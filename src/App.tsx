@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   MessageSquare, 
   Zap, 
@@ -22,9 +22,21 @@ import {
   Globe,
   Lock,
   User,
-  Clock
+  Clock,
+  Copy,
+  Edit2,
+  RefreshCw,
+  ThumbsUp,
+  ThumbsDown,
+  Battery,
+  BatteryMedium,
+  BatteryLow,
+  BatteryFull
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { GoogleGenAI } from "@google/genai";
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // --- Components ---
 
@@ -121,36 +133,244 @@ const Hero = () => {
 };
 
 const ChatPreview = () => {
+  const [messages, setMessages] = useState([
+    { id: 1, type: 'user', text: "Can you explain quantum entanglement like I'm five?", isEditing: false },
+    { id: 2, type: 'ai', text: "Imagine you have two magical socks. If you put one on your left foot in London, the other instantly knows it's the right-foot sock, even if it's on Mars!", feedback: null },
+    { id: 3, type: 'user', text: "That's perfect. Now write a Python script for it.", isEditing: false },
+    { id: 4, type: 'ai', text: "class Particle:\n  def __init__(self):\n    self.state = None", isCode: true, feedback: null }
+  ]);
+  const [inputText, setInputText] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [battery, setBattery] = useState<number | null>(null);
+  const [time, setTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    }, 60000);
+
+    if ('getBattery' in navigator) {
+      (navigator as any).getBattery().then((batt: any) => {
+        setBattery(Math.round(batt.level * 100));
+        batt.addEventListener('levelchange', () => setBattery(Math.round(batt.level * 100)));
+      });
+    }
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (messages.length === 0) {
+      setMessages([{ id: 0, type: 'ai', text: "Hello! I'm Maria, your fast and intelligent AI companion. How can I help you today?", feedback: null }]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, isLoading]);
+
+  const handleSend = async () => {
+    if (!inputText.trim() || isLoading) return;
+
+    const userMsg = { id: Date.now(), type: 'user', text: inputText, isEditing: false };
+    setMessages(prev => [...prev, userMsg]);
+    setInputText("");
+    setIsLoading(true);
+
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-latest",
+        contents: messages.concat(userMsg).map(m => ({
+          role: m.type === 'user' ? 'user' : 'model',
+          parts: [{ text: m.text }]
+        })),
+        config: {
+          systemInstruction: "You are Maria, a fast and intelligent AI companion. Your tone is helpful, witty, and concise. Use markdown for code blocks. Keep responses brief and engaging."
+        }
+      });
+
+      const aiText = response.text || "I'm sorry, I couldn't process that.";
+      setMessages(prev => [...prev, { 
+        id: Date.now() + 1, 
+        type: 'ai', 
+        text: aiText, 
+        isCode: aiText.includes('```'),
+        feedback: null 
+      }]);
+    } catch (error) {
+      console.error("Gemini Error:", error);
+      setMessages(prev => [...prev, { id: Date.now() + 1, type: 'ai', text: "Oops, something went wrong. Please try again.", feedback: null }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
+
+  const handleFeedback = (id: number, type: 'up' | 'down') => {
+    setMessages(prev => prev.map(m => m.id === id ? { ...m, feedback: type } : m));
+  };
+
+  const handleEdit = (id: number, newText: string) => {
+    setMessages(prev => prev.map(m => m.id === id ? { ...m, text: newText, isEditing: false } : m));
+  };
+
+  const toggleEdit = (id: number) => {
+    setMessages(prev => prev.map(m => m.id === id ? { ...m, isEditing: !m.isEditing } : m));
+  };
+
+  const handleRegenerate = async (id: number) => {
+    const aiMsgIndex = messages.findIndex(m => m.id === id);
+    if (aiMsgIndex === -1) return;
+    
+    const previousMessages = messages.slice(0, aiMsgIndex);
+    setMessages(prev => prev.map(m => m.id === id ? { ...m, text: "Regenerating..." } : m));
+    setIsLoading(true);
+
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-latest",
+        contents: previousMessages.map(m => ({
+          role: m.type === 'user' ? 'user' : 'model',
+          parts: [{ text: m.text }]
+        })),
+        config: {
+          systemInstruction: "You are Maria, a fast and intelligent AI companion. Your tone is helpful, witty, and concise. Use markdown for code blocks. Keep responses brief and engaging."
+        }
+      });
+
+      const aiText = response.text || "I'm sorry, I couldn't process that.";
+      setMessages(prev => prev.map(m => m.id === id ? { ...m, text: aiText, isCode: aiText.includes('```') } : m));
+    } catch (error) {
+      console.error("Regenerate Error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getBatteryIcon = () => {
+    if (battery === null) return <Battery className="w-3 h-3" />;
+    if (battery > 80) return <BatteryFull className="w-3 h-3 text-success" />;
+    if (battery > 30) return <BatteryMedium className="w-3 h-3 text-yellow-500" />;
+    return <BatteryLow className="w-3 h-3 text-red-500" />;
+  };
+
   return (
-    <div className="bento-card col-span-1 md:row-span-2 bg-black flex flex-col border-border">
-      <div className="text-[11px] uppercase tracking-[1px] text-muted mb-4 pb-2 border-b border-border flex items-center gap-2">
-        <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-        Conversational Stream
+    <div className="bento-card col-span-1 md:row-span-2 bg-black flex flex-col border-border overflow-hidden h-[500px] md:h-full bg-[radial-gradient(circle_at_bottom_left,var(--color-accent-glow),transparent)]">
+      <div className="text-[10px] uppercase tracking-[1px] text-muted mb-4 pb-2 border-b border-border flex items-center justify-between shrink-0 gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse shrink-0" />
+          <span className="truncate">Conversational Stream</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0 bg-border/30 px-2 py-0.5 rounded-full border border-border/50">
+          <div className="flex items-center gap-1">
+            <Clock className="w-2.5 h-2.5" />
+            <span>{time}</span>
+          </div>
+          <div className="w-[1px] h-2.5 bg-border" />
+          <div className="flex items-center gap-1">
+            {getBatteryIcon()}
+            <span>{battery !== null ? `${battery}%` : '--%'}</span>
+          </div>
+        </div>
       </div>
       
-      <div className="space-y-4 flex-grow overflow-y-auto pr-2 custom-scrollbar">
-        <div className="bg-accent text-white p-3 rounded-xl rounded-tr-none text-xs self-end ml-auto max-w-[90%] shadow-lg shadow-accent/20">
-          Can you explain quantum entanglement like I'm five?
-        </div>
-        
-        <div className="bg-border text-text p-3 rounded-xl rounded-tl-none text-xs self-start mr-auto max-w-[90%] border border-border">
-          Imagine you have two magical socks. If you put one on your left foot in London, the other instantly knows it's the right-foot sock, even if it's on Mars!
-        </div>
+      <div ref={scrollRef} className="space-y-6 flex-grow overflow-y-auto pr-2 custom-scrollbar pb-4 scroll-smooth">
+        {messages.map((msg) => (
+          <div key={msg.id} className={`flex flex-col gap-2 ${msg.type === 'user' ? 'items-end' : 'items-start'}`}>
+            <div className={`relative group max-w-[90%] ${msg.type === 'user' ? 'bg-accent text-white rounded-2xl rounded-tr-none shadow-lg shadow-accent/20' : 'bg-border text-text rounded-2xl rounded-tl-none border border-border'} p-3 text-xs transition-all duration-200`}>
+              {msg.isEditing ? (
+                <textarea 
+                  autoFocus
+                  className="bg-transparent border-none outline-none w-full resize-none text-white min-h-[40px]"
+                  defaultValue={msg.text}
+                  onBlur={(e) => handleEdit(msg.id, e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleEdit(msg.id, e.currentTarget.value);
+                    }
+                  }}
+                />
+              ) : (
+                <div className={`${msg.isCode ? 'font-mono whitespace-pre bg-black/30 p-2 rounded-lg mt-1 overflow-x-auto' : ''} break-words`}>
+                  {msg.text}
+                </div>
+              )}
 
-        <div className="bg-accent text-white p-3 rounded-xl rounded-tr-none text-xs self-end ml-auto max-w-[90%] shadow-lg shadow-accent/20">
-          That's perfect. Now write a Python script for it.
-        </div>
+              <div className={`absolute -bottom-6 ${msg.type === 'user' ? 'right-0' : 'left-0'} flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity pt-2 z-10`}>
+                <button onClick={() => handleCopy(msg.text)} className="p-1 hover:text-accent transition-colors bg-black/50 rounded-md backdrop-blur-sm" title="Copy">
+                  <Copy className="w-3 h-3" />
+                </button>
+                {msg.type === 'user' && (
+                  <button onClick={() => toggleEdit(msg.id)} className="p-1 hover:text-accent transition-colors bg-black/50 rounded-md backdrop-blur-sm" title="Edit">
+                    <Edit2 className="w-3 h-3" />
+                  </button>
+                )}
+                {msg.type === 'ai' && (
+                  <>
+                    <button onClick={() => handleRegenerate(msg.id)} className="p-1 hover:text-accent transition-colors bg-black/50 rounded-md backdrop-blur-sm" title="Regenerate">
+                      <RefreshCw className="w-3 h-3" />
+                    </button>
+                    <button 
+                      onClick={() => handleFeedback(msg.id, 'up')} 
+                      className={`p-1 transition-colors bg-black/50 rounded-md backdrop-blur-sm ${msg.feedback === 'up' ? 'text-success' : 'hover:text-success'}`}
+                    >
+                      <ThumbsUp className="w-3 h-3" />
+                    </button>
+                    <button 
+                      onClick={() => handleFeedback(msg.id, 'down')} 
+                      className={`p-1 transition-colors bg-black/50 rounded-md backdrop-blur-sm ${msg.feedback === 'down' ? 'text-red-500' : 'hover:text-red-500'}`}
+                    >
+                      <ThumbsDown className="w-3 h-3" />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+        {isLoading && (
+          <div className="flex items-start gap-2">
+            <div className="bg-border text-text p-3 rounded-2xl rounded-tl-none border border-border text-xs flex items-center gap-2">
+              <div className="flex gap-1">
+                <div className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce [animation-delay:-0.3s]" />
+                <div className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce [animation-delay:-0.15s]" />
+                <div className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce" />
+              </div>
+              Maria is thinking...
+            </div>
+          </div>
+        )}
+      </div>
 
-        <div className="bg-bg border border-border p-4 rounded-xl rounded-tl-none text-[10px] font-mono text-muted w-full overflow-x-auto">
-          <span className="text-accent">class</span> <span className="text-success">Particle</span>:<br/>
-          &nbsp;&nbsp;<span className="text-accent">def</span> <span className="text-success">__init__</span>(self):<br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;self.state = <span className="text-accent">None</span>
+      <div className="mt-auto pt-4 border-t border-border shrink-0">
+        <div className="bg-bg border border-border rounded-xl p-2 flex items-center gap-2 focus-within:border-accent transition-colors">
+          <input 
+            type="text" 
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            placeholder="Ask Maria anything..." 
+            className="bg-transparent border-none outline-none flex-grow text-xs px-2 text-text py-1"
+          />
+          <button 
+            onClick={handleSend}
+            disabled={isLoading || !inputText.trim()}
+            className={`bg-accent text-white p-1.5 rounded-lg transition-all ${isLoading || !inputText.trim() ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90 hover:scale-105 active:scale-95'}`}
+          >
+            <ArrowRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </div>
   );
 };
-
 const FeaturesGrid = () => {
   const features = [
     { icon: "✦", title: "Smart Chat", desc: "Natural AI conversations that understand context." },
@@ -576,11 +796,11 @@ export default function App() {
   const [activeModal, setActiveModal] = useState<'privacy' | 'terms' | 'help' | null>(null);
 
   return (
-    <div className="min-h-screen bg-bg text-text font-sans p-6 md:p-8 flex flex-col gap-6 selection:bg-accent selection:text-white">
+    <div className="min-h-screen bg-bg text-text font-sans p-4 md:p-12 flex flex-col gap-8 selection:bg-accent selection:text-white">
       <Navbar />
       
-      <main className="mt-20 flex-grow max-w-7xl mx-auto w-full flex flex-col gap-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-grow">
+      <main className="mt-24 flex-grow max-w-7xl mx-auto w-full flex flex-col gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-grow">
           <Hero />
           <ChatPreview />
           <FAQMini />

@@ -17,7 +17,7 @@
   }
 
   .bento-card {
-    @apply bg-card border border-border rounded-2xl p-6 relative overflow-hidden transition-all duration-300;
+    @apply bg-card border border-border rounded-[2rem] p-6 md:p-8 relative overflow-hidden transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-accent/5 hover:border-accent/20;
   }
 
   .bento-grid {
