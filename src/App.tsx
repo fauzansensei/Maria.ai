@@ -14,7 +14,15 @@ import {
   X,
   Search,
   BrainCircuit,
-  Lightbulb
+  Lightbulb,
+  Shield,
+  FileText,
+  HelpCircle,
+  Mail,
+  Globe,
+  Lock,
+  User,
+  Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -244,231 +252,194 @@ const FAQMini = () => {
   );
 };
 
+const PrivacyContent = () => (
+  <div className="space-y-10">
+    <section>
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
+          <Shield className="w-5 h-5" />
+        </div>
+        <h3 className="text-xl font-bold text-text">Privacy Overview</h3>
+      </div>
+      <p className="text-muted leading-relaxed">
+        This Privacy Notice for <span className="text-text font-medium">Celestial Nexus</span> ("we", "us", or "our"), describes how and why we might access, collect, store, use, and/or share ("process") your personal information when you use our services ("Services").
+      </p>
+    </section>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="p-5 rounded-2xl bg-bg border border-border">
+        <h4 className="font-bold text-text mb-2 flex items-center gap-2">
+          <User className="w-4 h-4 text-accent" />
+          Data Collection
+        </h4>
+        <p className="text-xs text-muted leading-relaxed">
+          We collect names, email addresses, and social media login data that you voluntarily provide during registration.
+        </p>
+      </div>
+      <div className="p-5 rounded-2xl bg-bg border border-border">
+        <h4 className="font-bold text-text mb-2 flex items-center gap-2">
+          <BrainCircuit className="w-4 h-4 text-accent" />
+          AI Processing
+        </h4>
+        <p className="text-xs text-muted leading-relaxed">
+          Your data helps our AI provide personalized responses while maintaining high security standards.
+        </p>
+      </div>
+    </div>
+
+    <section className="space-y-4">
+      <h3 className="text-lg font-bold text-text flex items-center gap-2">
+        <div className="w-1.5 h-6 bg-accent rounded-full" />
+        Key Information
+      </h3>
+      <div className="space-y-4">
+        {[
+          { title: "Authentication", desc: "We use your info to manage account creation and secure logins." },
+          { title: "Service Delivery", desc: "Processing is necessary to deliver and improve our AI services." },
+          { title: "Data Safety", desc: "We implement technical measures to protect your personal information." }
+        ].map((item, i) => (
+          <div key={i} className="flex gap-4">
+            <div className="mt-1"><Check className="w-4 h-4 text-success" /></div>
+            <div>
+              <h5 className="font-bold text-text text-sm">{item.title}</h5>
+              <p className="text-xs text-muted">{item.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section className="p-6 rounded-2xl bg-accent/5 border border-accent/20">
+      <h3 className="text-lg font-bold text-text mb-2">Contact Us</h3>
+      <p className="text-sm text-muted mb-4">Questions about your privacy? Reach out to our data protection officer.</p>
+      <div className="flex items-center gap-2 text-accent font-bold">
+        <Mail className="w-4 h-4" />
+        celestialnexus.dev@gmail.com
+      </div>
+    </section>
+  </div>
+);
+
+const TermsContent = () => (
+  <div className="space-y-10">
+    <section>
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
+          <FileText className="w-5 h-5" />
+        </div>
+        <h3 className="text-xl font-bold text-text">Terms of Service</h3>
+      </div>
+      <p className="text-muted leading-relaxed">
+        By accessing or using <span className="text-text font-medium">Maria.ai</span>, you agree to be bound by these Terms. These rules ensure a safe and productive environment for all users.
+      </p>
+    </section>
+
+    <div className="space-y-6">
+      {[
+        { 
+          icon: <User className="w-5 h-5" />, 
+          title: "1. User Accounts", 
+          desc: "You are responsible for your account security. You must be 18+ to use our services." 
+        },
+        { 
+          icon: <BrainCircuit className="w-5 h-5" />, 
+          title: "2. AI Content", 
+          desc: "AI outputs are generated for assistance. Users should verify critical information independently." 
+        },
+        { 
+          icon: <Lock className="w-5 h-5" />, 
+          title: "3. Prohibited Use", 
+          desc: "No illegal activities, generating harmful content, or interfering with service security." 
+        }
+      ].map((item, i) => (
+        <div key={i} className="flex gap-5 p-5 rounded-2xl bg-bg border border-border hover:border-purple-500/30 transition-colors">
+          <div className="text-purple-500">{item.icon}</div>
+          <div>
+            <h4 className="font-bold text-text mb-1">{item.title}</h4>
+            <p className="text-sm text-muted leading-relaxed">{item.desc}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <section className="p-6 rounded-2xl bg-purple-500/5 border border-purple-500/20">
+      <h3 className="text-lg font-bold text-text mb-2">Liability Disclaimer</h3>
+      <p className="text-sm text-muted">
+        Celestial Nexus is not liable for damages arising from your use of the Services. These terms are governed by the laws of Indonesia.
+      </p>
+    </section>
+  </div>
+);
+
+const HelpContent = () => (
+  <div className="space-y-10">
+    <section className="text-center">
+      <h3 className="text-2xl font-bold text-text mb-2">How can we help?</h3>
+      <p className="text-muted">Search our knowledge base or get in touch with support.</p>
+    </section>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {[
+        { icon: <Zap />, title: "Getting Started", color: "text-accent", bg: "bg-accent/10" },
+        { icon: <Code />, title: "API & Dev", color: "text-success", bg: "bg-success/10" },
+        { icon: <Sparkles />, title: "Pro Features", color: "text-purple-500", bg: "bg-purple-500/10" },
+        { icon: <Shield />, title: "Security", color: "text-yellow-500", bg: "bg-yellow-500/10" }
+      ].map((item, i) => (
+        <button key={i} className="p-6 rounded-2xl bg-bg border border-border hover:border-text/30 transition-all flex flex-col items-center gap-3 group">
+          <div className={`w-12 h-12 rounded-xl ${item.bg} ${item.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+            {item.icon}
+          </div>
+          <span className="font-bold text-text">{item.title}</span>
+        </button>
+      ))}
+    </div>
+
+    <section className="space-y-4">
+      <h4 className="text-lg font-bold text-text px-2">Top Questions</h4>
+      <div className="space-y-2">
+        {[
+          "How accurate is the AI output?",
+          "Can I use Maria.ai for commercial projects?",
+          "How do I upgrade to the Pro plan?",
+          "Is my data encrypted?"
+        ].map((q, i) => (
+          <div key={i} className="p-4 rounded-xl bg-bg border border-border flex items-center justify-between group cursor-pointer hover:bg-card transition-colors">
+            <span className="text-sm text-muted group-hover:text-text">{q}</span>
+            <ArrowRight className="w-4 h-4 text-muted group-hover:text-accent group-hover:translate-x-1 transition-all" />
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <div className="flex flex-col md:flex-row gap-4">
+      <div className="flex-grow p-6 rounded-2xl bg-accent text-white flex flex-col justify-center shadow-lg shadow-accent/20">
+        <h4 className="font-bold mb-1">Live Support</h4>
+        <p className="text-xs opacity-90 mb-4">Average response time: 5 minutes</p>
+        <button className="bg-white text-accent py-2 rounded-lg font-bold text-sm hover:bg-opacity-90 transition-all">
+          Start Chat
+        </button>
+      </div>
+      <div className="flex-grow p-6 rounded-2xl bg-border border border-border flex flex-col justify-center">
+        <h4 className="font-bold text-text mb-1">Email Us</h4>
+        <p className="text-xs text-muted mb-4">For complex technical inquiries</p>
+        <a href="mailto:support@maria.ai" className="text-accent font-bold text-sm hover:underline">
+          support@maria.ai
+        </a>
+      </div>
+    </div>
+  </div>
+);
+
 const LegalModal = ({ isOpen, onClose, type }: { isOpen: boolean, onClose: () => void, type: 'privacy' | 'terms' | 'help' | null }) => {
   if (!isOpen || !type) return null;
 
-  const content = {
-    privacy: {
-      title: "Privacy Policy",
-      lastUpdated: "March 08, 2026",
-      body: `
-        <div className="space-y-6">
-          <p>This Privacy Notice for Celestial Nexus ("we", "us", or "our"), describes how and why we might access, collect, store, use, and/or share ("process") your personal information when you use our services ("Services"), including when you visit our website at https://celestial-nexus.vercel.app or use our Maria.ai application.</p>
-          
-          <section>
-            <h3 className="text-lg font-bold text-text mb-2">SUMMARY OF KEY POINTS</h3>
-            <p className="text-muted mb-2">This summary provides key points from our Privacy Notice. You can find more detail about any of these topics by using our table of contents below.</p>
-            <ul className="list-disc pl-5 space-y-1 text-muted">
-              <li><strong>What personal information do we process?</strong> When you visit, use, or navigate our Services, we may process personal information depending on how you interact with us and the Services.</li>
-              <li><strong>Do we process any sensitive personal information?</strong> We do not process sensitive personal information.</li>
-              <li><strong>Do we collect any information from third parties?</strong> We may collect information from public databases, marketing partners, social media platforms, and other outside sources.</li>
-              <li><strong>How do we process your information?</strong> We process your information to provide, improve, and administer our Services, communicate with you, for security and fraud prevention, and to comply with law.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h3 className="text-lg font-bold text-text mb-2">1. WHAT INFORMATION DO WE COLLECT?</h3>
-            <p className="text-muted mb-2"><strong>Personal information you disclose to us:</strong> We collect personal information that you voluntarily provide to us when you register on the Services, express an interest in obtaining information about us or our products and Services, or otherwise when you contact us.</p>
-            <p className="text-muted mb-2">The personal information we collect may include:</p>
-            <ul className="list-disc pl-5 space-y-1 text-muted">
-              <li>Names, email addresses, usernames, passwords, and contact preferences.</li>
-              <li><strong>Social Media Login Data:</strong> We may provide you with the option to register with us using your existing social media account details, like your Facebook, X, or other social media account.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h3 className="text-lg font-bold text-text mb-2">2. HOW DO WE PROCESS YOUR INFORMATION?</h3>
-            <p className="text-muted mb-2">We process your personal information for a variety of reasons, depending on how you interact with our Services, including:</p>
-            <ul className="list-disc pl-5 space-y-1 text-muted">
-              <li>To facilitate account creation and authentication and otherwise manage user accounts.</li>
-              <li>To deliver and facilitate delivery of services to the user.</li>
-              <li>To respond to user inquiries/offer support to users.</li>
-              <li>To send administrative information to you.</li>
-              <li>To fulfill and manage your orders.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h3 className="text-lg font-bold text-text mb-2">3. WHEN AND WITH WHOM DO WE SHARE YOUR PERSONAL INFORMATION?</h3>
-            <p className="text-muted mb-2">We may share information in specific situations described in this section and/or with the following categories of third parties:</p>
-            <ul className="list-disc pl-5 space-y-1 text-muted">
-              <li><strong>Vendors, Consultants, and Other Third-Party Service Providers:</strong> We may share your data with third-party vendors, service providers, contractors, or agents who perform services for us or on our behalf and require access to such information to do that work.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h3 className="text-lg font-bold text-text mb-2">4. DO WE OFFER ARTIFICIAL INTELLIGENCE-BASED PRODUCTS?</h3>
-            <p className="text-muted mb-2">Yes, we offer products, features, or tools powered by artificial intelligence, machine learning, or similar technologies. As part of our Services, we offer products, features, or tools powered by artificial intelligence, machine learning, or similar technologies (collectively, "AI Products").</p>
-            <p className="text-muted">All personal information processed using our AI Products is handled in line with our Privacy Notice and our agreement with third parties. This ensures high security and safeguards your personal information throughout the process, giving you peace of mind about your data's safety.</p>
-          </section>
-
-          <section>
-            <h3 className="text-lg font-bold text-text mb-2">5. HOW DO WE KEEP YOUR INFORMATION SAFE?</h3>
-            <p className="text-muted">We have implemented appropriate and reasonable technical and organizational security measures designed to protect the security of any personal information we process. However, despite our safeguards and efforts to secure your information, no electronic transmission over the Internet or information storage technology can be guaranteed to be 100% secure, so we cannot promise or guarantee that hackers, cybercriminals, or other unauthorized third parties will not be able to defeat our security and improperly collect, access, steal, or modify your information.</p>
-          </section>
-
-          <section>
-            <h3 className="text-lg font-bold text-text mb-2">6. CONTACT US</h3>
-            <p className="text-muted">If you have questions or comments about this notice, you may email us at <strong>celestialnexus.dev@gmail.com</strong> or by post to:</p>
-            <p className="text-muted mt-2">
-              Celestial Nexus<br/>
-              Jalan salak putih RT 003/012 Tangerang Selatan, Banten<br/>
-              Kec. Serpong Utara, Kota Tangerang Selatan<br/>
-              Kab. Tangerang, Banten 15333<br/>
-              Indonesia
-            </p>
-          </section>
-        </div>
-      `
-    },
-    terms: {
-      title: "Terms of Service",
-      lastUpdated: "April 15, 2024",
-      body: `
-        <div className="space-y-6">
-          <p>Welcome to Maria.ai. These Terms of Service ("Terms") govern your access to and use of Maria.ai's website, services, and applications. Please read these Terms carefully before using our Services.</p>
-          
-          <section>
-            <h3 className="text-lg font-bold text-text mb-2">1. ACCEPTANCE OF TERMS</h3>
-            <p className="text-muted">By accessing or using our Services, you agree to be bound by these Terms and our Privacy Policy. If you do not agree to these Terms, you may not access or use the Services.</p>
-          </section>
-
-          <section>
-            <h3 className="text-lg font-bold text-text mb-2">2. USER ACCOUNTS</h3>
-            <p className="text-muted">To access certain features of the Services, you may be required to create an account. You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. You agree to notify us immediately of any unauthorized use of your account.</p>
-          </section>
-
-          <section>
-            <h3 className="text-lg font-bold text-text mb-2">3. PROHIBITED CONDUCT</h3>
-            <p className="text-muted mb-2">You agree not to engage in any of the following prohibited activities:</p>
-            <ul className="list-disc pl-5 space-y-1 text-muted">
-              <li>Using the Services for any illegal purpose or in violation of any local, state, national, or international law.</li>
-              <li>Violating, or encouraging others to violate, any right of a third party, including by infringing or misappropriating any third-party intellectual property right.</li>
-              <li>Interfering with security-related features of the Services.</li>
-              <li>Using the Services to generate harmful, offensive, or inappropriate content.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h3 className="text-lg font-bold text-text mb-2">4. AI CONTENT DISCLAIMER</h3>
-            <p className="text-muted">Maria.ai uses advanced artificial intelligence models to generate responses. While we strive for accuracy, the AI may occasionally produce incorrect, biased, or incomplete information. You are solely responsible for verifying any information generated by the AI before relying on it.</p>
-          </section>
-
-          <section>
-            <h3 className="text-lg font-bold text-text mb-2">5. INTELLECTUAL PROPERTY</h3>
-            <p className="text-muted">The Services, including all content, features, and functionality, are owned by Celestial Nexus, its licensors, or other providers of such material and are protected by international copyright, trademark, patent, trade secret, and other intellectual property or proprietary rights laws.</p>
-          </section>
-
-          <section>
-            <h3 className="text-lg font-bold text-text mb-2">6. LIMITATION OF LIABILITY</h3>
-            <p className="text-muted">In no event will Celestial Nexus, its affiliates, or their licensors, service providers, employees, agents, officers, or directors be liable for damages of any kind, under any legal theory, arising out of or in connection with your use, or inability to use, the Services.</p>
-          </section>
-
-          <section>
-            <h3 className="text-lg font-bold text-text mb-2">7. GOVERNING LAW</h3>
-            <p className="text-muted">These Terms shall be governed by and construed in accordance with the laws of Indonesia, without regard to its conflict of law provisions.</p>
-          </section>
-        </div>
-      `
-    },
-    help: {
-      title: "Help Center",
-      lastUpdated: "April 15, 2024",
-      body: `
-        <div className="space-y-8">
-          <p className="text-center text-lg text-muted">Welcome to the Maria.ai Support Hub. Find answers, tips, and technical guidance.</p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-5 bg-bg border border-border rounded-2xl hover:border-accent transition-colors group">
-              <h4 className="font-bold text-text mb-2 flex items-center gap-2">
-                <span className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent">1</span>
-                Getting Started
-              </h4>
-              <p className="text-sm text-muted mb-3">New to Maria? Start here to learn about account setup, your first prompt, and basic features.</p>
-              <ul className="text-xs space-y-1 text-accent/80">
-                <li className="hover:underline cursor-pointer">Creating your account</li>
-                <li className="hover:underline cursor-pointer">Writing effective prompts</li>
-                <li className="hover:underline cursor-pointer">Customizing your profile</li>
-              </ul>
-            </div>
-            <div className="p-5 bg-bg border border-border rounded-2xl hover:border-accent transition-colors group">
-              <h4 className="font-bold text-text mb-2 flex items-center gap-2">
-                <span className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-500">2</span>
-                Billing & Pro
-              </h4>
-              <p className="text-sm text-muted mb-3">Manage your subscription, payments, and explore the benefits of our Pro tier.</p>
-              <ul className="text-xs space-y-1 text-yellow-500/80">
-                <li className="hover:underline cursor-pointer">Pro vs Free features</li>
-                <li className="hover:underline cursor-pointer">Updating payment methods</li>
-                <li className="hover:underline cursor-pointer">Refund policy</li>
-              </ul>
-            </div>
-            <div className="p-5 bg-bg border border-border rounded-2xl hover:border-accent transition-colors group">
-              <h4 className="font-bold text-text mb-2 flex items-center gap-2">
-                <span className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500">3</span>
-                Technical Support
-              </h4>
-              <p className="text-sm text-muted mb-3">Encountering issues? Find solutions for common technical problems and API integrations.</p>
-              <ul className="text-xs space-y-1 text-purple-500/80">
-                <li className="hover:underline cursor-pointer">Browser compatibility</li>
-                <li className="hover:underline cursor-pointer">API access & documentation</li>
-                <li className="hover:underline cursor-pointer">Reporting a bug</li>
-              </ul>
-            </div>
-            <div className="p-5 bg-bg border border-border rounded-2xl hover:border-accent transition-colors group">
-              <h4 className="font-bold text-text mb-2 flex items-center gap-2">
-                <span className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center text-success">4</span>
-                Safety & Privacy
-              </h4>
-              <p className="text-sm text-muted mb-3">Learn about our commitment to data security and how we handle your information.</p>
-              <ul className="text-xs space-y-1 text-success/80">
-                <li className="hover:underline cursor-pointer">Data encryption standards</li>
-                <li className="hover:underline cursor-pointer">Privacy controls</li>
-                <li className="hover:underline cursor-pointer">AI ethics & safety</li>
-              </ul>
-            </div>
-          </div>
-
-          <section>
-            <h3 className="text-lg font-bold text-text mb-4">Detailed FAQ</h3>
-            <div className="space-y-6">
-              <div className="border-b border-border pb-4">
-                <h5 className="font-bold text-text mb-2">How accurate is Maria.ai?</h5>
-                <p className="text-sm text-muted">Maria is powered by the latest Gemini models, achieving high accuracy in most tasks. However, AI can occasionally hallucinate. We recommend verifying critical facts, especially for legal or medical advice.</p>
-              </div>
-              <div className="border-b border-border pb-4">
-                <h5 className="font-bold text-text mb-2">Can I use Maria.ai offline?</h5>
-                <p className="text-sm text-muted">Currently, Maria.ai requires an active internet connection to process requests through our high-performance cloud infrastructure.</p>
-              </div>
-              <div className="border-b border-border pb-4">
-                <h5 className="font-bold text-text mb-2">Does Maria support voice input?</h5>
-                <p className="text-sm text-muted">Voice-to-text input is available on our mobile-optimized web version and will be coming soon to the desktop interface.</p>
-              </div>
-              <div className="border-b border-border pb-4">
-                <h5 className="font-bold text-text mb-2">How do I delete my data?</h5>
-                <p className="text-sm text-muted">You can delete individual conversations or your entire account history through the 'Settings' panel in your dashboard. Once deleted, data is permanently removed from our active servers.</p>
-              </div>
-            </div>
-          </section>
-
-          <div className="p-6 bg-accent/5 border border-accent/20 rounded-2xl text-center">
-            <h4 className="font-bold text-text mb-2">Still need help?</h4>
-            <p className="text-sm text-muted mb-4">Our support team is available 24/7 to assist you with any questions or technical issues.</p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <a href="mailto:support@maria.ai" className="bg-accent text-white px-8 py-3 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-accent/20">
-                Email Support
-              </a>
-              <button className="bg-border border border-border text-text px-8 py-3 rounded-xl font-bold hover:bg-card transition-all">
-                Live Chat
-              </button>
-            </div>
-          </div>
-        </div>
-      `
-    }
+  const config = {
+    privacy: { title: "Privacy Policy", date: "March 08, 2026", component: <PrivacyContent /> },
+    terms: { title: "Terms of Service", date: "April 15, 2024", component: <TermsContent /> },
+    help: { title: "Help Center", date: "April 15, 2024", component: <HelpContent /> }
   };
 
-  const activeContent = content[type];
+  const active = config[type];
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6">
@@ -483,23 +454,33 @@ const LegalModal = ({ isOpen, onClose, type }: { isOpen: boolean, onClose: () =>
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-2xl max-h-[80vh] bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        className="relative w-full max-w-2xl max-h-[85vh] bg-card border border-border rounded-[2rem] shadow-2xl overflow-hidden flex flex-col"
       >
-        <div className="p-6 border-b border-border flex items-center justify-between bg-card/50 backdrop-blur-md sticky top-0 z-10">
-          <div>
-            <h2 className="text-2xl font-bold text-text">{activeContent.title}</h2>
-            <p className="text-xs text-muted mt-1">Last updated: {activeContent.lastUpdated}</p>
+        <div className="p-6 md:p-8 border-b border-border flex items-center justify-between bg-card/50 backdrop-blur-md sticky top-0 z-10">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-border flex items-center justify-center text-muted">
+              {type === 'privacy' && <Shield className="w-6 h-6" />}
+              {type === 'terms' && <FileText className="w-6 h-6" />}
+              {type === 'help' && <HelpCircle className="w-6 h-6" />}
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-text tracking-tight">{active.title}</h2>
+              <div className="flex items-center gap-2 text-[10px] text-muted uppercase tracking-widest mt-0.5">
+                <Clock className="w-3 h-3" />
+                Updated {active.date}
+              </div>
+            </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-border rounded-full transition-colors text-muted hover:text-text">
-            <X className="w-6 h-6" />
+          <button onClick={onClose} className="p-3 hover:bg-border rounded-2xl transition-all text-muted hover:text-text group">
+            <X className="w-6 h-6 group-hover:rotate-90 transition-transform duration-300" />
           </button>
         </div>
-        <div className="p-8 overflow-y-auto custom-scrollbar text-sm leading-relaxed text-text/80">
-          <div dangerouslySetInnerHTML={{ __html: activeContent.body }} />
+        <div className="p-8 md:p-10 overflow-y-auto custom-scrollbar flex-grow">
+          {active.component}
         </div>
-        <div className="p-4 border-t border-border bg-card/50 text-center">
-          <button onClick={onClose} className="bg-text text-bg px-6 py-2 rounded-lg font-bold text-sm hover:opacity-90 transition-all">
-            Close
+        <div className="p-6 border-t border-border bg-card/50 flex justify-center">
+          <button onClick={onClose} className="bg-text text-bg px-10 py-3 rounded-2xl font-bold text-sm hover:opacity-90 transition-all shadow-lg shadow-black/20">
+            Got it, thanks
           </button>
         </div>
       </motion.div>
