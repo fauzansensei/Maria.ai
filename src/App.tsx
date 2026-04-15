@@ -36,11 +36,22 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Safe API initialization helper
+const getApiKey = () => {
+  try {
+    return (process as any).env.GEMINI_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY || '';
+  } catch (e) {
+    try {
+      return (import.meta as any).env.VITE_GEMINI_API_KEY || '';
+    } catch (e2) {
+      return '';
+    }
+  }
+};
 
 // --- Components ---
 
-const Navbar = () => {
+const Navbar = ({ onViewChange, currentView }: { onViewChange: (view: 'landing' | 'app') => void, currentView: string }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -51,9 +62,9 @@ const Navbar = () => {
   }, []);
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-bg/80 backdrop-blur-md border-b border-border py-3 shadow-sm' : 'bg-transparent py-5'}`}>
+    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled || currentView === 'app' ? 'bg-bg/80 backdrop-blur-md border-b border-border py-3 shadow-sm' : 'bg-transparent py-5'}`}>
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => onViewChange('landing')}>
           <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(59,130,246,0.5)]">
             <Sparkles className="text-white w-5 h-5" />
           </div>
@@ -61,17 +72,26 @@ const Navbar = () => {
         </div>
 
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted">
+          <button onClick={() => onViewChange('landing')} className={`hover:text-text transition-colors ${currentView === 'landing' ? 'text-text' : ''}`}>Home</button>
           <a href="#features" className="hover:text-text transition-colors">Features</a>
           <a href="#how-it-works" className="hover:text-text transition-colors">How it works</a>
           <a href="#pricing" className="hover:text-text transition-colors">Pricing</a>
-          <a href="#faq" className="hover:text-text transition-colors">FAQ</a>
         </div>
 
         <div className="hidden md:flex items-center gap-4">
-          <button className="text-sm font-medium px-4 py-2 text-muted hover:text-text transition-colors">Log in</button>
-          <button className="bg-text text-bg text-sm font-medium px-5 py-2.5 rounded-lg hover:opacity-90 transition-all shadow-lg shadow-black/5">
-            Start Chatting
-          </button>
+          {currentView === 'landing' ? (
+            <button 
+              onClick={() => onViewChange('app')}
+              className="bg-text text-bg text-sm font-medium px-5 py-2.5 rounded-lg hover:opacity-90 transition-all shadow-lg shadow-black/5"
+            >
+              Start Chatting
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 text-xs font-mono text-success bg-success/10 px-3 py-1.5 rounded-full border border-success/20">
+              <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+              SYSTEM ACTIVE
+            </div>
+          )}
         </div>
 
         <button className="md:hidden text-text" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
@@ -88,12 +108,11 @@ const Navbar = () => {
             exit={{ opacity: 0, y: -20 }}
             className="absolute top-full left-0 right-0 bg-card border-b border-border p-6 flex flex-col gap-4 md:hidden shadow-xl"
           >
+            <button onClick={() => { onViewChange('landing'); setIsMobileMenuOpen(false); }} className="text-left text-lg font-medium text-text">Home</button>
             <a href="#features" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-medium text-text">Features</a>
             <a href="#how-it-works" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-medium text-text">How it works</a>
-            <a href="#pricing" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-medium text-text">Pricing</a>
-            <a href="#faq" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-medium text-text">FAQ</a>
             <hr className="border-border" />
-            <button className="bg-text text-bg py-3 rounded-xl font-medium">Start Chatting</button>
+            <button onClick={() => { onViewChange('app'); setIsMobileMenuOpen(false); }} className="bg-text text-bg py-3 rounded-xl font-medium">Start Chatting</button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -101,7 +120,7 @@ const Navbar = () => {
   );
 };
 
-const Hero = () => {
+const Hero = ({ onLaunch }: { onLaunch: () => void }) => {
   return (
     <div className="bento-card col-span-1 md:col-span-1 flex flex-col justify-center bg-[radial-gradient(circle_at_top_right,var(--color-accent-glow),transparent)]">
       <motion.div
@@ -120,10 +139,7 @@ const Hero = () => {
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <button 
-            onClick={() => {
-              document.getElementById('chat-container')?.scrollIntoView({ behavior: 'smooth' });
-              setTimeout(() => document.getElementById('chat-input')?.focus(), 800);
-            }}
+            onClick={onLaunch}
             className="bg-text text-bg px-6 py-2.5 rounded-lg font-semibold text-sm hover:opacity-90 transition-all flex items-center justify-center gap-2 group shadow-xl"
           >
             Start Chatting
@@ -141,7 +157,7 @@ const Hero = () => {
   );
 };
 
-const ChatPreview = () => {
+const ChatPreview = ({ isFullApp = false }: { isFullApp?: boolean }) => {
   const [messages, setMessages] = useState([
     { id: 1, type: 'user', text: "Can you explain quantum entanglement like I'm five?", isEditing: false },
     { id: 2, type: 'ai', text: "Imagine you have two magical socks. If you put one on your left foot in London, the other instantly knows it's the right-foot sock, even if it's on Mars!", feedback: null },
@@ -151,18 +167,30 @@ const ChatPreview = () => {
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [battery, setBattery] = useState<number | null>(null);
-  const [time, setTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+  const [time, setTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  // Refs for real-time data to be used in prompt injection
+  const batteryRef = useRef<number | null>(null);
+  const timeRef = useRef<string>("");
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      setTime(timeStr);
+      timeRef.current = now.toLocaleString(); // More detailed for AI
     }, 1000);
 
     if ('getBattery' in navigator) {
       (navigator as any).getBattery().then((batt: any) => {
-        setBattery(Math.round(batt.level * 100));
-        batt.addEventListener('levelchange', () => setBattery(Math.round(batt.level * 100)));
+        const updateBattery = () => {
+          const level = Math.round(batt.level * 100);
+          setBattery(level);
+          batteryRef.current = level;
+        };
+        updateBattery();
+        batt.addEventListener('levelchange', updateBattery);
       });
     }
 
@@ -190,10 +218,11 @@ const ChatPreview = () => {
     setIsLoading(true);
 
     try {
-      const currentBattery = battery !== null ? `${battery}%` : 'unknown';
-      const currentTime = new Date().toLocaleTimeString();
+      const currentBattery = batteryRef.current !== null ? `${batteryRef.current}%` : 'unknown';
+      const currentTime = timeRef.current || new Date().toLocaleString();
       
-      const response = await ai.models.generateContent({
+      const aiClient = new GoogleGenAI({ apiKey: getApiKey() });
+      const response = await aiClient.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: messages.concat(userMsg).map(m => ({
           role: m.type === 'user' ? 'user' : 'model',
@@ -201,14 +230,20 @@ const ChatPreview = () => {
         })),
         config: {
           systemInstruction: `You are Maria, a fast and intelligent AI companion. Your tone is helpful, witty, and concise. Use markdown for code blocks. Keep responses brief and engaging. 
-          SYSTEM AWARENESS: 
+          
+          CRITICAL REAL-TIME SYSTEM DATA:
           - Current Time: ${currentTime}
-          - Battery Level: ${currentBattery}
-          Always use this real-time data if the user asks about time or battery.`
+          - Device Battery: ${currentBattery}
+          
+          INSTRUCTIONS:
+          1. If the user asks about the time, battery, or system status, use the data provided above.
+          2. Do NOT say you don't have access to this data. You DO have access.
+          3. Be precise. If the time is 15:21:11, say exactly that.`
         }
       });
 
       const aiText = response.text || "I'm sorry, I couldn't process that.";
+      
       setMessages(prev => [...prev, { 
         id: Date.now() + 1, 
         type: 'ai', 
@@ -218,7 +253,7 @@ const ChatPreview = () => {
       }]);
     } catch (error) {
       console.error("Gemini Error:", error);
-      setMessages(prev => [...prev, { id: Date.now() + 1, type: 'ai', text: "Oops, something went wrong. Please try again.", feedback: null }]);
+      setMessages(prev => [...prev, { id: Date.now() + 1, type: 'ai', text: "Oops, something went wrong. Make sure your API key is set in the environment variables.", feedback: null }]);
     } finally {
       setIsLoading(false);
     }
@@ -249,10 +284,11 @@ const ChatPreview = () => {
     setIsLoading(true);
 
     try {
-      const currentBattery = battery !== null ? `${battery}%` : 'unknown';
-      const currentTime = new Date().toLocaleTimeString();
+      const currentBattery = batteryRef.current !== null ? `${batteryRef.current}%` : 'unknown';
+      const currentTime = timeRef.current || new Date().toLocaleString();
 
-      const response = await ai.models.generateContent({
+      const aiClient = new GoogleGenAI({ apiKey: getApiKey() });
+      const response = await aiClient.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: previousMessages.map(m => ({
           role: m.type === 'user' ? 'user' : 'model',
@@ -260,14 +296,20 @@ const ChatPreview = () => {
         })),
         config: {
           systemInstruction: `You are Maria, a fast and intelligent AI companion. Your tone is helpful, witty, and concise. Use markdown for code blocks. Keep responses brief and engaging.
-          SYSTEM AWARENESS:
+          
+          CRITICAL REAL-TIME SYSTEM DATA:
           - Current Time: ${currentTime}
-          - Battery Level: ${currentBattery}
-          Always use this real-time data if the user asks about time or battery.`
+          - Device Battery: ${currentBattery}
+          
+          INSTRUCTIONS:
+          1. If the user asks about the time, battery, or system status, use the data provided above.
+          2. Do NOT say you don't have access to this data. You DO have access.
+          3. Be precise.`
         }
       });
 
       const aiText = response.text || "I'm sorry, I couldn't process that.";
+
       setMessages(prev => prev.map(m => m.id === id ? { ...m, text: aiText, isCode: aiText.includes('```') } : m));
     } catch (error) {
       console.error("Regenerate Error:", error);
@@ -284,7 +326,7 @@ const ChatPreview = () => {
   };
 
   return (
-    <div id="chat-container" className="bento-card col-span-1 md:col-span-2 md:row-span-2 bg-black flex flex-col border-border overflow-hidden h-[500px] md:h-full bg-[radial-gradient(circle_at_bottom_left,var(--color-accent-glow),transparent)] scroll-mt-24">
+    <div id="chat-container" className={`bento-card ${isFullApp ? 'col-span-full h-[calc(100vh-180px)]' : 'col-span-1 md:col-span-2 md:row-span-2 h-[500px] md:h-full'} bg-black flex flex-col border-border overflow-hidden bg-[radial-gradient(circle_at_bottom_left,var(--color-accent-glow),transparent)] scroll-mt-24`}>
       <div className="text-[10px] uppercase tracking-[1px] text-muted mb-4 pb-2 border-b border-border flex items-center justify-between shrink-0 gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
           <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse shrink-0" />
@@ -823,21 +865,46 @@ const Footer = ({ onOpenLegal }: { onOpenLegal: (type: 'privacy' | 'terms' | 'he
 
 export default function App() {
   const [activeModal, setActiveModal] = useState<'privacy' | 'terms' | 'help' | null>(null);
+  const [view, setView] = useState<'landing' | 'app'>('landing');
 
   return (
     <div className="min-h-screen bg-bg text-text font-sans p-4 md:p-12 flex flex-col gap-8 selection:bg-accent selection:text-white">
-      <Navbar />
+      <Navbar onViewChange={setView} currentView={view} />
       
       <main className="mt-24 flex-grow max-w-7xl mx-auto w-full flex flex-col gap-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-grow">
-          <ChatPreview />
-          <Hero />
-          <FAQMini />
-          <PricingCard />
-          <FeaturesGrid />
-          <HowItWorksCard />
-        </div>
-        <CapabilitiesShowcase />
+        {view === 'landing' ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-grow">
+              <ChatPreview />
+              <Hero onLaunch={() => setView('app')} />
+              <FAQMini />
+              <PricingCard />
+              <FeaturesGrid />
+              <HowItWorksCard />
+            </div>
+            <CapabilitiesShowcase />
+          </>
+        ) : (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex flex-col gap-6"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">Maria Workspace</h2>
+                <p className="text-sm text-muted">Your dedicated AI environment</p>
+              </div>
+              <button 
+                onClick={() => setView('landing')}
+                className="text-xs font-medium px-4 py-2 border border-border rounded-lg hover:bg-card transition-colors"
+              >
+                Back to Home
+              </button>
+            </div>
+            <ChatPreview isFullApp />
+          </motion.div>
+        )}
       </main>
 
       <Footer onOpenLegal={setActiveModal} />
