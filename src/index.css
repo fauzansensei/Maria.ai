@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #09090b;
+  --color-card: #18181b;
+  --color-border: #27272a;
+  --color-text: #fafafa;
+  --color-muted: #a1a1aa;
+  --color-accent: #3b82f6;
+  --color-accent-glow: rgba(59, 130, 246, 0.15);
+  --color-success: #22c55e;
+}
+
+@layer base {
+  body {
+    @apply bg-bg text-text font-sans;
+  }
+
+  .bento-card {
+    @apply bg-card border border-border rounded-2xl p-6 relative overflow-hidden transition-all duration-300;
+  }
+
+  .bento-grid {
+    @apply grid gap-4;
+  }
+}
