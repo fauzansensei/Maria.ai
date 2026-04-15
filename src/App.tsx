@@ -103,7 +103,7 @@ const Navbar = () => {
 
 const Hero = () => {
   return (
-    <div className="bento-card col-span-1 md:col-span-2 flex flex-col justify-center bg-[radial-gradient(circle_at_top_right,var(--color-accent-glow),transparent)]">
+    <div className="bento-card col-span-1 md:col-span-1 flex flex-col justify-center bg-[radial-gradient(circle_at_top_right,var(--color-accent-glow),transparent)]">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -112,18 +112,27 @@ const Hero = () => {
         <span className="inline-block px-3 py-1 mb-4 text-[10px] font-bold tracking-widest uppercase bg-border rounded-full text-muted border border-border">
           Your Personal AI Partner
         </span>
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 leading-[1.1] text-text">
-          Meet Maria — Your Fast & <span className="text-muted">Intelligent AI Companion</span>
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 leading-[1.1] text-text">
+          Meet <span className="text-accent">Maria</span>
         </h1>
-        <p className="text-base text-muted mb-8 max-w-md leading-relaxed">
-          Experience the next generation of conversational intelligence. Maria AI delivers smart conversations, instant answers, and creative support in one clean interface.
+        <p className="text-sm text-muted mb-6 max-w-md leading-relaxed">
+          Your fast & intelligent AI companion for smart conversations and instant answers.
         </p>
         <div className="flex flex-wrap items-center gap-3">
-          <button className="bg-text text-bg px-6 py-2.5 rounded-lg font-semibold text-sm hover:opacity-90 transition-all flex items-center justify-center gap-2 group shadow-xl">
+          <button 
+            onClick={() => {
+              document.getElementById('chat-container')?.scrollIntoView({ behavior: 'smooth' });
+              setTimeout(() => document.getElementById('chat-input')?.focus(), 800);
+            }}
+            className="bg-text text-bg px-6 py-2.5 rounded-lg font-semibold text-sm hover:opacity-90 transition-all flex items-center justify-center gap-2 group shadow-xl"
+          >
             Start Chatting
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </button>
-          <button className="bg-border border border-border text-text px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-card transition-all">
+          <button 
+            onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+            className="bg-border border border-border text-text px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-card transition-all"
+          >
             See Demo
           </button>
         </div>
@@ -147,8 +156,8 @@ const ChatPreview = () => {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    }, 60000);
+      setTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    }, 1000);
 
     if ('getBattery' in navigator) {
       (navigator as any).getBattery().then((batt: any) => {
@@ -181,14 +190,21 @@ const ChatPreview = () => {
     setIsLoading(true);
 
     try {
+      const currentBattery = battery !== null ? `${battery}%` : 'unknown';
+      const currentTime = new Date().toLocaleTimeString();
+      
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-latest",
+        model: "gemini-3-flash-preview",
         contents: messages.concat(userMsg).map(m => ({
           role: m.type === 'user' ? 'user' : 'model',
           parts: [{ text: m.text }]
         })),
         config: {
-          systemInstruction: "You are Maria, a fast and intelligent AI companion. Your tone is helpful, witty, and concise. Use markdown for code blocks. Keep responses brief and engaging."
+          systemInstruction: `You are Maria, a fast and intelligent AI companion. Your tone is helpful, witty, and concise. Use markdown for code blocks. Keep responses brief and engaging. 
+          SYSTEM AWARENESS: 
+          - Current Time: ${currentTime}
+          - Battery Level: ${currentBattery}
+          Always use this real-time data if the user asks about time or battery.`
         }
       });
 
@@ -233,14 +249,21 @@ const ChatPreview = () => {
     setIsLoading(true);
 
     try {
+      const currentBattery = battery !== null ? `${battery}%` : 'unknown';
+      const currentTime = new Date().toLocaleTimeString();
+
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-latest",
+        model: "gemini-3-flash-preview",
         contents: previousMessages.map(m => ({
           role: m.type === 'user' ? 'user' : 'model',
           parts: [{ text: m.text }]
         })),
         config: {
-          systemInstruction: "You are Maria, a fast and intelligent AI companion. Your tone is helpful, witty, and concise. Use markdown for code blocks. Keep responses brief and engaging."
+          systemInstruction: `You are Maria, a fast and intelligent AI companion. Your tone is helpful, witty, and concise. Use markdown for code blocks. Keep responses brief and engaging.
+          SYSTEM AWARENESS:
+          - Current Time: ${currentTime}
+          - Battery Level: ${currentBattery}
+          Always use this real-time data if the user asks about time or battery.`
         }
       });
 
@@ -261,18 +284,23 @@ const ChatPreview = () => {
   };
 
   return (
-    <div className="bento-card col-span-1 md:row-span-2 bg-black flex flex-col border-border overflow-hidden h-[500px] md:h-full bg-[radial-gradient(circle_at_bottom_left,var(--color-accent-glow),transparent)]">
+    <div id="chat-container" className="bento-card col-span-1 md:col-span-2 md:row-span-2 bg-black flex flex-col border-border overflow-hidden h-[500px] md:h-full bg-[radial-gradient(circle_at_bottom_left,var(--color-accent-glow),transparent)] scroll-mt-24">
       <div className="text-[10px] uppercase tracking-[1px] text-muted mb-4 pb-2 border-b border-border flex items-center justify-between shrink-0 gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
           <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse shrink-0" />
           <span className="truncate">Conversational Stream</span>
         </div>
-        <div className="flex items-center gap-2 shrink-0 bg-border/30 px-2 py-0.5 rounded-full border border-border/50">
+        <div className="flex items-center gap-2 shrink-0 bg-accent/10 px-2 py-0.5 rounded-full border border-accent/20">
+          <div className="flex items-center gap-1 text-accent">
+            <div className="w-1 h-1 rounded-full bg-accent animate-ping" />
+            <span className="text-[9px] font-bold">LIVE</span>
+          </div>
+          <div className="w-[1px] h-2.5 bg-accent/20" />
           <div className="flex items-center gap-1">
             <Clock className="w-2.5 h-2.5" />
-            <span>{time}</span>
+            <span className="font-mono">{time}</span>
           </div>
-          <div className="w-[1px] h-2.5 bg-border" />
+          <div className="w-[1px] h-2.5 bg-accent/20" />
           <div className="flex items-center gap-1">
             {getBatteryIcon()}
             <span>{battery !== null ? `${battery}%` : '--%'}</span>
@@ -352,6 +380,7 @@ const ChatPreview = () => {
       <div className="mt-auto pt-4 border-t border-border shrink-0">
         <div className="bg-bg border border-border rounded-xl p-2 flex items-center gap-2 focus-within:border-accent transition-colors">
           <input 
+            id="chat-input"
             type="text" 
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
@@ -422,7 +451,7 @@ const PricingCard = () => {
 
 const HowItWorksCard = () => {
   return (
-    <div className="bento-card flex flex-col justify-center">
+    <div id="how-it-works" className="bento-card flex flex-col justify-center scroll-mt-24">
       <div className="text-[11px] uppercase tracking-[1px] text-muted mb-4 border-b border-border pb-2">How it works</div>
       <div className="flex items-center justify-between gap-2">
         {[
@@ -801,8 +830,8 @@ export default function App() {
       
       <main className="mt-24 flex-grow max-w-7xl mx-auto w-full flex flex-col gap-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-grow">
-          <Hero />
           <ChatPreview />
+          <Hero />
           <FAQMini />
           <PricingCard />
           <FeaturesGrid />
