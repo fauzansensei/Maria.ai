@@ -64,11 +64,14 @@ const Navbar = ({ onViewChange, currentView }: { onViewChange: (view: 'landing' 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled || currentView === 'app' ? 'bg-bg/80 backdrop-blur-md border-b border-border py-3 shadow-sm' : 'bg-transparent py-5'}`}>
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => onViewChange('landing')}>
-          <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+        <div className="flex items-center gap-2 cursor-pointer group" onClick={() => onViewChange('landing')}>
+          <div className="w-9 h-9 bg-accent rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.4)] group-hover:scale-110 transition-transform duration-300">
             <Sparkles className="text-white w-5 h-5" />
           </div>
-          <span className="text-xl font-bold tracking-tight text-text">Maria.ai</span>
+          <div className="flex flex-col -space-y-1">
+            <span className="text-xl font-bold tracking-tight text-text">Maria.ai</span>
+            <span className="text-[8px] font-bold tracking-[2px] text-accent uppercase">Intelligence</span>
+          </div>
         </div>
 
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted">
@@ -851,13 +854,29 @@ const CapabilitiesShowcase = () => {
 
 const Footer = ({ onOpenLegal }: { onOpenLegal: (type: 'privacy' | 'terms' | 'help') => void }) => {
   return (
-    <footer className="mt-8 pt-6 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4 text-[11px] text-muted">
-      <div>&copy; 2024 Maria AI Systems. Built for high-performance teams.</div>
-      <div className="flex gap-6">
-        <span className="hover:text-text cursor-pointer transition-colors">GitHub</span>
-        <span onClick={() => onOpenLegal('privacy')} className="hover:text-text cursor-pointer transition-colors">Privacy Policy</span>
-        <span onClick={() => onOpenLegal('terms')} className="hover:text-text cursor-pointer transition-colors">Terms</span>
-        <span onClick={() => onOpenLegal('help')} className="hover:text-text cursor-pointer transition-colors">Contact</span>
+    <footer className="mt-8 pt-12 pb-8 border-t border-border flex flex-col gap-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 bg-accent rounded-md flex items-center justify-center">
+            <Sparkles className="text-white w-3.5 h-3.5" />
+          </div>
+          <span className="text-lg font-bold tracking-tight text-text">Maria.ai</span>
+        </div>
+        
+        <div className="flex flex-wrap gap-x-8 gap-y-4 text-[11px] font-medium text-muted">
+          <span className="hover:text-text cursor-pointer transition-colors">GitHub</span>
+          <span onClick={() => onOpenLegal('privacy')} className="hover:text-text cursor-pointer transition-colors">Privacy Policy</span>
+          <span onClick={() => onOpenLegal('terms')} className="hover:text-text cursor-pointer transition-colors">Terms of Service</span>
+          <span onClick={() => onOpenLegal('help')} className="hover:text-text cursor-pointer transition-colors">Help Center</span>
+        </div>
+      </div>
+      
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] text-muted/60 border-t border-border/50 pt-6">
+        <div>&copy; {new Date().getFullYear()} Maria AI Systems. All rights reserved.</div>
+        <div className="flex gap-4">
+          <span>Status: <span className="text-success">Operational</span></span>
+          <span>Version: 2.1.0</span>
+        </div>
       </div>
     </footer>
   );
