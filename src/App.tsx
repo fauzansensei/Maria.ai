@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
+import { languages, translations } from './languages';
 
 // Safe API initialization helper
 const getApiKey = () => {
@@ -51,9 +52,11 @@ const getApiKey = () => {
 
 // --- Components ---
 
-const Navbar = ({ onViewChange, currentView }: { onViewChange: (view: 'landing' | 'app') => void, currentView: string }) => {
+const Navbar = ({ onViewChange, currentView, language, setLanguage }: { onViewChange: (view: 'landing' | 'app') => void, currentView: string, language: string, setLanguage: (lang: string) => void }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLangOpen, setIsLangOpen] = useState(false);
+  const t = translations[language] || translations.id;
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -75,10 +78,43 @@ const Navbar = ({ onViewChange, currentView }: { onViewChange: (view: 'landing' 
         </div>
 
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted">
-          <button onClick={() => onViewChange('landing')} className={`hover:text-text transition-colors ${currentView === 'landing' ? 'text-text' : ''}`}>Home</button>
-          <a href="#features" className="hover:text-text transition-colors">Features</a>
-          <a href="#how-it-works" className="hover:text-text transition-colors">How it works</a>
-          <a href="#pricing" className="hover:text-text transition-colors">Pricing</a>
+          <button onClick={() => onViewChange('landing')} className={`hover:text-text transition-colors ${currentView === 'landing' ? 'text-text' : ''}`}>{t.navHome}</button>
+          <a href="#features" className="hover:text-text transition-colors">{t.navFeatures}</a>
+          <a href="#how-it-works" className="hover:text-text transition-colors">{t.navHow}</a>
+          <a href="#pricing" className="hover:text-text transition-colors">{t.navPricing}</a>
+          
+          {/* Language Selector Desktop */}
+          <div className="relative">
+            <button 
+              onClick={() => setIsLangOpen(!isLangOpen)}
+              className="flex items-center gap-1.5 hover:text-text transition-colors uppercase tracking-widest text-[10px] font-bold"
+            >
+              <Globe className="w-3.5 h-3.5" />
+              {language}
+              <ChevronDown className={`w-3 h-3 transition-transform ${isLangOpen ? 'rotate-180' : ''}`} />
+            </button>
+            <AnimatePresence>
+              {isLangOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute top-full right-0 mt-2 w-56 max-h-[400px] overflow-y-auto bg-card border border-border rounded-2xl shadow-2xl p-2 z-[60] custom-scrollbar grid grid-cols-1 gap-1"
+                >
+                  {languages.map(lang => (
+                    <button
+                      key={lang.id}
+                      onClick={() => { setLanguage(lang.id); setIsLangOpen(false); }}
+                      className={`flex flex-col items-start px-3 py-2 rounded-xl transition-colors ${language === lang.id ? 'bg-accent text-white' : 'hover:bg-border'}`}
+                    >
+                      <span className="text-[11px] font-bold">{lang.native}</span>
+                      <span className={`text-[9px] ${language === lang.id ? 'opacity-80' : 'text-muted'}`}>{lang.name}</span>
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         <div className="hidden md:flex items-center gap-4">
@@ -87,12 +123,12 @@ const Navbar = ({ onViewChange, currentView }: { onViewChange: (view: 'landing' 
               onClick={() => onViewChange('app')}
               className="bg-text text-bg text-sm font-medium px-5 py-2.5 rounded-lg hover:opacity-90 transition-all shadow-lg shadow-black/5"
             >
-              Start Chatting
+              {t.startChat}
             </button>
           ) : (
             <div className="flex items-center gap-2 text-xs font-mono text-success bg-success/10 px-3 py-1.5 rounded-full border border-success/20">
               <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-              SYSTEM ACTIVE
+              {t.systemActive}
             </div>
           )}
         </div>
@@ -111,11 +147,27 @@ const Navbar = ({ onViewChange, currentView }: { onViewChange: (view: 'landing' 
             exit={{ opacity: 0, y: -20 }}
             className="absolute top-full left-0 right-0 bg-card border-b border-border p-6 flex flex-col gap-4 md:hidden shadow-xl"
           >
-            <button onClick={() => { onViewChange('landing'); setIsMobileMenuOpen(false); }} className="text-left text-lg font-medium text-text">Home</button>
-            <a href="#features" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-medium text-text">Features</a>
-            <a href="#how-it-works" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-medium text-text">How it works</a>
+            <button onClick={() => { onViewChange('landing'); setIsMobileMenuOpen(false); }} className="text-left text-lg font-medium text-text">{t.navHome}</button>
+            <a href="#features" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-medium text-text">{t.navFeatures}</a>
+            <a href="#how-it-works" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-medium text-text">{t.navHow}</a>
+            
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] font-bold text-muted uppercase tracking-[2px] mt-2">Change Language</span>
+              <div className="flex flex-wrap gap-2">
+                {languages.filter(l => l.id === 'id' || l.id === 'en' || l.id === 'jv' || l.id === 'su').map(lang => (
+                  <button
+                    key={lang.id}
+                    onClick={() => { setLanguage(lang.id); setIsMobileMenuOpen(false); }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${language === lang.id ? 'bg-accent border-accent text-white' : 'border-border text-muted'}`}
+                  >
+                    {lang.native}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
             <hr className="border-border" />
-            <button onClick={() => { onViewChange('app'); setIsMobileMenuOpen(false); }} className="bg-text text-bg py-3 rounded-xl font-medium">Start Chatting</button>
+            <button onClick={() => { onViewChange('app'); setIsMobileMenuOpen(false); }} className="bg-text text-bg py-4 rounded-2xl font-bold">{t.startChat}</button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -123,7 +175,8 @@ const Navbar = ({ onViewChange, currentView }: { onViewChange: (view: 'landing' 
   );
 };
 
-const Hero = ({ onLaunch }: { onLaunch: () => void }) => {
+const Hero = ({ onLaunch, language }: { onLaunch: () => void, language: string }) => {
+  const t = translations[language] || translations.id;
   return (
     <div className="bento-card col-span-1 md:col-span-1 flex flex-col justify-center bg-[radial-gradient(circle_at_top_right,var(--color-accent-glow),transparent)]">
       <motion.div
@@ -132,27 +185,27 @@ const Hero = ({ onLaunch }: { onLaunch: () => void }) => {
         transition={{ duration: 0.6 }}
       >
         <span className="inline-block px-3 py-1 mb-4 text-[10px] font-bold tracking-widest uppercase bg-border rounded-full text-muted border border-border">
-          Your Personal AI Partner
+          {t.heroTag}
         </span>
         <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 leading-[1.1] text-text">
-          Meet <span className="text-accent">Maria</span>
+          {t.heroTitle} <span className="text-accent">Maria</span>
         </h1>
         <p className="text-sm text-muted mb-6 max-w-md leading-relaxed">
-          Your fast & intelligent AI companion for smart conversations and instant answers.
+          {t.heroDesc}
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <button 
             onClick={onLaunch}
             className="bg-text text-bg px-6 py-2.5 rounded-lg font-semibold text-sm hover:opacity-90 transition-all flex items-center justify-center gap-2 group shadow-xl"
           >
-            Start Chatting
+            {t.startChat}
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </button>
           <button 
             onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
             className="bg-border border border-border text-text px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-card transition-all"
           >
-            See Demo
+            {t.seeDemo}
           </button>
         </div>
       </motion.div>
@@ -160,7 +213,9 @@ const Hero = ({ onLaunch }: { onLaunch: () => void }) => {
   );
 };
 
-const ChatPreview = ({ isFullApp = false }: { isFullApp?: boolean }) => {
+const ChatPreview = ({ isFullApp = false, language = 'id' }: { isFullApp?: boolean, language?: string }) => {
+  const t = translations[language] || translations.id;
+  const langName = languages.find(l => l.id === language)?.name || 'Indonesian';
   const [messages, setMessages] = useState([
     { id: 1, type: 'user', text: "Can you explain quantum entanglement like I'm five?", isEditing: false },
     { id: 2, type: 'ai', text: "Imagine you have two magical socks. If you put one on your left foot in London, the other instantly knows it's the right-foot sock, even if it's on Mars!", feedback: null },
@@ -202,9 +257,9 @@ const ChatPreview = ({ isFullApp = false }: { isFullApp?: boolean }) => {
 
   useEffect(() => {
     if (messages.length === 0) {
-      setMessages([{ id: 0, type: 'ai', text: "Hello! I'm Maria, your fast and intelligent AI companion. How can I help you today?", feedback: null }]);
+      setMessages([{ id: 0, type: 'ai', text: `Hello! I'm Maria. I'm currently using ${langName} as my primary communication mode. How can I help you?`, feedback: null }]);
     }
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -233,6 +288,10 @@ const ChatPreview = ({ isFullApp = false }: { isFullApp?: boolean }) => {
         })),
         config: {
           systemInstruction: `You are Maria, a fast and intelligent AI companion. Your tone is helpful, witty, and concise. Use markdown for code blocks. Keep responses brief and engaging. 
+          
+          LANGUAGE CONTEXT:
+          - Target Language: ${langName} (${language})
+          - Your primary language for this session is ${langName}. Please respond in that language unless asked otherwise.
           
           CRITICAL REAL-TIME SYSTEM DATA:
           - Current Time: ${currentTime}
@@ -300,6 +359,9 @@ const ChatPreview = ({ isFullApp = false }: { isFullApp?: boolean }) => {
         config: {
           systemInstruction: `You are Maria, a fast and intelligent AI companion. Your tone is helpful, witty, and concise. Use markdown for code blocks. Keep responses brief and engaging.
           
+          LANGUAGE CONTEXT:
+          - Target Language: ${langName}
+          
           CRITICAL REAL-TIME SYSTEM DATA:
           - Current Time: ${currentTime}
           - Device Battery: ${currentBattery}
@@ -333,12 +395,12 @@ const ChatPreview = ({ isFullApp = false }: { isFullApp?: boolean }) => {
       <div className="text-[10px] uppercase tracking-[1px] text-muted mb-4 pb-2 border-b border-border flex items-center justify-between shrink-0 gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
           <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse shrink-0" />
-          <span className="truncate">Conversational Stream</span>
+          <span className="truncate">{t.streamTitle}</span>
         </div>
         <div className="flex items-center gap-2 shrink-0 bg-accent/10 px-2 py-0.5 rounded-full border border-accent/20">
           <div className="flex items-center gap-1 text-accent">
             <div className="w-1 h-1 rounded-full bg-accent animate-ping" />
-            <span className="text-[9px] font-bold">LIVE</span>
+            <span className="text-[9px] font-bold">{t.live}</span>
           </div>
           <div className="w-[1px] h-2.5 bg-accent/20" />
           <div className="flex items-center gap-1">
@@ -358,87 +420,107 @@ const ChatPreview = ({ isFullApp = false }: { isFullApp?: boolean }) => {
           <div key={msg.id} className={`flex flex-col gap-2 ${msg.type === 'user' ? 'items-end' : 'items-start'}`}>
             <div className={`relative group max-w-[90%] ${msg.type === 'user' ? 'bg-accent text-white rounded-2xl rounded-tr-none shadow-lg shadow-accent/20' : 'bg-border text-text rounded-2xl rounded-tl-none border border-border'} p-3 text-xs transition-all duration-200`}>
               {msg.isEditing ? (
-                <textarea 
-                  autoFocus
-                  className="bg-transparent border-none outline-none w-full resize-none text-white min-h-[40px]"
-                  defaultValue={msg.text}
-                  onBlur={(e) => handleEdit(msg.id, e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleEdit(msg.id, e.currentTarget.value);
-                    }
-                  }}
-                />
-              ) : (
-                <div className={`${msg.isCode ? 'font-mono whitespace-pre bg-black/30 p-2 rounded-lg mt-1 overflow-x-auto' : ''} break-words`}>
-                  {msg.text}
+                <div className="flex flex-col gap-2">
+                  <textarea 
+                    autoFocus
+                    className="bg-bg/50 border border-white/10 rounded-xl p-2 text-white outline-none w-full min-h-[60px]"
+                    defaultValue={msg.text}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleEdit(msg.id, e.currentTarget.value);
+                      }
+                      if (e.key === 'Escape') toggleEdit(msg.id);
+                    }}
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => toggleEdit(msg.id)} className="px-2 py-1 text-[10px] bg-white/10 rounded-lg">Cancel</button>
+                    <button 
+                      onClick={(e) => {
+                        const textarea = e.currentTarget.parentElement?.previousElementSibling as HTMLTextAreaElement;
+                        handleEdit(msg.id, textarea.value);
+                      }}
+                      className="px-2 py-1 text-[10px] bg-white text-bg rounded-lg font-bold"
+                    >Save</button>
+                  </div>
                 </div>
-              )}
+              ) : (
+                <>
+                  <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.text}</p>
+                  
+                  {/* Action Buttons */}
+                  <div className={`absolute top-0 ${msg.type === 'user' ? 'right-full mr-2' : 'left-full ml-2'} opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 pointer-events-none group-hover:pointer-events-auto`}>
+                    <button onClick={() => handleCopy(msg.text)} className="p-1.5 bg-card/80 backdrop-blur-md border border-border rounded-lg hover:bg-border transition-all shadow-xl" title="Copy">
+                      <Copy className="w-3 h-3 text-muted" />
+                    </button>
+                    {msg.type === 'user' && (
+                      <button onClick={() => toggleEdit(msg.id)} className="p-1.5 bg-card/80 backdrop-blur-md border border-border rounded-lg hover:bg-border transition-all shadow-xl" title="Edit">
+                        <Edit2 className="w-3 h-3 text-muted" />
+                      </button>
+                    )}
+                    {msg.type === 'ai' && (
+                      <button onClick={() => handleRegenerate(msg.id)} className="p-1.5 bg-card/80 backdrop-blur-md border border-border rounded-lg hover:bg-border transition-all shadow-xl" title="Regenerate">
+                        <RefreshCw className={`w-3 h-3 text-muted ${isLoading ? 'animate-spin' : ''}`} />
+                      </button>
+                    )}
+                  </div>
 
-              <div className={`absolute -bottom-6 ${msg.type === 'user' ? 'right-0' : 'left-0'} flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity pt-2 z-10`}>
-                <button onClick={() => handleCopy(msg.text)} className="p-1 hover:text-accent transition-colors bg-black/50 rounded-md backdrop-blur-sm" title="Copy">
-                  <Copy className="w-3 h-3" />
-                </button>
-                {msg.type === 'user' && (
-                  <button onClick={() => toggleEdit(msg.id)} className="p-1 hover:text-accent transition-colors bg-black/50 rounded-md backdrop-blur-sm" title="Edit">
-                    <Edit2 className="w-3 h-3" />
-                  </button>
-                )}
-                {msg.type === 'ai' && (
-                  <>
-                    <button onClick={() => handleRegenerate(msg.id)} className="p-1 hover:text-accent transition-colors bg-black/50 rounded-md backdrop-blur-sm" title="Regenerate">
-                      <RefreshCw className="w-3 h-3" />
-                    </button>
-                    <button 
-                      onClick={() => handleFeedback(msg.id, 'up')} 
-                      className={`p-1 transition-colors bg-black/50 rounded-md backdrop-blur-sm ${msg.feedback === 'up' ? 'text-success' : 'hover:text-success'}`}
-                    >
-                      <ThumbsUp className="w-3 h-3" />
-                    </button>
-                    <button 
-                      onClick={() => handleFeedback(msg.id, 'down')} 
-                      className={`p-1 transition-colors bg-black/50 rounded-md backdrop-blur-sm ${msg.feedback === 'down' ? 'text-red-500' : 'hover:text-red-500'}`}
-                    >
-                      <ThumbsDown className="w-3 h-3" />
-                    </button>
-                  </>
-                )}
-              </div>
+                  {/* Feedback Buttons for AI */}
+                  {msg.type === 'ai' && (
+                    <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handleFeedback(msg.id, 'up')}
+                          className={`p-1.5 rounded-lg transition-all ${msg.feedback === 'up' ? 'bg-success/20 text-success' : 'hover:bg-white/5 text-muted'}`}
+                        >
+                          <ThumbsUp className="w-3 h-3" />
+                        </button>
+                        <button 
+                          onClick={() => handleFeedback(msg.id, 'down')}
+                          className={`p-1.5 rounded-lg transition-all ${msg.feedback === 'down' ? 'bg-red-500/20 text-red-500' : 'hover:bg-white/5 text-muted'}`}
+                        >
+                          <ThumbsDown className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         ))}
         {isLoading && (
-          <div className="flex items-start gap-2">
-            <div className="bg-border text-text p-3 rounded-2xl rounded-tl-none border border-border text-xs flex items-center gap-2">
-              <div className="flex gap-1">
-                <div className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce [animation-delay:-0.3s]" />
-                <div className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce [animation-delay:-0.15s]" />
-                <div className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce" />
-              </div>
-              Maria is thinking...
+          <div className="flex flex-col gap-2 items-start">
+            <div className="bg-border/50 text-text rounded-2xl rounded-tl-none border border-border p-4 flex gap-1.5 shadow-sm">
+              <span className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+              <span className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+              <span className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce"></span>
             </div>
           </div>
         )}
       </div>
 
-      <div className="mt-auto pt-4 border-t border-border shrink-0">
-        <div className="bg-bg border border-border rounded-xl p-2 flex items-center gap-2 focus-within:border-accent transition-colors">
+      <div className="mt-4 pt-4 border-t border-border bg-black/50 backdrop-blur-md relative shrink-0">
+        <div className="flex items-center gap-3 bg-card border border-border rounded-2xl p-2 focus-within:ring-2 focus-within:ring-accent/50 focus-within:border-accent transition-all shadow-xl">
           <input 
             id="chat-input"
             type="text" 
+            placeholder={t.inputPlaceholder}
+            className="flex-grow bg-transparent border-none outline-none px-4 text-xs font-medium placeholder:text-muted/50"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Ask Maria anything..." 
-            className="bg-transparent border-none outline-none flex-grow text-xs px-2 text-text py-1"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !isLoading && inputText.trim()) {
+                handleSend();
+              }
+            }}
           />
           <button 
+            disabled={!inputText.trim() || isLoading}
             onClick={handleSend}
-            disabled={isLoading || !inputText.trim()}
-            className={`bg-accent text-white p-1.5 rounded-lg transition-all ${isLoading || !inputText.trim() ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90 hover:scale-105 active:scale-95'}`}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all shadow-lg ${inputText.trim() && !isLoading ? 'bg-accent text-white hover:scale-105 active:scale-95 shadow-accent/20' : 'bg-border text-muted opacity-50'}`}
           >
-            <ArrowRight className="w-4 h-4" />
+            <Zap className={`w-4 h-4 ${isLoading ? 'animate-pulse' : ''}`} />
           </button>
         </div>
       </div>
@@ -885,17 +967,19 @@ const Footer = ({ onOpenLegal }: { onOpenLegal: (type: 'privacy' | 'terms' | 'he
 export default function App() {
   const [activeModal, setActiveModal] = useState<'privacy' | 'terms' | 'help' | null>(null);
   const [view, setView] = useState<'landing' | 'app'>('landing');
+  const [language, setLanguage] = useState('id');
+  const t = translations[language] || translations.id;
 
   return (
     <div className="min-h-screen bg-bg text-text font-sans p-4 md:p-12 flex flex-col gap-8 selection:bg-accent selection:text-white">
-      <Navbar onViewChange={setView} currentView={view} />
+      <Navbar onViewChange={setView} currentView={view} language={language} setLanguage={setLanguage} />
       
       <main className="mt-24 flex-grow max-w-7xl mx-auto w-full flex flex-col gap-8">
         {view === 'landing' ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-grow">
-              <ChatPreview />
-              <Hero onLaunch={() => setView('app')} />
+              <ChatPreview language={language} />
+              <Hero onLaunch={() => setView('app')} language={language} />
               <FAQMini />
               <PricingCard />
               <FeaturesGrid />
@@ -911,17 +995,17 @@ export default function App() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold">Maria Workspace</h2>
-                <p className="text-sm text-muted">Your dedicated AI environment</p>
+                <h2 className="text-2xl font-bold">{t.workspaceTitle}</h2>
+                <p className="text-sm text-muted">{t.workspaceDesc}</p>
               </div>
               <button 
                 onClick={() => setView('landing')}
                 className="text-xs font-medium px-4 py-2 border border-border rounded-lg hover:bg-card transition-colors"
               >
-                Back to Home
+                {t.backHome}
               </button>
             </div>
-            <ChatPreview isFullApp />
+            <ChatPreview isFullApp language={language} />
           </motion.div>
         )}
       </main>
