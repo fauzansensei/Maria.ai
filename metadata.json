@@ -1,0 +1,6 @@
+{
+  "name": "Maria AI Agent",
+  "description": "A sophisticated AI agent named Maria designed for advanced information retrieval, featuring local language support and system utilities.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": []
+}

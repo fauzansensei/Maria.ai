@@ -1,0 +1,719 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState, useEffect, useCallback, type ReactNode } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from './lib/firebase';
+import MariaAgent from './components/MariaAgent';
+import MultiUtilityWidget from './components/MultiUtilityWidget';
+import UserProfile from './components/UserProfile';
+import NotificationCenter from './components/NotificationCenter';
+import { 
+  Search, Info, Settings, User as UserIcon, 
+  Menu, X, Clock, Globe, Plus, MoreVertical, ChevronRight, Sparkles, Notebook,
+  Share2, MessageCircle, MessageSquare, Edit2, Pin, PinOff, Trash2, Bell
+} from 'lucide-react';
+import { ChatSession, UserNotification, SUPPORTED_LANGUAGES } from './types';
+import { getTranslation } from './translations';
+
+export default function App() {
+  const [language, setLanguage] = useState('id');
+  const t = getTranslation(language);
+  const [user, setUser] = useState<User | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  const updateUnreadCount = useCallback(() => {
+    const saved = localStorage.getItem('maria_notifications');
+    if (saved) {
+      const notifs: UserNotification[] = JSON.parse(saved);
+      setUnreadNotifications(notifs.filter(n => !n.isRead).length);
+    } else {
+      setUnreadNotifications(0);
+    }
+  }, []);
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [isLiteMode, setIsLiteMode] = useState(false);
+  const [isDark, setIsDark] = useState(false);
+  const [isPlus, setIsPlus] = useState(false);
+  const [userName, setUserName] = useState('Pengguna');
+  const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [activeChatId, setActiveChatId] = useState<string>('');
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renamingTitle, setRenamingTitle] = useState('');
+
+  const loadProfile = () => {
+    const savedProfile = localStorage.getItem('maria_profile');
+    if (savedProfile) {
+      try {
+        const profile = JSON.parse(savedProfile);
+        setUserName(profile.name);
+        setUserAvatar(profile.avatar || null);
+        
+        const accentColor = profile.preferences?.accentColor || 'blue';
+        const theme = profile.preferences?.theme || 'light';
+        
+        const colors: Record<string, string> = {
+          blue: '#001B3D',
+          teal: '#14B8A6',
+          gold: '#FBBF24',
+          purple: '#7E22CE',
+          green: '#22c55e',
+          red: '#ef4444',
+          pink: '#db2777',
+          amber: '#d97706',
+          slate: '#475569',
+          yellow: '#eab308'
+        };
+        
+        const finalAccent = colors[accentColor] || colors.blue;
+        document.documentElement.style.setProperty('--maria-accent', finalAccent);
+        setIsLiteMode(profile.preferences?.performanceMode || false);
+        setIsPlus(profile.isPlus || false);
+
+        if (profile.preferences?.language) {
+          setLanguage(profile.preferences.language);
+        }
+
+        // Handle theme independently of focus mode
+        if (theme === 'system') {
+          const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          setIsDark(isSystemDark);
+        } else if (theme === 'dark') {
+          setIsDark(true);
+        } else {
+          setIsDark(false);
+        }
+      } catch (e) {}
+    }
+  };
+
+  const loadChats = (forceId?: string) => {
+    // Migration logic
+    const migrateLegacyHistory = () => {
+      const legacyHistory = localStorage.getItem('maria_chat_history');
+      const chatsStr = localStorage.getItem('maria_chats');
+      
+      if (legacyHistory && !chatsStr) {
+        const messages = JSON.parse(legacyHistory);
+        const firstUserMsg = messages.find((m: any) => m.role === 'user');
+        const title = firstUserMsg ? (firstUserMsg.content.substring(0, 35) + (firstUserMsg.content.length > 35 ? '...' : '')) : 'Migration Chat';
+        const newId = 'legacy-' + Date.now();
+        const initialChats = {
+          [newId]: {
+            id: newId,
+            title,
+            messages,
+            updatedAt: Date.now()
+          }
+        };
+        localStorage.setItem('maria_chats', JSON.stringify(initialChats));
+        localStorage.removeItem('maria_chat_history');
+        return newId;
+      }
+      return null;
+    };
+
+    const migratedId = migrateLegacyHistory();
+    const chatsStr = localStorage.getItem('maria_chats');
+    if (chatsStr) {
+      try {
+        const chatsObj = JSON.parse(chatsStr);
+        const sessions = Object.values(chatsObj) as ChatSession[];
+        const sortedSessions = sessions.sort((a, b) => b.updatedAt - a.updatedAt);
+        setChatSessions(sortedSessions);
+        
+        if (!activeChatId || forceId) {
+          const targetId = forceId || migratedId || sortedSessions[0]?.id || 'initial-chat';
+          setActiveChatId(targetId);
+        }
+      } catch (e) {
+        console.error("Failed to parse chats", e);
+      }
+    } else {
+      const defaultId = migratedId || 'initial-chat';
+      setActiveChatId(defaultId);
+    }
+  };
+
+  useEffect(() => {
+    if (window.innerWidth >= 1024) {
+      setIsSidebarOpen(true);
+    }
+
+    loadProfile();
+    loadChats();
+    updateUnreadCount();
+
+    const handleStorage = () => {
+      loadProfile();
+      loadChats();
+      updateUnreadCount();
+    };
+
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('maria_new_notification', updateUnreadCount);
+    
+    // Check for persisted mock user
+    const savedMockUser = localStorage.getItem('maria_mock_user');
+    if (savedMockUser) {
+      try {
+        const mockUser = JSON.parse(savedMockUser);
+        setUser(mockUser);
+        setUserName(mockUser.displayName);
+        setUserAvatar(mockUser.photoURL);
+      } catch (e) {}
+    }
+    
+    let unsubscribe = () => {};
+    if (auth) {
+      unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        setUser(currentUser);
+        if (currentUser) {
+          setUserName(currentUser.displayName || 'Pengguna');
+          setUserAvatar(currentUser.photoURL);
+          
+          // Optionally save to localStorage profile
+          const savedProfile = localStorage.getItem('maria_profile');
+          const profile = savedProfile ? JSON.parse(savedProfile) : { preferences: {} };
+          const nextProfile = {
+            ...profile,
+            name: currentUser.displayName || profile.name || 'Pengguna',
+            email: currentUser.email || profile.email || '',
+            avatar: currentUser.photoURL || profile.avatar
+          };
+          localStorage.setItem('maria_profile', JSON.stringify(nextProfile));
+        }
+      });
+    }
+
+    const handleMockLogin = (e: any) => {
+      setUser(e.detail);
+      setUserName(e.detail.displayName);
+      setUserAvatar(e.detail.photoURL);
+    };
+
+    const handleMockLogout = () => {
+      setUser(null);
+      setUserName('Pengguna');
+      setUserAvatar(undefined);
+    };
+
+    window.addEventListener('maria_mock_login', handleMockLogin);
+    window.addEventListener('maria_mock_logout', handleMockLogout);
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('maria_new_notification', updateUnreadCount);
+      window.removeEventListener('maria_mock_login', handleMockLogin);
+      window.removeEventListener('maria_mock_logout', handleMockLogout);
+      unsubscribe();
+    };
+  }, [updateUnreadCount]);
+
+  const handleNewChat = () => {
+    const newId = Date.now().toString();
+    setActiveChatId(newId);
+    
+    // Create empty session entry
+    const chatsStr = localStorage.getItem('maria_chats');
+    const chatsObj = chatsStr ? JSON.parse(chatsStr) : {};
+    chatsObj[newId] = {
+      id: newId,
+      title: t.newChat,
+      messages: [],
+      updatedAt: Date.now()
+    };
+    localStorage.setItem('maria_chats', JSON.stringify(chatsObj));
+    window.dispatchEvent(new Event('storage'));
+    
+    if (window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
+  };
+
+  const deleteChat = (id: string) => {
+    const chatsStr = localStorage.getItem('maria_chats');
+    if (chatsStr) {
+      const chatsObj = JSON.parse(chatsStr);
+      delete chatsObj[id];
+      localStorage.setItem('maria_chats', JSON.stringify(chatsObj));
+      
+      const remaining = Object.keys(chatsObj);
+      if (activeChatId === id) {
+        const nextId = remaining.length > 0 ? remaining[0] : 'initial-chat';
+        setActiveChatId(nextId);
+        loadChats(nextId);
+      } else {
+        loadChats();
+      }
+      
+      window.dispatchEvent(new Event('storage'));
+    }
+  };
+
+  const togglePin = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    const chatsStr = localStorage.getItem('maria_chats');
+    if (chatsStr) {
+      const chatsObj = JSON.parse(chatsStr);
+      if (chatsObj[id]) {
+        chatsObj[id].isPinned = !chatsObj[id].isPinned;
+        localStorage.setItem('maria_chats', JSON.stringify(chatsObj));
+        window.dispatchEvent(new Event('storage'));
+      }
+    }
+    setMenuOpenId(null);
+  };
+
+  const startRename = (e: React.MouseEvent, session: ChatSession) => {
+    e.stopPropagation();
+    setRenamingId(session.id);
+    setRenamingTitle(session.title);
+    setMenuOpenId(null);
+  };
+
+  const submitRename = () => {
+    if (!renamingId || !renamingTitle.trim()) {
+      setRenamingId(null);
+      return;
+    }
+
+    const chatsStr = localStorage.getItem('maria_chats');
+    if (chatsStr) {
+      const chatsObj = JSON.parse(chatsStr);
+      if (chatsObj[renamingId]) {
+        chatsObj[renamingId].title = renamingTitle.trim();
+        localStorage.setItem('maria_chats', JSON.stringify(chatsObj));
+        window.dispatchEvent(new Event('storage'));
+      }
+    }
+    setRenamingId(null);
+  };
+
+  const getChatGroup = (session: ChatSession) => {
+    if (session.isPinned) return t.chatGroups?.pinned || 'Pinned';
+    
+    const date = new Date(session.updatedAt);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) return t.chatGroups?.today || 'Today';
+    if (date.toDateString() === yesterday.toDateString()) return t.chatGroups?.yesterday || 'Yesterday';
+    return t.chatGroups?.previous || 'Previous';
+  };
+
+  const filteredSessions = chatSessions.filter(s => s.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  const groupedSessions = filteredSessions.reduce((acc, session) => {
+    const group = getChatGroup(session);
+    if (!acc[group]) acc[group] = [];
+    acc[group].push(session);
+    return acc;
+  }, {} as Record<string, ChatSession[]>);
+
+  // Custom sort for sections
+  const sortedGroupKeys = Object.keys(groupedSessions).sort((a, b) => {
+    const order: Record<string, number> = { [t.chatGroups?.pinned || 'Pinned']: 0, [t.chatGroups?.today || 'Today']: 1, [t.chatGroups?.yesterday || 'Yesterday']: 2, [t.chatGroups?.previous || 'Previous']: 3 };
+    return (order[a] ?? 10) - (order[b] ?? 10);
+  });
+
+  const transition = isLiteMode 
+    ? { duration: 0.1 } 
+    : ({ type: 'spring', damping: 25, stiffness: 200 } as any);
+
+  return (
+    <div className={`h-screen w-full flex flex-col font-sans overflow-hidden transition-all ${isLiteMode ? 'duration-100' : 'duration-700'} ${isDark ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
+    {/* Premium Header */}
+    <AnimatePresence mode={isLiteMode ? 'popLayout' : 'wait'}>
+      {!isFocusMode && (
+        <motion.header 
+          initial={isLiteMode ? { opacity: 0 } : { y: -64, opacity: 0 }}
+          animate={isLiteMode ? { opacity: 1 } : { y: 0, opacity: 1 }}
+          exit={isLiteMode ? { opacity: 0 } : { y: -64, opacity: 0 }}
+          className={`h-16 shrink-0 border-b backdrop-blur-md flex items-center justify-between px-4 md:px-6 z-30 transition-colors ${
+            isLiteMode ? 'duration-100' : 'duration-500'
+          } ${
+            isDark ? 'bg-slate-950/80 border-slate-900' : 'bg-white/80 border-slate-200'
+          }`}
+        >
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className={`p-2 rounded-xl transition-all ${
+                  isDark ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-brand-blue hover:bg-slate-100'
+                }`}
+              >
+                <Menu size={24} />
+              </button>
+              
+              <a 
+                href="/maria_logo_humanist.svg" 
+                download="maria_logo_humanist.svg"
+                className="flex items-center gap-3 group px-1 cursor-pointer"
+                title={`Download Maria ${isPlus ? 'Plus' : ''} Logo`}
+              >
+                <div className="relative">
+                  <div className="w-10 h-10 rounded-xl bg-[#001B3D] flex items-center justify-center text-white shadow-lg shadow-blue-900/30 group-hover:scale-105 group-hover:rotate-3 transition-all duration-500 overflow-hidden border border-teal-500/20">
+                    <motion.div
+                      animate={{ opacity: [0.1, 0.3, 0.1] }}
+                      transition={{ duration: 4, repeat: Infinity }}
+                      className="absolute inset-0 bg-gradient-to-tr from-teal-500/20 via-transparent to-amber-400/20"
+                    />
+                    <span className="text-xl font-black text-teal-400 tracking-tighter relative z-10">M</span>
+                    <Sparkles size={12} className="absolute top-1.5 right-1.5 text-amber-400 animate-pulse" />
+                  </div>
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="absolute -top-1 -right-1 w-4 h-4 bg-white dark:bg-slate-950 rounded-full flex items-center justify-center shadow-sm"
+                  >
+                    <div className="w-2.5 h-2.5 bg-teal-500 rounded-full animate-pulse" />
+                  </motion.div>
+                </div>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <h1 className={`text-base font-black tracking-tight leading-none ${isDark ? 'text-white' : 'text-[#001B3D]'}`}>Maria {isPlus ? 'Plus' : ''}</h1>
+                    {!isPlus && (
+                      <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md ${isDark ? 'bg-teal-500/10 border border-teal-500/20' : 'bg-teal-50/50 border border-teal-100'}`}>
+                        <span className="text-[7px] text-teal-600 font-black uppercase tracking-[0.2em]">Free</span>
+                      </div>
+                    )}
+                  </div>
+                  <span className={`text-[9px] font-bold uppercase tracking-widest ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>{isPlus ? 'Professional Assistant' : 'Modern Intelligence'}</span>
+                </div>
+              </a>
+            </div>
+
+            <div className="flex items-center gap-2 md:gap-4">
+              <button 
+                onClick={() => setIsNotificationsOpen(true)}
+                className={`relative p-2 rounded-xl transition-all ${
+                  isDark ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-brand-blue hover:bg-slate-100'
+                }`}
+              >
+                <Bell size={20} />
+                {unreadNotifications > 0 && (
+                  <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 border-2 border-white dark:border-slate-950 rounded-full animate-pulse" />
+                )}
+              </button>
+
+              <button 
+                onClick={() => setIsFocusMode(true)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                  isDark ? 'hover:bg-brand-blue/10 text-brand-blue' : 'hover:bg-brand-blue/5 text-brand-blue'
+                }`}
+              >
+                <Sparkles size={14} />
+                <span className="hidden lg:inline">{t.focusMode}</span>
+              </button>
+
+              <button 
+                onClick={() => setIsProfileOpen(true)}
+                className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-colors ${
+                isDark ? 'bg-slate-900/50 hover:bg-slate-800 text-slate-400' : 'bg-slate-100/50 hover:bg-slate-100 text-slate-600'
+              }`}>
+                  <Globe size={14} className="text-brand-blue" /> 
+                  <span>{language.toUpperCase()}</span>
+              </button>
+              
+              <div 
+                onClick={() => setIsProfileOpen(true)}
+                className={`w-10 h-10 rounded-xl border flex items-center justify-center cursor-pointer transition-all overflow-hidden shadow-lg shadow-teal-500/10 ${
+                  isDark 
+                  ? 'bg-slate-900 border-slate-800 text-slate-500 hover:border-teal-500/50 hover:text-white' 
+                  : 'bg-[#001B3D] border-teal-500/20 text-teal-400 hover:scale-105 shadow-blue-900/10'
+                }`}
+              >
+                {userAvatar ? (
+                  <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-sm font-black">{userName[0] || 'P'}</span>
+                )}
+              </div>
+            </div>
+          </motion.header>
+        )}
+      </AnimatePresence>
+
+      {/* Main Content Area */}
+      <main className="flex-1 relative flex overflow-hidden">
+        {/* Mobile Backdrop */}
+        <AnimatePresence>
+          {(isSidebarOpen && !isFocusMode) && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSidebarOpen(false)}
+              className="lg:hidden fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[45]"
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Sidebar History */}
+        <AnimatePresence mode="wait">
+          {(isSidebarOpen && !isFocusMode) && (
+            <motion.aside 
+              initial={isLiteMode ? { opacity: 0 } : { x: -300, opacity: 0 }}
+              animate={isLiteMode ? { opacity: 1 } : { x: 0, opacity: 1 }}
+              exit={isLiteMode ? { opacity: 0 } : { x: -300, opacity: 0 }}
+              transition={transition}
+              className={`fixed lg:relative inset-y-0 left-0 z-50 flex flex-col shadow-2xl lg:shadow-none border-r transition-colors duration-500 overflow-hidden w-[300px] ${
+                isDark ? 'bg-slate-950 border-slate-900' : 'bg-white border-slate-100'
+              }`}
+            >
+              <div className="w-[300px] flex flex-col h-full">
+                <div className="p-5 pb-2 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className={`px-3 py-1 rounded-full shadow-lg flex items-center gap-2 group cursor-pointer hover:scale-105 transition-all ${
+                      isPlus 
+                      ? 'bg-gradient-to-r from-brand-blue to-blue-900 border border-white/10' 
+                      : 'bg-[#001B3D] border border-teal-500/30'
+                    }`}>
+                      <Sparkles size={10} className={`${isPlus ? 'text-teal-300' : 'text-amber-400'} animate-pulse`} />
+                      <span className={`text-[9px] font-black uppercase tracking-widest ${isPlus ? 'text-white' : 'text-teal-400'}`}>
+                        Maria {isPlus ? 'Plus' : ''}
+                      </span>
+                    </div>
+                    <button onClick={() => setIsSidebarOpen(false)} className={`lg:hidden p-2 transition-all ${isDark ? 'text-slate-600 hover:text-white' : 'text-slate-400 hover:text-red-500'}`}>
+                      <X size={18} />
+                    </button>
+                  </div>
+                  
+                  <button 
+                    onClick={handleNewChat}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand-blue hover:bg-blue-600 rounded-xl text-xs font-black uppercase tracking-widest text-white transition-all active:scale-95 shadow-lg shadow-brand-blue/20"
+                  >
+                    <Plus size={16} />
+                    <span>{t.newChat}</span>
+                  </button>
+
+                  <div className="relative group">
+                    <Search size={14} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${isDark ? 'text-slate-700' : 'text-slate-300'} group-focus-within:text-brand-blue`} />
+                    <input 
+                      type="text" 
+                      placeholder={t.searchPlaceholder}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className={`w-full border rounded-xl py-2 pl-10 pr-4 text-[13px] outline-none transition-all ${
+                        isDark 
+                        ? 'bg-slate-900/50 border-slate-800 text-slate-200 placeholder:text-slate-600 focus:border-brand-blue/30' 
+                        : 'bg-slate-50 border-slate-100 text-slate-700 placeholder:text-slate-400 focus:border-brand-blue/30'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto custom-scrollbar px-3 py-4 space-y-6" onClick={() => setMenuOpenId(null)}>
+                  {sortedGroupKeys.map((group) => (
+                    <div key={group} className="space-y-1">
+                      <div className="flex items-center gap-2 px-3 mb-2">
+                        {group === 'Disematkan' && <Pin size={10} className="text-brand-blue" />}
+                        <h4 className={`text-[9px] font-black uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{group}</h4>
+                      </div>
+                      <div className="space-y-0.5">
+                        {groupedSessions[group].map((session) => (
+                          <div 
+                            key={session.id}
+                            onClick={() => {
+                              setActiveChatId(session.id);
+                              if (window.innerWidth < 1024) setIsSidebarOpen(false);
+                            }}
+                            className={`group relative flex items-center justify-between px-3 py-3 rounded-xl transition-all cursor-pointer border ${
+                              activeChatId === session.id 
+                              ? (isDark ? 'bg-brand-blue/10 border-brand-blue/20' : 'bg-brand-blue/5 border-brand-blue/10') 
+                              : `border-transparent ${isDark ? 'hover:bg-slate-900/50' : 'hover:bg-slate-50'}`
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <MessageSquare size={14} className={activeChatId === session.id ? 'text-brand-blue' : (isDark ? 'text-slate-700' : 'text-slate-300')} />
+                              {renamingId === session.id ? (
+                                <input
+                                  autoFocus
+                                  className={`text-xs font-bold bg-transparent outline-none border-b border-brand-blue w-full ${isDark ? 'text-white' : 'text-slate-900'}`}
+                                  value={renamingTitle}
+                                  onChange={(e) => setRenamingTitle(e.target.value)}
+                                  onBlur={submitRename}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') submitRename();
+                                    if (e.key === 'Escape') setRenamingId(null);
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              ) : (
+                                <span className={`text-xs font-bold truncate transition-colors ${
+                                  activeChatId === session.id 
+                                  ? (isDark ? 'text-white' : 'text-slate-900') 
+                                  : `group-hover:text-slate-900 ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500'}`
+                                }`}>
+                                  {session.title}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center relative">
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setMenuOpenId(menuOpenId === session.id ? null : session.id);
+                                }}
+                                className={`p-1.5 rounded-lg transition-all ${
+                                  menuOpenId === session.id 
+                                  ? (isDark ? 'bg-slate-800 text-white' : 'bg-slate-100 text-brand-blue')
+                                  : `opacity-0 group-hover:opacity-100 lg:group-hover:opacity-100 ${isDark ? 'text-slate-600 hover:text-white hover:bg-slate-800' : 'text-slate-400 hover:text-brand-blue hover:bg-slate-100'}`
+                                }`}
+                              >
+                                <MoreVertical size={14} />
+                              </button>
+
+                              {/* Dropdown Menu */}
+                              <AnimatePresence>
+                                {menuOpenId === session.id && (
+                                  <motion.div
+                                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                                    className={`absolute right-0 top-10 w-40 rounded-xl border shadow-xl z-[60] overflow-hidden ${
+                                      isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'
+                                    }`}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <button 
+                                      onClick={(e) => startRename(e, session)}
+                                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium transition-colors ${
+                                        isDark ? 'text-slate-300 hover:bg-slate-800 hover:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-brand-blue'
+                                      }`}
+                                    >
+                                      <Edit2 size={14} />
+                                      <span>{t.rename}</span>
+                                    </button>
+                                    <button 
+                                      onClick={(e) => togglePin(e, session.id)}
+                                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium transition-colors ${
+                                        isDark ? 'text-slate-300 hover:bg-slate-800 hover:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-brand-blue'
+                                      }`}
+                                    >
+                                      {session.isPinned ? <PinOff size={14} /> : <Pin size={14} />}
+                                      <span>{session.isPinned ? t.unpin : t.pin}</span>
+                                    </button>
+                                    <div className={`border-t ${isDark ? 'border-slate-800' : 'border-slate-50'}`} />
+                                    <button 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setMenuOpenId(null);
+                                        deleteChat(session.id);
+                                      }}
+                                      className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
+                                    >
+                                      <Trash2 size={14} />
+                                      <span>{t.delete}</span>
+                                    </button>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className={`p-5 border-t mt-auto space-y-4 transition-colors duration-500 ${isDark ? 'border-slate-900 bg-slate-900/10' : 'border-slate-50 bg-slate-50/20'}`}>
+                    <MultiUtilityWidget isDark={isDark} language={language} />
+
+                    <div className="space-y-3">
+                      <div className={`flex items-center gap-3 p-3 border rounded-2xl shadow-sm transition-colors ${
+                        isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'
+                      }`}>
+                          <div 
+                            onClick={() => setIsProfileOpen(true)}
+                            className="w-10 h-10 rounded-xl bg-[#001B3D] flex items-center justify-center text-teal-400 font-bold text-sm shadow-lg shadow-teal-500/10 cursor-pointer overflow-hidden border border-teal-500/20"
+                          >
+                              {userAvatar ? (
+                                <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />
+                              ) : (
+                                <span>{userName[0] || 'P'}</span>
+                              )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                              <p className={`text-[13px] font-black truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>{userName}</p>
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                <span className="text-[9px] font-bold text-brand-blue uppercase tracking-widest">{t.online}</span>
+                              </div>
+                          </div>
+                          <button 
+                            onClick={() => setIsProfileOpen(true)}
+                            className={`p-2 transition-colors ${isDark ? 'text-slate-600 hover:text-white' : 'text-slate-400 hover:text-brand-blue'}`}
+                          >
+                            <Settings size={18} />
+                          </button>
+                      </div>
+                    </div>
+                </div>
+              </div>
+            </motion.aside>
+          )}
+        </AnimatePresence>
+
+        {/* Chat Area */}
+        <section className={`flex-1 h-full min-w-0 relative transition-all duration-700 ${isFocusMode ? 'max-w-4xl mx-auto' : ''}`}>
+          {activeChatId && (
+            <MariaAgent 
+              chatId={activeChatId}
+              language={language} 
+              userName={userName}
+              isFocusMode={isFocusMode} 
+              isLiteMode={isLiteMode}
+              isDark={isDark}
+              onExitFocus={() => setIsFocusMode(false)}
+              onTitleUpdate={() => {
+                // Refresh list locally if needed, but storage listener handles it
+              }}
+            />
+          )}
+        </section>
+      </main>
+
+      <UserProfile 
+        isOpen={isProfileOpen} 
+        onClose={() => setIsProfileOpen(false)} 
+        onLanguageChange={setLanguage} 
+        isLiteMode={isLiteMode}
+        isDark={isDark}
+        user={user}
+      />
+
+      <NotificationCenter 
+        isDark={isDark}
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
+      />
+    </div>
+  );
+}
+
+function SidebarGroupItem({ icon, label, count }: { icon: ReactNode, label: string, count: number }) {
+  return (
+    <div className="flex items-center justify-between px-3 py-3 text-slate-500 hover:text-brand-blue hover:bg-slate-50 rounded-xl transition-all cursor-pointer group border border-transparent hover:border-slate-100">
+      <div className="flex items-center gap-3">
+        <span className="p-1.5 rounded-lg group-hover:bg-brand-blue/5 transition-colors">{icon}</span>
+        <span className="text-[14px] font-semibold">{label}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="px-1.5 py-0.5 bg-slate-100 text-[10px] font-bold text-slate-400 rounded-md group-hover:bg-brand-blue/10 group-hover:text-brand-blue transition-colors">{count}</span>
+        <ChevronRight size={14} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
+      </div>
+    </div>
+  );
+}

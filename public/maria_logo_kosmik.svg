@@ -1,0 +1,44 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cosmic-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6" /> <!-- brand-blue -->
+      <stop offset="50%" stop-color="#4F46E5" /> <!-- indigo-600 -->
+      <stop offset="100%" stop-color="#7E22CE" /> <!-- purple-700 -->
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="20" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="200" fill="url(#cosmic-gradient)" />
+  
+  <!-- Subtle pattern -->
+  <g opacity="0.1">
+    <circle cx="200" cy="200" r="2" fill="white" />
+    <circle cx="800" cy="150" r="1.5" fill="white" />
+    <circle cx="400" cy="700" r="2.5" fill="white" />
+    <circle cx="150" cy="850" r="1" fill="white" />
+    <circle cx="900" cy="900" r="2" fill="white" />
+    <circle cx="512" cy="100" r="1" fill="white" />
+  </g>
+
+  <!-- Maria Sparkle Icon -->
+  <g filter="url(#glow)">
+    <path 
+      d="M512 192C512 192 512 400 304 400C512 400 512 608 512 608C512 608 512 400 720 400C512 400 512 192 512 192Z" 
+      fill="white" 
+    />
+    <path 
+      d="M768 576C768 576 768 652.8 691.2 652.8C768 652.8 768 729.6 768 729.6C768 729.6 768 652.8 844.8 652.8C768 652.8 768 576 768 576Z" 
+      fill="white" 
+      opacity="0.8"
+    />
+    <path 
+      d="M256 640C256 640 256 684.8 211.2 684.8C256 684.8 256 729.6 256 729.6C256 729.6 256 684.8 300.8 684.8C256 684.8 256 640 256 640Z" 
+      fill="white" 
+      opacity="0.6"
+    />
+  </g>
+</svg>
