@@ -6,24 +6,29 @@ import './index.css';
 // Suppress benign Vite WebSocket errors and unhandled rejections related to HMR
 if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', (event) => {
-    if (event.reason && (
-      event.reason.message?.includes('WebSocket') || 
-      event.reason.message?.includes('vite') ||
-      event.reason.toString().includes('WebSocket')
-    )) {
-      event.preventDefault();
-      console.debug('Suppressed benign Vite HMR error:', event.reason);
-    }
+    try {
+      const reason = event.reason;
+      if (reason && (
+        String(reason.message || reason).includes('WebSocket') || 
+        String(reason.message || reason).includes('vite')
+      )) {
+        event.preventDefault();
+        console.debug('Suppressed benign Vite HMR error:', reason);
+      }
+    } catch (e) {}
   });
 
   const originalError = console.error;
   console.error = (...args) => {
-    if (args[0] && typeof args[0] === 'string' && (
-      args[0].includes('[vite] failed to connect') || 
-      args[0].includes('WebSocket connection to')
-    )) {
-      return;
-    }
+    try {
+      const firstArg = args[0];
+      if (typeof firstArg === 'string' && (
+        firstArg.includes('[vite] failed to connect') || 
+        firstArg.includes('WebSocket connection to')
+      )) {
+        return;
+      }
+    } catch (e) {}
     originalError.apply(console, args);
   };
 }

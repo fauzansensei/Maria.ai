@@ -63,7 +63,7 @@
 }
 
 .markdown-body {
-  @apply leading-relaxed;
+  @apply leading-relaxed whitespace-pre-wrap;
 }
 
 .markdown-body p {

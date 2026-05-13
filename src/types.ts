@@ -21,6 +21,7 @@ export interface ChatSession {
   messages: Message[];
   updatedAt: number;
   isPinned?: boolean;
+  isFavorite?: boolean;
 }
 
 export interface SearchResult {

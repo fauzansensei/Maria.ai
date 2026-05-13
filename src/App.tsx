@@ -12,7 +12,7 @@ import MultiUtilityWidget from './components/MultiUtilityWidget';
 import UserProfile from './components/UserProfile';
 import NotificationCenter from './components/NotificationCenter';
 import { 
-  Search, Info, Settings, User as UserIcon, 
+  Search, Info, Settings, User as UserIcon, Star,
   Menu, X, Clock, Globe, Plus, MoreVertical, ChevronRight, Sparkles, Notebook,
   Share2, MessageCircle, MessageSquare, Edit2, Pin, PinOff, Trash2, Bell
 } from 'lucide-react';
@@ -268,6 +268,20 @@ export default function App() {
       const chatsObj = JSON.parse(chatsStr);
       if (chatsObj[id]) {
         chatsObj[id].isPinned = !chatsObj[id].isPinned;
+        localStorage.setItem('maria_chats', JSON.stringify(chatsObj));
+        window.dispatchEvent(new Event('storage'));
+      }
+    }
+    setMenuOpenId(null);
+  };
+
+  const toggleFavorite = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    const chatsStr = localStorage.getItem('maria_chats');
+    if (chatsStr) {
+      const chatsObj = JSON.parse(chatsStr);
+      if (chatsObj[id]) {
+        chatsObj[id].isFavorite = !chatsObj[id].isFavorite;
         localStorage.setItem('maria_chats', JSON.stringify(chatsObj));
         window.dispatchEvent(new Event('storage'));
       }
@@ -561,6 +575,9 @@ export default function App() {
                               )}
                             </div>
                             <div className="flex items-center relative">
+                              {session.isFavorite && (
+                                <Star size={10} className="text-amber-400 fill-amber-400 mr-1" />
+                              )}
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -604,6 +621,15 @@ export default function App() {
                                     >
                                       {session.isPinned ? <PinOff size={14} /> : <Pin size={14} />}
                                       <span>{session.isPinned ? t.unpin : t.pin}</span>
+                                    </button>
+                                    <button 
+                                      onClick={(e) => toggleFavorite(e, session.id)}
+                                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium transition-colors ${
+                                        isDark ? 'text-slate-300 hover:bg-slate-800 hover:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-brand-blue'
+                                      }`}
+                                    >
+                                      <Star size={14} className={session.isFavorite ? 'text-amber-400 fill-amber-400' : ''} />
+                                      <span>{session.isFavorite ? 'Unfavorite' : 'Favorite'}</span>
                                     </button>
                                     <div className={`border-t ${isDark ? 'border-slate-800' : 'border-slate-50'}`} />
                                     <button 

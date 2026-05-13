@@ -22,11 +22,13 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import { Message, KeywordSetting, UserNotification } from '../types';
 import { askMaria } from '../services/geminiService';
 import { getTranslation } from '../translations';
 import MapWidget from './MapWidget';
 import VTuberAvatar from './VTuberAvatar';
+import Typewriter from './Typewriter';
 import { useDeviceContext } from '../hooks/useDeviceContext';
 
 interface MariaAgentProps {
@@ -62,6 +64,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
   const [isPlus, setIsPlus] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     const loadProfile = () => {
@@ -163,6 +166,9 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
     const currentImages = [...pendingImages];
     
     setPendingImages([]);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = '64px';
+    }
     processMessage(nextMessages, currentInput, currentImages);
   };
 
@@ -570,9 +576,22 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
                     </div>
                   ) : (
                     <div className="markdown-body">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {msg.content}
-                      </ReactMarkdown>
+                      {msg.role === 'assistant' && msg.id === messages[messages.length - 1]?.id && (Date.now() - msg.timestamp) < 5000 ? (
+                        <Typewriter 
+                          text={msg.content}
+                          speed={10}
+                          onUpdate={scrollToBottom}
+                          renderMarkdown={(content) => (
+                            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                              {content}
+                            </ReactMarkdown>
+                          )}
+                        />
+                      ) : (
+                        <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                          {msg.content}
+                        </ReactMarkdown>
+                      )}
                         
                       {msg.role === 'assistant' && detectLocation(msg.content) && (
                         <div className={`mt-6 pt-5 border-t flex items-center justify-between ${isDark || isFocusMode ? 'border-slate-800' : 'border-slate-50'}`}>
@@ -763,17 +782,29 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
                 <div className="relative flex items-center gap-3">
                     <div className="flex-1 relative flex items-center">
                         <Sparkles size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-brand-blue/30 group-focus-within:text-brand-blue transition-colors" />
-                        <input
-                            type="text"
+                        <textarea
+                            ref={textareaRef}
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSubmit(e);
+                              }
+                            }}
                             disabled={isLoading}
                             placeholder={t.chatInputPlaceholder}
-                            className={`w-full h-16 transition-all outline-none rounded-[28px] pl-16 pr-16 text-base shadow-xl ${
+                            rows={1}
+                            className={`w-full py-5 transition-all outline-none rounded-[28px] pl-16 pr-16 text-base shadow-xl resize-none overflow-hidden custom-scrollbar ${
                                 isDark || isFocusMode 
                                 ? 'bg-slate-900 border border-slate-800 text-white placeholder:text-slate-600 focus:border-brand-blue/50 focus:ring-8 focus:ring-brand-blue/10' 
                                 : 'bg-white border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-brand-blue focus:ring-8 focus:ring-brand-blue/5'
                             } shadow-slate-200/40`}
+                            style={{ minHeight: '64px', maxHeight: '200px', height: 'auto' }}
+                            onInput={(e: any) => {
+                              e.target.style.height = 'auto';
+                              e.target.style.height = e.target.scrollHeight + 'px';
+                            }}
                         />
                         <div className="absolute right-4 flex items-center gap-1">
                           <input 
