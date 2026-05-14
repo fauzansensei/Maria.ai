@@ -531,8 +531,8 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
               <div className={`max-w-[85%] md:max-w-[75%] group flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                 {msg.role === 'assistant' && (
                   <div className="flex items-center gap-2 mb-2 ml-1">
-                    <div className={`w-5 h-5 rounded-md flex items-center justify-center text-teal-400 shadow-sm border border-teal-500/20 ${isPlus ? 'bg-gradient-to-tr from-brand-blue to-blue-900' : 'bg-[#001B3D]'}`}>
-                      <span className="text-[10px] font-black">{isPlus ? <Sparkles size={10} /> : 'M'}</span>
+                    <div className={`w-5 h-5 rounded-md flex items-center justify-center text-white shadow-sm border border-white/10 ${isPlus ? 'bg-gradient-to-tr from-brand-blue to-blue-900' : 'bg-gradient-to-br from-[#021B2B] via-[#0E4D54] to-[#14BCB2]'}`}>
+                      <span className="text-[10px] font-serif italic drop-shadow-sm">{isPlus ? <Sparkles size={10} /> : 'M'}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className={`text-[11px] font-black uppercase tracking-widest ${isDark || isFocusMode ? 'text-slate-300' : 'text-slate-600'}`}>

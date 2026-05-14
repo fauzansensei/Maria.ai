@@ -496,7 +496,7 @@ function MainApp() {
                 </div>
                 <div className="flex flex-col">
                   <div className="flex items-center gap-2">
-                    <h1 className={`text-base font-black tracking-tight leading-none ${isDark ? 'text-white' : 'text-[#001B3D]'}`}>Maria {isPlus ? 'Plus' : ''}</h1>
+                    <h1 className={`text-base font-black tracking-tight leading-none ${isDark ? 'text-white' : 'text-[#021B2B]'}`}>Maria {isPlus ? 'Plus' : ''}</h1>
                     {!isPlus && (
                       <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md ${isDark ? 'bg-teal-500/10 border border-teal-500/20' : 'bg-teal-50/50 border border-teal-100'}`}>
                         <span className="text-[7px] text-teal-600 font-black uppercase tracking-[0.2em]">Free</span>
@@ -545,7 +545,7 @@ function MainApp() {
                 className={`w-10 h-10 rounded-xl border flex items-center justify-center cursor-pointer transition-all overflow-hidden shadow-lg shadow-teal-500/10 ${
                   isDark 
                   ? 'bg-slate-900 border-slate-800 text-slate-500 hover:border-teal-500/50 hover:text-white' 
-                  : 'bg-[#001B3D] border-teal-500/20 text-teal-400 hover:scale-105 shadow-blue-900/10'
+                  : 'bg-gradient-to-br from-[#021B2B] via-[#0E4D54] to-[#14BCB2] border-white/10 text-white hover:scale-105 shadow-teal-500/10'
                 }`}
               >
                 {userAvatar ? (
@@ -592,7 +592,7 @@ function MainApp() {
                     <div className={`px-3 py-1 rounded-full shadow-lg flex items-center gap-2 group cursor-pointer hover:scale-105 transition-all ${
                       isPlus 
                       ? 'bg-gradient-to-r from-brand-blue to-blue-900 border border-white/10' 
-                      : 'bg-[#001B3D] border border-teal-500/30'
+                      : 'bg-gradient-to-r from-[#021B2B] via-[#0E4D54] to-[#14BCB2] border border-white/10'
                     }`}>
                       <Sparkles size={10} className={`${isPlus ? 'text-teal-300' : 'text-amber-400'} animate-pulse`} />
                       <span className={`text-[9px] font-black uppercase tracking-widest ${isPlus ? 'text-white' : 'text-teal-400'}`}>
@@ -763,7 +763,7 @@ function MainApp() {
                       }`}>
                           <div 
                             onClick={() => setIsProfileOpen(true)}
-                            className="w-10 h-10 rounded-xl bg-[#001B3D] flex items-center justify-center text-teal-400 font-bold text-sm shadow-lg shadow-teal-500/10 cursor-pointer overflow-hidden border border-teal-500/20"
+                            className="w-10 h-10 rounded-xl bg-[#021B2B] flex items-center justify-center text-teal-400 font-bold text-sm shadow-lg shadow-teal-500/10 cursor-pointer overflow-hidden border border-white/10"
                           >
                               {userAvatar ? (
                                 <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />

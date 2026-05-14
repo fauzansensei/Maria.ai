@@ -174,8 +174,8 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                     className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-cover border border-teal-500/20 shadow-sm"
                   />
                 ) : (
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#001B3D] flex items-center justify-center text-teal-400 font-black border border-teal-500/20 shadow-sm">
-                    <span>M</span>
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#021B2B] via-[#0E4D54] to-[#14BCB2] flex items-center justify-center text-white border border-white/10 shadow-sm">
+                    <span className="font-serif italic">M</span>
                   </div>
                 )}
                 <h2 className={`text-lg sm:text-xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>{t.settings}</h2>
@@ -768,7 +768,7 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                         console.error(e);
                       }
                     }}
-                    className="w-full sm:w-auto px-10 py-4 bg-[#001B3D] text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-blue-900/40 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+                    className="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-[#021B2B] to-[#0E4D54] text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-teal-900/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
                   >
                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
                     {t.loginGoogle}
