@@ -144,43 +144,58 @@ export default function MultiUtilityWidget({ isDark = false, language = 'id' }: 
 
     try {
       if (apiKey) {
-        // Use WeatherAPI.com if key is provided (more stable, includes geocoding)
-        const res = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${encodeURIComponent(city)}&days=7&aqi=yes&lang=${language === 'id' ? 'id' : 'en'}`);
-        if (!res.ok) throw new Error("WeatherAPI request failed");
-        const data = await res.json();
+        // Use OpenWeather API (Supports the key from OpenWeather dashboard)
+        // 1. Get Geocoding
+        const geoRes = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)}&limit=1&appid=${apiKey}`);
+        if (!geoRes.ok) throw new Error("Geocoding failed");
+        const geoData = await geoRes.json();
+        
+        if (!geoData || geoData.length === 0) {
+          alert("Kota tidak ditemukan.");
+          return;
+        }
 
+        const { lat, lon, name } = geoData[0];
+
+        // 2. Get Weather Data (Current + Forecast)
+        const weatherRes = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&lang=${language === 'id' ? 'id' : 'en'}&appid=${apiKey}`);
+        if (!weatherRes.ok) throw new Error("Weather fetch failed");
+        const data = await weatherRes.json();
+
+        const current = data.list[0];
         const now = Date.now();
+
         const newWeather: WeatherData & { timestamp: number } = {
-          temp: Math.round(data.current.temp_c).toString(),
-          condition: data.current.condition.text,
-          location: data.location.name,
-          humidity: data.current.humidity.toString(),
-          wind: Math.round(data.current.wind_kph).toString(),
-          feelsLike: Math.round(data.current.feelslike_c).toString(),
-          uvIndex: data.current.uv.toString(),
-          visibility: data.current.vis_km.toString(),
-          pressure: data.current.pressure_mb.toString(),
-          aqi: Math.round(data.current.air_quality['us-epa-index'] * 20), // Rough conversion to US AQI scale
-          sunrise: data.forecast.forecastday[0].astro.sunrise,
-          sunset: data.forecast.forecastday[0].astro.sunset,
+          temp: Math.round(current.main.temp).toString(),
+          condition: current.weather[0].description,
+          location: name,
+          humidity: current.main.humidity.toString(),
+          wind: Math.round(current.wind.speed * 3.6).toString(), // m/s to km/h
+          feelsLike: Math.round(current.main.feels_like).toString(),
+          uvIndex: "N/A",
+          visibility: (current.visibility / 1000).toString(),
+          pressure: current.main.pressure.toString(),
+          aqi: 0,
+          sunrise: new Date(data.city.sunrise * 1000).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+          sunset: new Date(data.city.sunset * 1000).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
           timestamp: now,
-          daily: data.forecast.forecastday.map((day: any) => ({
-            date: new Date(day.date).toLocaleDateString('id-ID', { weekday: 'short', day: '2-digit', month: '2-digit' }),
-            maxTemp: Math.round(day.day.maxtemp_c).toString(),
-            minTemp: Math.round(day.day.mintemp_c).toString(),
-            condition: day.day.condition.text
+          daily: data.list.filter((_: any, i: number) => i % 8 === 0).map((day: any) => ({
+            date: new Date(day.dt * 1000).toLocaleDateString('id-ID', { weekday: 'short', day: '2-digit', month: '2-digit' }),
+            maxTemp: Math.round(day.main.temp_max).toString(),
+            minTemp: Math.round(day.main.temp_min).toString(),
+            condition: day.weather[0].description
           })),
-          hourly: data.forecast.forecastday[0].hour.filter((_: any, i: number) => i % 2 === 0).map((hour: any) => ({
-            time: hour.time.split(' ')[1],
-            temp: Math.round(hour.temp_c),
-            condition: hour.condition.text
+          hourly: data.list.slice(0, 8).map((hour: any) => ({
+            time: new Date(hour.dt * 1000).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+            temp: Math.round(hour.main.temp),
+            condition: hour.weather[0].description
           }))
         };
 
         setWeather(newWeather);
-        setSavedCity(data.location.name);
+        setSavedCity(name);
         setLastUpdated(new Date(now).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }));
-        localStorage.setItem('weather_city', data.location.name);
+        localStorage.setItem('weather_city', name);
         localStorage.setItem('weather_data', JSON.stringify(newWeather));
         setShowSearch(false);
       } else {
@@ -249,7 +264,7 @@ export default function MultiUtilityWidget({ isDark = false, language = 'id' }: 
       }
     } catch (e) {
       console.warn("Maria: Weather fetch failed", e);
-      // Optional: Inform user about fetch failure in UI instead of just alert
+      alert("Gagal memuat cuaca. Periksa koneksi atau API Key Anda.");
     } finally {
       setIsSearching(false);
       setIsLoading(false);
