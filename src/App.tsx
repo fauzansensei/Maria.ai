@@ -13,7 +13,7 @@ import UserProfile from './components/UserProfile';
 import NotificationCenter from './components/NotificationCenter';
 import { 
   Search, Info, Settings, User as UserIcon, Star,
-  Menu, X, Clock, Globe, Plus, MoreVertical, ChevronRight, Sparkles, Notebook,
+  Menu, X, Clock, Globe, Plus, MoreVertical, ChevronRight, Sparkles,
   Share2, MessageCircle, MessageSquare, Edit2, Pin, PinOff, Trash2, Bell, AlertTriangle
 } from 'lucide-react';
 import { ChatSession, UserNotification, SUPPORTED_LANGUAGES } from './types';
@@ -91,11 +91,20 @@ function MainApp() {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   const updateUnreadCount = useCallback(() => {
-    const saved = localStorage.getItem('maria_notifications');
-    if (saved) {
-      const notifs: UserNotification[] = JSON.parse(saved);
-      setUnreadNotifications(notifs.filter(n => !n.isRead).length);
-    } else {
+    try {
+      const saved = localStorage.getItem('maria_notifications');
+      if (saved && saved !== 'null' && saved !== 'undefined') {
+        const notifs = JSON.parse(saved);
+        if (Array.isArray(notifs)) {
+          setUnreadNotifications(notifs.filter((n: any) => n && !n.isRead).length);
+        } else {
+          setUnreadNotifications(0);
+        }
+      } else {
+        setUnreadNotifications(0);
+      }
+    } catch (e) {
+      console.error("Maria: Failed to update unread count", e);
       setUnreadNotifications(0);
     }
   }, []);
@@ -115,9 +124,9 @@ function MainApp() {
   const [renamingTitle, setRenamingTitle] = useState('');
 
   const loadProfile = useCallback(() => {
-    const savedProfile = localStorage.getItem('maria_profile');
-    if (savedProfile && savedProfile !== 'null' && savedProfile !== 'undefined') {
-      try {
+    try {
+      const savedProfile = localStorage.getItem('maria_profile');
+      if (savedProfile && savedProfile !== 'null' && savedProfile !== 'undefined') {
         const profile = JSON.parse(savedProfile);
         if (profile && typeof profile === 'object') {
           setUserName(profile.name || 'Pengguna');
@@ -148,17 +157,19 @@ function MainApp() {
             setLanguage(profile.preferences.language);
           }
 
-          // Handle theme independently of focus mode
+          // Handle theme
           if (theme === 'system') {
-            const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            setIsDark(isSystemDark);
+            const isSystemDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+            setIsDark(!!isSystemDark);
           } else if (theme === 'dark') {
             setIsDark(true);
           } else {
             setIsDark(false);
           }
         }
-      } catch (e) {}
+      }
+    } catch (e) {
+      console.error("Maria: Failed to load profile", e);
     }
   }, []);
 
@@ -188,7 +199,9 @@ function MainApp() {
             return newId;
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error("Maria: Migration failed", e);
+      }
       return null;
     };
 
@@ -199,7 +212,7 @@ function MainApp() {
         const chatsObj = JSON.parse(chatsStr);
         if (chatsObj && typeof chatsObj === 'object') {
           const sessions = Object.values(chatsObj) as ChatSession[];
-          const sortedSessions = sessions.sort((a, b) => b.updatedAt - a.updatedAt);
+          const sortedSessions = sessions.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
           setChatSessions(sortedSessions);
           
           if (!activeChatId || forceId) {
@@ -208,7 +221,7 @@ function MainApp() {
           }
         }
       } catch (e) {
-        console.error("Failed to parse chats", e);
+        console.error("Maria: Failed to parse chats", e);
       }
     } else {
       const defaultId = migratedId || 'initial-chat';
@@ -235,21 +248,28 @@ function MainApp() {
     window.addEventListener('maria_new_notification', updateUnreadCount);
     
     // Check for persisted mock user
-    const savedMockUser = localStorage.getItem('maria_mock_user');
-    if (savedMockUser) {
-      try {
+    try {
+      const savedMockUser = localStorage.getItem('maria_mock_user');
+      if (savedMockUser && savedMockUser !== 'null') {
         const mockUser = JSON.parse(savedMockUser);
-        setUser(mockUser);
-        setUserName(mockUser.displayName);
-        setUserAvatar(mockUser.photoURL);
-      } catch (e) {}
-    }
+        if (mockUser) {
+          setUser(mockUser);
+          setUserName(mockUser.displayName || 'Pengguna');
+          setUserAvatar(mockUser.photoURL || null);
+        }
+      }
+    } catch (e) {}
     
     let unsubscribe = () => {};
     if (auth) {
-      unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-        setUser(currentUser);
-        if (currentUser) {
+      try {
+        unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+          if (!currentUser) {
+            setUser(null);
+            return;
+          }
+          
+          setUser(currentUser);
           setUserName(currentUser.displayName || 'Pengguna');
           setUserAvatar(currentUser.photoURL);
           
@@ -265,22 +285,27 @@ function MainApp() {
             };
             localStorage.setItem('maria_profile', JSON.stringify(nextProfile));
           } catch (e) {
-            console.error("Failed to update profile from auth change", e);
+            console.error("Maria: Failed to update profile from auth change", e);
           }
-        }
-      });
+        });
+      } catch (e) {
+        console.error("Maria: Auth listener failed", e);
+      }
     }
 
     const handleMockLogin = (e: any) => {
-      setUser(e.detail);
-      setUserName(e.detail.displayName);
-      setUserAvatar(e.detail.photoURL);
+      const data = e.detail;
+      if (data) {
+        setUser(data);
+        setUserName(data.displayName || 'Pengguna');
+        setUserAvatar(data.photoURL || null);
+      }
     };
 
     const handleMockLogout = () => {
       setUser(null);
       setUserName('Pengguna');
-      setUserAvatar(undefined);
+      setUserAvatar(null);
     };
 
     window.addEventListener('maria_mock_login', handleMockLogin);
@@ -291,9 +316,9 @@ function MainApp() {
       window.removeEventListener('maria_new_notification', updateUnreadCount);
       window.removeEventListener('maria_mock_login', handleMockLogin);
       window.removeEventListener('maria_mock_logout', handleMockLogout);
-      unsubscribe();
+      if (typeof unsubscribe === 'function') unsubscribe();
     };
-  }, [updateUnreadCount]);
+  }, [updateUnreadCount, loadProfile, loadChats]);
 
   const handleNewChat = () => {
     const newId = Date.now().toString();

@@ -3,7 +3,19 @@ import { APIProvider, Map, AdvancedMarker, Pin, useMap } from '@vis.gl/react-goo
 import { motion, AnimatePresence } from 'motion/react';
 import { MapPin, X, Navigation } from 'lucide-react';
 
-const API_KEY = process.env.GOOGLE_MAPS_PLATFORM_KEY || '';
+const getMapsKey = () => {
+  try {
+    if (typeof process !== 'undefined' && process.env?.GOOGLE_MAPS_PLATFORM_KEY) {
+      return process.env.GOOGLE_MAPS_PLATFORM_KEY;
+    }
+    if (import.meta.env.VITE_GOOGLE_MAPS_PLATFORM_KEY) {
+      return import.meta.env.VITE_GOOGLE_MAPS_PLATFORM_KEY;
+    }
+  } catch (e) {}
+  return '';
+};
+
+const API_KEY = getMapsKey();
 const hasValidKey = Boolean(API_KEY) && API_KEY !== 'YOUR_API_KEY';
 
 interface MapWidgetProps {

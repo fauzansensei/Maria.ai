@@ -2,7 +2,23 @@ import { SYSTEM_PROMPT, SUPPORTED_LANGUAGES } from "../constants";
 import { GoogleGenAI } from "@google/genai";
 
 // Initialize Gemini directly on the frontend
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
+const getApiKey = () => {
+  try {
+    // Standard environment variable for Gemini
+    if (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) {
+      return process.env.GEMINI_API_KEY;
+    }
+    // Vite-specific environment variable for production (e.g. Vercel)
+    if (import.meta.env.VITE_GEMINI_API_KEY) {
+      return import.meta.env.VITE_GEMINI_API_KEY;
+    }
+  } catch (e) {
+    console.warn("Maria AI: Context error while reading API Key", e);
+  }
+  return '';
+};
+
+const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
 export interface MariaImage {
   mimeType: string;

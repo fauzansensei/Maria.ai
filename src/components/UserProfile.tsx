@@ -62,27 +62,36 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const savedProfile = localStorage.getItem('maria_profile');
-    const savedKeywords = localStorage.getItem('maria_keywords');
-    const savedReminders = localStorage.getItem('maria_reminders');
+    try {
+      const savedProfile = localStorage.getItem('maria_profile');
+      const savedKeywords = localStorage.getItem('maria_keywords');
+      const savedReminders = localStorage.getItem('maria_reminders');
 
-    if (savedKeywords) setKeywords(JSON.parse(savedKeywords));
-    if (savedReminders) setReminders(JSON.parse(savedReminders));
-    
-    if (savedProfile) {
-      try {
-        const parsed = JSON.parse(savedProfile);
-        setProfile(prev => ({
-          ...prev,
-          ...parsed,
-          preferences: {
-            ...prev.preferences,
-            ...parsed.preferences
-          }
-        }));
-      } catch (e) {
-        console.error("Failed to parse profile", e);
+      if (savedKeywords && savedKeywords !== 'null' && savedKeywords !== 'undefined') {
+        const kws = JSON.parse(savedKeywords);
+        if (Array.isArray(kws)) setKeywords(kws);
       }
+      
+      if (savedReminders && savedReminders !== 'null' && savedReminders !== 'undefined') {
+        const rems = JSON.parse(savedReminders);
+        if (Array.isArray(rems)) setReminders(rems);
+      }
+      
+      if (savedProfile && savedProfile !== 'null' && savedProfile !== 'undefined') {
+        const parsed = JSON.parse(savedProfile);
+        if (parsed && typeof parsed === 'object') {
+          setProfile(prev => ({
+            ...prev,
+            ...parsed,
+            preferences: {
+              ...prev.preferences,
+              ...(parsed.preferences || {})
+            }
+          }));
+        }
+      }
+    } catch (e) {
+      console.error("Maria: Failed to load settings", e);
     }
   }, []);
 

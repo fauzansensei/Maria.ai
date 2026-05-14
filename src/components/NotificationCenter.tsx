@@ -18,13 +18,28 @@ export default function NotificationCenter({ isDark, isOpen, onClose }: Notifica
   const [keywords, setKeywords] = useState<KeywordSetting[]>([]);
 
   const loadData = useCallback(() => {
-    const savedNotifications = localStorage.getItem('maria_notifications');
-    const savedReminders = localStorage.getItem('maria_reminders');
-    const savedKeywords = localStorage.getItem('maria_keywords');
+    try {
+      const savedNotifications = localStorage.getItem('maria_notifications');
+      const savedReminders = localStorage.getItem('maria_reminders');
+      const savedKeywords = localStorage.getItem('maria_keywords');
 
-    if (savedNotifications) setNotifications(JSON.parse(savedNotifications));
-    if (savedReminders) setReminders(JSON.parse(savedReminders));
-    if (savedKeywords) setKeywords(JSON.parse(savedKeywords));
+      if (savedNotifications && savedNotifications !== 'null' && savedNotifications !== 'undefined') {
+        const notifs = JSON.parse(savedNotifications);
+        if (Array.isArray(notifs)) setNotifications(notifs);
+      }
+      
+      if (savedReminders && savedReminders !== 'null' && savedReminders !== 'undefined') {
+        const rems = JSON.parse(savedReminders);
+        if (Array.isArray(rems)) setReminders(rems);
+      }
+      
+      if (savedKeywords && savedKeywords !== 'null' && savedKeywords !== 'undefined') {
+        const kws = JSON.parse(savedKeywords);
+        if (Array.isArray(kws)) setKeywords(kws);
+      }
+    } catch (e) {
+      console.error("Maria: Failed to load notification data", e);
+    }
   }, []);
 
   useEffect(() => {

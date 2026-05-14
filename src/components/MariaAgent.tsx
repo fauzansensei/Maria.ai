@@ -22,6 +22,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import { Message, KeywordSetting, UserNotification } from '../types';
 import { askMaria } from '../services/geminiService';
 import { getTranslation } from '../translations';
@@ -591,13 +592,13 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
                           speed={10}
                           onUpdate={scrollToBottom}
                           renderMarkdown={(content) => (
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
                               {content}
                             </ReactMarkdown>
                           )}
                         />
                       ) : (
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
                           {msg.content}
                         </ReactMarkdown>
                       )}
