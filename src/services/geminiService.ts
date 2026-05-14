@@ -29,6 +29,13 @@ export interface DeviceContext {
   time: string;
   battery: number;
   charging: boolean;
+  weather?: {
+    temp: string;
+    condition: string;
+    location: string;
+    aqi?: number;
+    description?: string;
+  } | null;
 }
 
 export async function askMaria(
@@ -56,11 +63,21 @@ export async function askMaria(
 
     const langModePrompt = `MANDATORY: ALWAYS respond using ${langName}. If ${langName} is a regional language of Indonesia (like Javanese, Sundanese, etc.), you MUST use that specific language correctly. Adapting to the user's selected language is your highest priority. If the user uses a different language in their message, you may adapt accordingly but primarily stay in ${langName}.`;
 
-    const contextPrompt = context 
-      ? `\n\n[CONTEXT] Device Status: Time is ${context.time}, Battery is ${context.battery}% (${context.charging ? 'Charging' : 'Not Charging'}). Mention these ONLY if the user asks about them or if relevant. Respond naturally as Maria.`
+    const weatherPrompt = context?.weather 
+      ? `\n[WEATHER] Current location: ${context.weather.location}, Temperature: ${context.weather.temp}°C, Condition: ${context.weather.condition}${context.weather.aqi ? `, AQI: ${context.weather.aqi}` : ''}. Use this information naturally to show you are aware of their environment.`
       : '';
 
-    const systemInstruction = `${SYSTEM_PROMPT} ${langModePrompt} Personality: ${personalityPrompts[personality] || personalityPrompts.ramah}. ${contextPrompt} If the language is a regional Indonesian language, ensure you use the correct dialect and cultural context. If an image is provided, describe it or answer questions about it clearly.`;
+    const contextPrompt = context 
+      ? `\n\n[CONTEXT] Device Status: Time is ${context.time}, Battery is ${context.battery}% (${context.charging ? 'Charging' : 'Not Charging'}). ${weatherPrompt} Mention these ONLY if the user asks about them or if relevant. Respond naturally as Maria.`
+      : '';
+
+    const systemInstruction = `${SYSTEM_PROMPT} ${langModePrompt} Personality: ${personalityPrompts[personality] || personalityPrompts.ramah}. ${contextPrompt} 
+    
+CORE INTELLIGENCE UPGRADE:
+1. MEDIA ANALYSIS: You have advanced vision capabilities. You can "see", learn from, and manage information from any media (images/photos) provided. Analyze them deeply for context, emotions, and specific details.
+2. ADAPTABILITY: You are an evolving intelligence. Learn from the conversation history, user preferences, and their physical environment (time/weather/status).
+3. PROACTIVE ASSISTANCE: If user shares media regarding a task, offer specific management advice or creative solutions.
+4. If the language is a regional Indonesian language, ensure you use the correct dialect and cultural context. If an image is provided, describe it or answer questions about it clearly.`;
 
     const parts: any[] = [];
     if (images && images.length > 0) {

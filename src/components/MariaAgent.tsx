@@ -253,13 +253,22 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
       } catch (e) {}
     }
 
+    // Get weather data from localStorage
+    let weatherContext = null;
+    try {
+      const savedWeather = localStorage.getItem('weather_data');
+      if (savedWeather) {
+        weatherContext = JSON.parse(savedWeather);
+      }
+    } catch (e) {}
+
     try {
       const response = await askMaria(
         text, 
         language, 
         images ? images.map(img => ({ data: img.base64, mimeType: img.type })) : undefined,
         preferences,
-        deviceContext,
+        { ...deviceContext, weather: weatherContext },
         userName
       );
       const assistantMsg: Message = {
