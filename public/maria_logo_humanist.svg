@@ -1,8 +1,9 @@
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="navy-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#001B3D" />
-      <stop offset="100%" stop-color="#003366" />
+    <linearGradient id="teal-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#021B2B" />
+      <stop offset="50%" stop-color="#0E4D54" />
+      <stop offset="100%" stop-color="#14BCB2" />
     </linearGradient>
     <filter id="soft-glow" x="-20%" y="-20%" width="140%" height="140%">
       <feGaussianBlur stdDeviation="15" result="blur" />
@@ -11,25 +12,28 @@
   </defs>
   
   <!-- Rounded Square Background -->
-  <rect width="1024" height="1024" rx="220" fill="url(#navy-gradient)" />
+  <rect width="1024" height="1024" rx="220" fill="url(#teal-gradient)" />
   
-  <!-- Humanist "M" - Smooth Curves -->
-  <path 
-    d="M300 724V400C300 340 340 300 400 300C460 300 512 350 512 410C512 350 564 300 624 300C684 300 724 340 724 400V724" 
-    stroke="#14B8A6" 
-    stroke-width="80" 
-    stroke-linecap="round" 
-    stroke-linejoin="round"
-  />
+  <!-- Serif "M" -->
+  <text 
+    x="512" 
+    y="650" 
+    font-family="Playfair Display, serif" 
+    font-size="600" 
+    font-weight="900" 
+    font-style="italic"
+    fill="white" 
+    text-anchor="middle"
+    fill-opacity="0.95"
+    filter="url(#soft-glow)"
+  >M</text>
   
-  <!-- Tech Sparkle (Gold) -->
-  <g filter="url(#soft-glow)">
+  <!-- Tech Sparkle (White/Gold) -->
+  <g transform="translate(780 280)">
     <path 
-      d="M780 244C780 244 780 304 720 304C780 304 780 364 780 364C780 364 780 304 840 304C780 304 780 244 780 244Z" 
-      fill="#FBBF24" 
+      d="M0 -80C0 -80 0 0 -80 0C0 0 0 80 0 80C0 80 0 0 80 0C0 0 0 -80 0 -80Z" 
+      fill="white" 
+      fill-opacity="0.8"
     />
   </g>
-
-  <!-- Accent dot -->
-  <circle cx="512" cy="724" r="25" fill="#14B8A6" />
 </svg>

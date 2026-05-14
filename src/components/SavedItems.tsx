@@ -1,6 +1,8 @@
 import { Message } from '../types';
-import { X, Trash2, Copy, ExternalLink } from 'lucide-react';
+import { X, Trash2, Copy, ExternalLink, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useState } from 'react';
+import { copyToClipboard } from '../lib/clipboard';
 
 interface SavedItemsProps {
   isOpen: boolean;
@@ -8,6 +10,8 @@ interface SavedItemsProps {
 }
 
 export default function SavedItems({ isOpen, onClose }: SavedItemsProps) {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
   const getSaved = (): Message[] => {
     const saved = localStorage.getItem('maria_saved_info');
     return saved ? JSON.parse(saved) : [];
@@ -67,12 +71,16 @@ export default function SavedItems({ isOpen, onClose }: SavedItemsProps) {
                        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest bg-blue-50 px-2.5 py-1 rounded-lg">Report</span>
                        <div className="flex items-center gap-1">
                          <button 
-                          onClick={() => {
-                            navigator.clipboard.writeText(item.content);
+                          onClick={async () => {
+                            const success = await copyToClipboard(item.content);
+                            if (success) {
+                              setCopiedId(item.id);
+                              setTimeout(() => setCopiedId(null), 2000);
+                            }
                           }}
                           className="p-2 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-blue-600 transition-colors"
                          >
-                           <Copy size={16} />
+                           {copiedId === item.id ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
                          </button>
                          <button 
                           onClick={() => {

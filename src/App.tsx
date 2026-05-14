@@ -477,14 +477,14 @@ function MainApp() {
                 title={`Download Maria ${isPlus ? 'Plus' : ''} Logo`}
               >
                 <div className="relative">
-                  <div className="w-10 h-10 rounded-xl bg-[#001B3D] flex items-center justify-center text-white shadow-lg shadow-blue-900/30 group-hover:scale-105 group-hover:rotate-3 transition-all duration-500 overflow-hidden border border-teal-500/20">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#021B2B] via-[#0E4D54] to-[#14BCB2] flex items-center justify-center text-white shadow-lg group-hover:scale-105 group-hover:rotate-3 transition-all duration-500 overflow-hidden border border-white/10">
                     <motion.div
-                      animate={{ opacity: [0.1, 0.3, 0.1] }}
+                      animate={{ opacity: [0.1, 0.4, 0.1] }}
                       transition={{ duration: 4, repeat: Infinity }}
-                      className="absolute inset-0 bg-gradient-to-tr from-teal-500/20 via-transparent to-amber-400/20"
+                      className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-white/10"
                     />
-                    <span className="text-xl font-black text-teal-400 tracking-tighter relative z-10">M</span>
-                    <Sparkles size={12} className="absolute top-1.5 right-1.5 text-amber-400 animate-pulse" />
+                    <span className="text-2xl font-serif text-white/95 drop-shadow-md relative z-10 italic tracking-tighter">M</span>
+                    <Sparkles size={12} className="absolute top-1.5 right-1.5 text-white/80 animate-pulse" />
                   </div>
                   <motion.div 
                     initial={{ opacity: 0, scale: 0 }}

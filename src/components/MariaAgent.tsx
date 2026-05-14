@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
+import { copyToClipboard } from '../lib/clipboard';
 import { Message, KeywordSetting, UserNotification } from '../types';
 import { askMaria } from '../services/geminiService';
 import { getTranslation } from '../translations';
@@ -375,17 +376,21 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
     return places.find(p => text.toLowerCase().includes(p.name.toLowerCase()));
   };
 
-  const handleCopy = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+  const handleCopy = async (text: string, id: string) => {
+    const success = await copyToClipboard(text);
+    if (success) {
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    }
   };
 
   const handleShare = async (text: string, id: string) => {
-    const copyToClipboard = () => {
-      navigator.clipboard.writeText(text);
-      setSharedId(id);
-      setTimeout(() => setSharedId(null), 2000);
+    const fallbackCopy = async () => {
+      const success = await copyToClipboard(text);
+      if (success) {
+        setSharedId(id);
+        setTimeout(() => setSharedId(null), 2000);
+      }
     };
 
     if (navigator.share) {
@@ -398,15 +403,15 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
       } catch (err) {
         // If it's not a user cancelation, or even if it is, providing feedback is good
         if ((err as Error).name !== 'AbortError') {
-          copyToClipboard();
+          fallbackCopy();
         } else {
           // Even if canceled, we could still copy to be helpful, or just do nothing
           // Let's copy to clipboard as fallback always if the user intent was to share
-          copyToClipboard();
+          fallbackCopy();
         }
       }
     } else {
-      copyToClipboard();
+      fallbackCopy();
     }
   };
 

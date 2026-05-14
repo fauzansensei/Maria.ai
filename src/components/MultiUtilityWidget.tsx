@@ -110,18 +110,22 @@ export default function MultiUtilityWidget({ isDark = false, language = 'id' }: 
         navigator.geolocation.getCurrentPosition(async (pos) => {
           try {
             const { latitude, longitude } = pos.coords;
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`, {
+              headers: {
+                'User-Agent': 'Maria-AI-App/1.0'
+              }
+            });
             const data = await res.json();
             const cityName = data.address.city || data.address.town || data.address.village;
             if (cityName) fetchWeather(cityName);
           } catch (err) {
             // Silently fail or log quietly for developer
-            console.debug("Reverse geocoding failed", err);
+            console.warn("Maria: Reverse geocoding failed", err);
           }
         }, (err) => {
           // Handle permission denial gracefully without big warnings
           if (err.code !== err.PERMISSION_DENIED) {
-            console.debug("Geolocation failed", err);
+            console.warn("Maria: Geolocation failed", err);
           }
         });
       }
@@ -141,7 +145,11 @@ export default function MultiUtilityWidget({ isDark = false, language = 'id' }: 
     if (!weather) setIsLoading(true);
     
     try {
-      const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`);
+      const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`, {
+        headers: {
+          'User-Agent': 'Maria-AI-App/1.0'
+        }
+      });
       const geoData = await geoRes.json();
       
       if (!geoData || geoData.length === 0) {
@@ -203,7 +211,7 @@ export default function MultiUtilityWidget({ isDark = false, language = 'id' }: 
       localStorage.setItem('weather_data', JSON.stringify(newWeather));
       setShowSearch(false);
     } catch (e) {
-      console.error("Fetch failed", e);
+      console.warn("Maria: Weather fetch failed", e);
     } finally {
       setIsSearching(false);
       setIsLoading(false);
