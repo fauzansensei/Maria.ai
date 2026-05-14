@@ -93,6 +93,7 @@ export const translations: Record<string, any> = {
     wait: "Wait",
     tryAgain: "Try Again",
     close: "Close",
+    securityStatus: "Security Status",
     chatGroups: {
       pinned: "Pinned",
       today: "Today",
@@ -193,6 +194,7 @@ export const translations: Record<string, any> = {
     wait: "Tunggu",
     tryAgain: "Coba Lagi",
     close: "Tutup",
+    securityStatus: "Status Keamanan",
     chatGroups: {
       pinned: "Disematkan",
       today: "Hari ini",

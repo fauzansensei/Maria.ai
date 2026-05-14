@@ -239,7 +239,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
     setIsLoading(true);
 
     // Get preferences for personality
-    let preferences = { personality: 'default', useMemory: true };
+    let preferences = { personality: 'default', useMemory: true, guardrailsEnabled: true };
     const savedProfile = localStorage.getItem('maria_profile');
     if (savedProfile) {
       try {
@@ -247,7 +247,8 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
         if (parsed.preferences) {
           preferences = {
             personality: parsed.preferences.personality || 'default',
-            useMemory: parsed.preferences.useMemory !== undefined ? parsed.preferences.useMemory : true
+            useMemory: parsed.preferences.useMemory !== undefined ? parsed.preferences.useMemory : true,
+            guardrailsEnabled: parsed.preferences.guardrailsEnabled !== undefined ? parsed.preferences.guardrailsEnabled : true
           };
         }
       } catch (e) {}

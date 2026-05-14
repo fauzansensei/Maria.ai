@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Settings, LogOut, Globe, Shield, CreditCard, ChevronRight, Sparkles, RotateCcw, X, User as UserIcon, MessageSquare, Info, Brain, Bell, Plus, Calendar, Trash2, Clock, Camera } from 'lucide-react';
+import { Settings, LogOut, Globe, Shield, ShieldCheck, CreditCard, ChevronRight, Sparkles, RotateCcw, X, User as UserIcon, MessageSquare, Info, Brain, Bell, Plus, Calendar, Trash2, Clock, Camera } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User } from 'firebase/auth';
 import { loginWithGoogle, logout } from '../lib/firebase';
@@ -21,6 +21,7 @@ interface UserProfileData {
     autoSave: boolean;
     useMemory: boolean;
     performanceMode: boolean;
+    guardrailsEnabled: boolean;
   };
 }
 
@@ -47,7 +48,8 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
       safeMode: true,
       autoSave: true,
       useMemory: true,
-      performanceMode: false
+      performanceMode: false,
+      guardrailsEnabled: true
     }
   });
 
@@ -426,10 +428,72 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                     )}
 
                     {activeTab === 'privasi' && (
-                      <div className="space-y-8">
-                        <h3 className="text-2xl font-black tracking-tight">{t.privacy}</h3>
+                      <div className="space-y-10">
+                        <div className="flex items-center gap-4">
+                          <div className={`p-3 rounded-2xl ${isDark ? 'bg-emerald-500/20 text-emerald-500' : 'bg-emerald-500/10 text-emerald-600'}`}>
+                             <ShieldCheck size={24} />
+                          </div>
+                          <div>
+                            <h3 className="text-2xl font-black tracking-tight">{t.privacy}</h3>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t.securityStatus}: <span className={profile.preferences.guardrailsEnabled ? 'text-emerald-500' : 'text-amber-500'}>{profile.preferences.guardrailsEnabled ? 'Shielded' : 'Vulnerable'}</span></p>
+                          </div>
+                        </div>
                         
                         <div className="space-y-6">
+                          {/* Maria Shield Integration */}
+                          <div className={`p-8 rounded-[40px] border transition-all duration-700 relative overflow-hidden group ${
+                            profile.preferences.guardrailsEnabled 
+                            ? (isDark ? 'bg-slate-900/80 border-emerald-500/30 shadow-[0_20px_50px_rgba(16,185,129,0.1)]' : 'bg-white border-emerald-500/20 shadow-[0_20px_50px_rgba(16,185,129,0.05)]') 
+                            : (isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-slate-50 border-slate-200 shadow-sm')
+                          }`}>
+                            {profile.preferences.guardrailsEnabled && (
+                              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                <ShieldCheck size={120} />
+                              </div>
+                            )}
+
+                            <div className="flex items-start gap-5 relative z-10">
+                              <div className={`p-3 rounded-2xl transition-all duration-500 ${profile.preferences.guardrailsEnabled ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 rotate-3' : (isDark ? 'bg-slate-800 text-slate-500' : 'bg-slate-200 text-slate-400')}`}>
+                                <Shield size={24} className={profile.preferences.guardrailsEnabled ? 'animate-pulse' : ''} />
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="text-lg font-black tracking-tight">Maria Core Shield</p>
+                                  <span className="bg-emerald-500/10 text-emerald-500 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border border-emerald-500/20">L3 Protocol</span>
+                                </div>
+                                <p className={`text-xs font-bold leading-relaxed mt-1 max-w-[280px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                                  Proteksi *In-Memory* yang memfilter setiap input dan output Maria dari upaya manipulasi.
+                                </p>
+                              </div>
+                              <button 
+                                onClick={() => handleUpdatePreference('guardrailsEnabled', !profile.preferences.guardrailsEnabled)}
+                                className={`w-14 h-7 rounded-full relative transition-all duration-500 shrink-0 ${profile.preferences.guardrailsEnabled ? 'bg-emerald-500' : (isDark ? 'bg-slate-800' : 'bg-slate-300')}`}
+                              >
+                                <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-500 ${profile.preferences.guardrailsEnabled ? 'right-1' : 'left-1'}`} />
+                              </button>
+                            </div>
+                            
+                            {profile.preferences.guardrailsEnabled && (
+                              <motion.div 
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="mt-8 grid grid-cols-2 gap-4"
+                              >
+                                {[
+                                  { label: 'Input Filter', info: 'Jailbreak blocking' },
+                                  { label: 'Output Guard', info: 'Safety validation' },
+                                  { label: 'Identity Lock', info: 'Persona integrity' },
+                                  { label: 'Data Shield', info: 'Context isolation' }
+                                ].map((item, idx) => (
+                                  <div key={idx} className={`p-4 rounded-3xl border ${isDark ? 'bg-slate-950/50 border-emerald-500/10' : 'bg-emerald-50/30 border-emerald-500/10'}`}>
+                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest leading-none mb-1">{item.label}</p>
+                                    <p className="text-[9px] font-bold text-slate-500 opacity-60 uppercase tracking-tighter">{item.info}</p>
+                                  </div>
+                                ))}
+                              </motion.div>
+                            )}
+                          </div>
+
                           <div className={`flex items-center gap-4 p-5 rounded-2xl border transition-colors ${isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-slate-50 border-slate-100'}`}>
                             <div className="flex-1">
                               <p className="text-base font-black">{t.saveHistory}</p>
