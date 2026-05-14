@@ -22,7 +22,6 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import remarkBreaks from 'remark-breaks';
 import { Message, KeywordSetting, UserNotification } from '../types';
 import { askMaria } from '../services/geminiService';
 import { getTranslation } from '../translations';
@@ -83,25 +82,30 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
 
   useEffect(() => {
     const loadChat = () => {
-      const allChats = JSON.parse(localStorage.getItem('maria_chats') || '{}');
-      const currentChat = allChats[chatId];
-      
-      if (currentChat) {
-        setMessages(currentChat.messages);
-      } else {
-        // Fallback for migration or new chat
-        const defaultMessages: Message[] = [
-          {
-            id: 'welcome',
-            role: 'assistant',
-            content: t.welcome,
-            timestamp: Date.now(),
-          },
-        ];
-        setMessages(defaultMessages);
-        
-        // Don't save it immediately, wait for the first user message or just return
+      try {
+        const chatsStr = localStorage.getItem('maria_chats');
+        if (chatsStr && chatsStr !== 'null' && chatsStr !== 'undefined') {
+          const allChats = JSON.parse(chatsStr);
+          const currentChat = allChats[chatId];
+          if (currentChat) {
+            setMessages(currentChat.messages || []);
+            return;
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load chat", e);
       }
+      
+      // Fallback for migration or new chat
+      const defaultMessages: Message[] = [
+        {
+          id: 'welcome',
+          role: 'assistant',
+          content: t.welcome,
+          timestamp: Date.now(),
+        },
+      ];
+      setMessages(defaultMessages);
     };
 
     loadChat();
@@ -123,8 +127,10 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
   }, [messages]);
 
   const saveToStorage = (updatedMessages: Message[]) => {
-    const allChats = JSON.parse(localStorage.getItem('maria_chats') || '{}');
-    let title = allChats[chatId]?.title || 'Chat Baru';
+    try {
+      const chatsStr = localStorage.getItem('maria_chats');
+      const allChats = (chatsStr && chatsStr !== 'null') ? JSON.parse(chatsStr) : {};
+      let title = allChats[chatId]?.title || 'Chat Baru';
     
     // Auto-generate title if it's the first real user message
     if (title === 'Chat Baru') {
@@ -144,6 +150,9 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
     
     localStorage.setItem('maria_chats', JSON.stringify(allChats));
     window.dispatchEvent(new Event('storage'));
+    } catch (e) {
+      console.error("Failed to save to storage", e);
+    }
   };
 
   const handleSubmit = async (e: any) => {
@@ -582,13 +591,13 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
                           speed={10}
                           onUpdate={scrollToBottom}
                           renderMarkdown={(content) => (
-                            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
                               {content}
                             </ReactMarkdown>
                           )}
                         />
                       ) : (
-                        <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
                           {msg.content}
                         </ReactMarkdown>
                       )}

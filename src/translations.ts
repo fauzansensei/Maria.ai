@@ -417,7 +417,7 @@ export const translations: Record<string, any> = {
       previous: "Riolo"
     }
   },
-  btw: { // Betawi
+  bet: { // Betawi
     newChat: "Ngerumpi Baru",
     searchPlaceholder: "Cari obrolan...",
     focusMode: "Mode Fokus",

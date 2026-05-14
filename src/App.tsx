@@ -14,12 +14,75 @@ import NotificationCenter from './components/NotificationCenter';
 import { 
   Search, Info, Settings, User as UserIcon, Star,
   Menu, X, Clock, Globe, Plus, MoreVertical, ChevronRight, Sparkles, Notebook,
-  Share2, MessageCircle, MessageSquare, Edit2, Pin, PinOff, Trash2, Bell
+  Share2, MessageCircle, MessageSquare, Edit2, Pin, PinOff, Trash2, Bell, AlertTriangle
 } from 'lucide-react';
 import { ChatSession, UserNotification, SUPPORTED_LANGUAGES } from './types';
 import { getTranslation } from './translations';
 
+// Simple Error Boundary component
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("Maria App Crash:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="h-screen w-full flex items-center justify-center bg-slate-950 text-white p-6 font-sans">
+          <div className="max-w-md w-full bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl flex flex-col items-center text-center">
+            <div className="w-16 h-16 bg-red-500/20 text-red-500 rounded-2xl flex items-center justify-center mb-6">
+              <AlertTriangle size={32} />
+            </div>
+            <h1 className="text-xl font-black mb-4">Waduh, Maria lagi kendala!</h1>
+            <p className="text-slate-400 text-sm mb-8 leading-relaxed">Terjadi kesalahan sistem yang tidak terduga. Silakan muat ulang halaman atau hapus cache browser jika masalah berlanjut.</p>
+            <div className="w-full space-y-3">
+              <button 
+                onClick={() => window.location.reload()}
+                className="w-full py-3 bg-brand-blue text-white rounded-xl font-bold hover:bg-blue-600 transition-all"
+              >
+                Muat Ulang
+              </button>
+              <button 
+                onClick={() => {
+                  localStorage.clear();
+                  window.location.reload();
+                }}
+                className="w-full py-3 border border-slate-800 text-slate-500 rounded-xl font-bold hover:text-white transition-all text-xs"
+              >
+                Reset Semua Data (Lokal)
+              </button>
+            </div>
+            {this.state.error && (
+              <pre className="mt-8 p-4 bg-black/50 rounded-xl text-[10px] text-slate-600 text-left w-full overflow-auto max-h-32">
+                {String(this.state.error)}
+              </pre>
+            )}
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
+  return (
+    <ErrorBoundary>
+      <MainApp />
+    </ErrorBoundary>
+  );
+}
+
+function MainApp() {
   const [language, setLanguage] = useState('id');
   const t = getTranslation(language);
   const [user, setUser] = useState<User | null>(null);
@@ -51,90 +114,98 @@ export default function App() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renamingTitle, setRenamingTitle] = useState('');
 
-  const loadProfile = () => {
+  const loadProfile = useCallback(() => {
     const savedProfile = localStorage.getItem('maria_profile');
-    if (savedProfile) {
+    if (savedProfile && savedProfile !== 'null' && savedProfile !== 'undefined') {
       try {
         const profile = JSON.parse(savedProfile);
-        setUserName(profile.name);
-        setUserAvatar(profile.avatar || null);
-        
-        const accentColor = profile.preferences?.accentColor || 'blue';
-        const theme = profile.preferences?.theme || 'light';
-        
-        const colors: Record<string, string> = {
-          blue: '#001B3D',
-          teal: '#14B8A6',
-          gold: '#FBBF24',
-          purple: '#7E22CE',
-          green: '#22c55e',
-          red: '#ef4444',
-          pink: '#db2777',
-          amber: '#d97706',
-          slate: '#475569',
-          yellow: '#eab308'
-        };
-        
-        const finalAccent = colors[accentColor] || colors.blue;
-        document.documentElement.style.setProperty('--maria-accent', finalAccent);
-        setIsLiteMode(profile.preferences?.performanceMode || false);
-        setIsPlus(profile.isPlus || false);
+        if (profile && typeof profile === 'object') {
+          setUserName(profile.name || 'Pengguna');
+          setUserAvatar(profile.avatar || null);
+          
+          const accentColor = profile.preferences?.accentColor || 'blue';
+          const theme = profile.preferences?.theme || 'light';
+          
+          const colors: Record<string, string> = {
+            blue: '#001B3D',
+            teal: '#14B8A6',
+            gold: '#FBBF24',
+            purple: '#7E22CE',
+            green: '#22c55e',
+            red: '#ef4444',
+            pink: '#db2777',
+            amber: '#d97706',
+            slate: '#475569',
+            yellow: '#eab308'
+          };
+          
+          const finalAccent = colors[accentColor] || colors.blue;
+          document.documentElement.style.setProperty('--maria-accent', finalAccent);
+          setIsLiteMode(profile.preferences?.performanceMode || false);
+          setIsPlus(profile.isPlus || false);
 
-        if (profile.preferences?.language) {
-          setLanguage(profile.preferences.language);
-        }
+          if (profile.preferences?.language) {
+            setLanguage(profile.preferences.language);
+          }
 
-        // Handle theme independently of focus mode
-        if (theme === 'system') {
-          const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          setIsDark(isSystemDark);
-        } else if (theme === 'dark') {
-          setIsDark(true);
-        } else {
-          setIsDark(false);
+          // Handle theme independently of focus mode
+          if (theme === 'system') {
+            const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            setIsDark(isSystemDark);
+          } else if (theme === 'dark') {
+            setIsDark(true);
+          } else {
+            setIsDark(false);
+          }
         }
       } catch (e) {}
     }
-  };
+  }, []);
 
-  const loadChats = (forceId?: string) => {
+  const loadChats = useCallback((forceId?: string) => {
     // Migration logic
     const migrateLegacyHistory = () => {
-      const legacyHistory = localStorage.getItem('maria_chat_history');
-      const chatsStr = localStorage.getItem('maria_chats');
-      
-      if (legacyHistory && !chatsStr) {
-        const messages = JSON.parse(legacyHistory);
-        const firstUserMsg = messages.find((m: any) => m.role === 'user');
-        const title = firstUserMsg ? (firstUserMsg.content.substring(0, 35) + (firstUserMsg.content.length > 35 ? '...' : '')) : 'Migration Chat';
-        const newId = 'legacy-' + Date.now();
-        const initialChats = {
-          [newId]: {
-            id: newId,
-            title,
-            messages,
-            updatedAt: Date.now()
+      try {
+        const legacyHistory = localStorage.getItem('maria_chat_history');
+        const chatsStr = localStorage.getItem('maria_chats');
+        
+        if (legacyHistory && legacyHistory !== 'null' && !chatsStr) {
+          const messages = JSON.parse(legacyHistory);
+          if (Array.isArray(messages)) {
+            const firstUserMsg = messages.find((m: any) => m.role === 'user');
+            const title = firstUserMsg ? (firstUserMsg.content.substring(0, 35) + (firstUserMsg.content.length > 35 ? '...' : '')) : 'Migration Chat';
+            const newId = 'legacy-' + Date.now();
+            const initialChats = {
+              [newId]: {
+                id: newId,
+                title,
+                messages,
+                updatedAt: Date.now()
+              }
+            };
+            localStorage.setItem('maria_chats', JSON.stringify(initialChats));
+            localStorage.removeItem('maria_chat_history');
+            return newId;
           }
-        };
-        localStorage.setItem('maria_chats', JSON.stringify(initialChats));
-        localStorage.removeItem('maria_chat_history');
-        return newId;
-      }
+        }
+      } catch (e) {}
       return null;
     };
 
     const migratedId = migrateLegacyHistory();
     const chatsStr = localStorage.getItem('maria_chats');
-    if (chatsStr) {
+    if (chatsStr && chatsStr !== 'undefined' && chatsStr !== 'null') {
       try {
         const chatsObj = JSON.parse(chatsStr);
-        const sessions = Object.values(chatsObj) as ChatSession[];
-        const sortedSessions = sessions.sort((a, b) => b.updatedAt - a.updatedAt);
-        setChatSessions(sortedSessions);
-        
-        if (!activeChatId || forceId) {
-          const targetId = forceId || migratedId || sortedSessions[0]?.id || 'initial-chat';
-          setActiveChatId(targetId);
+        if (chatsObj && typeof chatsObj === 'object') {
+          const sessions = Object.values(chatsObj) as ChatSession[];
+          const sortedSessions = sessions.sort((a, b) => b.updatedAt - a.updatedAt);
+          setChatSessions(sortedSessions);
+          
+          if (!activeChatId || forceId) {
+            const targetId = forceId || migratedId || sortedSessions[0]?.id || 'initial-chat';
+            setActiveChatId(targetId);
+          }
         }
       } catch (e) {
         console.error("Failed to parse chats", e);
@@ -143,7 +214,7 @@ export default function App() {
       const defaultId = migratedId || 'initial-chat';
       setActiveChatId(defaultId);
     }
-  };
+  }, [activeChatId]);
 
   useEffect(() => {
     if (window.innerWidth >= 1024) {
@@ -183,15 +254,19 @@ export default function App() {
           setUserAvatar(currentUser.photoURL);
           
           // Optionally save to localStorage profile
-          const savedProfile = localStorage.getItem('maria_profile');
-          const profile = savedProfile ? JSON.parse(savedProfile) : { preferences: {} };
-          const nextProfile = {
-            ...profile,
-            name: currentUser.displayName || profile.name || 'Pengguna',
-            email: currentUser.email || profile.email || '',
-            avatar: currentUser.photoURL || profile.avatar
-          };
-          localStorage.setItem('maria_profile', JSON.stringify(nextProfile));
+          try {
+            const savedProfile = localStorage.getItem('maria_profile');
+            const profile = (savedProfile && savedProfile !== 'null' && savedProfile !== 'undefined') ? JSON.parse(savedProfile) : { preferences: {} };
+            const nextProfile = {
+              ...(typeof profile === 'object' ? profile : { preferences: {} }),
+              name: currentUser.displayName || profile.name || 'Pengguna',
+              email: currentUser.email || profile.email || '',
+              avatar: currentUser.photoURL || (typeof profile === 'object' ? profile.avatar : null)
+            };
+            localStorage.setItem('maria_profile', JSON.stringify(nextProfile));
+          } catch (e) {
+            console.error("Failed to update profile from auth change", e);
+          }
         }
       });
     }
