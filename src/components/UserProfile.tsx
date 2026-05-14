@@ -874,51 +874,29 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                               ))}
                         </div>
 
-                        <div className="pt-6 mt-6 border-t border-slate-200/10 space-y-4">
-                             <div className="flex items-center justify-between">
-                                <h4 className="text-lg font-black tracking-tight">{t.automation.work_time} & {t.automation.home_time}</h4>
-                             </div>
-                             
-                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div className="space-y-2">
-                                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.automation.set_work_start}</label>
-                                  <input 
-                                    type="time" 
-                                    value={profile.preferences.workStartTime}
-                                    onChange={(e) => handleUpdatePreference('workStartTime', e.target.value)}
-                                    className={`w-full p-3 rounded-xl border font-bold text-sm ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-100'}`}
-                                  />
-                                </div>
-                                <div className="space-y-2">
-                                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.automation.set_work_end}</label>
-                                  <input 
-                                    type="time" 
-                                    value={profile.preferences.workEndTime}
-                                    onChange={(e) => handleUpdatePreference('workEndTime', e.target.value)}
-                                    className={`w-full p-3 rounded-xl border font-bold text-sm ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-100'}`}
-                                  />
-                                </div>
-                                <div className="space-y-2">
-                                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.automation.home_time}</label>
-                                  <input 
-                                    type="time" 
-                                    value={profile.preferences.homeStartTime}
-                                    onChange={(e) => handleUpdatePreference('homeStartTime', e.target.value)}
-                                    className={`w-full p-3 rounded-xl border font-bold text-sm ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-100'}`}
-                                  />
-                                </div>
+                        <div className="pt-6 mt-6 border-t border-slate-200/10 space-y-6">
+                             <div className="space-y-1">
+                                <h4 className="text-lg font-black tracking-tight">{t.automation.title}</h4>
+                                <p className={`text-xs font-bold leading-relaxed ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                                  {t.automation.desc}
+                                </p>
                              </div>
 
-                             <div className="flex items-center justify-between p-4 rounded-2xl border bg-amber-500/5 border-amber-500/10">
+                             <div className={`flex items-center justify-between p-6 rounded-[28px] border transition-all duration-500 ${profile.preferences.autoNotify ? (isDark ? 'bg-amber-500/10 border-amber-500/20 shadow-[0_15px_30px_rgba(245,158,11,0.05)]' : 'bg-amber-50 border-amber-200/50') : (isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-slate-50 border-slate-100')}`}>
                                 <div className="flex-1">
-                                  <p className="text-sm font-black">{t.automation.auto_notify}</p>
-                                  <p className="text-[10px] font-bold text-slate-500">Maria akan memberitahu jadwal kerja secara otomatis.</p>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <p className="text-sm font-black">{t.automation.smart_active}</p>
+                                    {profile.preferences.autoNotify && <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse" />}
+                                  </div>
+                                  <p className={`text-[10px] font-bold leading-relaxed max-w-[280px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                                    {t.automation.smart_active_desc}
+                                  </p>
                                 </div>
                                 <button 
                                   onClick={() => handleUpdatePreference('autoNotify', !profile.preferences.autoNotify)}
-                                  className={`w-10 h-5 rounded-full relative transition-all duration-300 shrink-0 ${profile.preferences.autoNotify ? 'bg-amber-500' : 'bg-slate-300'}`}
+                                  className={`w-12 h-6 rounded-full relative transition-all duration-500 shrink-0 ${profile.preferences.autoNotify ? 'bg-amber-500 shadow-lg shadow-amber-500/30' : (isDark ? 'bg-slate-800' : 'bg-slate-300')}`}
                                 >
-                                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full shadow-sm transition-all duration-300 ${profile.preferences.autoNotify ? 'right-1' : 'left-1'}`} />
+                                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-md transition-all duration-500 ${profile.preferences.autoNotify ? 'right-1' : 'left-1'}`} />
                                 </button>
                              </div>
                           </div>

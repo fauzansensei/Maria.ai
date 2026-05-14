@@ -146,11 +146,10 @@
     "connector_search": "Connector search"
   },
   "automation": {
-    "work_time": "Work Time",
-    "home_time": "Home Time",
-    "auto_notify": "Auto Notify",
-    "set_work_start": "Set Work Start Time",
-    "set_work_end": "Set Work End Time"
+    "title": "Maria Intelligent Automation",
+    "desc": "Maria will automatically manage your schedule and activities based on your habits.",
+    "smart_active": "Maria Smart Activation",
+    "smart_active_desc": "Maria will recognize when you start work or go home and perform appropriate actions automatically."
   },
   "chatGroups": {
     "pinned": "Pinned",

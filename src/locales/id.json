@@ -146,11 +146,10 @@
     "connector_search": "Pencarian konektor"
   },
   "automation": {
-    "work_time": "Waktu Kerja",
-    "home_time": "Waktu Pulang",
-    "auto_notify": "Beritahu Otomatis",
-    "set_work_start": "Set Jam Masuk Kerja",
-    "set_work_end": "Set Jam Pulang Kerja"
+    "title": "Otomasi Cerdas Maria",
+    "desc": "Maria akan secara otomatis mengelola jadwal dan aktivitas Anda berdasarkan kebiasaan.",
+    "smart_active": "Aktivitas Cerdas Maria",
+    "smart_active_desc": "Maria akan mengenali kapan Anda mulai bekerja atau pulang dan melakukan aksi yang sesuai secara otomatis."
   },
   "chatGroups": {
     "pinned": "Disematkan",
