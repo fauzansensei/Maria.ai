@@ -1,0 +1,19 @@
+{
+  "newChat": "Oca'an Anyar",
+  "searchPlaceholder": "Nyari oca'an...",
+  "focusMode": "Mode Fokus",
+  "settings": "Atoran",
+  "profile": "Profil & Akun",
+  "privacy": "Privasi & Data",
+  "personalization": "Personalisasi",
+  "memory": "Ingatan",
+  "notifications": "Kabar",
+  "welcome": "Halo! Kabulâ Maria. È bâdâ sè bisa èbhânto?",
+  "language": "Basa",
+  "chatGroups": {
+    "pinned": "Èpasang",
+    "today": "Arè mangken",
+    "yesterday": "Alami",
+    "previous": "Sabelumma"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "newChat": "Obrolan Baru",
+  "welcome": "Halo! Nyak Maria. Api sai pandai nyak bantu?",
+  "language": "Bahaso",
+  "chatGroups": {
+    "pinned": "Disematko",
+    "today": "Ghani hinji",
+    "yesterday": "Jibi",
+    "previous": "Sakekhuni"
+  }
+}

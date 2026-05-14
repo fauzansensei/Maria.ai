@@ -1,0 +1,14 @@
+{
+  "newChat": "Pangkataion Baru",
+  "searchPlaceholder": "Darami pangkataion...",
+  "focusMode": "Mode Fokus",
+  "settings": "Aturan",
+  "welcome": "Mejuah-juah! Aku Maria. Kai si banci kusampati?",
+  "language": "Cakap",
+  "chatGroups": {
+    "pinned": "Ipasang",
+    "today": "Sendah",
+    "yesterday": "Nderbi",
+    "previous": "Si nggo lebe"
+  }
+}

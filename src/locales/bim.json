@@ -1,0 +1,11 @@
+{
+  "newChat": "Baos Anyar",
+  "welcome": "Halo! Mada Maria. Apa nahu mada bantu?",
+  "language": "Basa",
+  "chatGroups": {
+    "pinned": "Tepasang",
+    "today": "Ai iye",
+    "yesterday": "Alami",
+    "previous": "Sabelumma"
+  }
+}

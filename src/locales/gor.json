@@ -1,0 +1,11 @@
+{
+  "newChat": "Obrolan Baru",
+  "welcome": "Halo! Watiya Maria. Wanu u mowali bantu?",
+  "language": "Bahasalo",
+  "chatGroups": {
+    "pinned": "Disematkan",
+    "today": "Dulahia boti",
+    "yesterday": "Ngo’idi",
+    "previous": "U yilalu"
+  }
+}

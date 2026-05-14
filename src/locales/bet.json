@@ -1,0 +1,18 @@
+{
+  "newChat": "Ngerumpi Baru",
+  "searchPlaceholder": "Cari obrolan...",
+  "focusMode": "Mode Fokus",
+  "settings": "Setelan",
+  "profile": "Profil & Akun",
+  "privacy": "Privasi & Data",
+  "memory": "Ingetan",
+  "notifications": "Kabar",
+  "welcome": "Halo! Aye Maria. Ada yang bisa aye bantu?",
+  "language": "Bahasa",
+  "chatGroups": {
+    "pinned": "Disematkan",
+    "today": "Hari ni",
+    "yesterday": "Camer",
+    "previous": "Nyang udeh-udeh"
+  }
+}

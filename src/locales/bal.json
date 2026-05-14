@@ -1,0 +1,18 @@
+{
+  "newChat": "Obrolan Anyar",
+  "searchPlaceholder": "Rereh obrolan...",
+  "focusMode": "Mode Fokus",
+  "settings": "Setelan",
+  "profile": "Profil & Akon",
+  "privacy": "Privasi & Data",
+  "memory": "Elingan",
+  "notifications": "Orati",
+  "welcome": "Halo! Tiang Maria. Wenten sane prasida titiang wantu?",
+  "language": "Basa",
+  "chatGroups": {
+    "pinned": "Kapasang",
+    "today": "Rahina mangkin",
+    "yesterday": "Ibi",
+    "previous": "Saderengnyane"
+  }
+}

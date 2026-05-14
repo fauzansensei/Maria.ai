@@ -1,0 +1,18 @@
+{
+  "newChat": "Kisah Anyar",
+  "searchPlaceholder": "Cari kisah...",
+  "focusMode": "Mode Fokus",
+  "settings": "Aturan",
+  "profile": "Profil & Akun",
+  "privacy": "Privasi & Data",
+  "memory": "Ingatan",
+  "notifications": "Kabar",
+  "welcome": "Halo! Ulun Maria. Napa nang kawa ulun bantu?",
+  "language": "Bahasa",
+  "chatGroups": {
+    "pinned": "Tapasang",
+    "today": "Hari ngini",
+    "yesterday": "Samalam",
+    "previous": "Sabalumnya"
+  }
+}

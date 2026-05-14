@@ -1,0 +1,11 @@
+{
+  "newChat": "Obrolan Anyar",
+  "welcome": "Halo! Aku Maria. Apa bisa bantu?",
+  "language": "Basa",
+  "chatGroups": {
+    "pinned": "Tepasang",
+    "today": "Leso ho’o",
+    "yesterday": "Gulon",
+    "previous": "Dania"
+  }
+}

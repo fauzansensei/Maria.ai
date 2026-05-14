@@ -1,0 +1,18 @@
+{
+  "newChat": "Meutulông Barô",
+  "searchPlaceholder": "Mita peugah-habah...",
+  "focusMode": "Mode Fokus",
+  "settings": "Aturan",
+  "profile": "Profil & Akun",
+  "privacy": "Privasi & Data",
+  "memory": "Ingatan",
+  "notifications": "Peunajôh",
+  "welcome": "Halo! Lôn Maria. Peu nan jeuet lôn tulông?",
+  "language": "Bahsa",
+  "chatGroups": {
+    "pinned": "Dipeunajôh",
+    "today": "Urow nyoe",
+    "yesterday": "Baroe",
+    "previous": "Sigo nyoe"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "newChat": "Mabbicara Baru",
+  "searchPlaceholder": "Sappa mabbicara...",
+  "focusMode": "Mode Fokus",
+  "settings": "Aturang",
+  "profile": "Profil & Akun",
+  "privacy": "Privasi & Data",
+  "personalization": "Personalisasi",
+  "memory": "Ingngerang",
+  "notifications": "Pamberitahuang",
+  "welcome": "Halo! Iya Maria. Aga bisa ribantu?",
+  "language": "Basa",
+  "chatGroups": {
+    "pinned": "Ripasang",
+    "today": "Essoe iye",
+    "yesterday": "Irawe",
+    "previous": "Riolo"
+  }
+}

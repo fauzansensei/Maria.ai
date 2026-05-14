@@ -1,0 +1,19 @@
+{
+  "newChat": "Oto Baru",
+  "searchPlaceholder": "Cari curito...",
+  "focusMode": "Mode Fokus",
+  "settings": "Aturan",
+  "profile": "Profil & Akun",
+  "privacy": "Privasi & Data",
+  "personalization": "Personalisasi",
+  "memory": "Ingekan",
+  "notifications": "Pemberitahuan",
+  "welcome": "Halo! Ambo Maria. Ado nan bisa ambo bantu?",
+  "language": "Bahaso",
+  "chatGroups": {
+    "pinned": "Disematkan",
+    "today": "Hari iko",
+    "yesterday": "Patang",
+    "previous": "Sabalumnyo"
+  }
+}

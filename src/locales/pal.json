@@ -1,0 +1,19 @@
+{
+  "newChat": "Ngobrol Baru",
+  "searchPlaceholder": "Cari obrolan...",
+  "focusMode": "Mode Fokus",
+  "settings": "Aturan",
+  "profile": "Profil & Akun",
+  "privacy": "Privasi & Data",
+  "personalization": "Personalisasi",
+  "memory": "Ingatan",
+  "notifications": "Kabar",
+  "welcome": "Halo! Aku Maria. Ado yang biso aku bantu?",
+  "language": "Bahasa",
+  "chatGroups": {
+    "pinned": "Disematke",
+    "today": "Hari ini",
+    "yesterday": "Kemari",
+    "previous": "Sabelumnyo"
+  }
+}

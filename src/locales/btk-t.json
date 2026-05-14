@@ -1,0 +1,18 @@
+{
+  "newChat": "Pangkataion Baru",
+  "searchPlaceholder": "Lului pangkataion...",
+  "focusMode": "Mode Fokus",
+  "settings": "Setelan",
+  "profile": "Profil & Akun",
+  "privacy": "Privasi & Data",
+  "memory": "Ingatan",
+  "notifications": "Barita",
+  "welcome": "Horas! Au Maria. Adong na boi huurupi?",
+  "language": "Hata",
+  "chatGroups": {
+    "pinned": "Nidokkon",
+    "today": "Sadari on",
+    "yesterday": "Nantoari",
+    "previous": "Najolo"
+  }
+}
