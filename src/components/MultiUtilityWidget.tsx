@@ -162,6 +162,22 @@ export default function MultiUtilityWidget({ isDark = false, language = 'id' }: 
         if (!weatherRes.ok) throw new Error("Weather fetch failed");
         const data = await weatherRes.json();
 
+        // 3. Get Air Pollution Data
+        const airRes = await fetch(`https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${apiKey}`);
+        let aqiValue = 0;
+        let pm25Value = 0;
+        if (airRes.ok) {
+          const airData = await airRes.json();
+          if (airData.list && airData.list[0]) {
+            pm25Value = airData.list[0].components.pm2_5;
+            // Try to approximate US AQI from PM2.5 for better familiarity (0-500 scale)
+            if (pm25Value <= 12) aqiValue = Math.round((50 / 12) * pm25Value);
+            else if (pm25Value <= 35.4) aqiValue = Math.round(((100 - 51) / (35.4 - 12.1)) * (pm25Value - 12.1) + 51);
+            else if (pm25Value <= 55.4) aqiValue = Math.round(((150 - 101) / (55.4 - 35.5)) * (pm25Value - 35.5) + 101);
+            else aqiValue = Math.round(pm25Value * 1.5); // Rough fallback
+          }
+        }
+
         const current = data.list[0];
         const now = Date.now();
 
@@ -172,10 +188,10 @@ export default function MultiUtilityWidget({ isDark = false, language = 'id' }: 
           humidity: current.main.humidity.toString(),
           wind: Math.round(current.wind.speed * 3.6).toString(), // m/s to km/h
           feelsLike: Math.round(current.main.feels_like).toString(),
-          uvIndex: "N/A",
+          uvIndex: "N/A", // Standard OpenWeather API doesn't include UV in forecast
           visibility: (current.visibility / 1000).toString(),
           pressure: current.main.pressure.toString(),
-          aqi: 0,
+          aqi: aqiValue,
           sunrise: new Date(data.city.sunrise * 1000).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
           sunset: new Date(data.city.sunset * 1000).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
           timestamp: now,
@@ -185,7 +201,7 @@ export default function MultiUtilityWidget({ isDark = false, language = 'id' }: 
             minTemp: Math.round(day.main.temp_min).toString(),
             condition: day.weather[0].description
           })),
-          hourly: data.list.slice(0, 8).map((hour: any) => ({
+          hourly: data.list.slice(0, 12).map((hour: any) => ({
             time: new Date(hour.dt * 1000).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
             temp: Math.round(hour.main.temp),
             condition: hour.weather[0].description
@@ -511,9 +527,23 @@ export default function MultiUtilityWidget({ isDark = false, language = 'id' }: 
                         <div className="flex items-end justify-between">
                             <div>
                                 <div className="text-4xl font-black">{weather.aqi || '--'}</div>
-                                <div className="text-xs font-bold text-brand-blue uppercase mt-1">Sangat Baik</div>
+                                <div className={`text-xs font-bold uppercase mt-1 ${
+                                    (weather.aqi || 0) <= 50 ? 'text-green-400' :
+                                    (weather.aqi || 0) <= 100 ? 'text-yellow-400' :
+                                    (weather.aqi || 0) <= 150 ? 'text-orange-400' :
+                                    'text-red-400'
+                                }`}>
+                                    {(weather.aqi || 0) <= 50 ? 'Sangat Baik' :
+                                     (weather.aqi || 0) <= 100 ? 'Sedang' :
+                                     (weather.aqi || 0) <= 150 ? 'Tidak Sehat' :
+                                     'Sangat Buruk'}
+                                </div>
                             </div>
-                            <div className="w-12 h-12 rounded-full border-4 border-brand-blue/20 border-t-brand-blue flex items-center justify-center text-[10px] font-bold">AQI</div>
+                            <div className={`w-12 h-12 rounded-full border-4 flex items-center justify-center text-[10px] font-bold ${
+                                (weather.aqi || 0) <= 50 ? 'border-green-400/20 border-t-green-400' :
+                                (weather.aqi || 0) <= 100 ? 'border-yellow-400/20 border-t-yellow-400' :
+                                'border-red-400/20 border-t-red-400'
+                            }`}>AQI</div>
                         </div>
                     </div>
                     <div className={`border rounded-[32px] p-6 flex justify-between items-center min-h-[80px] ${
