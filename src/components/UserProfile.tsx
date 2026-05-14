@@ -15,13 +15,44 @@ interface UserProfileData {
   preferences: {
     theme: 'dark' | 'light' | 'system';
     language: string;
-    personality: 'ramah' | 'profesional' | 'lucu' | 'serius' | 'tsundere';
+    personality: string;
     accentColor: string;
     safeMode: boolean;
     autoSave: boolean;
     useMemory: boolean;
     performanceMode: boolean;
     guardrailsEnabled: boolean;
+    // New fields for personalization
+    style_tone: 'default' | 'professional' | 'friendly' | 'honest' | 'eccentric' | 'efficient' | 'sinister';
+    warmth: 'more' | 'default' | 'less';
+    enthusiasm: 'more' | 'default' | 'less';
+    titles_lists: 'more' | 'default' | 'less';
+    emoji: 'more' | 'default' | 'less';
+    quick_answer: boolean;
+    nickname: string;
+    job: string;
+    bio: string;
+    use_history: boolean;
+    web_search: boolean;
+    canvas: boolean;
+    voice: boolean;
+    advanced_voice: boolean;
+    connector_search: boolean;
+    // Automation fields
+    workStartTime: string; 
+    workEndTime: string;   
+    homeStartTime: string;
+    autoNotify: boolean;
+    customInstructions: string;
+  };
+  notifications: {
+    codex: 'push' | 'email' | 'both' | 'none';
+    group_chat: 'push' | 'email' | 'both' | 'none';
+    usage: 'push' | 'email' | 'both' | 'none';
+    project: 'push' | 'email' | 'both' | 'none';
+    recommendation: 'push' | 'email' | 'both' | 'none';
+    response: 'push' | 'email' | 'both' | 'none';
+    tasks: 'push' | 'email' | 'both' | 'none';
   };
 }
 
@@ -49,7 +80,36 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
       autoSave: true,
       useMemory: true,
       performanceMode: false,
-      guardrailsEnabled: true
+      guardrailsEnabled: true,
+      style_tone: 'default',
+      warmth: 'default',
+      enthusiasm: 'default',
+      titles_lists: 'default',
+      emoji: 'default',
+      quick_answer: true,
+      nickname: '',
+      job: '',
+      bio: '',
+      use_history: true,
+      web_search: true,
+      canvas: true,
+      voice: true,
+      advanced_voice: true,
+      connector_search: true,
+      workStartTime: '08:00',
+      workEndTime: '17:00',
+      homeStartTime: '18:00',
+      autoNotify: true,
+      customInstructions: ''
+    },
+    notifications: {
+      codex: 'push',
+      group_chat: 'push',
+      usage: 'both',
+      project: 'email',
+      recommendation: 'push',
+      response: 'push',
+      tasks: 'both'
     }
   });
 
@@ -60,7 +120,7 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
   const [newReminderTitle, setNewReminderTitle] = useState('');
   const [newReminderDateTime, setNewReminderDateTime] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'umum' | 'profil' | 'privasi' | 'personalisasi' | 'memory' | 'notifikasi'>('umum');
+  const [activeTab, setActiveTab] = useState<'umum' | 'profil' | 'privasi' | 'personalisasi' | 'memory' | 'notifikasi' | 'jadwal'>('umum');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -97,7 +157,17 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
     }
   }, []);
 
-  const handleUpdatePreference = (key: string, value: any) => {
+  const handleUpdateNotification = (key: keyof UserProfileData['notifications'], value: any) => {
+    const nextProfile = {
+      ...profile,
+      notifications: { ...profile.notifications, [key]: value }
+    };
+    setProfile(nextProfile);
+    localStorage.setItem('maria_profile', JSON.stringify(nextProfile));
+    window.dispatchEvent(new Event('storage'));
+  };
+
+  const handleUpdatePreference = (key: keyof UserProfileData['preferences'], value: any) => {
     const nextProfile = {
       ...profile,
       preferences: { ...profile.preferences, [key]: value }
@@ -201,6 +271,7 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                 { id: 'personalisasi', label: t.personalization, icon: <Sparkles size={16} /> },
                 { id: 'memory', label: t.memory, icon: <Brain size={16} /> },
                 { id: 'privasi', label: t.privacy, icon: <Shield size={16} /> },
+                { id: 'jadwal', label: t.eventReminders, icon: <Calendar size={16} /> },
               ].map((item) => (
                 <button
                   key={item.id}
@@ -524,31 +595,77 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
 
                     {activeTab === 'personalisasi' && (
                       <div className="space-y-8">
-                        <h3 className="text-2xl font-black tracking-tight">{t.personalization}</h3>
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-2xl font-black tracking-tight">{t.personalization}</h3>
+                        </div>
                         
-                        <div className="space-y-7">
+                        <div className="space-y-8">
+                          {/* Tone Setting */}
                           <div className="flex flex-col gap-2">
-                            <label className={`text-sm font-black uppercase tracking-widest ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t.mariaStyle}</label>
-                            <select 
-                              value={profile.preferences.personality}
-                              onChange={(e) => handleUpdatePreference('personality', e.target.value)}
-                              className={`w-full border rounded-xl px-4 py-3.5 text-sm font-bold outline-none focus:ring-4 transition-all cursor-pointer ${
-                                isDark 
-                                ? 'bg-slate-900 border-slate-800 text-white focus:ring-brand-blue/20' 
-                                : 'bg-slate-50 border-slate-100 text-slate-900 focus:ring-brand-blue/5'
-                              }`}
-                            >
-                                <option value="default">Bawaan</option>
-                                <option value="ramah">Ramah</option>
-                                <option value="profesional">Formal</option>
-                                <option value="tsundere">Tsundere</option>
-                                <option value="serius">Cerdas</option>
-                            </select>
+                             <div className="flex items-start justify-between">
+                               <div>
+                                 <label className={`text-base font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{t.personalization_settings.style_tone}</label>
+                                 <p className={`text-xs font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t.personalization_settings.style_tone_desc}</p>
+                               </div>
+                               <select 
+                                 value={profile.preferences.style_tone}
+                                 onChange={(e) => handleUpdatePreference('style_tone', e.target.value)}
+                                 className={`px-3 py-1.5 rounded-lg text-xs font-black border outline-none cursor-pointer ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100 shadow-sm'}`}
+                               >
+                                 <option value="default">Default</option>
+                                 <option value="professional">Professional</option>
+                                 <option value="friendly">Friendly</option>
+                                 <option value="honest">Honest</option>
+                                 <option value="eccentric">Eccentric</option>
+                                 <option value="efficient">Efficient</option>
+                                 <option value="sinister">Sinister</option>
+                               </select>
+                             </div>
                           </div>
 
-                          <div className="flex flex-col gap-2">
+                          <div className="space-y-4">
+                            <label className={`text-sm font-black uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t.personalization_settings.characteristics}</label>
+                            {[
+                              { key: 'warmth', label: t.personalization_settings.warmth },
+                              { key: 'enthusiasm', label: t.personalization_settings.enthusiasm },
+                              { key: 'titles_lists', label: t.personalization_settings.titles_lists },
+                              { key: 'emoji', label: t.personalization_settings.emoji }
+                            ].map((item) => (
+                              <div key={item.key} className="flex items-center justify-between">
+                                <span className="text-sm font-bold">{item.label}</span>
+                                <select 
+                                  value={profile.preferences[item.key as keyof UserProfileData['preferences']] as string}
+                                  onChange={(e) => handleUpdatePreference(item.key as any, e.target.value)}
+                                  className={`px-3 py-1 rounded-lg text-xs font-black border outline-none cursor-pointer ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100 shadow-sm'}`}
+                                >
+                                  <option value="more">{t.personalization_settings.more}</option>
+                                  <option value="default">{t.personalization_settings.default}</option>
+                                  <option value="less">{t.personalization_settings.less}</option>
+                                </select>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className={`p-5 rounded-2xl border flex items-start gap-4 ${isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-slate-50 border-slate-100'}`}>
+                            <div className="flex-1">
+                              <p className="text-base font-black">{t.personalization_settings.quick_answer}</p>
+                              <p className={`text-xs font-bold leading-relaxed ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                                {t.personalization_settings.quick_answer_desc}
+                              </p>
+                            </div>
+                            <button 
+                              onClick={() => handleUpdatePreference('quick_answer', !profile.preferences.quick_answer)}
+                              className={`w-12 h-6 rounded-full relative transition-all duration-300 shrink-0 ${profile.preferences.quick_answer ? 'bg-brand-blue' : (isDark ? 'bg-slate-800' : 'bg-slate-200')}`}
+                            >
+                              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300 ${profile.preferences.quick_answer ? 'right-1' : 'left-1'}`} />
+                            </button>
+                          </div>
+
+                          <div className="space-y-4">
                              <label className={`text-sm font-black uppercase tracking-widest ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t.customInst}</label>
                              <textarea 
+                               value={profile.preferences.customInstructions}
+                               onChange={(e) => handleUpdatePreference('customInstructions', e.target.value)}
                                placeholder={t.customInstPlaceholder}
                                className={`w-full border rounded-xl px-4 py-3.5 text-sm font-bold outline-none focus:ring-4 transition-all min-h-[120px] resize-none ${
                                  isDark 
@@ -556,6 +673,111 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                                  : 'bg-slate-50 border-slate-100 text-slate-900 focus:ring-brand-blue/5'
                                }`}
                              />
+                          </div>
+
+                          <div className="space-y-4 pt-4 border-t border-slate-200/10">
+                            <h4 className="text-lg font-black tracking-tight">{t.personalization_settings.about_you}</h4>
+                            
+                            <div className="space-y-4">
+                              <div className="flex flex-col gap-2">
+                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{t.personalization_settings.nickname}</label>
+                                <input 
+                                  type="text"
+                                  value={profile.preferences.nickname}
+                                  onChange={(e) => handleUpdatePreference('nickname', e.target.value)}
+                                  placeholder={t.personalization_settings.nickname_placeholder}
+                                  className={`w-full border rounded-xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-100 text-slate-900'}`}
+                                />
+                              </div>
+                              <div className="flex flex-col gap-2">
+                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{t.personalization_settings.job}</label>
+                                <input 
+                                  type="text"
+                                  value={profile.preferences.job}
+                                  onChange={(e) => handleUpdatePreference('job', e.target.value)}
+                                  placeholder={t.personalization_settings.job_placeholder}
+                                  className={`w-full border rounded-xl px-4 py-3 text-sm font-bold outline-none ${isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-100 text-slate-900'}`}
+                                />
+                              </div>
+                              <div className="flex flex-col gap-2">
+                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{t.personalization_settings.bio}</label>
+                                <textarea 
+                                  value={profile.preferences.bio}
+                                  onChange={(e) => handleUpdatePreference('bio', e.target.value)}
+                                  placeholder={t.personalization_settings.bio_placeholder}
+                                  className={`w-full border rounded-xl px-4 py-3 text-sm font-bold outline-none min-h-[100px] resize-none ${isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-100 text-slate-900'}`}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-4 pt-4 border-t border-slate-200/10">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-lg font-black tracking-tight">{t.memory}</h4>
+                              <button className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>{t.personalization_settings.manage}</button>
+                            </div>
+                            
+                            <div className="space-y-4">
+                              <div className="flex items-start justify-between">
+                                <div className="max-w-[280px]">
+                                  <p className="text-sm font-black">{t.personalization_settings.use_memory}</p>
+                                  <p className={`text-[10px] font-bold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t.personalization_settings.use_memory_desc}</p>
+                                </div>
+                                <button 
+                                  onClick={() => handleUpdatePreference('useMemory', !profile.preferences.useMemory)}
+                                  className={`w-12 h-6 rounded-full relative transition-all duration-300 shrink-0 ${profile.preferences.useMemory ? 'bg-brand-blue' : (isDark ? 'bg-slate-800' : 'bg-slate-200')}`}
+                                >
+                                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300 ${profile.preferences.useMemory ? 'right-1' : 'left-1'}`} />
+                                </button>
+                              </div>
+                              <div className="flex items-start justify-between">
+                                <div className="max-w-[280px]">
+                                  <p className="text-sm font-black">{t.personalization_settings.use_history}</p>
+                                  <p className={`text-[10px] font-bold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t.personalization_settings.use_history_desc}</p>
+                                </div>
+                                <button 
+                                  onClick={() => handleUpdatePreference('use_history', !profile.preferences.use_history)}
+                                  className={`w-12 h-6 rounded-full relative transition-all duration-300 shrink-0 ${profile.preferences.use_history ? 'bg-brand-blue' : (isDark ? 'bg-slate-800' : 'bg-slate-200')}`}
+                                >
+                                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300 ${profile.preferences.use_history ? 'right-1' : 'left-1'}`} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-4 pt-4 border-t border-slate-200/10">
+                            <button 
+                                onClick={() => {
+                                  const el = document.getElementById('advanced-settings');
+                                  if (el) el.classList.toggle('hidden');
+                                }}
+                                className="flex items-center gap-2 text-sm font-black"
+                            >
+                                {t.personalization_settings.advanced} <ChevronRight size={16} />
+                            </button>
+                            
+                            <div id="advanced-settings" className="space-y-4 hidden">
+                                {[
+                                    { key: 'web_search', label: t.personalization_settings.web_search, desc: t.personalization_settings.web_search_desc },
+                                    { key: 'canvas', label: t.personalization_settings.canvas, desc: 'Berkolaborasi dengan Maria di teks dan kode.' },
+                                    { key: 'voice', label: t.personalization_settings.voice, desc: 'Aktifkan Suara di Maria.' },
+                                    { key: 'advanced_voice', label: t.personalization_settings.advanced_voice, desc: 'Lakukan percakapan lebih natural dalam Suara.' },
+                                    { key: 'connector_search', label: t.personalization_settings.connector_search, desc: 'Izinkan Maria mencari sumber terhubung untuk jawaban.' },
+                                ].map((item) => (
+                                    <div key={item.key} className="flex items-start justify-between">
+                                        <div className="max-w-[280px]">
+                                            <p className="text-sm font-black">{item.label}</p>
+                                            <p className={`text-[10px] font-bold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{item.desc}</p>
+                                        </div>
+                                        <button 
+                                            onClick={() => handleUpdatePreference(item.key as any, !profile.preferences[item.key as keyof UserProfileData['preferences']])}
+                                            className={`w-12 h-6 rounded-full relative transition-all duration-300 shrink-0 ${profile.preferences[item.key as keyof UserProfileData['preferences']] ? 'bg-brand-blue' : (isDark ? 'bg-slate-800' : 'bg-slate-200')}`}
+                                        >
+                                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300 ${profile.preferences[item.key as keyof UserProfileData['preferences']] ? 'right-1' : 'left-1'}`} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -620,66 +842,112 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                     )}
 
                     {activeTab === 'notifikasi' && (
-                      <div className="space-y-10">
+                      <div className="space-y-8">
+                        <h3 className="text-2xl font-black tracking-tight">{t.notifications}</h3>
+                        
                         <div className="space-y-4">
-                          <h3 className="text-2xl font-black tracking-tight">{t.topicsKeywords}</h3>
-                          <p className={`text-xs font-bold leading-relaxed ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                            {t.topicsDesc}
-                          </p>
-                          
-                          <div className="flex gap-3">
-                            <input 
-                              type="text"
-                              value={newKeyword}
-                              onChange={(e) => setNewKeyword(e.target.value)}
-                              placeholder={t.addKeywordPlaceholder}
-                              className={`flex-1 border rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-4 transition-all ${
-                                isDark 
-                                ? 'bg-slate-900 border-slate-800 text-white focus:ring-brand-blue/20' 
-                                : 'bg-slate-50 border-slate-100 text-slate-900 focus:ring-brand-blue/5'
-                              }`}
-                            />
-                            <button 
-                              onClick={() => {
-                                if (!newKeyword.trim()) return;
-                                const updated = [...keywords, { id: Date.now().toString(), keyword: newKeyword.trim(), isEnabled: true }];
-                                setKeywords(updated);
-                                localStorage.setItem('maria_keywords', JSON.stringify(updated));
-                                setNewKeyword('');
-                                window.dispatchEvent(new Event('storage'));
-                              }}
-                              className="px-5 py-3 bg-brand-blue text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-brand-blue/20 hover:scale-[1.02] active:scale-95 transition-all"
-                            >
-                              {t.add}
-                            </button>
-                          </div>
-
-                          <div className="flex flex-wrap gap-2 pt-2">
-                            {keywords.map((kw) => (
-                              <div 
-                                key={kw.id} 
-                                className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-black transition-all ${
-                                  isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-100 shadow-sm'
-                                }`}
-                              >
-                                <Sparkles size={12} className="text-brand-blue" />
-                                <span>{kw.keyword}</span>
-                                <button 
-                                  onClick={() => {
-                                    const updated = keywords.filter(k => k.id !== kw.id);
-                                    setKeywords(updated);
-                                    localStorage.setItem('maria_keywords', JSON.stringify(updated));
-                                    window.dispatchEvent(new Event('storage'));
-                                  }}
-                                  className="ml-1 text-slate-400 hover:text-red-500 transition-colors"
-                                >
-                                  <X size={14} />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
+                              {[
+                                { key: 'codex', label: t.notifications_settings.codex, desc: t.notifications_settings.codex_desc },
+                                { key: 'group_chat', label: t.notifications_settings.group_chat, desc: t.notifications_settings.group_chat_desc },
+                                { key: 'usage', label: t.notifications_settings.usage, desc: t.notifications_settings.usage_desc },
+                                { key: 'project', label: t.notifications_settings.project, desc: t.notifications_settings.project_desc },
+                                { key: 'recommendation', label: t.notifications_settings.recommendation, desc: t.notifications_settings.recommendation_desc },
+                                { key: 'response', label: t.notifications_settings.response, desc: t.notifications_settings.response_desc },
+                                { key: 'tasks', label: t.notifications_settings.tasks, desc: t.notifications_settings.tasks_desc },
+                              ].map((item) => (
+                                <div key={item.key} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${isDark ? 'bg-slate-900/30 border-slate-900/50' : 'bg-slate-50/50 border-slate-100/50'}`}>
+                                  <div className="max-w-[70%]">
+                                    <p className="text-sm font-black">{item.label}</p>
+                                    <p className={`text-[10px] font-bold leading-tight mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{item.desc}</p>
+                                  </div>
+                                  <select 
+                                    value={profile.notifications[item.key as keyof UserProfileData['notifications']]}
+                                    onChange={(e) => handleUpdateNotification(item.key as any, e.target.value)}
+                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black border outline-none cursor-pointer transition-all ${isDark ? 'bg-slate-950 border-slate-800' : 'bg-white border-slate-100 shadow-sm'}`}
+                                  >
+                                    <option value="push">{t.notifications_settings.push}</option>
+                                    <option value="email">{t.notifications_settings.email}</option>
+                                    <option value="both">{t.notifications_settings.push_email}</option>
+                                    <option value="none">{t.notifications_settings.none}</option>
+                                  </select>
+                                </div>
+                              ))}
                         </div>
 
+                        <div className="pt-6 mt-6 border-t border-slate-200/10 space-y-4">
+                             <div className="flex items-center justify-between">
+                                <h4 className="text-lg font-black tracking-tight">{t.automation.work_time} & {t.automation.home_time}</h4>
+                             </div>
+                             
+                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.automation.set_work_start}</label>
+                                  <input 
+                                    type="time" 
+                                    value={profile.preferences.workStartTime}
+                                    onChange={(e) => handleUpdatePreference('workStartTime', e.target.value)}
+                                    className={`w-full p-3 rounded-xl border font-bold text-sm ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-100'}`}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.automation.set_work_end}</label>
+                                  <input 
+                                    type="time" 
+                                    value={profile.preferences.workEndTime}
+                                    onChange={(e) => handleUpdatePreference('workEndTime', e.target.value)}
+                                    className={`w-full p-3 rounded-xl border font-bold text-sm ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-100'}`}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.automation.home_time}</label>
+                                  <input 
+                                    type="time" 
+                                    value={profile.preferences.homeStartTime}
+                                    onChange={(e) => handleUpdatePreference('homeStartTime', e.target.value)}
+                                    className={`w-full p-3 rounded-xl border font-bold text-sm ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-100'}`}
+                                  />
+                                </div>
+                             </div>
+
+                             <div className="flex items-center justify-between p-4 rounded-2xl border bg-amber-500/5 border-amber-500/10">
+                                <div className="flex-1">
+                                  <p className="text-sm font-black">{t.automation.auto_notify}</p>
+                                  <p className="text-[10px] font-bold text-slate-500">Maria akan memberitahu jadwal kerja secara otomatis.</p>
+                                </div>
+                                <button 
+                                  onClick={() => handleUpdatePreference('autoNotify', !profile.preferences.autoNotify)}
+                                  className={`w-10 h-5 rounded-full relative transition-all duration-300 shrink-0 ${profile.preferences.autoNotify ? 'bg-amber-500' : 'bg-slate-300'}`}
+                                >
+                                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full shadow-sm transition-all duration-300 ${profile.preferences.autoNotify ? 'right-1' : 'left-1'}`} />
+                                </button>
+                             </div>
+                          </div>
+                        <div className="pt-6 border-t border-slate-200/10 space-y-6">
+                          <div className="space-y-4">
+                            <h3 className="text-2xl font-black tracking-tight">{t.topicsKeywords}</h3>
+                            <p className={`text-xs font-bold leading-relaxed ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                              {t.topicsDesc}
+                            </p>
+                            
+                            <div className="flex gap-3">
+                              <input 
+                                type="text"
+                                value={newKeyword}
+                                onChange={(e) => setNewKeyword(e.target.value)}
+                                placeholder={t.addKeywordPlaceholder}
+                                className={`flex-1 border rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-4 transition-all ${
+                                  isDark 
+                                  ? 'bg-slate-900 border-slate-800 text-white focus:ring-brand-blue/20' 
+                                  : 'bg-slate-50 border-slate-100 text-slate-900 focus:ring-brand-blue/5'
+                                }`}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {activeTab === 'jadwal' && (
                         <div className="space-y-6 pt-6 border-t border-slate-200/5">
                           <div className="flex items-center justify-between">
                             <h3 className="text-2xl font-black tracking-tight">{t.eventReminders}</h3>
@@ -790,60 +1058,59 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                             )}
                           </div>
                         </div>
-                      </div>
                     )}
                   </motion.div>
                 </AnimatePresence>
               </div>
 
-              {/* Action Buttons Footer */}
-              <footer className="px-6 sm:px-10 py-6 border-t border-slate-200/10 flex flex-col sm:flex-row items-center justify-between gap-6 shrink-0">
-                <div className="flex items-center justify-between w-full sm:w-auto gap-10">
-                  <div className="flex flex-col">
-                      <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Maria AI</span>
-                      <span className="text-[10px] font-bold text-slate-400">v0.0.1 • Stable</span>
-                  </div>
-                  <button 
-                    onClick={handleClearChat}
-                    className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-400 transition-all"
-                  >
-                    <RotateCcw size={14} />
-                    {t.resetMaria}
-                  </button>
+            {/* Action Buttons Footer */}
+            <footer className="px-6 sm:px-10 py-6 border-t border-slate-200/10 flex flex-col sm:flex-row items-center justify-between gap-6 shrink-0">
+              <div className="flex items-center justify-between w-full sm:w-auto gap-10">
+                <div className="flex flex-col">
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Maria AI</span>
+                    <span className="text-[10px] font-bold text-slate-400">v0.0.1 • Stable</span>
                 </div>
-                {user ? (
-                  <button 
-                    onClick={async () => {
-                      await logout();
+                <button 
+                  onClick={handleClearChat}
+                  className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-400 transition-all"
+                >
+                  <RotateCcw size={14} />
+                  {t.resetMaria}
+                </button>
+              </div>
+              {user ? (
+                <button 
+                  onClick={async () => {
+                    await logout();
+                    onClose();
+                  }}
+                  className="w-full sm:w-auto px-10 py-4 bg-red-500/10 text-red-500 rounded-2xl text-sm font-black uppercase tracking-widest border border-red-500/20 hover:bg-red-500 hover:text-white transition-all shadow-lg shadow-red-500/10 flex items-center justify-center gap-2"
+                >
+                  <LogOut size={18} />
+                  {t.logout}
+                </button>
+              ) : (
+                <button 
+                  onClick={async () => {
+                    try {
+                      await loginWithGoogle();
                       onClose();
-                    }}
-                    className="w-full sm:w-auto px-10 py-4 bg-red-500/10 text-red-500 rounded-2xl text-sm font-black uppercase tracking-widest border border-red-500/20 hover:bg-red-500 hover:text-white transition-all shadow-lg shadow-red-500/10 flex items-center justify-center gap-2"
-                  >
-                    <LogOut size={18} />
-                    {t.logout}
-                  </button>
-                ) : (
-                  <button 
-                    onClick={async () => {
-                      try {
-                        await loginWithGoogle();
-                        onClose();
-                      } catch (e) {
-                        console.error(e);
-                      }
-                    }}
-                    className="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-[#021B2B] to-[#0E4D54] text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-teal-900/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
-                  >
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-                    {t.loginGoogle}
-                  </button>
-                )}
-              </footer>
-            </div>
-          </motion.div>
-        </div>
-      </AnimatePresence>
-    );
+                    } catch (e) {
+                      console.error(e);
+                    }
+                  }}
+                  className="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-[#021B2B] to-[#0E4D54] text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-teal-900/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                  {t.loginGoogle}
+                </button>
+              )}
+            </footer>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
 }
 
 function SettingItem({ icon, label, value, onClick }: { icon: any, label: string, value: string, onClick: () => void }) {

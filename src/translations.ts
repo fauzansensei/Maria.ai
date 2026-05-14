@@ -6,24 +6,33 @@ export const getTranslation = (lang: string) => {
     i18n.changeLanguage(lang);
   }
 
-  // Create a proxy to allow t.key syntax while using i18n.t(key)
-  const proxy = new Proxy({}, {
-    get(target, prop) {
-      if (typeof prop !== 'string') return undefined;
+  const createProxy = (path: string = ''): any => {
+    return new Proxy({}, {
+      get(target, prop) {
+        // Allow access to common methods for React and JS conversion
+        if (prop === 'toString' || prop === 'valueOf' || prop === Symbol.toPrimitive) {
+          return () => i18n.t(path);
+        }
 
-      // Handle nested chatGroups
-      if (prop === 'chatGroups') {
-        return new Proxy({}, {
-          get(targetGroup, propGroup) {
-            if (typeof propGroup !== 'string') return undefined;
-            return i18n.t(`chatGroups.${propGroup}`);
-          }
-        });
+        if (typeof prop !== 'string') return undefined;
+
+        const newPath = path ? `${path}.${prop}` : prop;
+        const val = i18n.t(newPath, { returnObjects: true });
+        
+        if (typeof val === 'string') {
+          return val;
+        }
+        
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+          // If it's an object, it's a nested structure, return a proxy
+          return createProxy(newPath);
+        }
+
+        // Fallback: return the value from i18n.t (likely the key string if missing)
+        return val;
       }
+    });
+  };
 
-      return i18n.t(prop);
-    }
-  });
-
-  return proxy as any;
+  return createProxy();
 };
