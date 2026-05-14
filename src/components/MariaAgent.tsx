@@ -762,7 +762,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
       />
 
       {/* Modern Input Dock */}
-      <div className={`p-6 md:p-10 pointer-events-none transition-all duration-700 ${isFocusMode ? 'pb-20' : ''}`}>
+      <div className={`p-4 md:p-10 pointer-events-none transition-all duration-700 ${isFocusMode ? 'pb-20' : ''}`}>
           <div className="max-w-4xl mx-auto w-full pointer-events-auto">
               <form onSubmit={handleSubmit} className="relative group">
                 <AnimatePresence>
@@ -792,11 +792,10 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
                     </motion.div>
                   )}
                 </AnimatePresence>
-
-                <div className={`absolute -inset-4 rounded-[40px] blur-2xl opacity-0 group-focus-within:opacity-100 transition-opacity ${isFocusMode ? 'bg-brand-blue/10' : 'bg-brand-blue/5'}`} />
-                <div className="relative flex items-center gap-3">
+                
+                <div className="relative flex items-center gap-2">
                     <div className="flex-1 relative flex items-center">
-                        <Sparkles size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-brand-blue/30 group-focus-within:text-brand-blue transition-colors" />
+                        <Sparkles size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-brand-blue/30 group-focus-within:text-brand-blue transition-colors hidden sm:block" />
                         <textarea
                             ref={textareaRef}
                             value={input}
@@ -810,18 +809,18 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
                             disabled={isLoading}
                             placeholder={t.chatInputPlaceholder}
                             rows={1}
-                            className={`w-full py-5 transition-all outline-none rounded-[28px] pl-16 pr-16 text-base shadow-xl resize-none overflow-hidden custom-scrollbar ${
+                            className={`w-full py-4 sm:py-5 transition-all outline-none rounded-[24px] sm:rounded-[28px] pl-6 sm:pl-16 pr-14 text-sm sm:text-base shadow-xl resize-none overflow-hidden custom-scrollbar ${
                                 isDark || isFocusMode 
                                 ? 'bg-slate-900 border border-slate-800 text-white placeholder:text-slate-600 focus:border-brand-blue/50 focus:ring-8 focus:ring-brand-blue/10' 
                                 : 'bg-white border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-brand-blue focus:ring-8 focus:ring-brand-blue/5'
                             } shadow-slate-200/40`}
-                            style={{ minHeight: '64px', maxHeight: '200px', height: 'auto' }}
+                            style={{ minHeight: '56px', maxHeight: '200px', height: 'auto' }}
                             onInput={(e: any) => {
                               e.target.style.height = 'auto';
                               e.target.style.height = e.target.scrollHeight + 'px';
                             }}
                         />
-                        <div className="absolute right-4 flex items-center gap-1">
+                        <div className="absolute right-3 flex items-center gap-0.5">
                           <input 
                             type="file" 
                             ref={fileInputRef} 
@@ -833,26 +832,26 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
                           <button 
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
-                            className={`p-2.5 rounded-full transition-all ${isDark || isFocusMode ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-400'} hover:text-brand-blue`}
+                            className={`p-2 rounded-full transition-all ${isDark || isFocusMode ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-400'} hover:text-brand-blue`}
                             title="Upload Image"
                           >
-                            <ImageIcon size={20} />
+                            <ImageIcon size={18} />
                           </button>
                         </div>
                     </div>
                     <button
                         type="submit"
                         disabled={(!input.trim() && pendingImages.length === 0) || isLoading}
-                        className={`w-16 h-16 shrink-0 border rounded-[26px] transition-all disabled:opacity-20 flex items-center justify-center shadow-xl active:scale-95 group ${
+                        className={`w-14 h-14 sm:w-16 sm:h-16 shrink-0 border rounded-[22px] sm:rounded-[26px] transition-all disabled:opacity-20 flex items-center justify-center shadow-xl active:scale-95 group ${
                           isDark || isFocusMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-900 border-slate-800 text-white'
                         } hover:bg-brand-blue hover:border-brand-blue`}
                     >
-                        <Send size={24} className="ml-1 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                        <Send size={22} className="ml-1 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                     </button>
                 </div>
               </form>
-              <div className="mt-4 text-center">
-                  <p className={`text-[10px] font-bold uppercase tracking-[0.4em] ${isDark || isFocusMode ? 'text-slate-600' : 'text-slate-400'}`}>MARIA AI • {t.professionalAsst}</p>
+              <div className="mt-3 text-center">
+                  <p className={`text-[9px] font-bold uppercase tracking-[0.2em] px-4 ${isDark || isFocusMode ? 'text-slate-600' : 'text-slate-400'}`}>MARIA AI • {t.professionalAsst}</p>
               </div>
           </div>
       </div>

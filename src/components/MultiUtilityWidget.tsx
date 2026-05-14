@@ -144,74 +144,120 @@ export default function MultiUtilityWidget({ isDark = false, language = 'id' }: 
     // Only show full loading if we don't have cached data
     if (!weather) setIsLoading(true);
     
+    const apiKey = import.meta.env.VITE_WEATHER_API_KEY;
+
     try {
-      const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`, {
-        headers: {
-          'User-Agent': 'Maria-AI-App/1.0'
+      if (apiKey) {
+        // Use WeatherAPI.com if key is provided (more stable, includes geocoding)
+        const res = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${encodeURIComponent(city)}&days=7&aqi=yes&lang=${language === 'id' ? 'id' : 'en'}`);
+        if (!res.ok) throw new Error("WeatherAPI request failed");
+        const data = await res.json();
+
+        const now = Date.now();
+        const newWeather: WeatherData & { timestamp: number } = {
+          temp: Math.round(data.current.temp_c).toString(),
+          condition: data.current.condition.text,
+          location: data.location.name,
+          humidity: data.current.humidity.toString(),
+          wind: Math.round(data.current.wind_kph).toString(),
+          feelsLike: Math.round(data.current.feelslike_c).toString(),
+          uvIndex: data.current.uv.toString(),
+          visibility: data.current.vis_km.toString(),
+          pressure: data.current.pressure_mb.toString(),
+          aqi: Math.round(data.current.air_quality['us-epa-index'] * 20), // Rough conversion to US AQI scale
+          sunrise: data.forecast.forecastday[0].astro.sunrise,
+          sunset: data.forecast.forecastday[0].astro.sunset,
+          timestamp: now,
+          daily: data.forecast.forecastday.map((day: any) => ({
+            date: new Date(day.date).toLocaleDateString('id-ID', { weekday: 'short', day: '2-digit', month: '2-digit' }),
+            maxTemp: Math.round(day.day.maxtemp_c).toString(),
+            minTemp: Math.round(day.day.mintemp_c).toString(),
+            condition: day.day.condition.text
+          })),
+          hourly: data.forecast.forecastday[0].hour.filter((_: any, i: number) => i % 2 === 0).map((hour: any) => ({
+            time: hour.time.split(' ')[1],
+            temp: Math.round(hour.temp_c),
+            condition: hour.condition.text
+          }))
+        };
+
+        setWeather(newWeather);
+        setSavedCity(data.location.name);
+        setLastUpdated(new Date(now).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }));
+        localStorage.setItem('weather_city', data.location.name);
+        localStorage.setItem('weather_data', JSON.stringify(newWeather));
+        setShowSearch(false);
+      } else {
+        // Fallback to Open-Meteo
+        const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`, {
+          headers: {
+            'User-Agent': 'Maria-AI-App/1.0'
+          }
+        });
+        const geoData = await geoRes.json();
+        
+        if (!geoData || geoData.length === 0) {
+          alert("Kota tidak ditemukan. Pastikan nama kota benar.");
+          return;
         }
-      });
-      const geoData = await geoRes.json();
-      
-      if (!geoData || geoData.length === 0) {
-        alert("Kota tidak ditemukan. Pastikan nama kota benar.");
-        return;
+
+        const { lat, lon, display_name } = geoData[0];
+        const cityShortName = display_name.split(',')[0];
+
+        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,pressure_msl,surface_pressure,wind_speed_10m,uv_index&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=auto`);
+        const data = await weatherRes.json();
+
+        const aqiRes = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,pm10,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone`);
+        const aqiData = await aqiRes.json();
+
+        const current = data.current;
+        const codes: Record<number, string> = { 
+          0: 'Cerah', 1: 'Cerah Berawan', 2: 'Sebagian Berawan', 3: 'Mendung', 
+          45: 'Berkabut', 48: 'Kabut Berembun', 51: 'Gerimis Ringan', 53: 'Gerimis Sedang', 
+          55: 'Gerimis Lebat', 61: 'Hujan Ringan', 63: 'Hujan Sedang', 65: 'Hujan Lebat',
+          71: 'Salju Ringan', 73: 'Salju Sedang', 75: 'Salju Lebat', 80: 'Hujan Shower Ringan',
+          81: 'Hujan Shower Sedang', 82: 'Hujan Shower Sangat Lebat', 95: 'Badai Petir',
+          96: 'Badai Petir Ringan', 99: 'Badai Petir Lebat'
+        };
+
+        const now = Date.now();
+        const newWeather: WeatherData & { timestamp: number } = {
+          temp: Math.round(current.temperature_2m).toString(),
+          condition: codes[current.weather_code] || "Berawan",
+          location: cityShortName,
+          humidity: current.relative_humidity_2m.toString(),
+          wind: Math.round(current.wind_speed_10m).toString(),
+          feelsLike: Math.round(current.apparent_temperature).toString(),
+          uvIndex: Math.round(current.uv_index).toString(),
+          visibility: "10", 
+          pressure: Math.round(current.pressure_msl).toString(),
+          aqi: aqiData.current.us_aqi,
+          sunrise: data.daily.sunrise[0].split('T')[1],
+          sunset: data.daily.sunset[0].split('T')[1],
+          timestamp: now,
+          daily: data.daily.time.map((dateStr: string, i: number) => ({
+            date: new Date(dateStr).toLocaleDateString('id-ID', { weekday: 'short', day: '2-digit', month: '2-digit' }),
+            maxTemp: Math.round(data.daily.temperature_2m_max[i]).toString(),
+            minTemp: Math.round(data.daily.temperature_2m_min[i]).toString(),
+            condition: codes[data.daily.weather_code[i]] || "Berawan"
+          })),
+          hourly: data.hourly.time.slice(0, 24).map((timeStr: string, i: number) => ({
+            time: timeStr.split('T')[1],
+            temp: Math.round(data.hourly.temperature_2m[i]),
+            condition: codes[data.hourly.weather_code[i]] || "Berawan"
+          }))
+        };
+
+        setWeather(newWeather);
+        setSavedCity(cityShortName);
+        setLastUpdated(new Date(now).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }));
+        localStorage.setItem('weather_city', cityShortName);
+        localStorage.setItem('weather_data', JSON.stringify(newWeather));
+        setShowSearch(false);
       }
-
-      const { lat, lon, display_name } = geoData[0];
-      const cityShortName = display_name.split(',')[0];
-
-      const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,pressure_msl,surface_pressure,wind_speed_10m,uv_index&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=auto`);
-      const data = await weatherRes.json();
-
-      const aqiRes = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5,pm10,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone`);
-      const aqiData = await aqiRes.json();
-
-      const current = data.current;
-      const codes: Record<number, string> = { 
-        0: 'Cerah', 1: 'Cerah Berawan', 2: 'Sebagian Berawan', 3: 'Mendung', 
-        45: 'Berkabut', 48: 'Kabut Berembun', 51: 'Gerimis Ringan', 53: 'Gerimis Sedang', 
-        55: 'Gerimis Lebat', 61: 'Hujan Ringan', 63: 'Hujan Sedang', 65: 'Hujan Lebat',
-        71: 'Salju Ringan', 73: 'Salju Sedang', 75: 'Salju Lebat', 80: 'Hujan Shower Ringan',
-        81: 'Hujan Shower Sedang', 82: 'Hujan Shower Sangat Lebat', 95: 'Badai Petir',
-        96: 'Badai Petir Ringan', 99: 'Badai Petir Lebat'
-      };
-
-      const now = Date.now();
-      const newWeather: WeatherData & { timestamp: number } = {
-        temp: Math.round(current.temperature_2m).toString(),
-        condition: codes[current.weather_code] || "Berawan",
-        location: cityShortName,
-        humidity: current.relative_humidity_2m.toString(),
-        wind: Math.round(current.wind_speed_10m).toString(),
-        feelsLike: Math.round(current.apparent_temperature).toString(),
-        uvIndex: Math.round(current.uv_index).toString(),
-        visibility: "10", 
-        pressure: Math.round(current.pressure_msl).toString(),
-        aqi: aqiData.current.us_aqi,
-        sunrise: data.daily.sunrise[0].split('T')[1],
-        sunset: data.daily.sunset[0].split('T')[1],
-        timestamp: now,
-        daily: data.daily.time.map((dateStr: string, i: number) => ({
-          date: new Date(dateStr).toLocaleDateString('id-ID', { weekday: 'short', day: '2-digit', month: '2-digit' }),
-          maxTemp: Math.round(data.daily.temperature_2m_max[i]).toString(),
-          minTemp: Math.round(data.daily.temperature_2m_min[i]).toString(),
-          condition: codes[data.daily.weather_code[i]] || "Berawan"
-        })),
-        hourly: data.hourly.time.slice(0, 24).map((timeStr: string, i: number) => ({
-          time: timeStr.split('T')[1],
-          temp: Math.round(data.hourly.temperature_2m[i]),
-          condition: codes[data.hourly.weather_code[i]] || "Berawan"
-        }))
-      };
-
-      setWeather(newWeather);
-      setSavedCity(cityShortName);
-      setLastUpdated(new Date(now).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }));
-      localStorage.setItem('weather_city', cityShortName);
-      localStorage.setItem('weather_data', JSON.stringify(newWeather));
-      setShowSearch(false);
     } catch (e) {
       console.warn("Maria: Weather fetch failed", e);
+      // Optional: Inform user about fetch failure in UI instead of just alert
     } finally {
       setIsSearching(false);
       setIsLoading(false);
