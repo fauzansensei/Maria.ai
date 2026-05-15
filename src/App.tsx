@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from './lib/firebase';
+import { auth, testFirestoreConnection } from './lib/firebase';
 import MariaAgent from './components/MariaAgent';
 import MultiUtilityWidget from './components/MultiUtilityWidget';
 import DeviceStatusWidget from './components/DeviceStatusWidget';
@@ -41,7 +41,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   render() {
     if (this.state.hasError) {
       return (
-        <div className="h-screen w-full flex items-center justify-center bg-slate-950 text-white p-6 font-sans">
+        <div className="h-[100dvh] w-full flex items-center justify-center bg-slate-950 text-white p-6 font-sans">
           <div className="max-w-md w-full bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl flex flex-col items-center text-center">
             <div className="w-16 h-16 bg-red-500/20 text-red-500 rounded-2xl flex items-center justify-center mb-6">
               <AlertTriangle size={32} />
@@ -274,6 +274,7 @@ function MainApp() {
   }, [activeChatId]);
 
   useEffect(() => {
+    testFirestoreConnection();
     if (window.innerWidth >= 1024) {
       setIsSidebarOpen(true);
     }
@@ -546,7 +547,7 @@ function MainApp() {
     : ({ type: 'spring', damping: 25, stiffness: 200 } as any);
 
   return (
-    <div className={`h-screen w-full flex flex-col font-sans overflow-hidden transition-all ${isLiteMode ? 'duration-100' : 'duration-700'} ${isDark ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
+    <div className={`h-[100dvh] w-full flex flex-col font-sans overflow-hidden transition-all ${isLiteMode ? 'duration-100' : 'duration-700'} ${isDark ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
     {/* Premium Header */}
     <AnimatePresence mode={isLiteMode ? 'popLayout' : 'wait'}>
       {!isFocusMode && (

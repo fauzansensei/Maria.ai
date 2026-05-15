@@ -619,7 +619,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
       </AnimatePresence>
 
       {/* Dynamic Messages Container */}
-      <div className={`flex-1 overflow-y-auto px-4 md:px-10 lg:px-20 py-10 space-y-12 custom-scrollbar transition-all duration-700 ${isFocusMode ? 'pt-24' : ''}`}>
+      <div className={`flex-1 overflow-y-auto px-4 sm:px-6 md:px-10 lg:px-20 py-6 sm:py-10 space-y-8 sm:space-y-12 custom-scrollbar transition-all duration-700 ${isFocusMode ? 'pt-24' : ''}`}>
         <AnimatePresence initial={false}>
           {messages.map((msg) => (
             <motion.div
@@ -629,7 +629,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
               transition={transition}
               className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              <div className={`max-w-[85%] md:max-w-[75%] group flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+              <div className={`max-w-[92%] sm:max-w-[85%] md:max-w-[75%] group flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                 {msg.role === 'assistant' && (
                   <div className="flex items-center gap-2 mb-2 ml-1">
                     <div className={`w-5 h-5 rounded-md flex items-center justify-center text-white shadow-sm border border-white/10 ${isPlus ? 'bg-gradient-to-tr from-brand-blue to-blue-900' : 'bg-gradient-to-br from-[#021B2B] via-[#0E4D54] to-[#14BCB2]'}`}>
@@ -863,7 +863,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
       />
 
       {/* Modern Input Dock */}
-      <div className={`p-4 md:p-10 pointer-events-none transition-all duration-700 ${isFocusMode ? 'pb-20' : ''}`}>
+      <div className={`p-4 sm:p-6 md:p-10 pointer-events-none transition-all duration-700 ${isFocusMode ? 'pb-20' : ''}`}>
           <div className="max-w-4xl mx-auto w-full pointer-events-auto">
               <form onSubmit={handleSubmit} className="relative group">
                 <AnimatePresence>
@@ -915,7 +915,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
                                 ? 'bg-slate-900 border border-slate-800 text-white placeholder:text-slate-600 focus:border-brand-blue/50 focus:ring-8 focus:ring-brand-blue/10' 
                                 : 'bg-white border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-brand-blue focus:ring-8 focus:ring-brand-blue/5'
                             } shadow-slate-200/40`}
-                            style={{ minHeight: '56px', maxHeight: '200px', height: 'auto' }}
+                            style={{ minHeight: '48px', maxHeight: '200px', height: 'auto' }}
                             onInput={(e: any) => {
                               e.target.style.height = 'auto';
                               e.target.style.height = e.target.scrollHeight + 'px';
@@ -943,11 +943,11 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
                     <button
                         type="submit"
                         disabled={(!input.trim() && pendingImages.length === 0) || isLoading}
-                        className={`w-14 h-14 sm:w-16 sm:h-16 shrink-0 border rounded-[22px] sm:rounded-[26px] transition-all disabled:opacity-20 flex items-center justify-center shadow-xl active:scale-95 group ${
+                        className={`w-12 h-12 sm:w-16 sm:h-16 shrink-0 border rounded-[20px] sm:rounded-[26px] transition-all disabled:opacity-20 flex items-center justify-center shadow-xl active:scale-95 group ${
                           isDark || isFocusMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-900 border-slate-800 text-white'
                         } hover:bg-brand-blue hover:border-brand-blue`}
                     >
-                        <Send size={22} className="ml-1 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                        <Send size={18} className="sm:w-5 sm:h-5 ml-1 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                     </button>
                 </div>
               </form>

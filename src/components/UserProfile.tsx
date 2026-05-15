@@ -252,41 +252,41 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
           exit={isLiteMode ? { opacity: 0 } : { x: '100%', opacity: 0 }}
           transition={isLiteMode ? { duration: 0.1 } : { type: 'spring', damping: 25, stiffness: 200 }}
           onClick={(e) => e.stopPropagation()}
-          className={`relative w-full max-w-5xl h-full sm:h-[80vh] sm:rounded-[24px] sm:my-auto sm:mx-6 flex flex-col shadow-2xl overflow-hidden self-center transition-all duration-500 ${
+          className={`relative w-full max-w-5xl h-[100dvh] sm:h-[85vh] sm:rounded-[24px] sm:my-auto sm:mx-6 flex flex-col shadow-2xl overflow-hidden self-center transition-all duration-500 ${
             isDark ? 'bg-[#0a0a0f] border-slate-900 text-[#e0e0ff]' : 'bg-white border-slate-200 text-slate-900'
           }`}
         >
           {/* Dashboard Container */}
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full overflow-hidden">
             
             {/* Header */}
-            <header className={`flex flex-col items-center justify-center px-6 sm:px-10 py-10 border-b transition-colors duration-500 shrink-0 ${
+            <header className={`flex flex-col items-center justify-center px-6 sm:px-10 py-6 sm:py-10 border-b transition-colors duration-500 shrink-0 ${
               isDark ? 'bg-[#111118] border-slate-800' : 'bg-white border-slate-100'
             }`}>
-              <div className="flex flex-col items-center gap-4 text-center">
+              <div className="flex flex-col items-center gap-2 sm:gap-4 text-center">
                 {profile.avatar ? (
                   <img 
                     src={profile.avatar} 
                     alt="Profile" 
-                    className="w-16 h-16 rounded-2xl object-cover border-2 border-teal-500/20 shadow-xl"
+                    className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl object-cover border-2 border-teal-500/20 shadow-xl"
                   />
                 ) : (
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#021B2B] via-[#0E4D54] to-[#14BCB2] flex items-center justify-center text-white border border-white/10 shadow-xl">
-                    <span className="font-serif italic text-2xl">M</span>
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#021B2B] via-[#0E4D54] to-[#14BCB2] flex items-center justify-center text-white border border-white/10 shadow-xl">
+                    <span className="font-serif italic text-xl sm:text-2xl">M</span>
                   </div>
                 )}
-                <h2 className={`text-2xl font-black tracking-tight ${isDark ? 'text-[#e0e0ff]' : 'text-slate-900'}`}>{t.settings}</h2>
+                <h2 className={`text-xl sm:text-2xl font-black tracking-tight ${isDark ? 'text-[#e0e0ff]' : 'text-slate-900'}`}>{t.settings}</h2>
               </div>
               <button 
                 onClick={onClose}
-                className={`absolute top-6 right-6 p-2 rounded-xl transition-all ${isDark ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
+                className={`absolute top-4 right-4 sm:top-6 sm:right-6 p-2 rounded-xl transition-all ${isDark ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
               >
-                <X size={24} />
+                <X size={20} className="sm:w-6 sm:h-6" />
               </button>
             </header>
 
             {/* Horizontal Navigation Tabs */}
-            <nav className={`px-6 sm:px-10 py-2 flex items-center justify-center gap-1 overflow-x-auto no-scrollbar border-b shrink-0 ${
+            <nav className={`px-4 sm:px-10 py-1 flex items-center justify-start sm:justify-center gap-1 overflow-x-auto no-scrollbar border-b shrink-0 ${
               isDark ? 'bg-[#111118]/80 border-slate-800' : 'bg-slate-50/50 border-slate-100'
             }`}>
               {[
@@ -301,7 +301,7 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                 <button
                   key={`tab-${item.id}`}
                   onClick={() => setActiveTab(item.id as any)}
-                  className={`flex items-center gap-2 px-6 py-4 whitespace-nowrap text-xs font-black transition-all border-b-2 shrink-0 ${
+                  className={`flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-[10px] sm:text-xs font-black transition-all border-b-2 shrink-0 ${
                     activeTab === item.id
                     ? 'border-brand-blue text-brand-blue'
                     : `border-transparent text-slate-500 hover:text-slate-400 ${isDark ? 'hover:text-slate-200' : ''}`
@@ -314,7 +314,7 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
             </nav>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto p-6 sm:p-10 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-10 custom-scrollbar">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeTab}
