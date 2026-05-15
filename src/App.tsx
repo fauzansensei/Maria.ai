@@ -690,17 +690,18 @@ function MainApp() {
               <div className="w-[300px] flex flex-col h-full">
                 <div className="p-5 pb-2 space-y-4">
                   <div className="flex items-center justify-between">
-                    <div className={`px-3 py-1 rounded-full shadow-lg flex items-center gap-2 group cursor-pointer hover:scale-105 transition-all ${
-                      isPlus 
-                      ? 'bg-gradient-to-r from-brand-blue to-blue-900 border border-white/10' 
-                      : 'bg-gradient-to-r from-[#021B2B] via-[#0E4D54] to-[#14BCB2] border border-white/10'
-                    }`}>
-                      <Sparkles size={10} className={`${isPlus ? 'text-teal-300' : 'text-amber-400'} animate-pulse`} />
-                      <span className={`text-[9px] font-black uppercase tracking-widest ${isPlus ? 'text-white' : 'text-teal-400'}`}>
-                        Maria {isPlus ? 'Plus' : ''}
-                      </span>
-                    </div>
-                    <button onClick={() => setIsSidebarOpen(false)} className={`lg:hidden p-2 transition-all ${isDark ? 'text-slate-600 hover:text-white' : 'text-slate-400 hover:text-red-500'}`}>
+                    {!isPlus && (
+                      <div 
+                        onClick={() => setIsProfileOpen(true)}
+                        className={`px-3 py-1 rounded-full shadow-lg flex items-center gap-2 group cursor-pointer hover:scale-105 transition-all bg-gradient-to-r from-[#021B2B] via-[#0E4D54] to-[#14BCB2] border border-white/10`}
+                      >
+                        <Sparkles size={10} className="text-amber-400 animate-pulse" />
+                        <span className="text-[9px] font-black uppercase tracking-widest text-teal-400">
+                          Maria Plus
+                        </span>
+                      </div>
+                    )}
+                    <button onClick={() => setIsSidebarOpen(false)} className={`lg:hidden p-2 transition-all ${isDark ? 'text-slate-600 hover:text-white' : 'text-slate-400 hover:text-red-500'} ${isPlus ? 'ml-auto' : ''}`}>
                       <X size={18} />
                     </button>
                   </div>
