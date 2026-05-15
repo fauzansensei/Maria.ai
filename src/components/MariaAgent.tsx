@@ -952,7 +952,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
                 </div>
               </form>
               <div className="mt-3 text-center">
-                  <p className={`text-[9px] font-bold uppercase tracking-[0.2em] px-4 ${isDark || isFocusMode ? 'text-slate-600' : 'text-slate-400'}`}>MARIA AI • {t.professionalAsst}</p>
+                  <p className={`text-[9px] font-bold tracking-[0.1em] px-4 ${isDark || isFocusMode ? 'text-slate-600' : 'text-slate-400'}`}>{t.professionalAsst}</p>
               </div>
           </div>
       </div>
