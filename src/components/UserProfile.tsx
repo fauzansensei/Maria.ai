@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Settings, LogOut, Globe, Shield, ShieldCheck, CreditCard, ChevronRight, Sparkles, RotateCcw, X, User as UserIcon, MessageSquare, Info, Brain, Bell, Plus, Calendar, Trash2, Clock, Camera } from 'lucide-react';
+import { Settings, LogOut, Globe, Shield, ShieldCheck, CreditCard, ChevronRight, Sparkles, RotateCcw, X, User as UserIcon, MessageSquare, Info, Brain, Bell, Plus, Calendar, Trash2, Clock, Camera, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User } from 'firebase/auth';
 import { loginWithGoogle, logout } from '../lib/firebase';
@@ -456,6 +456,63 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                                   ))}
                                 </div>
                               </div>
+                            </div>
+
+                            <div className="space-y-6 pt-6">
+                               <div className="flex items-center gap-3 border-b border-slate-200/5 pb-2">
+                                  <Sparkles size={14} className="text-amber-500" />
+                                  <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Fitur Cerdas Maria</span>
+                               </div>
+
+                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                  <div className={`flex items-center justify-between p-5 rounded-2xl border ${isDark ? 'bg-slate-900/20 border-slate-800/50' : 'bg-white border-slate-100 shadow-sm'}`}>
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <div className={`p-2 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-blue-50'}`}><Globe size={16} className="text-brand-blue" /></div>
+                                      <div className="min-w-0">
+                                        <p className="text-[11px] font-black truncate">{t.personalization_settings.web_search}</p>
+                                        <p className="text-[9px] font-bold text-slate-500 truncate">Cloud Data</p>
+                                      </div>
+                                    </div>
+                                    <button 
+                                      onClick={() => handleUpdatePreference('connector_search', !profile.preferences.connector_search)}
+                                      className={`w-10 h-5 rounded-full relative transition-all ${profile.preferences.connector_search ? 'bg-brand-blue' : (isDark ? 'bg-slate-800' : 'bg-slate-200')}`}
+                                    >
+                                      <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-md transition-all ${profile.preferences.connector_search ? 'right-0.5' : 'left-0.5'}`} />
+                                    </button>
+                                  </div>
+
+                                  <div className={`flex items-center justify-between p-5 rounded-2xl border ${isDark ? 'bg-slate-900/20 border-slate-800/50' : 'bg-white border-slate-100 shadow-sm'}`}>
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <div className={`p-2 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-amber-50'}`}><Brain size={16} className="text-amber-500" /></div>
+                                      <div className="min-w-0">
+                                        <p className="text-[11px] font-black truncate">{t.autoMemory}</p>
+                                        <p className="text-[9px] font-bold text-slate-500 truncate">Local Memory</p>
+                                      </div>
+                                    </div>
+                                    <button 
+                                      onClick={() => handleUpdatePreference('useMemory', !profile.preferences.useMemory)}
+                                      className={`w-10 h-5 rounded-full relative transition-all ${profile.preferences.useMemory ? 'bg-amber-500' : (isDark ? 'bg-slate-800' : 'bg-slate-200')}`}
+                                    >
+                                      <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-md transition-all ${profile.preferences.useMemory ? 'right-0.5' : 'left-0.5'}`} />
+                                    </button>
+                                  </div>
+
+                                  <div className={`flex items-center justify-between p-5 rounded-2xl border ${isDark ? 'bg-slate-900/20 border-slate-800/50' : 'bg-white border-slate-100 shadow-sm'}`}>
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <div className={`p-2 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-teal-50'}`}><MessageCircle size={16} className="text-teal-500" /></div>
+                                      <div className="min-w-0">
+                                        <p className="text-[11px] font-black truncate">{t.personalization_settings.voice}</p>
+                                        <p className="text-[9px] font-bold text-slate-500 truncate">Vocal System</p>
+                                      </div>
+                                    </div>
+                                    <button 
+                                      onClick={() => handleUpdatePreference('advanced_voice', !profile.preferences.advanced_voice)}
+                                      className={`w-10 h-5 rounded-full relative transition-all ${profile.preferences.advanced_voice ? 'bg-teal-500' : (isDark ? 'bg-slate-800' : 'bg-slate-200')}`}
+                                    >
+                                      <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-md transition-all ${profile.preferences.advanced_voice ? 'right-0.5' : 'left-0.5'}`} />
+                                    </button>
+                                  </div>
+                               </div>
                             </div>
                           </div>
                         </div>
