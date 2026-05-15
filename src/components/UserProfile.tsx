@@ -329,11 +329,6 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                       <div className="space-y-12 py-4">
                         <div className="text-center space-y-2">
                             <h3 className="text-2xl font-black tracking-tight">{t.general}</h3>
-                            <div className="flex justify-center">
-                              <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${profile.preferences.performanceMode ? 'bg-amber-500/20 text-amber-500' : 'bg-brand-blue/20 text-brand-blue'}`}>
-                                  {profile.preferences.performanceMode ? t.liteMode : t.fullMode}
-                              </div>
-                            </div>
                         </div>
 
                         <div className="space-y-10 max-w-2xl mx-auto">
@@ -379,21 +374,6 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                             </div>
 
                             <div className="space-y-6">
-                              <div className={`flex items-center justify-between p-6 rounded-2xl border ${isDark ? 'bg-slate-900/20 border-slate-800/50' : 'bg-slate-50/50 border-slate-100'}`}>
-                                <div className="space-y-1">
-                                  <p className="text-sm font-black">{t.performanceMode}</p>
-                                  <p className={`text-[10px] font-bold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                                    {t.perfDesc}
-                                  </p>
-                                </div>
-                                <button 
-                                  onClick={() => handleUpdatePreference('performanceMode', !profile.preferences.performanceMode)}
-                                  className={`w-12 h-6 rounded-full relative transition-all duration-300 shrink-0 ${profile.preferences.performanceMode ? 'bg-amber-500 shadow-md shadow-amber-500/20' : (isDark ? 'bg-slate-800' : 'bg-slate-200')}`}
-                                >
-                                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300 ${profile.preferences.performanceMode ? 'right-1' : 'left-1'}`} />
-                                </button>
-                              </div>
-
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                   <label className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t.theme}</label>

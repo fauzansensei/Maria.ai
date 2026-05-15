@@ -859,29 +859,6 @@ function MainApp() {
                     <DeviceStatusWidget isDark={isDark} />
                     <MultiUtilityWidget isDark={isDark} language={language} />
 
-                    <div className="grid grid-cols-2 gap-2 px-1">
-                      <button 
-                        onClick={() => setIsSavedItemsOpen(true)}
-                        className={`flex items-center justify-center gap-2 p-3 border rounded-2xl shadow-sm transition-all hover:scale-[1.02] active:scale-95 ${
-                          isDark ? 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white' : 'bg-white border-slate-100 text-slate-500 hover:text-brand-blue'
-                        }`}
-                        title="Saved Items"
-                      >
-                        <Bookmark size={16} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Informasi</span>
-                      </button>
-                      <button 
-                        onClick={() => setIsProfileOpen(true)}
-                        className={`flex items-center justify-center gap-2 p-3 border rounded-2xl shadow-sm transition-all hover:scale-[1.02] active:scale-95 ${
-                          isDark ? 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white' : 'bg-white border-slate-100 text-slate-500 hover:text-brand-blue'
-                        }`}
-                        title="Quick Search"
-                      >
-                        <Globe size={16} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Search</span>
-                      </button>
-                    </div>
-
                     <div className="space-y-3">
                       <div className={`flex items-center gap-3 p-3 border rounded-2xl shadow-sm transition-colors ${
                         isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'
