@@ -11,7 +11,7 @@ export const getTranslation = (lang: string) => {
       get(target, prop) {
         // Allow access to common methods for React and JS conversion
         if (prop === 'toString' || prop === 'valueOf' || prop === Symbol.toPrimitive) {
-          return () => i18n.t(path);
+          return () => String(i18n.t(path));
         }
 
         if (typeof prop !== 'string') return undefined;
@@ -23,13 +23,13 @@ export const getTranslation = (lang: string) => {
           return val;
         }
         
-        if (val && typeof val === 'object' && !Array.isArray(val)) {
-          // If it's an object, it's a nested structure, return a proxy
+        if (val && typeof val === 'object' && !Array.isArray(val) && Object.keys(val).length > 0) {
+          // If it's an object with keys, it's a nested structure, return a proxy
           return createProxy(newPath);
         }
 
-        // Fallback: return the value from i18n.t (likely the key string if missing)
-        return val;
+        // Fallback: return the value from i18n.t (likely the key string if missing or empty object)
+        return String(val);
       }
     });
   };

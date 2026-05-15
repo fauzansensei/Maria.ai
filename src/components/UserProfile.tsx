@@ -5,6 +5,8 @@ import { User } from 'firebase/auth';
 import { loginWithGoogle, logout } from '../lib/firebase';
 import { ReminderSetting, KeywordSetting, SUPPORTED_LANGUAGES } from '../types';
 import { getTranslation } from '../translations';
+import { generateId } from '../lib/utils';
+import LegalDocs, { LegalDocType } from './LegalDocs';
 
 interface UserProfileData {
   name: string;
@@ -115,6 +117,7 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
 
   const t = getTranslation(profile.preferences.language || 'id');
   const [reminders, setReminders] = useState<ReminderSetting[]>([]);
+  const [activeLegalDoc, setActiveLegalDoc] = useState<LegalDocType>(null);
   const [keywords, setKeywords] = useState<KeywordSetting[]>([]);
   const [newKeyword, setNewKeyword] = useState('');
   const [newReminderTitle, setNewReminderTitle] = useState('');
@@ -975,7 +978,7 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                               onClick={() => {
                                 if (!newReminderTitle.trim() || !newReminderDateTime) return;
                                 const updated = [...reminders, { 
-                                  id: Date.now().toString(), 
+                                  id: generateId('rem'), 
                                   title: newReminderTitle.trim(), 
                                   dateTime: newReminderDateTime,
                                   isCompleted: false 
@@ -1043,19 +1046,42 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
 
             {/* Action Buttons Footer */}
             <footer className="px-6 sm:px-10 py-6 border-t border-slate-200/10 flex flex-col sm:flex-row items-center justify-between gap-6 shrink-0">
-              <div className="flex items-center justify-between w-full sm:w-auto gap-10">
-                <div className="flex flex-col">
-                    <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Maria AI</span>
-                    <span className="text-[10px] font-bold text-slate-400">v0.0.1 • Stable</span>
+              <div className="flex flex-col gap-4 w-full sm:w-auto">
+                <div className="flex items-center gap-6">
+                  <div className="flex flex-col">
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Maria AI</span>
+                      <span className="text-[10px] font-bold text-slate-400">v0.0.1 • Stable</span>
+                  </div>
+                  <button 
+                    onClick={handleClearChat}
+                    className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-400 transition-all"
+                  >
+                    <RotateCcw size={14} />
+                    {t.resetMaria}
+                  </button>
                 </div>
-                <button 
-                  onClick={handleClearChat}
-                  className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-400 transition-all"
-                >
-                  <RotateCcw size={14} />
-                  {t.resetMaria}
-                </button>
+                
+                {/* Legal Links */}
+                <div className="flex flex-wrap gap-x-4 gap-y-2">
+                   {[
+                     { id: 'privacy', label: t.legal?.privacy || 'Privacy' },
+                     { id: 'terms', label: t.legal?.terms || 'Terms' },
+                     { id: 'help', label: t.legal?.help || 'Help' },
+                     { id: 'cookies', label: t.legal?.cookies || 'Cookies' }
+                   ].map((link) => (
+                     <button 
+                       key={link.id}
+                       onClick={() => setActiveLegalDoc(link.id as LegalDocType)}
+                       className={`text-[9px] font-black uppercase tracking-[0.1em] transition-colors ${
+                         isDark ? 'text-slate-700 hover:text-slate-500' : 'text-slate-300 hover:text-slate-500'
+                       }`}
+                     >
+                       {link.label}
+                     </button>
+                   ))}
+                </div>
               </div>
+
               {user ? (
                 <button 
                   onClick={async () => {
@@ -1087,6 +1113,12 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
           </div>
         </motion.div>
       </div>
+
+      <LegalDocs 
+        type={activeLegalDoc} 
+        onClose={() => setActiveLegalDoc(null)} 
+        isDark={isDark} 
+      />
     </AnimatePresence>
   );
 }

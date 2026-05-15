@@ -27,6 +27,7 @@ import { copyToClipboard } from '../lib/clipboard';
 import { Message, KeywordSetting, UserNotification } from '../types';
 import { askMaria } from '../services/geminiService';
 import { getTranslation } from '../translations';
+import { generateId } from '../lib/utils';
 import MapWidget from './MapWidget';
 import VTuberAvatar from './VTuberAvatar';
 import Typewriter from './Typewriter';
@@ -162,7 +163,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
     if ((!input.trim() && pendingImages.length === 0) || isLoading) return;
 
     const userMsg: Message = {
-      id: Date.now().toString(),
+      id: generateId('msg-user'),
       role: 'user',
       content: input,
       timestamp: Date.now(),
@@ -273,7 +274,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
         userName
       );
       const assistantMsg: Message = {
-        id: (Date.now() + 1).toString(),
+        id: generateId('msg-assistant'),
         role: 'assistant',
         content: response,
         timestamp: Date.now(),
@@ -283,7 +284,39 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
       setMessages(finalMessages);
       saveToStorage(finalMessages);
 
-      // Keyword detection logic
+      // --- SMART AUTOMATION LOGIC ---
+      const autoEnabled = localStorage.getItem('maria_profile') ? JSON.parse(localStorage.getItem('maria_profile')!).preferences?.autoNotify : false;
+      if (autoEnabled) {
+          const lowerResponse = response.toLowerCase();
+          const isWorking = lowerResponse.includes('mulai kerja') || lowerResponse.includes('mode kerja') || lowerResponse.includes('semangat bekerja');
+          const isHome = lowerResponse.includes('sudah pulang') || lowerResponse.includes('selamat istirahat') || lowerResponse.includes('pulang kerja');
+          
+          if (isWorking || isHome) {
+              const status = isWorking ? 'WORKING' : 'HOME';
+              const newNotif: UserNotification = {
+                  id: generateId('notif-auto'),
+                  type: 'system',
+                  title: isWorking ? 'Mode Kerja Aktif' : 'Mode Istirahat Aktif',
+                  content: isWorking ? 'Maria telah mengoptimalkan dashboard untuk fokus bekerja.' : 'Maria telah menyesuaikan dashboard untuk waktu istirahat.',
+                  timestamp: Date.now(),
+                  isRead: false,
+                  metadata: { automation: status }
+              };
+              const existingNotifs = JSON.parse(localStorage.getItem('maria_notifications') || '[]');
+              existingNotifs.unshift(newNotif);
+              localStorage.setItem('maria_notifications', JSON.stringify(existingNotifs.slice(0, 50)));
+              window.dispatchEvent(new Event('maria_new_notification'));
+              
+              // Effect: Trigger profile update or dashboard changes
+              if (isWorking) {
+                  window.dispatchEvent(new CustomEvent('maria_automation', { detail: { type: 'WORK_START' } }));
+                  console.log("Maria Automation: Working Mode");
+              } else if (isHome) {
+                  window.dispatchEvent(new CustomEvent('maria_automation', { detail: { type: 'WORK_END' } }));
+              }
+          }
+      }
+      // -------------------------------
       const savedKeywords = localStorage.getItem('maria_keywords');
       if (savedKeywords) {
         try {
@@ -293,7 +326,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
           
           if (foundKeywords.length > 0) {
             const newNotif: UserNotification = {
-              id: 'keyword-' + Date.now(),
+              id: generateId('notif-keyword'),
               type: 'keyword',
               title: t.topicDetected,
               content: `${t.topicFound}: ${foundKeywords.map(k => k.keyword).join(', ')}`,
@@ -336,7 +369,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
       }
 
       const errorMsg: Message = {
-        id: (Date.now() + 1).toString(),
+        id: generateId('msg-error'),
         role: 'assistant',
         content: error.message || 'Maria sedang mengalami kendala teknis. Mohon coba lagi nanti.',
         timestamp: Date.now(),

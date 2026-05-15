@@ -350,8 +350,7 @@ export default function MultiUtilityWidget({ isDark = false, language = 'id' }: 
                   <span className="text-[10px] font-bold text-slate-500 truncate uppercase tracking-widest">{weather.condition}</span>
                </div>
                <div className={`flex items-center gap-3 mt-1.5 text-[9px] font-bold uppercase tracking-[0.15em] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                 <div className="flex items-center gap-1"><Clock size={10} /> {deviceContext.time}</div>
-                 <div className="flex items-center gap-1"><BatteryIcon size={10} className={currentLevel <= 20 ? 'text-red-500' : ''} /> {currentLevel}%</div>
+                 <div className="flex items-center gap-1"><Cloud size={10} /> Weather Updates</div>
                </div>
             </div>
           </button>

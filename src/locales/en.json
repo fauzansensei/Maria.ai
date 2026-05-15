@@ -156,5 +156,11 @@
     "today": "Today",
     "yesterday": "Yesterday",
     "previous": "Previous"
+  },
+  "legal": {
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "help": "Help Center",
+    "cookies": "Cookie Policy"
   }
 }

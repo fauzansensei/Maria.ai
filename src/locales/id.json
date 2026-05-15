@@ -156,5 +156,11 @@
     "today": "Hari ini",
     "yesterday": "Kemarin",
     "previous": "Sebelumnya"
+  },
+  "legal": {
+    "privacy": "Kebijakan Privasi",
+    "terms": "Ketentuan Layanan",
+    "help": "Pusat Bantuan",
+    "cookies": "Kebijakan Cookie"
   }
 }

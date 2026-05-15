@@ -9,6 +9,7 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import MariaAgent from './components/MariaAgent';
 import MultiUtilityWidget from './components/MultiUtilityWidget';
+import DeviceStatusWidget from './components/DeviceStatusWidget';
 import UserProfile from './components/UserProfile';
 import NotificationCenter from './components/NotificationCenter';
 import { 
@@ -18,6 +19,7 @@ import {
 } from 'lucide-react';
 import { ChatSession, UserNotification, SUPPORTED_LANGUAGES } from './types';
 import { getTranslation } from './translations';
+import { generateId } from './lib/utils';
 
 // Simple Error Boundary component
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any }> {
@@ -185,7 +187,7 @@ function MainApp() {
           if (Array.isArray(messages)) {
             const firstUserMsg = messages.find((m: any) => m.role === 'user');
             const title = firstUserMsg ? (firstUserMsg.content.substring(0, 35) + (firstUserMsg.content.length > 35 ? '...' : '')) : 'Migration Chat';
-            const newId = 'legacy-' + Date.now();
+            const newId = generateId('legacy');
             const initialChats = {
               [newId]: {
                 id: newId,
@@ -308,20 +310,31 @@ function MainApp() {
       setUserAvatar(null);
     };
 
+    const handleAutomation = (e: any) => {
+      const type = e.detail?.type;
+      if (type === 'WORK_START') {
+        setIsFocusMode(true);
+      } else if (type === 'WORK_END') {
+        setIsFocusMode(false);
+      }
+    };
+
     window.addEventListener('maria_mock_login', handleMockLogin);
     window.addEventListener('maria_mock_logout', handleMockLogout);
+    window.addEventListener('maria_automation' as any, handleAutomation);
 
     return () => {
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('maria_new_notification', updateUnreadCount);
       window.removeEventListener('maria_mock_login', handleMockLogin);
       window.removeEventListener('maria_mock_logout', handleMockLogout);
+      window.removeEventListener('maria_automation' as any, handleAutomation);
       if (typeof unsubscribe === 'function') unsubscribe();
     };
   }, [updateUnreadCount, loadProfile, loadChats]);
 
   const handleNewChat = () => {
-    const newId = Date.now().toString();
+    const newId = generateId('chat');
     setActiveChatId(newId);
     
     // Create empty session entry
@@ -754,7 +767,8 @@ function MainApp() {
                   ))}
                 </div>
 
-                <div className={`p-5 border-t mt-auto space-y-4 transition-colors duration-500 ${isDark ? 'border-slate-900 bg-slate-900/10' : 'border-slate-50 bg-slate-50/20'}`}>
+                <div className={`p-5 border-t mt-auto space-y-3 transition-colors duration-500 ${isDark ? 'border-slate-900 bg-slate-900/10' : 'border-slate-50 bg-slate-50/20'}`}>
+                    <DeviceStatusWidget isDark={isDark} />
                     <MultiUtilityWidget isDark={isDark} language={language} />
 
                     <div className="space-y-3">
