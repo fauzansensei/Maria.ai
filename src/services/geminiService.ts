@@ -91,7 +91,7 @@ export async function askMaria(
 
     const contextPrompt = `\n\n[REAL-TIME CONTEXT] 
 Current Date: ${currentDate}
-Current Time: ${context?.time || new Date().toLocaleTimeString('id-ID', { hour12: false })}
+Current Time: ${context?.time || new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false })}
 Battery: ${context?.battery || 'Unknown'}% (${context?.charging ? 'Charging' : 'Not Charging'})
 ${weatherPrompt}
 Respond naturally using this data if the user asks or if relevant.`;

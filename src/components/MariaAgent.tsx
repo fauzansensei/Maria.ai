@@ -206,7 +206,9 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
           const latestMsg = updatedMessages[updatedMessages.length - 1];
           if (latestMsg) {
             const msgRef = doc(db, 'chats', chatId, 'messages', latestMsg.id);
-            await setDoc(msgRef, latestMsg).catch(err => handleFirestoreError(err, OperationType.CREATE, `chats/${chatId}/messages/${latestMsg.id}`));
+            // Sanitize to avoid undefined fields which Firestore doesn't like
+            const sanitizedMsg = JSON.parse(JSON.stringify(latestMsg));
+            await setDoc(msgRef, sanitizedMsg).catch(err => handleFirestoreError(err, OperationType.CREATE, `chats/${chatId}/messages/${latestMsg.id}`));
           }
         }
       }
@@ -224,10 +226,12 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
       role: 'user',
       content: input,
       timestamp: Date.now(),
-      images: pendingImages.length > 0 ? pendingImages.map(img => ({
-        data: img.base64,
-        mimeType: img.type
-      })) : undefined
+      ...(pendingImages.length > 0 ? {
+        images: pendingImages.map(img => ({
+          data: img.base64,
+          mimeType: img.type
+        }))
+      } : {})
     };
 
     const nextMessages = [...messages.filter(m => m.id !== 'welcome' || messages.length > 1), userMsg];
