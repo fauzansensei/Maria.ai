@@ -84,15 +84,21 @@ export async function askMaria(
 
     const langModePrompt = `MANDATORY: ALWAYS respond using ${langName}. If ${langName} is a regional language of Indonesia (like Javanese, Sundanese, etc.), you MUST use that specific language correctly. Adapting to the user's selected language is your highest priority. If the user uses a different language in their message, you may adapt accordingly but primarily stay in ${langName}.`;
 
+    const currentDate = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const weatherPrompt = context?.weather 
-      ? `\n[WEATHER] Current location: ${context.weather.location}, Temperature: ${context.weather.temp}°C, Condition: ${context.weather.condition}${context.weather.aqi ? `, AQI: ${context.weather.aqi}` : ''}. Use this information naturally to show you are aware of their environment.`
+      ? `\n[WEATHER] Current location: ${context.weather.location}, Temperature: ${context.weather.temp}°C, Condition: ${context.weather.condition}${context.weather.aqi ? `, AQI: ${context.weather.aqi}` : ''}.`
       : '';
 
-    const contextPrompt = context 
-      ? `\n\n[CONTEXT] Device Status: Time is ${context.time}, Battery is ${context.battery}% (${context.charging ? 'Charging' : 'Not Charging'}). ${weatherPrompt} Mention these ONLY if the user asks about them or if relevant. Respond naturally as Maria.`
-      : '';
+    const contextPrompt = `\n\n[REAL-TIME CONTEXT] 
+Current Date: ${currentDate}
+Current Time: ${context?.time || new Date().toLocaleTimeString('id-ID', { hour12: false })}
+Battery: ${context?.battery || 'Unknown'}% (${context?.charging ? 'Charging' : 'Not Charging'})
+${weatherPrompt}
+Respond naturally using this data if the user asks or if relevant.`;
 
-    const systemInstruction = `${SYSTEM_PROMPT} ${langModePrompt} Personality: ${personalityPrompts[personality] || personalityPrompts.ramah}. ${contextPrompt} 
+    const systemInstruction = `${SYSTEM_PROMPT} ${langModePrompt} 
+Personality: ${personalityPrompts[personality] || personalityPrompts.ramah}
+${contextPrompt} 
     
 CORE INTELLIGENCE UPGRADE:
 1. MEDIA ANALYSIS: You have advanced vision capabilities. You can "see", learn from, and manage information from any media (images/photos) provided. Analyze them deeply for context, emotions, and specific details.

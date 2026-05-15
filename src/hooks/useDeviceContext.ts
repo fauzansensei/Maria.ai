@@ -38,7 +38,7 @@ export function useDeviceContext(): DeviceContext {
   }, []);
 
   return {
-    time: time.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+    time: time.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
     battery: battery.level,
     charging: battery.charging
   };
