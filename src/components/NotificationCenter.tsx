@@ -186,7 +186,7 @@ export default function NotificationCenter({ isDark, isOpen, onClose }: Notifica
                 {notifications.map((notif) => (
                   <motion.div
                     layout
-                    key={notif.id}
+                    key={`notif-center-${notif.id}`}
                     onClick={() => markAsRead(notif.id)}
                     className={`group relative p-5 rounded-[24px] border transition-all cursor-pointer ${
                       !notif.isRead 

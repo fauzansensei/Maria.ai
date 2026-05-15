@@ -643,7 +643,7 @@ function MainApp() {
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar px-3 py-4 space-y-6" onClick={() => setMenuOpenId(null)}>
                   {sortedGroupKeys.map((group) => (
-                    <div key={group} className="space-y-1">
+                    <div key={`group-${group}`} className="space-y-1">
                       <div className="flex items-center gap-2 px-3 mb-2">
                         {group === 'Disematkan' && <Pin size={10} className="text-brand-blue" />}
                         <h4 className={`text-[9px] font-black uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{group}</h4>

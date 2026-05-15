@@ -213,76 +213,80 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
     }
   };
 
-  if (!isOpen) return null;
+  // Profile data and hooks above
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[200] flex items-center justify-end" onClick={onClose}>
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm"
-        />
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-[200] flex items-center justify-end">
+          <motion.div 
+            key="profile-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+          />
         <motion.div 
           initial={isLiteMode ? { opacity: 0 } : { x: '100%', opacity: 0 }}
           animate={isLiteMode ? { opacity: 1 } : { x: 0, opacity: 1 }}
           exit={isLiteMode ? { opacity: 0 } : { x: '100%', opacity: 0 }}
           transition={isLiteMode ? { duration: 0.1 } : { type: 'spring', damping: 25, stiffness: 200 }}
           onClick={(e) => e.stopPropagation()}
-          className={`relative w-full max-w-4xl h-full sm:h-[650px] sm:rounded-[32px] sm:my-auto sm:mx-6 flex flex-col shadow-2xl overflow-hidden self-center transition-all duration-500 ${
-            isDark ? 'bg-slate-950 border-slate-900 text-white' : 'bg-white border-slate-200 text-slate-900'
+          className={`relative w-full max-w-5xl h-full sm:h-[80vh] sm:rounded-[24px] sm:my-auto sm:mx-6 flex flex-col shadow-2xl overflow-hidden self-center transition-all duration-500 ${
+            isDark ? 'bg-[#0a0a0f] border-slate-900 text-[#e0e0ff]' : 'bg-white border-slate-200 text-slate-900'
           }`}
         >
           {/* Dashboard Container */}
           <div className="flex flex-col h-full">
             
             {/* Header */}
-            <header className={`flex items-center justify-between px-6 sm:px-10 py-6 border-b transition-colors duration-500 shrink-0 ${
-              isDark ? 'bg-slate-950 border-slate-900' : 'bg-white border-slate-100'
+            <header className={`flex flex-col items-center justify-center px-6 sm:px-10 py-10 border-b transition-colors duration-500 shrink-0 ${
+              isDark ? 'bg-[#111118] border-slate-800' : 'bg-white border-slate-100'
             }`}>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col items-center gap-4 text-center">
                 {profile.avatar ? (
                   <img 
                     src={profile.avatar} 
                     alt="Profile" 
-                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-cover border border-teal-500/20 shadow-sm"
+                    className="w-16 h-16 rounded-2xl object-cover border-2 border-teal-500/20 shadow-xl"
                   />
                 ) : (
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#021B2B] via-[#0E4D54] to-[#14BCB2] flex items-center justify-center text-white border border-white/10 shadow-sm">
-                    <span className="font-serif italic">M</span>
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#021B2B] via-[#0E4D54] to-[#14BCB2] flex items-center justify-center text-white border border-white/10 shadow-xl">
+                    <span className="font-serif italic text-2xl">M</span>
                   </div>
                 )}
-                <h2 className={`text-lg sm:text-xl font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>{t.settings}</h2>
+                <h2 className={`text-2xl font-black tracking-tight ${isDark ? 'text-[#e0e0ff]' : 'text-slate-900'}`}>{t.settings}</h2>
               </div>
               <button 
                 onClick={onClose}
-                className={`p-2 rounded-xl transition-all ${isDark ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
+                className={`absolute top-6 right-6 p-2 rounded-xl transition-all ${isDark ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
               >
                 <X size={24} />
               </button>
             </header>
 
             {/* Horizontal Navigation Tabs */}
-            <nav className={`px-6 sm:px-10 py-4 flex items-center gap-2 overflow-x-auto no-scrollbar border-b shrink-0 ${
-              isDark ? 'bg-slate-950/50 border-slate-900/50' : 'bg-slate-50/50 border-slate-100'
+            <nav className={`px-6 sm:px-10 py-2 flex items-center justify-center gap-1 overflow-x-auto no-scrollbar border-b shrink-0 ${
+              isDark ? 'bg-[#111118]/80 border-slate-800' : 'bg-slate-50/50 border-slate-100'
             }`}>
               {[
-                { id: 'umum', label: t.general, icon: <Settings size={16} /> },
-                { id: 'profil', label: t.profile, icon: <UserIcon size={16} /> },
-                { id: 'notifikasi', label: t.notifications, icon: <Bell size={16} /> },
-                { id: 'personalisasi', label: t.personalization, icon: <Sparkles size={16} /> },
-                { id: 'memory', label: t.memory, icon: <Brain size={16} /> },
-                { id: 'privasi', label: t.privacy, icon: <Shield size={16} /> },
-                { id: 'jadwal', label: t.eventReminders, icon: <Calendar size={16} /> },
+                { id: 'umum', label: t.general, icon: <Settings size={14} /> },
+                { id: 'profil', label: t.profile, icon: <UserIcon size={14} /> },
+                { id: 'notifikasi', label: t.notifications, icon: <Bell size={14} /> },
+                { id: 'personalisasi', label: t.personalization, icon: <Sparkles size={14} /> },
+                { id: 'memory', label: t.memory, icon: <Brain size={14} /> },
+                { id: 'privasi', label: t.privacy, icon: <Shield size={14} /> },
+                { id: 'jadwal', label: t.eventReminders, icon: <Calendar size={14} /> },
               ].map((item) => (
                 <button
-                  key={item.id}
+                  key={`tab-${item.id}`}
                   onClick={() => setActiveTab(item.id as any)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap text-xs font-bold transition-all shrink-0 ${
+                  className={`flex items-center gap-2 px-6 py-4 whitespace-nowrap text-xs font-black transition-all border-b-2 shrink-0 ${
                     activeTab === item.id
-                    ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20'
-                    : `text-slate-500 hover:bg-slate-200/50 ${isDark ? 'hover:bg-slate-800/50 text-slate-400' : ''}`
+                    ? 'border-brand-blue text-brand-blue'
+                    : `border-transparent text-slate-500 hover:text-slate-400 ${isDark ? 'hover:text-slate-200' : ''}`
                   }`}
                 >
                   {item.icon}
@@ -304,127 +308,133 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                 >
 
                     {activeTab === 'umum' && (
-                      <div className="space-y-8">
-                        <div className="flex items-center justify-between">
+                      <div className="space-y-12 py-4">
+                        <div className="text-center space-y-2">
                             <h3 className="text-2xl font-black tracking-tight">{t.general}</h3>
-                            <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${profile.preferences.performanceMode ? 'bg-amber-500/20 text-amber-500' : 'bg-brand-blue/20 text-brand-blue'}`}>
-                                {profile.preferences.performanceMode ? t.liteMode : t.fullMode}
+                            <div className="flex justify-center">
+                              <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${profile.preferences.performanceMode ? 'bg-amber-500/20 text-amber-500' : 'bg-brand-blue/20 text-brand-blue'}`}>
+                                  {profile.preferences.performanceMode ? t.liteMode : t.fullMode}
+                              </div>
                             </div>
                         </div>
 
-                        {/* Maria Plus Card */}
-                        <div className={`relative p-8 rounded-[32px] border flex flex-col sm:flex-row items-center gap-6 overflow-hidden group transition-all duration-500 ${
-                          profile.isPlus 
-                          ? 'bg-gradient-to-br from-brand-blue via-[#002a5e] to-brand-blue border-brand-blue/30 text-white shadow-2xl shadow-brand-blue/20' 
-                          : `${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-100 shadow-sm'}`
-                        }`}>
-                          <div className={`p-4 rounded-3xl shrink-0 transition-transform duration-700 group-hover:scale-110 ${profile.isPlus ? 'bg-white/10' : 'bg-brand-blue/10 text-brand-blue'}`}>
-                            <Sparkles size={32} className={profile.isPlus ? 'text-teal-300 animate-pulse' : ''} />
-                          </div>
-                          <div className="flex-1 text-center sm:text-left space-y-2">
-                            <div className="flex items-center justify-center sm:justify-start gap-3">
-                              <h4 className={`text-xl font-black ${profile.isPlus ? 'text-white' : (isDark ? 'text-white' : 'text-slate-900')}`}>Maria Plus</h4>
-                              {profile.isPlus && <span className="bg-teal-400 text-[#001B3D] text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Active</span>}
+                        <div className="space-y-10 max-w-2xl mx-auto">
+                          {/* Maria Plus Card */}
+                          <div className={`relative p-8 rounded-[20px] border flex flex-col sm:flex-row items-center gap-6 overflow-hidden group transition-all duration-500 ${
+                            profile.isPlus 
+                            ? 'bg-gradient-to-br from-[#111118] to-brand-blue/20 border-brand-blue/30 text-white shadow-2xl' 
+                            : `${isDark ? 'bg-slate-900/10 border-slate-800' : 'bg-slate-50 border-slate-100 shadow-sm'}`
+                          }`}>
+                             <div className={`p-4 rounded-3xl shrink-0 transition-transform duration-700 group-hover:scale-110 ${profile.isPlus ? 'bg-brand-blue/20' : 'bg-brand-blue/10 text-brand-blue'}`}>
+                              <Sparkles size={32} className={profile.isPlus ? 'text-teal-300 animate-pulse' : ''} />
                             </div>
-                            <p className={`text-xs font-bold leading-relaxed max-w-sm ${profile.isPlus ? 'text-blue-100' : (isDark ? 'text-slate-500' : 'text-slate-400')}`}>
-                              {profile.isPlus 
-                                ? 'Nikmati akses tanpa batas, model AI yang lebih cerdas, dan fitur memory premium.' 
-                                : 'Buka potensi penuh Maria dengan model AI tercanggih dan akses eksklusif fitur premium.'}
-                            </p>
-                          </div>
-                          <button 
-                            onClick={() => {
-                              const next = { ...profile, isPlus: !profile.isPlus };
-                              setProfile(next);
-                              localStorage.setItem('maria_profile', JSON.stringify(next));
-                              window.dispatchEvent(new Event('storage'));
-                            }}
-                            className={`px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shrink-0 ${
-                              profile.isPlus 
-                              ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20' 
-                              : 'bg-brand-blue text-white shadow-xl shadow-brand-blue/20 hover:scale-105 active:scale-95'
-                            }`}
-                          >
-                            {profile.isPlus ? 'Manage Account' : 'Upgrade Now'}
-                          </button>
-                        </div>
-                        
-                        <div className="space-y-6">
-                          <div className={`flex items-center gap-4 p-5 rounded-2xl border transition-colors ${isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-slate-50 border-slate-100'}`}>
-                            <div className="flex-1">
-                              <p className="text-base font-black">{t.performanceMode}</p>
-                              <p className={`text-xs font-bold leading-relaxed ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                                {t.perfDesc}
+                            <div className="flex-1 text-center sm:text-left space-y-2">
+                              <div className="flex items-center justify-center sm:justify-start gap-3">
+                                <h4 className={`text-xl font-black ${isDark ? 'text-[#e0e0ff]' : 'text-slate-900'}`}>Maria Plus</h4>
+                                {profile.isPlus && <span className="bg-teal-400 text-[#001B3D] text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">Active</span>}
+                              </div>
+                              <p className={`text-xs font-bold leading-relaxed max-w-sm ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                                {profile.isPlus 
+                                  ? 'Nikmati akses tanpa batas, model AI yang lebih cerdas, dan fitur memory premium.' 
+                                  : 'Buka potensi penuh Maria dengan model AI tercanggih dan akses eksklusif fitur premium.'}
                               </p>
                             </div>
                             <button 
-                              onClick={() => handleUpdatePreference('performanceMode', !profile.preferences.performanceMode)}
-                              className={`w-12 h-6 rounded-full relative transition-all duration-300 shrink-0 ${profile.preferences.performanceMode ? 'bg-amber-500' : (isDark ? 'bg-slate-800' : 'bg-slate-200')}`}
+                              onClick={() => handleUpdatePreference('isPlus', !profile.isPlus)}
+                              className={`px-8 py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all shrink-0 ${
+                                profile.isPlus 
+                                ? 'bg-white/5 hover:bg-white/10 text-white border border-white/10' 
+                                : 'bg-brand-blue text-white shadow-xl shadow-brand-blue/20 hover:scale-[1.02] active:scale-95'
+                              }`}
                             >
-                              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300 ${profile.preferences.performanceMode ? 'right-1' : 'left-1'}`} />
+                              {profile.isPlus ? 'Manage Account' : 'Upgrade Now'}
                             </button>
                           </div>
+                          
+                          <div className="space-y-8">
+                            <div className="flex items-center gap-3 border-b border-slate-200/5 pb-2">
+                               <Settings size={14} className="text-brand-blue" />
+                               <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Preferensi Dasar</span>
+                            </div>
 
-                          <div className="flex flex-col gap-2">
-                            <label className={`text-sm font-black uppercase tracking-widest ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t.theme}</label>
-                            <select 
-                              value={profile.preferences.theme}
-                              onChange={(e) => handleUpdatePreference('theme', e.target.value)}
-                              className={`w-full border rounded-xl px-4 py-3.5 text-sm font-bold outline-none focus:ring-4 transition-all cursor-pointer ${
-                                isDark 
-                                ? 'bg-slate-900 border-slate-800 text-white focus:ring-brand-blue/20' 
-                                : 'bg-slate-50 border-slate-100 text-slate-900 focus:ring-brand-blue/5'
-                              }`}
-                            >
-                              <option value="system">{t.themeSettings?.system || 'System Default'}</option>
-                              <option value="dark">{t.themeSettings?.dark || 'Dark Mode'}</option>
-                              <option value="light">{t.themeSettings?.light || 'Light Mode'}</option>
-                            </select>
-                          </div>
-
-                          <div className="flex flex-col gap-2">
-                            <label className={`text-sm font-black uppercase tracking-widest ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t.language}</label>
-                            <select 
-                              value={profile.preferences.language}
-                              onChange={(e) => handleUpdatePreference('language', e.target.value)}
-                              className={`w-full border rounded-xl px-4 py-3.5 text-sm font-bold outline-none focus:ring-4 transition-all cursor-pointer ${
-                                isDark 
-                                ? 'bg-slate-900 border-slate-800 text-white focus:ring-brand-blue/20' 
-                                : 'bg-slate-50 border-slate-100 text-slate-900 focus:ring-brand-blue/5'
-                              }`}
-                            >
-                              {SUPPORTED_LANGUAGES.map(lang => (
-                                <option key={lang.code} value={lang.code}>{lang.name}</option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <div className="flex flex-col gap-3">
-                            <label className={`text-sm font-black uppercase tracking-widest ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t.accentColor}</label>
-                            <div className="flex flex-wrap gap-3">
-                              {[
-                                { id: 'blue', color: '#001B3D', label: 'Navy' },
-                                { id: 'teal', color: '#14B8A6', label: 'Teal' },
-                                { id: 'gold', color: '#FBBF24', label: 'Gold' },
-                                { id: 'purple', color: '#7E22CE', label: 'Purple' },
-                                { id: 'green', color: '#22c55e', label: 'Green' },
-                                { id: 'red', color: '#ef4444', label: 'Red' },
-                                { id: 'pink', color: '#db2777', label: 'Pink' },
-                                { id: 'amber', color: '#d97706', label: 'Amber' },
-                              ].map((item) => (
-                                <button
-                                  key={item.id}
-                                  onClick={() => handleUpdatePreference('accentColor', item.id)}
-                                  className={`w-9 h-9 rounded-full transition-all flex items-center justify-center p-0.5 border-2 ${
-                                    profile.preferences.accentColor === item.id 
-                                    ? 'border-brand-blue scale-110 shadow-lg' 
-                                    : 'border-transparent hover:scale-105'
-                                  }`}
-                                  title={item.label}
+                            <div className="space-y-6">
+                              <div className={`flex items-center justify-between p-6 rounded-2xl border ${isDark ? 'bg-slate-900/20 border-slate-800/50' : 'bg-slate-50/50 border-slate-100'}`}>
+                                <div className="space-y-1">
+                                  <p className="text-sm font-black">{t.performanceMode}</p>
+                                  <p className={`text-[10px] font-bold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                                    {t.perfDesc}
+                                  </p>
+                                </div>
+                                <button 
+                                  onClick={() => handleUpdatePreference('performanceMode', !profile.preferences.performanceMode)}
+                                  className={`w-12 h-6 rounded-full relative transition-all duration-300 shrink-0 ${profile.preferences.performanceMode ? 'bg-amber-500 shadow-md shadow-amber-500/20' : (isDark ? 'bg-slate-800' : 'bg-slate-200')}`}
                                 >
-                                  <div className="w-full h-full rounded-full" style={{ backgroundColor: item.color }} />
+                                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300 ${profile.preferences.performanceMode ? 'right-1' : 'left-1'}`} />
                                 </button>
-                              ))}
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                  <label className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t.theme}</label>
+                                  <select 
+                                    value={profile.preferences.theme}
+                                    onChange={(e) => handleUpdatePreference('theme', e.target.value)}
+                                    className={`w-full border rounded-xl px-4 py-3 text-sm font-bold outline-none cursor-pointer ${
+                                      isDark 
+                                      ? 'bg-slate-900/40 border-slate-800 text-white' 
+                                      : 'bg-slate-50 border-slate-100 text-slate-900'
+                                    }`}
+                                  >
+                                    <option value="system">{t.themeSettings?.system || 'System Default'}</option>
+                                    <option value="dark">{t.themeSettings?.dark || 'Dark Mode'}</option>
+                                    <option value="light">{t.themeSettings?.light || 'Light Mode'}</option>
+                                  </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <label className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t.language}</label>
+                                  <select 
+                                    value={profile.preferences.language}
+                                    onChange={(e) => handleUpdatePreference('language', e.target.value)}
+                                    className={`w-full border rounded-xl px-4 py-3 text-sm font-bold outline-none cursor-pointer ${
+                                      isDark 
+                                      ? 'bg-slate-900/40 border-slate-800 text-white' 
+                                      : 'bg-slate-50 border-slate-100 text-slate-900'
+                                    }`}
+                                  >
+                                    {SUPPORTED_LANGUAGES.map(lang => (
+                                      <option key={`lang-${lang.code}`} value={lang.code}>{lang.name}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+
+                              <div className="space-y-4">
+                                <label className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t.accentColor}</label>
+                                <div className="flex flex-wrap gap-4">
+                                  {[
+                                    { id: 'blue', color: '#001B3D', label: 'Navy' },
+                                    { id: 'teal', color: '#14B8A6', label: 'Teal' },
+                                    { id: 'gold', color: '#FBBF24', label: 'Gold' },
+                                    { id: 'purple', color: '#7E22CE', label: 'Purple' },
+                                    { id: 'green', color: '#22c55e', label: 'Green' },
+                                    { id: 'red', color: '#ef4444', label: 'Red' },
+                                  ].map((item) => (
+                                    <button
+                                      key={`color-${item.id}`}
+                                      onClick={() => handleUpdatePreference('accentColor', item.id)}
+                                      className={`w-10 h-10 rounded-xl transition-all flex items-center justify-center p-1 border-2 ${
+                                        profile.preferences.accentColor === item.id 
+                                        ? 'border-brand-blue scale-110' 
+                                        : 'border-transparent opacity-60 hover:opacity-100'
+                                      }`}
+                                      title={item.label}
+                                    >
+                                      <div className="w-full h-full rounded-lg" style={{ backgroundColor: item.color }} />
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -502,95 +512,78 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                     )}
 
                     {activeTab === 'privasi' && (
-                      <div className="space-y-10">
-                        <div className="flex items-center gap-4">
-                          <div className={`p-3 rounded-2xl ${isDark ? 'bg-emerald-500/20 text-emerald-500' : 'bg-emerald-500/10 text-emerald-600'}`}>
-                             <ShieldCheck size={24} />
-                          </div>
-                          <div>
-                            <h3 className="text-2xl font-black tracking-tight">{t.privacy}</h3>
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t.securityStatus}: <span className={profile.preferences.guardrailsEnabled ? 'text-emerald-500' : 'text-amber-500'}>{profile.preferences.guardrailsEnabled ? 'Shielded' : 'Vulnerable'}</span></p>
-                          </div>
+                      <div className="space-y-12 py-4">
+                        <div className="text-center space-y-2">
+                          <h3 className="text-2xl font-black tracking-tight">{t.privacy}</h3>
+                          <p className={`text-xs font-bold uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                            {t.securityStatus}: <span className={profile.preferences.guardrailsEnabled ? 'text-emerald-500' : 'text-amber-500'}>{profile.preferences.guardrailsEnabled ? 'Shielded' : 'Vulnerable'}</span>
+                          </p>
                         </div>
                         
-                        <div className="space-y-6">
-                          {/* Maria Shield Integration */}
-                          <div className={`p-8 rounded-[40px] border transition-all duration-700 relative overflow-hidden group ${
-                            profile.preferences.guardrailsEnabled 
-                            ? (isDark ? 'bg-slate-900/80 border-emerald-500/30 shadow-[0_20px_50px_rgba(16,185,129,0.1)]' : 'bg-white border-emerald-500/20 shadow-[0_20px_50px_rgba(16,185,129,0.05)]') 
-                            : (isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-slate-50 border-slate-200 shadow-sm')
-                          }`}>
-                            {profile.preferences.guardrailsEnabled && (
-                              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <ShieldCheck size={120} />
-                              </div>
-                            )}
+                        <div className="space-y-10 max-w-2xl mx-auto">
+                          {/* Maria Shield Section */}
+                          <div className="space-y-6">
+                             <div className="flex items-center gap-3 border-b border-slate-200/5 pb-2">
+                                <ShieldCheck size={14} className="text-emerald-500" />
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Keamanan Inti</span>
+                             </div>
 
-                            <div className="flex items-start gap-5 relative z-10">
-                              <div className={`p-3 rounded-2xl transition-all duration-500 ${profile.preferences.guardrailsEnabled ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 rotate-3' : (isDark ? 'bg-slate-800 text-slate-500' : 'bg-slate-200 text-slate-400')}`}>
-                                <Shield size={24} className={profile.preferences.guardrailsEnabled ? 'animate-pulse' : ''} />
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <p className="text-lg font-black tracking-tight">Maria Core Shield</p>
-                                  <span className="bg-emerald-500/10 text-emerald-500 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border border-emerald-500/20">L3 Protocol</span>
+                             <div className={`flex items-center justify-between p-6 rounded-2xl border transition-all duration-500 ${profile.preferences.guardrailsEnabled ? (isDark ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-emerald-50 border-emerald-200') : (isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-slate-50 border-slate-100')}`}>
+                                <div className="space-y-1">
+                                  <p className="text-sm font-black">Maria Core Shield</p>
+                                  <p className={`text-[10px] font-bold leading-relaxed max-w-[320px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                                    Proteksi real-time yang memfilter input dan output untuk mencegah manipulasi data.
+                                  </p>
                                 </div>
-                                <p className={`text-xs font-bold leading-relaxed mt-1 max-w-[280px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                                  Proteksi *In-Memory* yang memfilter setiap input dan output Maria dari upaya manipulasi.
-                                </p>
-                              </div>
-                              <button 
-                                onClick={() => handleUpdatePreference('guardrailsEnabled', !profile.preferences.guardrailsEnabled)}
-                                className={`w-14 h-7 rounded-full relative transition-all duration-500 shrink-0 ${profile.preferences.guardrailsEnabled ? 'bg-emerald-500' : (isDark ? 'bg-slate-800' : 'bg-slate-300')}`}
-                              >
-                                <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-500 ${profile.preferences.guardrailsEnabled ? 'right-1' : 'left-1'}`} />
-                              </button>
-                            </div>
-                            
-                            {profile.preferences.guardrailsEnabled && (
-                              <motion.div 
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="mt-8 grid grid-cols-2 gap-4"
-                              >
-                                {[
-                                  { label: 'Input Filter', info: 'Jailbreak blocking' },
-                                  { label: 'Output Guard', info: 'Safety validation' },
-                                  { label: 'Identity Lock', info: 'Persona integrity' },
-                                  { label: 'Data Shield', info: 'Context isolation' }
-                                ].map((item, idx) => (
-                                  <div key={idx} className={`p-4 rounded-3xl border ${isDark ? 'bg-slate-950/50 border-emerald-500/10' : 'bg-emerald-50/30 border-emerald-500/10'}`}>
-                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest leading-none mb-1">{item.label}</p>
-                                    <p className="text-[9px] font-bold text-slate-500 opacity-60 uppercase tracking-tighter">{item.info}</p>
+                                <button 
+                                  onClick={() => handleUpdatePreference('guardrailsEnabled', !profile.preferences.guardrailsEnabled)}
+                                  className={`w-12 h-6 rounded-full relative transition-all duration-500 shrink-0 ${profile.preferences.guardrailsEnabled ? 'bg-emerald-500 shadow-lg shadow-emerald-500/30' : (isDark ? 'bg-slate-800' : 'bg-slate-300')}`}
+                                >
+                                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-md transition-all duration-500 ${profile.preferences.guardrailsEnabled ? 'right-1' : 'left-1'}`} />
+                                </button>
+                             </div>
+                          </div>
+
+                          {/* Data Management Section (Following Screenshot) */}
+                          <div className="space-y-6">
+                             <div className="flex items-center gap-3 border-b border-slate-200/5 pb-2">
+                                <MessageSquare size={14} className="text-brand-blue" />
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Pengelolaan Data</span>
+                             </div>
+
+                             <div className="space-y-4">
+                               {/* Auto Save Item */}
+                               <div className={`flex items-center justify-between p-6 rounded-2xl border ${isDark ? 'bg-slate-900/20 border-slate-800/50' : 'bg-slate-50/50 border-slate-100'}`}>
+                                  <div className="space-y-1">
+                                    <p className="text-sm font-black">{t.saveHistory}</p>
+                                    <p className={`text-[10px] font-bold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                                      {t.saveHistoryDesc}
+                                    </p>
                                   </div>
-                                ))}
-                              </motion.div>
-                            )}
-                          </div>
+                                  <button 
+                                    onClick={() => handleUpdatePreference('autoSave', !profile.preferences.autoSave)}
+                                    className={`w-12 h-6 rounded-full relative transition-all duration-500 shrink-0 ${profile.preferences.autoSave ? 'bg-brand-blue shadow-lg shadow-brand-blue/30' : (isDark ? 'bg-slate-800' : 'bg-slate-300')}`}
+                                  >
+                                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-md transition-all duration-500 ${profile.preferences.autoSave ? 'right-1' : 'left-1'}`} />
+                                  </button>
+                               </div>
 
-                          <div className={`flex items-center gap-4 p-5 rounded-2xl border transition-colors ${isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-slate-50 border-slate-100'}`}>
-                            <div className="flex-1">
-                              <p className="text-base font-black">{t.saveHistory}</p>
-                              <p className={`text-xs font-bold leading-relaxed ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                                {t.saveHistoryDesc}
-                              </p>
-                            </div>
-                            <button 
-                              onClick={() => handleUpdatePreference('autoSave', !profile.preferences.autoSave)}
-                              className={`w-12 h-6 rounded-full relative transition-all duration-300 shrink-0 ${profile.preferences.autoSave ? 'bg-brand-blue' : (isDark ? 'bg-slate-800' : 'bg-slate-200')}`}
-                            >
-                              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300 ${profile.preferences.autoSave ? 'right-1' : 'left-1'}`} />
-                            </button>
-                          </div>
-
-                          <div className="pt-4 space-y-4">
-                            <p className={`text-xs font-black uppercase tracking-widest ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>{t.dangerZone}</p>
-                            <button 
-                              onClick={handleClearChat}
-                              className="w-full py-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-lg shadow-red-500/10"
-                            >
-                              {t.deleteAll}
-                            </button>
+                               {/* Delete History Item */}
+                               <div className={`flex items-center justify-between p-6 rounded-2xl border ${isDark ? 'bg-slate-900/20 border-slate-800/50' : 'bg-slate-50/50 border-slate-100'}`}>
+                                  <div className="space-y-1">
+                                    <p className="text-sm font-black text-red-500">{t.deleteAll}</p>
+                                    <p className={`text-[10px] font-bold ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
+                                      Tindakan ini tidak dapat dibatalkan.
+                                    </p>
+                                  </div>
+                                  <button 
+                                    onClick={handleClearChat}
+                                    className="px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                                  >
+                                    Hapus
+                                  </button>
+                               </div>
+                             </div>
                           </div>
                         </div>
                       </div>
@@ -634,7 +627,7 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                               { key: 'titles_lists', label: t.personalization_settings.titles_lists },
                               { key: 'emoji', label: t.personalization_settings.emoji }
                             ].map((item) => (
-                              <div key={item.key} className="flex items-center justify-between">
+                              <div key={`char-${item.key}`} className="flex items-center justify-between">
                                 <span className="text-sm font-bold">{item.label}</span>
                                 <select 
                                   value={profile.preferences[item.key as keyof UserProfileData['preferences']] as string}
@@ -767,7 +760,7 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                                     { key: 'advanced_voice', label: t.personalization_settings.advanced_voice, desc: 'Lakukan percakapan lebih natural dalam Suara.' },
                                     { key: 'connector_search', label: t.personalization_settings.connector_search, desc: 'Izinkan Maria mencari sumber terhubung untuk jawaban.' },
                                 ].map((item) => (
-                                    <div key={item.key} className="flex items-start justify-between">
+                                    <div key={`adv-${item.key}`} className="flex items-start justify-between">
                                         <div className="max-w-[280px]">
                                             <p className="text-sm font-black">{item.label}</p>
                                             <p className={`text-[10px] font-bold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{item.desc}</p>
@@ -845,53 +838,58 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                     )}
 
                     {activeTab === 'notifikasi' && (
-                      <div className="space-y-8">
-                        <h3 className="text-2xl font-black tracking-tight">{t.notifications}</h3>
-                        
-                        <div className="space-y-4">
-                              {[
-                                { key: 'codex', label: t.notifications_settings.codex, desc: t.notifications_settings.codex_desc },
-                                { key: 'group_chat', label: t.notifications_settings.group_chat, desc: t.notifications_settings.group_chat_desc },
-                                { key: 'usage', label: t.notifications_settings.usage, desc: t.notifications_settings.usage_desc },
-                                { key: 'project', label: t.notifications_settings.project, desc: t.notifications_settings.project_desc },
-                                { key: 'recommendation', label: t.notifications_settings.recommendation, desc: t.notifications_settings.recommendation_desc },
-                                { key: 'response', label: t.notifications_settings.response, desc: t.notifications_settings.response_desc },
-                                { key: 'tasks', label: t.notifications_settings.tasks, desc: t.notifications_settings.tasks_desc },
-                              ].map((item) => (
-                                <div key={item.key} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${isDark ? 'bg-slate-900/30 border-slate-900/50' : 'bg-slate-50/50 border-slate-100/50'}`}>
-                                  <div className="max-w-[70%]">
-                                    <p className="text-sm font-black">{item.label}</p>
-                                    <p className={`text-[10px] font-bold leading-tight mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{item.desc}</p>
-                                  </div>
-                                  <select 
-                                    value={profile.notifications[item.key as keyof UserProfileData['notifications']]}
-                                    onChange={(e) => handleUpdateNotification(item.key as any, e.target.value)}
-                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black border outline-none cursor-pointer transition-all ${isDark ? 'bg-slate-950 border-slate-800' : 'bg-white border-slate-100 shadow-sm'}`}
-                                  >
-                                    <option value="push">{t.notifications_settings.push}</option>
-                                    <option value="email">{t.notifications_settings.email}</option>
-                                    <option value="both">{t.notifications_settings.push_email}</option>
-                                    <option value="none">{t.notifications_settings.none}</option>
-                                  </select>
-                                </div>
-                              ))}
+                      <div className="space-y-12 py-4">
+                        <div className="text-center space-y-2">
+                          <h3 className="text-2xl font-black tracking-tight">{t.notifications}</h3>
                         </div>
-
-                        <div className="pt-6 mt-6 border-t border-slate-200/10 space-y-6">
-                             <div className="space-y-1">
-                                <h4 className="text-lg font-black tracking-tight">{t.automation.title}</h4>
-                                <p className={`text-xs font-bold leading-relaxed ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                                  {t.automation.desc}
-                                </p>
+                        
+                        <div className="space-y-10 max-w-2xl mx-auto">
+                          <div className="space-y-6">
+                             <div className="flex items-center gap-3 border-b border-slate-200/5 pb-2">
+                                <Bell size={14} className="text-brand-blue" />
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Pengaturan Notifikasi</span>
                              </div>
 
-                             <div className={`flex items-center justify-between p-6 rounded-[28px] border transition-all duration-500 ${profile.preferences.autoNotify ? (isDark ? 'bg-amber-500/10 border-amber-500/20 shadow-[0_15px_30px_rgba(245,158,11,0.05)]' : 'bg-amber-50 border-amber-200/50') : (isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-slate-50 border-slate-100')}`}>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <p className="text-sm font-black">{t.automation.smart_active}</p>
-                                    {profile.preferences.autoNotify && <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse" />}
+                             <div className="space-y-4">
+                                {[
+                                  { key: 'codex', label: t.notifications_settings.codex, desc: t.notifications_settings.codex_desc },
+                                  { key: 'group_chat', label: t.notifications_settings.group_chat, desc: t.notifications_settings.group_chat_desc },
+                                  { key: 'usage', label: t.notifications_settings.usage, desc: t.notifications_settings.usage_desc },
+                                  { key: 'project', label: t.notifications_settings.project, desc: t.notifications_settings.project_desc },
+                                  { key: 'recommendation', label: t.notifications_settings.recommendation, desc: t.notifications_settings.recommendation_desc },
+                                  { key: 'response', label: t.notifications_settings.response, desc: t.notifications_settings.response_desc },
+                                  { key: 'tasks', label: t.notifications_settings.tasks, desc: t.notifications_settings.tasks_desc },
+                                ].map((item) => (
+                                  <div key={`notif-${item.key}`} className={`flex items-center justify-between p-6 rounded-2xl border ${isDark ? 'bg-slate-900/20 border-slate-800/50' : 'bg-slate-50/50 border-slate-100'}`}>
+                                    <div className="max-w-[70%]">
+                                      <p className="text-sm font-black">{item.label}</p>
+                                      <p className={`text-[10px] font-bold leading-tight mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{item.desc}</p>
+                                    </div>
+                                    <select 
+                                      value={profile.notifications[item.key as keyof UserProfileData['notifications']]}
+                                      onChange={(e) => handleUpdateNotification(item.key as any, e.target.value)}
+                                      className={`px-3 py-1.5 rounded-lg text-[10px] font-black border outline-none cursor-pointer transition-all ${isDark ? 'bg-slate-950 border-slate-800' : 'bg-white border-slate-100 shadow-sm'}`}
+                                    >
+                                      <option value="push">{t.notifications_settings.push}</option>
+                                      <option value="email">{t.notifications_settings.email}</option>
+                                      <option value="both">{t.notifications_settings.push_email}</option>
+                                      <option value="none">{t.notifications_settings.none}</option>
+                                    </select>
                                   </div>
-                                  <p className={`text-[10px] font-bold leading-relaxed max-w-[280px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                                ))}
+                             </div>
+                          </div>
+
+                          <div className="space-y-6">
+                             <div className="flex items-center gap-3 border-b border-slate-200/5 pb-2">
+                                <Sparkles size={14} className="text-amber-500" />
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Smart Automation</span>
+                             </div>
+
+                             <div className={`flex items-center justify-between p-6 rounded-2xl border transition-all duration-500 ${profile.preferences.autoNotify ? (isDark ? 'bg-amber-500/5 border-amber-500/20' : 'bg-amber-50 border-amber-200') : (isDark ? 'bg-slate-900/40 border-slate-800' : 'bg-slate-50 border-slate-100')}`}>
+                                <div className="space-y-1">
+                                  <p className="text-sm font-black">{t.automation.smart_active}</p>
+                                  <p className={`text-[10px] font-bold leading-relaxed max-w-[320px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                                     {t.automation.smart_active_desc}
                                   </p>
                                 </div>
@@ -902,27 +900,6 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                                   <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-md transition-all duration-500 ${profile.preferences.autoNotify ? 'right-1' : 'left-1'}`} />
                                 </button>
                              </div>
-                          </div>
-                        <div className="pt-6 border-t border-slate-200/10 space-y-6">
-                          <div className="space-y-4">
-                            <h3 className="text-2xl font-black tracking-tight">{t.topicsKeywords}</h3>
-                            <p className={`text-xs font-bold leading-relaxed ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                              {t.topicsDesc}
-                            </p>
-                            
-                            <div className="flex gap-3">
-                              <input 
-                                type="text"
-                                value={newKeyword}
-                                onChange={(e) => setNewKeyword(e.target.value)}
-                                placeholder={t.addKeywordPlaceholder}
-                                className={`flex-1 border rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-4 transition-all ${
-                                  isDark 
-                                  ? 'bg-slate-900 border-slate-800 text-white focus:ring-brand-blue/20' 
-                                  : 'bg-slate-50 border-slate-100 text-slate-900 focus:ring-brand-blue/5'
-                                }`}
-                              />
-                            </div>
                           </div>
                         </div>
                       </div>
@@ -1002,7 +979,7 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                             )}
                             {reminders.filter(r => !r.isCompleted).map((rem) => (
                               <div 
-                                key={rem.id}
+                                key={`rem-${rem.id}`}
                                 className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
                                   isDark ? 'bg-slate-950 border-slate-900/50' : 'bg-white border-slate-100 shadow-sm'
                                 }`}
@@ -1070,7 +1047,7 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                      { id: 'cookies', label: t.legal?.cookies || 'Cookies' }
                    ].map((link) => (
                      <button 
-                       key={link.id}
+                       key={`legal-link-${link.id}`}
                        onClick={() => setActiveLegalDoc(link.id as LegalDocType)}
                        className={`text-[9px] font-black uppercase tracking-[0.1em] transition-colors ${
                          isDark ? 'text-slate-700 hover:text-slate-500' : 'text-slate-300 hover:text-slate-500'
@@ -1119,6 +1096,8 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
         onClose={() => setActiveLegalDoc(null)} 
         isDark={isDark} 
       />
+        </>
+      )}
     </AnimatePresence>
   );
 }
