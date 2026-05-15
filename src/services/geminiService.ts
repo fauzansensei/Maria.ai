@@ -1,24 +1,11 @@
 import { SYSTEM_PROMPT, SUPPORTED_LANGUAGES } from "../constants";
 import { GoogleGenAI } from "@google/genai";
 
-// Initialize Gemini directly on the frontend
-const getApiKey = () => {
-  try {
-    // Standard environment variable for Gemini
-    if (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) {
-      return process.env.GEMINI_API_KEY;
-    }
-    // Vite-specific environment variable for production (e.g. Vercel)
-    if (import.meta.env.VITE_GEMINI_API_KEY) {
-      return import.meta.env.VITE_GEMINI_API_KEY;
-    }
-  } catch (e) {
-    console.warn("Maria AI: Context error while reading API Key", e);
-  }
-  return '';
-};
-
-const ai = new GoogleGenAI({ apiKey: getApiKey() });
+// Initialize Gemini according to platform guidelines
+// In AI Studio Build, process.env.GEMINI_API_KEY is automatically replaced during build
+const ai = new GoogleGenAI({ 
+  apiKey: process.env.GEMINI_API_KEY || '' 
+});
 
 export interface MariaImage {
   mimeType: string;
@@ -123,24 +110,11 @@ MARIA CORE INTEGRITY PROTOCOL:
     const contents: any[] = [];
     
     // Transform history for Gemini SDK
-    // Message role 'assistant' -> 'model'
     if (history && history.length > 0) {
       history.forEach(msg => {
-        if (msg.id === 'welcome') return; // Skip welcome message
+        if (msg.id === 'welcome') return;
         
         const parts: any[] = [];
-        
-        // Handle images in history
-        if (msg.images && msg.images.length > 0) {
-          msg.images.forEach((img: any) => {
-            if (img.data) {
-              parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } });
-            }
-          });
-        } else if (msg.image && msg.image.data) {
-          parts.push({ inlineData: { mimeType: msg.image.mimeType, data: msg.image.data } });
-        }
-        
         parts.push({ text: msg.content });
         
         contents.push({
@@ -164,7 +138,7 @@ MARIA CORE INTEGRITY PROTOCOL:
       parts: currentParts
     });
 
-    const result = await ai.models.generateContent({
+    const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents,
       config: {
@@ -174,7 +148,7 @@ MARIA CORE INTEGRITY PROTOCOL:
       }
     });
 
-    const responseText = result.text || "Maaf, saya tidak bisa memberikan jawaban saat ini.";
+    const responseText = response.text || "Maaf, saya tidak bisa memberikan jawaban saat ini.";
 
     // 2. OUTPUT INTEGRITY CHECK (Maria Core Shield - Output Guardrail)
     if (preferences?.guardrailsEnabled !== false) {
