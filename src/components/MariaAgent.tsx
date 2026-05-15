@@ -84,15 +84,46 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
   }, []);
 
   useEffect(() => {
-    const loadChat = () => {
+    const loadChat = async () => {
       try {
         const chatsStr = localStorage.getItem('maria_chats');
         if (chatsStr && chatsStr !== 'null' && chatsStr !== 'undefined') {
           const allChats = JSON.parse(chatsStr);
           const currentChat = allChats[chatId];
-          if (currentChat) {
-            setMessages(currentChat.messages || []);
+          if (currentChat && Array.isArray(currentChat.messages) && currentChat.messages.length > 0) {
+            setMessages(currentChat.messages);
             return;
+          }
+        }
+
+        // If not in local or empty, try Firebase
+        const { auth } = await import('../lib/firebase');
+        if (auth?.currentUser) {
+          const { collection, query, getDocs, orderBy } = await import('firebase/firestore');
+          const { db } = await import('../lib/firebase');
+          if (db) {
+            const q = query(
+              collection(db, 'chats', chatId, 'messages'),
+              orderBy('timestamp', 'asc')
+            );
+            const snap = await getDocs(q);
+            const msgs: Message[] = [];
+            snap.forEach(doc => msgs.push({ id: doc.id, ...doc.data() } as any));
+            
+            if (msgs.length > 0) {
+              setMessages(msgs);
+              // Update local cache
+              const chatsStr = localStorage.getItem('maria_chats');
+              const allChats = chatsStr ? JSON.parse(chatsStr) : {};
+              allChats[chatId] = { 
+                ...(allChats[chatId] || { id: chatId, title: 'Chat Baru' }), 
+                messages: msgs,
+                updatedAt: Date.now()
+              };
+              localStorage.setItem('maria_chats', JSON.stringify(allChats));
+              window.dispatchEvent(new Event('storage'));
+              return;
+            }
           }
         }
       } catch (e) {
@@ -119,7 +150,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [chatId]);
+  }, [chatId, t.welcome]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -129,30 +160,56 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
     scrollToBottom();
   }, [messages]);
 
-  const saveToStorage = (updatedMessages: Message[]) => {
+  const saveToStorage = async (updatedMessages: Message[]) => {
     try {
       const chatsStr = localStorage.getItem('maria_chats');
       const allChats = (chatsStr && chatsStr !== 'null') ? JSON.parse(chatsStr) : {};
       let title = allChats[chatId]?.title || 'Chat Baru';
     
-    // Auto-generate title if it's the first real user message
-    if (title === 'Chat Baru') {
-      const firstUserMsg = updatedMessages.find(m => m.role === 'user');
-      if (firstUserMsg) {
-        title = firstUserMsg.content.substring(0, 35) + (firstUserMsg.content.length > 35 ? '...' : '');
-        if (onTitleUpdate) onTitleUpdate(title);
+      // Auto-generate title if it's the first real user message
+      if (title === 'Chat Baru') {
+        const firstUserMsg = updatedMessages.find(m => m.role === 'user');
+        if (firstUserMsg) {
+          title = firstUserMsg.content.substring(0, 35) + (firstUserMsg.content.length > 35 ? '...' : '');
+          if (onTitleUpdate) onTitleUpdate(title);
+        }
       }
-    }
 
-    allChats[chatId] = {
-      id: chatId,
-      title: title,
-      messages: updatedMessages,
-      updatedAt: Date.now()
-    };
-    
-    localStorage.setItem('maria_chats', JSON.stringify(allChats));
-    window.dispatchEvent(new Event('storage'));
+      const activeChat = {
+        id: chatId,
+        title: title,
+        messages: updatedMessages,
+        updatedAt: Date.now()
+      };
+
+      allChats[chatId] = activeChat;
+      
+      localStorage.setItem('maria_chats', JSON.stringify(allChats));
+      window.dispatchEvent(new Event('storage'));
+
+      // FIREBASE SYNC
+      const { auth } = await import('../lib/firebase');
+      if (auth?.currentUser) {
+        const { doc, setDoc } = await import('firebase/firestore');
+        const { db, handleFirestoreError, OperationType } = await import('../lib/firebase');
+        if (db) {
+          const chatRef = doc(db, 'chats', chatId);
+          await setDoc(chatRef, {
+            userId: auth.currentUser.uid,
+            title: title,
+            isPinned: (allChats[chatId] as any)?.isPinned || false,
+            isFavorite: (allChats[chatId] as any)?.isFavorite || false,
+            updatedAt: activeChat.updatedAt
+          }, { merge: true }).catch(err => handleFirestoreError(err, OperationType.UPDATE, `chats/${chatId}`));
+
+          // Save latest message to subcollection
+          const latestMsg = updatedMessages[updatedMessages.length - 1];
+          if (latestMsg) {
+            const msgRef = doc(db, 'chats', chatId, 'messages', latestMsg.id);
+            await setDoc(msgRef, latestMsg).catch(err => handleFirestoreError(err, OperationType.CREATE, `chats/${chatId}/messages/${latestMsg.id}`));
+          }
+        }
+      }
     } catch (e) {
       console.error("Failed to save to storage", e);
     }
@@ -271,7 +328,8 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
         images ? images.map(img => ({ data: img.base64, mimeType: img.type })) : undefined,
         preferences,
         { ...deviceContext, weather: weatherContext },
-        userName
+        userName,
+        currentMessages.slice(0, -1)
       );
       const assistantMsg: Message = {
         id: generateId('msg-assistant'),

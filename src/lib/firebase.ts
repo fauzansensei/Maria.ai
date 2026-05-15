@@ -1,69 +1,88 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-
-// Default config from environment or placeholders
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || ''
-};
-
-// Extremely strict check to ensure we only initialize if we have what looks like real keys
-// Real Google API keys usually start with AIza and are ~39 chars
-const isFirebaseConfigured = !!(
-  firebaseConfig.apiKey && 
-  firebaseConfig.apiKey.startsWith('AIza') && 
-  firebaseConfig.apiKey.length > 30 && 
-  !firebaseConfig.apiKey.includes('YOUR_') &&
-  firebaseConfig.projectId
-);
+import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import firebaseConfig from '../../firebase-applet-config.json';
 
 let app: any = null;
 let auth: any = null;
 let db: any = null;
 
-if (isFirebaseConfigured) {
+try {
+  app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+  auth = getAuth(app);
+  // CRITICAL: Must use firestoreDatabaseId from config
+  db = getFirestore(app, (firebaseConfig as any).firestoreDatabaseId);
+} catch (error) {
+  console.error("Maria AI: Firebase initialization failed.", error);
+}
+
+export async function testFirestoreConnection() {
+  if (!db) return;
   try {
-    app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-    auth = getAuth(app);
-    db = getFirestore(app);
-  } catch (error) {
-    console.warn("Maria AI: Firebase detected but failed to initialize. Falling back to Demo Mode.", error);
-    auth = null;
-    db = null;
+    // Testing connection with a non-existent doc is fine, we just want to see if the server responds
+    await getDocFromServer(doc(db, 'test', 'connection'));
+    console.log("Maria AI: Firestore connection verified.");
+  } catch (error: any) {
+    if (error.message?.includes('the client is offline')) {
+      console.error("Maria AI: Please check your Firebase configuration or network.");
+    } else {
+      console.log("Maria AI: Firestore connection test completed (may be permission denied if not signed in, which is expected).");
+    }
   }
-} else {
-  console.log("Maria AI: Demo mode active (Simulation Mode)");
 }
 
 export { auth, db };
-export const googleProvider = isFirebaseConfigured ? new GoogleAuthProvider() : null;
+export const googleProvider = new GoogleAuthProvider();
+
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  }
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth?.currentUser?.uid,
+      email: auth?.currentUser?.email,
+      emailVerified: auth?.currentUser?.emailVerified,
+      isAnonymous: auth?.currentUser?.isAnonymous,
+      tenantId: auth?.currentUser?.tenantId,
+      providerInfo: auth?.currentUser?.providerData?.map((provider: any) => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 export const loginWithGoogle = async () => {
-  if (!auth) {
-    // Simulated Login for Demo / No Firebase
-    console.log("Maria AI: Simulating Google Login...");
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const mockUser = {
-          uid: 'demo-user-123',
-          displayName: 'Demo User',
-          email: 'demo@example.com',
-          photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maria',
-        };
-        // Persist mock user for persistence across refreshes
-        localStorage.setItem('maria_mock_user', JSON.stringify(mockUser));
-        // Trigger a custom event for the App component to pick up since onAuthStateChanged won't fire
-        window.dispatchEvent(new CustomEvent('maria_mock_login', { detail: mockUser }));
-        resolve(mockUser);
-      }, 400);
-    });
-  }
-  
+  if (!auth) throw new Error("Firebase Auth not initialized");
   if (!googleProvider) throw new Error("Google Provider not initialized");
   
   try {
@@ -76,13 +95,7 @@ export const loginWithGoogle = async () => {
 };
 
 export const logout = async () => {
-  if (!auth) {
-    // Simulated Logout for Demo
-    console.log("Maria AI: Simulating Logout...");
-    localStorage.removeItem('maria_mock_user');
-    window.dispatchEvent(new CustomEvent('maria_mock_logout'));
-    return;
-  }
+  if (!auth) throw new Error("Firebase Auth not initialized");
   try {
     await signOut(auth);
   } catch (error) {

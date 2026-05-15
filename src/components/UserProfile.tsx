@@ -160,14 +160,36 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
     }
   }, []);
 
+  const saveProfile = async (nextProfile: UserProfileData) => {
+    setProfile(nextProfile);
+    localStorage.setItem('maria_profile', JSON.stringify(nextProfile));
+    window.dispatchEvent(new Event('storage'));
+
+    if (user) {
+      try {
+        const { doc, updateDoc } = await import('firebase/firestore');
+        const { db, handleFirestoreError, OperationType } = await import('../lib/firebase');
+        if (db) {
+          const userRef = doc(db, 'users', user.uid);
+          await updateDoc(userRef, {
+            name: nextProfile.name,
+            avatar: nextProfile.avatar || null,
+            preferences: nextProfile.preferences,
+            notifications: nextProfile.notifications
+          } as any).catch(e => handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}`));
+        }
+      } catch (e) {
+        console.error("Maria: Firestore sync error", e);
+      }
+    }
+  };
+
   const handleUpdateNotification = (key: keyof UserProfileData['notifications'], value: any) => {
     const nextProfile = {
       ...profile,
       notifications: { ...profile.notifications, [key]: value }
     };
-    setProfile(nextProfile);
-    localStorage.setItem('maria_profile', JSON.stringify(nextProfile));
-    window.dispatchEvent(new Event('storage'));
+    saveProfile(nextProfile);
   };
 
   const handleUpdatePreference = (key: keyof UserProfileData['preferences'], value: any) => {
@@ -175,9 +197,7 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
       ...profile,
       preferences: { ...profile.preferences, [key]: value }
     };
-    setProfile(nextProfile);
-    localStorage.setItem('maria_profile', JSON.stringify(nextProfile));
-    window.dispatchEvent(new Event('storage'));
+    saveProfile(nextProfile);
     
     if (key === 'language') {
       onLanguageChange(value);
@@ -197,9 +217,7 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
     reader.onloadend = () => {
       const base64String = reader.result as string;
       const nextProfile = { ...profile, avatar: base64String };
-      setProfile(nextProfile);
-      localStorage.setItem('maria_profile', JSON.stringify(nextProfile));
-      window.dispatchEvent(new Event('storage'));
+      saveProfile(nextProfile);
     };
     reader.readAsDataURL(file);
   };
@@ -340,7 +358,10 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                               </p>
                             </div>
                             <button 
-                              onClick={() => handleUpdatePreference('isPlus', !profile.isPlus)}
+                              onClick={() => {
+                                const next = { ...profile, isPlus: !profile.isPlus };
+                                saveProfile(next);
+                              }}
                               className={`px-8 py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all shrink-0 ${
                                 profile.isPlus 
                                 ? 'bg-white/5 hover:bg-white/10 text-white border border-white/10' 
@@ -482,9 +503,7 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                                 value={profile.name}
                                 onChange={(e) => {
                                   const next = {...profile, name: e.target.value};
-                                  setProfile(next);
-                                  localStorage.setItem('maria_profile', JSON.stringify(next));
-                                  window.dispatchEvent(new Event('storage'));
+                                  saveProfile(next);
                                 }}
                                 placeholder={`${t.enterName}...`}
                                 className={`w-full border rounded-xl px-4 py-3.5 text-sm font-bold outline-none focus:ring-4 transition-all ${

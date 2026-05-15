@@ -175,7 +175,7 @@ function MainApp() {
     }
   }, []);
 
-  const loadChats = useCallback((forceId?: string) => {
+  const loadChats = useCallback(async (forceId?: string) => {
     // Migration logic
     const migrateLegacyHistory = () => {
       try {
@@ -208,6 +208,45 @@ function MainApp() {
     };
 
     const migratedId = migrateLegacyHistory();
+
+    // Firebase Sync for chat sessions list (metadata only)
+    if (auth?.currentUser) {
+      try {
+        const { collection, query, where, getDocs, orderBy } = await import('firebase/firestore');
+        const { db } = await import('./lib/firebase');
+        if (db) {
+          const q = query(
+            collection(db, 'chats'), 
+            where('userId', '==', auth.currentUser.uid),
+            orderBy('updatedAt', 'desc')
+          );
+          const snap = await getDocs(q);
+          const firebaseSessions: Record<string, ChatSession> = {};
+          
+          const chatsStr = localStorage.getItem('maria_chats');
+          const localChats = (chatsStr && chatsStr !== 'undefined' && chatsStr !== 'null') ? JSON.parse(chatsStr) : {};
+
+          snap.forEach((doc) => {
+             const data = doc.data();
+             firebaseSessions[doc.id] = {
+               id: doc.id,
+               title: data.title || 'Chat Baru',
+               messages: localChats[doc.id]?.messages || [],
+               updatedAt: data.updatedAt || Date.now(),
+               isPinned: data.isPinned || false,
+               isFavorite: data.isFavorite || false
+             };
+          });
+
+          // Merge: Firebase is source of truth for metadata, local for active messages
+          const merged = { ...localChats, ...firebaseSessions };
+          localStorage.setItem('maria_chats', JSON.stringify(merged));
+        }
+      } catch (e) {
+        console.error("Maria: Failed to sync chat sessions", e);
+      }
+    }
+
     const chatsStr = localStorage.getItem('maria_chats');
     if (chatsStr && chatsStr !== 'undefined' && chatsStr !== 'null') {
       try {
@@ -265,29 +304,74 @@ function MainApp() {
     let unsubscribe = () => {};
     if (auth) {
       try {
-        unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
           if (!currentUser) {
             setUser(null);
+            setUserName('Pengguna');
+            setUserAvatar(null);
             return;
           }
           
           setUser(currentUser);
-          setUserName(currentUser.displayName || 'Pengguna');
-          setUserAvatar(currentUser.photoURL);
           
-          // Optionally save to localStorage profile
+          // Try to load from Firebase
           try {
-            const savedProfile = localStorage.getItem('maria_profile');
-            const profile = (savedProfile && savedProfile !== 'null' && savedProfile !== 'undefined') ? JSON.parse(savedProfile) : { preferences: {} };
-            const nextProfile = {
-              ...(typeof profile === 'object' ? profile : { preferences: {} }),
-              name: currentUser.displayName || profile.name || 'Pengguna',
-              email: currentUser.email || profile.email || '',
-              avatar: currentUser.photoURL || (typeof profile === 'object' ? profile.avatar : null)
-            };
-            localStorage.setItem('maria_profile', JSON.stringify(nextProfile));
+            const { doc, getDoc, setDoc } = await import('firebase/firestore');
+            const { db } = await import('./lib/firebase');
+            if (db) {
+              const userRef = doc(db, 'users', currentUser.uid);
+              const userSnap = await getDoc(userRef);
+              
+              if (userSnap.exists()) {
+                const profile = userSnap.data();
+                setUserName(profile.name || currentUser.displayName || 'Pengguna');
+                setUserAvatar(profile.avatar || currentUser.photoURL || null);
+                setIsPlus(profile.isPlus || false);
+                if (profile.preferences?.language) {
+                  setLanguage(profile.preferences.language);
+                }
+                // Sync local storage for current session fast-load
+                localStorage.setItem('maria_profile', JSON.stringify(profile));
+                window.dispatchEvent(new Event('storage'));
+              } else {
+                // Create default profile if not exists
+                const defaultProfile = {
+                  name: currentUser.displayName || 'Pengguna',
+                  email: currentUser.email || '',
+                  avatar: currentUser.photoURL || null,
+                  joinedDate: new Date().toLocaleDateString('id-ID'),
+                  isPlus: false,
+                  preferences: { 
+                    theme: 'light', 
+                    language: 'id', 
+                    personality: 'ramah', 
+                    accentColor: 'blue', 
+                    performanceMode: false, 
+                    guardrailsEnabled: true,
+                    style_tone: 'default',
+                    warmth: 'default',
+                    enthusiasm: 'default',
+                    titles_lists: 'default',
+                    emoji: 'default',
+                    quick_answer: true,
+                    nickname: '',
+                    job: '',
+                    use_history: true,
+                    web_search: true
+                  },
+                  notifications: { response: 'both', tasks: 'both' }
+                };
+                await setDoc(userRef, defaultProfile);
+                setUserName(defaultProfile.name);
+                setUserAvatar(defaultProfile.avatar);
+                localStorage.setItem('maria_profile', JSON.stringify(defaultProfile));
+                window.dispatchEvent(new Event('storage'));
+              }
+            }
           } catch (e) {
-            console.error("Maria: Failed to update profile from auth change", e);
+            console.error("Maria: Failed to sync profile with Firebase", e);
+            setUserName(currentUser.displayName || 'Pengguna');
+            setUserAvatar(currentUser.photoURL);
           }
         });
       } catch (e) {

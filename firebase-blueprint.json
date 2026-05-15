@@ -1,0 +1,89 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Stores user preferences and profile information.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "avatar": { "type": "string" },
+        "joinedDate": { "type": "string" },
+        "isPlus": { "type": "boolean" },
+        "preferences": { "type": "object" },
+        "notifications": { "type": "object" }
+      }
+    },
+    "Chat": {
+      "title": "Chat Session",
+      "description": "Represents a conversation between the user and Maria.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "isPinned": { "type": "boolean" },
+        "isFavorite": { "type": "boolean" },
+        "updatedAt": { "type": "number" }
+      }
+    },
+    "Message": {
+      "title": "Chat Message",
+      "description": "A single message within a chat.",
+      "type": "object",
+      "properties": {
+        "chatId": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "content": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "image": { "type": "object" },
+        "images": { "type": "array" }
+      }
+    },
+    "Reminder": {
+      "title": "Reminder",
+      "description": "User set reminders.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "dateTime": { "type": "string" },
+        "isCompleted": { "type": "boolean" }
+      }
+    },
+    "Notification": {
+      "title": "User Notification",
+      "description": "Notifications for the user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "isRead": { "type": "boolean" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile document."
+    },
+    "/chats/{chatId}": {
+      "schema": "Chat",
+      "description": "Chat session document."
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Messages subcollection within a chat."
+    },
+    "/reminders/{reminderId}": {
+      "schema": "Reminder",
+      "description": "User reminders."
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications."
+    }
+  }
+}

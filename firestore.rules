@@ -1,0 +1,122 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+
+    // --- Validation Helpers ---
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'email', 'joinedDate', 'isPlus', 'preferences', 'notifications']) &&
+             data.keys().size() >= 6 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.email is string && data.email.size() <= 150 &&
+             data.joinedDate is string &&
+             data.isPlus is bool &&
+             data.preferences is map &&
+             data.notifications is map;
+    }
+
+    function isValidChat(data) {
+      return data.keys().hasAll(['userId', 'title', 'isPinned', 'isFavorite', 'updatedAt']) &&
+             data.keys().size() == 5 &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() <= 200 &&
+             data.isPinned is bool &&
+             data.isFavorite is bool &&
+             data.updatedAt is number;
+    }
+
+    function isValidMessage(data, chatId) {
+      return data.keys().hasAll(['chatId', 'role', 'content', 'timestamp']) &&
+             data.chatId == chatId &&
+             data.role in ['user', 'assistant'] &&
+             data.content is string && data.content.size() <= 5000 &&
+             data.timestamp is number;
+    }
+
+    function isValidReminder(data) {
+      return data.keys().hasAll(['userId', 'title', 'dateTime', 'isCompleted']) &&
+             data.keys().size() == 4 &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() <= 500 &&
+             data.dateTime is string &&
+             data.isCompleted is bool;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['userId', 'type', 'title', 'content', 'timestamp', 'isRead']) &&
+             data.keys().size() == 6 &&
+             data.userId == request.auth.uid &&
+             data.type is string &&
+             data.title is string && data.title.size() <= 500 &&
+             data.content is string && data.content.size() <= 2000 &&
+             data.timestamp is number &&
+             data.isRead is bool;
+    }
+
+    // --- Collections ---
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(incoming()) && (incoming().isPlus == false);
+      allow update: if isOwner(userId) && isValidUser(incoming()) && 
+                    incoming().email == existing().email && 
+                    incoming().joinedDate == existing().joinedDate &&
+                    incoming().isPlus == existing().isPlus && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'preferences', 'notifications']);
+    }
+
+    match /chats/{chatId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(chatId) && isValidChat(incoming());
+      allow update: if isSignedIn() && isOwner(existing().userId) && isValidChat(incoming()) &&
+                    incoming().userId == existing().userId &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['title', 'isPinned', 'isFavorite', 'updatedAt']);
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+
+      match /messages/{messageId} {
+        allow get: if isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid;
+        allow list: if isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid;
+        allow create: if isSignedIn() && isValidId(messageId) && isValidMessage(incoming(), chatId) &&
+                      get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
+    match /reminders/{reminderId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(reminderId) && isValidReminder(incoming());
+      allow update: if isSignedIn() && isOwner(existing().userId) && isValidReminder(incoming()) &&
+                    incoming().userId == existing().userId &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['title', 'dateTime', 'isCompleted']);
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /notifications/{notificationId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if false; 
+      allow update: if isSignedIn() && isOwner(existing().userId) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['isRead']);
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+  }
+}
