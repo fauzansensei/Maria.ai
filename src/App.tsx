@@ -285,6 +285,22 @@ function MainApp() {
     loadChats();
     updateUnreadCount();
 
+    // Auto-detect performance mode for older Android devices
+    const ua = navigator.userAgent;
+    if (/Android/.test(ua)) {
+      const match = ua.match(/Android\s([0-9\.]+)/);
+      if (match && match[1]) {
+        const version = parseFloat(match[1]);
+        if (version < 13) {
+          const profileStr = localStorage.getItem('maria_profile');
+          if (!profileStr || !JSON.parse(profileStr).preferences?.performanceMode) {
+             setIsLiteMode(true);
+             console.log("Maria: Performance mode auto-enabled for Android " + version);
+          }
+        }
+      }
+    }
+
     const handleStorage = () => {
       loadProfile();
       loadChats();
@@ -549,7 +565,15 @@ function MainApp() {
     : ({ type: 'spring', damping: 25, stiffness: 200 } as any);
 
   return (
-    <div className={`h-[100dvh] w-full flex flex-col font-sans overflow-hidden transition-all ${isLiteMode ? 'duration-100' : 'duration-700'} ${isDark ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
+    <div className={`h-[100dvh] w-full flex flex-col font-sans overflow-hidden transition-all ${isLiteMode ? 'duration-75 is-lite' : 'duration-700'} ${isDark ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
+    {/* Background optimization for performance */}
+    {!isLiteMode && (
+      <div className={`fixed inset-0 pointer-events-none z-0 overflow-hidden transition-opacity duration-1000 ${isFocusMode ? 'opacity-20' : 'opacity-100'}`}>
+        <div className={`absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full blur-[120px] transition-colors duration-1000 ${isDark ? 'bg-brand-blue/10' : 'bg-brand-blue/[0.03]'}`} />
+        <div className={`absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full blur-[120px] transition-colors duration-1000 ${isDark ? 'bg-indigo-900/10' : 'bg-indigo-500/[0.02]'}`} />
+      </div>
+    )}
+    
     {/* Premium Header */}
     <AnimatePresence mode={isLiteMode ? 'popLayout' : 'wait'}>
       {!isFocusMode && (

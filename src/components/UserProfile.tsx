@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Settings, LogOut, Globe, Shield, ShieldCheck, CreditCard, ChevronRight, Sparkles, RotateCcw, X, User as UserIcon, MessageSquare, Info, Brain, Bell, Plus, Calendar, Trash2, Clock, Camera, MessageCircle } from 'lucide-react';
+import { Settings, LogOut, Globe, Shield, ShieldCheck, CreditCard, ChevronRight, Sparkles, RotateCcw, X, User as UserIcon, MessageSquare, Info, Brain, Bell, Plus, Calendar, Trash2, Clock, Camera, MessageCircle, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User } from 'firebase/auth';
 import { loginWithGoogle, logout } from '../lib/firebase';
@@ -476,6 +476,22 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                                       className={`w-10 h-5 rounded-full relative transition-all ${profile.preferences.useMemory ? 'bg-amber-500' : (isDark ? 'bg-slate-800' : 'bg-slate-200')}`}
                                     >
                                       <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-md transition-all ${profile.preferences.useMemory ? 'right-0.5' : 'left-0.5'}`} />
+                                    </button>
+                                  </div>
+
+                                 <div className={`flex items-center justify-between p-5 rounded-2xl border ${isDark ? 'bg-slate-900/20 border-slate-800/50' : 'bg-white border-slate-100 shadow-sm'}`}>
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <div className={`p-2 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-teal-50'}`}><Zap size={16} className="text-teal-500" /></div>
+                                      <div className="min-w-0">
+                                        <p className="text-[11px] font-black truncate">Mode Performa</p>
+                                        <p className="text-[9px] font-bold text-slate-500 truncate">Lite Mode for Old Devices</p>
+                                      </div>
+                                    </div>
+                                    <button 
+                                      onClick={() => handleUpdatePreference('performanceMode', !profile.preferences.performanceMode)}
+                                      className={`w-10 h-5 rounded-full relative transition-all ${profile.preferences.performanceMode ? 'bg-teal-500' : (isDark ? 'bg-slate-800' : 'bg-slate-200')}`}
+                                    >
+                                      <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-md transition-all ${profile.preferences.performanceMode ? 'right-0.5' : 'left-0.5'}`} />
                                     </button>
                                   </div>
 

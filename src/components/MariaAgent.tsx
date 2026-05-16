@@ -154,7 +154,13 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
   }, [chatId, t.welcome]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isLiteMode) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+    } else {
+      window.requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      });
+    }
   };
 
   useEffect(() => {
@@ -223,14 +229,25 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
     e.preventDefault();
     if ((!input.trim() && pendingImages.length === 0) || isLoading) return;
 
+    // Capture current values
+    const currentInput = input;
+    const currentImages = [...pendingImages];
+    
+    // Immediate state reset for responsiveness
+    setInput('');
+    setPendingImages([]);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = '48px';
+    }
+
     const userMsg: Message = {
       id: generateId('msg-user'),
-      chatId: activeChatId,
+      chatId: chatId,
       role: 'user',
-      content: input,
+      content: currentInput,
       timestamp: Date.now(),
-      ...(pendingImages.length > 0 ? {
-        images: pendingImages.map(img => ({
+      ...(currentImages.length > 0 ? {
+        images: currentImages.map(img => ({
           data: img.base64,
           mimeType: img.type
         }))
@@ -238,13 +255,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
     };
 
     const nextMessages = [...messages.filter(m => m.id !== 'welcome' || messages.length > 1), userMsg];
-    const currentInput = input;
-    const currentImages = [...pendingImages];
     
-    setPendingImages([]);
-    if (textareaRef.current) {
-      textareaRef.current.style.height = '64px';
-    }
     processMessage(nextMessages, currentInput, currentImages);
   };
 
@@ -298,9 +309,9 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
     }
 
     setMessages(currentMessages);
-    saveToStorage(currentMessages);
+    // Non-blocking storage save
+    setTimeout(() => saveToStorage(currentMessages), 0);
 
-    setInput('');
     setIsLoading(true);
 
     // Get preferences for personality
@@ -345,7 +356,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
       );
       const assistantMsg: Message = {
         id: generateId('msg-assistant'),
-        chatId: activeChatId,
+        chatId: chatId,
         role: 'assistant',
         content: responseData.text,
         groundingMetadata: responseData.groundingMetadata,
@@ -641,7 +652,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
               key={msg.id}
               initial={isLiteMode ? { opacity: 0 } : { opacity: 0, y: 10 }}
               animate={isLiteMode ? { opacity: 1 } : { opacity: 1, y: 0 }}
-              transition={transition}
+              transition={isLiteMode ? { duration: 0.1 } : transition}
               className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div className={`max-w-[92%] sm:max-w-[85%] md:max-w-[75%] group flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
@@ -664,7 +675,9 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
                 )}
                 
                 <div 
-                  className={`px-6 py-4 relative w-full transition-all duration-500 overflow-hidden ${
+                  className={`px-6 py-4 relative w-full overflow-hidden ${
+                    isLiteMode ? '' : 'transition-all duration-500'
+                  } ${
                     msg.role === 'user' 
                     ? (isDark || isFocusMode ? 'chat-bubble-user bg-brand-blue/90 shadow-2xl shadow-brand-blue/20' : 'chat-bubble-user') 
                     : (isDark || isFocusMode ? 'bg-slate-900 border border-slate-800 text-slate-200 rounded-[24px] rounded-tl-none' : 'chat-bubble-ai')
@@ -707,7 +720,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
                     </div>
                   ) : (
                     <div className="markdown-body">
-                      {msg.role === 'assistant' && msg.id === messages[messages.length - 1]?.id && (Date.now() - msg.timestamp) < 5000 ? (
+                      {msg.role === 'assistant' && !isLiteMode && msg.id === messages[messages.length - 1]?.id && (Date.now() - msg.timestamp) < 5000 ? (
                         <Typewriter 
                           text={msg.content}
                           speed={10}
@@ -745,13 +758,14 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
                                      isDark || isFocusMode 
                                      ? 'bg-slate-800/50 border-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white' 
                                      : 'bg-slate-50 border-slate-100 text-slate-600 hover:bg-slate-100 hover:text-brand-blue'
-                                   }`}
+                                   } ${isLiteMode ? 'shadow-none' : ''}`}
                                  >
                                    <img 
                                      src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`} 
                                      alt="" 
                                      className="w-3 h-3 rounded-sm"
                                      referrerPolicy="no-referrer"
+                                     loading="lazy"
                                    />
                                    <span className="max-w-[150px] truncate">{chunk.web.title || domain}</span>
                                  </a>
@@ -923,10 +937,14 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
                 <AnimatePresence>
                   {pendingImages.length > 0 && (
                     <motion.div 
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute -top-32 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl p-3 rounded-2xl border border-slate-200 shadow-xl flex items-center gap-3 overflow-x-auto custom-scrollbar"
+                      initial={isLiteMode ? { opacity: 0 } : { opacity: 0, y: 10, scale: 0.95 }}
+                      animate={isLiteMode ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+                      exit={isLiteMode ? { opacity: 0 } : { opacity: 0, y: 10, scale: 0.95 }}
+                      className={`absolute -top-32 left-0 right-0 z-50 p-3 rounded-2xl border shadow-xl flex items-center gap-3 overflow-x-auto custom-scrollbar ${
+                        isLiteMode 
+                        ? (isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200')
+                        : 'bg-white/80 backdrop-blur-xl border-slate-200'
+                      }`}
                     >
                       {pendingImages.map((img) => (
                         <div key={img.id} className="relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden shadow-inner group/img">
@@ -958,17 +976,22 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
                             onKeyDown={(e) => {
                               if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault();
-                                handleSubmit(e);
+                                // Direct call to handleSubmit logic to avoid event bubbling issues
+                                if (input.trim() || pendingImages.length > 0) {
+                                  handleSubmit(e);
+                                }
                               }
                             }}
                             disabled={isLoading}
                             placeholder={t.chatInputPlaceholder}
                             rows={1}
+                            inputMode="text"
+                            enterKeyHint="send"
                             className={`w-full py-4 sm:py-5 transition-all outline-none rounded-[24px] sm:rounded-[28px] pl-6 sm:pl-16 pr-14 text-sm sm:text-base shadow-xl resize-none overflow-hidden custom-scrollbar ${
                                 isDark || isFocusMode 
                                 ? 'bg-slate-900 border border-slate-800 text-white placeholder:text-slate-600 focus:border-brand-blue/50 focus:ring-8 focus:ring-brand-blue/10' 
                                 : 'bg-white border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-brand-blue focus:ring-8 focus:ring-brand-blue/5'
-                            } shadow-slate-200/40`}
+                            } ${isLiteMode ? 'shadow-none' : 'shadow-slate-200/40'}`}
                             style={{ minHeight: '48px', maxHeight: '200px', height: 'auto' }}
                             onInput={(e: any) => {
                               e.target.style.height = 'auto';

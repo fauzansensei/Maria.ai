@@ -138,11 +138,15 @@ MARIA CORE INTEGRITY PROTOCOL:
       parts: currentParts
     });
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+
     const response = await fetch('/api/maria', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      signal: controller.signal,
       body: JSON.stringify({
         contents,
         systemInstruction,
@@ -151,6 +155,8 @@ MARIA CORE INTEGRITY PROTOCOL:
         customApiKey: preferences?.customApiKey
       })
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -192,7 +198,8 @@ MARIA CORE INTEGRITY PROTOCOL:
     }
     
     // Check if it's a transient error that might benefit from a retry
-    const isTransient = error?.message?.includes("xhr error") || 
+    const isTransient = error?.name === 'AbortError' ||
+                        error?.message?.includes("xhr error") || 
                         error?.message?.includes("fetch") || 
                         error?.status === "INTERNAL" || 
                         error?.status === "UNKNOWN";
@@ -205,6 +212,10 @@ MARIA CORE INTEGRITY PROTOCOL:
 
     if (isQuotaExceeded) {
       throw new Error("Kuota API Gemini telah habis. Silakan coba lagi nanti atau hubungkan kunci API berbayar di Settings.");
+    }
+
+    if (error?.name === 'AbortError') {
+      throw new Error("Maria butuh waktu terlalu lama untuk merespon. Mohon coba lagi.");
     }
 
     if (retries > 0 && isTransient) {
