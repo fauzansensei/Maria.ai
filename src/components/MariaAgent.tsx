@@ -87,17 +87,16 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
   useEffect(() => {
     const loadChat = async () => {
       try {
-        const chatsStr = localStorage.getItem('maria_chats');
-        if (chatsStr && chatsStr !== 'null' && chatsStr !== 'undefined') {
-          const allChats = JSON.parse(chatsStr);
-          const currentChat = allChats[chatId];
-          if (currentChat && Array.isArray(currentChat.messages) && currentChat.messages.length > 0) {
-            setMessages(currentChat.messages);
+        const historyStr = localStorage.getItem(`maria_history_${chatId}`);
+        if (historyStr && historyStr !== 'null') {
+          const msgs = JSON.parse(historyStr);
+          if (Array.isArray(msgs) && msgs.length > 0) {
+            setMessages(msgs);
             return;
           }
         }
 
-        // If not in local or empty, try Firebase
+        // If not in local, try Firebase
         const { auth } = await import('../lib/firebase');
         if (auth?.currentUser) {
           const { collection, query, getDocs, orderBy } = await import('firebase/firestore');
@@ -114,21 +113,13 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
             if (msgs.length > 0) {
               setMessages(msgs);
               // Update local cache
-              const chatsStr = localStorage.getItem('maria_chats');
-              const allChats = chatsStr ? JSON.parse(chatsStr) : {};
-              allChats[chatId] = { 
-                ...(allChats[chatId] || { id: chatId, title: 'Chat Baru' }), 
-                messages: msgs,
-                updatedAt: Date.now()
-              };
-              localStorage.setItem('maria_chats', JSON.stringify(allChats));
-              window.dispatchEvent(new Event('storage'));
+              localStorage.setItem(`maria_history_${chatId}`, JSON.stringify(msgs));
               return;
             }
           }
         }
       } catch (e) {
-        console.error("Failed to load chat", e);
+        console.error("Failed to load chat history", e);
       }
       
       // Fallback for migration or new chat
@@ -145,12 +136,15 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
 
     loadChat();
     
-    const handleStorageChange = () => {
-      loadChat();
+    // Custom event to handle history updates across components
+    const handleHistoryUpdate = (e: any) => {
+      if (e.detail?.chatId === chatId) {
+        loadChat();
+      }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('maria_history_update' as any, handleHistoryUpdate);
+    return () => window.removeEventListener('maria_history_update' as any, handleHistoryUpdate);
   }, [chatId, t.welcome]);
 
   const scrollToBottom = () => {
@@ -169,12 +163,15 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
 
   const saveToStorage = async (updatedMessages: Message[]) => {
     try {
+      // 1. Save messages to specific history key
+      localStorage.setItem(`maria_history_${chatId}`, JSON.stringify(updatedMessages));
+
+      // 2. Update metadata in maria_chats
       const chatsStr = localStorage.getItem('maria_chats');
       const allChats = (chatsStr && chatsStr !== 'null') ? JSON.parse(chatsStr) : {};
       let title = allChats[chatId]?.title || 'Chat Baru';
     
-      // Auto-generate title if it's the first real user message
-      if (title === 'Chat Baru') {
+      if (title === 'Chat Baru' || title === t.newChat) {
         const firstUserMsg = updatedMessages.find(m => m.role === 'user');
         if (firstUserMsg) {
           title = firstUserMsg.content.substring(0, 35) + (firstUserMsg.content.length > 35 ? '...' : '');
@@ -182,18 +179,19 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
         }
       }
 
-      const activeChat = {
+      allChats[chatId] = {
+        ...(allChats[chatId] || {}),
         id: chatId,
         title: title,
-        messages: updatedMessages,
         updatedAt: Date.now()
       };
-
-      allChats[chatId] = activeChat;
       
       localStorage.setItem('maria_chats', JSON.stringify(allChats));
       
-      // FIREBASE SYNC - Using WriteBatch for atomic first-time sync
+      window.dispatchEvent(new CustomEvent('maria_history_update', { detail: { chatId } }));
+      window.dispatchEvent(new Event('storage'));
+      
+      // FIREBASE SYNC - metadata + latest message
       const { auth } = await import('../lib/firebase');
       if (auth?.currentUser) {
         const { doc, writeBatch } = await import('firebase/firestore');
@@ -205,8 +203,8 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
           batch.set(chatRef, {
             userId: auth.currentUser.uid,
             title: title,
-            isPinned: (allChats[chatId] as any)?.isPinned || false,
-            isFavorite: (allChats[chatId] as any)?.isFavorite || false,
+            isPinned: allChats[chatId].isPinned || false,
+            isFavorite: allChats[chatId].isFavorite || false,
             updatedAt: Date.now()
           }, { merge: true });
 
@@ -224,9 +222,6 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
           });
         }
       }
-
-      // Dispatch event after sync to notify other parts of UI
-      window.dispatchEvent(new Event('storage'));
     } catch (e) {
       console.error("Failed to save to storage", e);
     }
@@ -441,14 +436,15 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
     } catch (error: any) {
       console.error(error);
       
-      const isQuotaError = error?.message?.includes("429") || 
-                           error?.message?.includes("quota") || 
-                           error?.status === "RESOURCE_EXHAUSTED" ||
-                           error?.error?.status === "RESOURCE_EXHAUSTED" ||
-                           error?.error?.code === 429 ||
-                           (error instanceof Error && error.message.includes("RESOURCE_EXHAUSTED"));
+    const isQuotaExceeded = error?.message?.toLowerCase().includes("429") || 
+                            error?.message?.toLowerCase().includes("quota") || 
+                            error?.message?.toLowerCase().includes("resource_exhausted") ||
+                            error?.status === "RESOURCE_EXHAUSTED" ||
+                            error?.error?.status === "RESOURCE_EXHAUSTED" ||
+                            error?.error?.code === 429 ||
+                            (error instanceof Error && error.message.toLowerCase().includes("resource_exhausted"));
 
-      if (isQuotaError) {
+      if (isQuotaExceeded) {
         // Calculate reset time (until next midnight)
         const now = new Date();
         const midnight = new Date(now);
@@ -460,6 +456,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
         setQuotaExhausted(true);
         setCountdown(Math.floor((limitTimestamp - Date.now()) / 1000));
         
+        // Remove the failing message from optimistic UI
         setMessages(currentMessages.slice(0, -1));
         return;
       }
@@ -669,179 +666,32 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
       <div className={`flex-1 overflow-y-auto px-4 sm:px-6 md:px-10 lg:px-20 py-6 sm:py-10 space-y-8 sm:space-y-12 custom-scrollbar transition-all duration-700 ${isFocusMode ? 'pt-24' : ''}`}>
         <AnimatePresence initial={false}>
           {messages.map((msg) => (
-            <motion.div
+            <MessageItem 
               key={msg.id}
-              initial={isLiteMode ? { opacity: 0 } : { opacity: 0, y: 10 }}
-              animate={isLiteMode ? { opacity: 1 } : { opacity: 1, y: 0 }}
-              transition={isLiteMode ? { duration: 0.1 } : transition}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div className={`max-w-[92%] sm:max-w-[85%] md:max-w-[75%] group flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                {msg.role === 'assistant' && (
-                  <div className="flex items-center gap-2 mb-2 ml-1">
-                    <div className={`w-5 h-5 rounded-md flex items-center justify-center text-white shadow-sm border border-white/10 ${isPlus ? 'bg-gradient-to-tr from-brand-blue to-blue-900' : 'bg-gradient-to-br from-[#021B2B] via-[#0E4D54] to-[#14BCB2]'}`}>
-                      <span className="text-[10px] font-serif italic drop-shadow-sm">{isPlus ? <Sparkles size={10} /> : 'M'}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className={`text-[11px] font-black uppercase tracking-widest ${isDark || isFocusMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                        Maria {isPlus ? 'Plus' : ''}
-                      </span>
-                      {isPlus && (
-                        <div className="flex items-center gap-1 px-1 py-0.5 bg-brand-blue/10 border border-brand-blue/20 rounded-md">
-                          <span className="text-[6px] font-black text-brand-blue uppercase tracking-widest">Plus</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-                
-                <div 
-                  className={`px-6 py-4 relative w-full overflow-hidden ${
-                    isLiteMode ? '' : 'transition-all duration-500'
-                  } ${
-                    msg.role === 'user' 
-                    ? (isDark || isFocusMode ? 'chat-bubble-user bg-brand-blue/90 shadow-2xl shadow-brand-blue/20' : 'chat-bubble-user') 
-                    : (isDark || isFocusMode ? 'bg-slate-900 border border-slate-800 text-slate-200 rounded-[24px] rounded-tl-none' : 'chat-bubble-ai')
-                  } ${editingId === msg.id ? 'ring-4 ring-brand-blue/10 border-brand-blue' : ''}`}
-                >
-                  {(msg.image || (msg.images && msg.images.length > 0)) && (
-                    <div className="mb-4 flex flex-wrap gap-2">
-                      {msg.image && (
-                         <div className="rounded-xl overflow-hidden border border-white/10 shadow-lg max-w-sm">
-                           <img 
-                             src={msg.image.data ? `data:${msg.image.mimeType};base64,${msg.image.data}` : msg.image.url} 
-                             alt="Shared with Maria" 
-                             className="w-full h-auto object-cover max-h-[300px]" 
-                           />
-                         </div>
-                      )}
-                      {msg.images?.map((img, idx) => (
-                        <div key={idx} className="rounded-xl overflow-hidden border border-white/10 shadow-lg max-w-sm">
-                           <img 
-                             src={img.data ? `data:${img.mimeType};base64,${img.data}` : img.url} 
-                             alt={`Shared ${idx + 1}`} 
-                             className="w-full h-auto object-cover max-h-[300px]" 
-                           />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {editingId === msg.id ? (
-                    <div className="flex flex-col gap-3">
-                      <textarea
-                        value={editInput}
-                        onChange={(e) => setEditInput(e.target.value)}
-                        className={`bg-transparent text-[15px] leading-relaxed whitespace-pre-wrap outline-none w-full resize-none min-h-[80px] ${isDark || isFocusMode ? 'text-white' : 'text-slate-700'}`}
-                        autoFocus
-                      />
-                      <div className={`flex justify-end gap-3 pt-3 border-t ${isDark || isFocusMode ? 'border-slate-800' : 'border-slate-100'}`}>
-                        <button onClick={() => setEditingId(null)} className="px-4 py-1.5 text-xs font-bold text-slate-400 hover:text-slate-600">{t.cancel}</button>
-                        <button onClick={() => handleUpdateMessage(msg.id)} className="px-4 py-1.5 bg-brand-blue text-white rounded-lg text-xs font-bold shadow-md shadow-brand-blue/20">{t.saveChanges}</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="markdown-body">
-                      {msg.role === 'assistant' && !isLiteMode && msg.id === messages[messages.length - 1]?.id && (Date.now() - msg.timestamp) < 5000 ? (
-                        <Typewriter 
-                          text={msg.content}
-                          speed={10}
-                          onUpdate={scrollToBottom}
-                          renderMarkdown={(content) => (
-                            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-                              {content}
-                            </ReactMarkdown>
-                          )}
-                        />
-                      ) : (
-                        <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-                          {msg.content}
-                        </ReactMarkdown>
-                      )}
-
-                      {msg.role === 'assistant' && msg.groundingMetadata?.groundingChunks && (
-                        <div className={`mt-5 pt-4 border-t ${isDark || isFocusMode ? 'border-slate-800' : 'border-slate-50'}`}>
-                          <div className="flex items-center gap-2 mb-3">
-                             <Globe size={12} className="text-brand-blue" />
-                             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                               {language === 'en' ? 'Sources' : 'Sumber Informasi'}
-                             </span>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                             {msg.groundingMetadata.groundingChunks.filter((chunk: any) => chunk.web).map((chunk: any, chunkIdx: number) => {
-                               const domain = new URL(chunk.web.uri).hostname;
-                               return (
-                                 <a 
-                                   key={chunkIdx}
-                                   href={chunk.web.uri}
-                                   target="_blank"
-                                   rel="noopener noreferrer"
-                                   className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[11px] font-bold transition-all shadow-sm ${
-                                     isDark || isFocusMode 
-                                     ? 'bg-slate-800/50 border-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white' 
-                                     : 'bg-slate-50 border-slate-100 text-slate-600 hover:bg-slate-100 hover:text-brand-blue'
-                                   } ${isLiteMode ? 'shadow-none' : ''}`}
-                                 >
-                                   <img 
-                                     src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`} 
-                                     alt="" 
-                                     className="w-3 h-3 rounded-sm"
-                                     referrerPolicy="no-referrer"
-                                     loading="lazy"
-                                   />
-                                   <span className="max-w-[150px] truncate">{chunk.web.title || domain}</span>
-                                 </a>
-                               );
-                             })}
-                          </div>
-                        </div>
-                      )}
-                        
-                      {msg.role === 'assistant' && getDetectedLocation(msg.content) && (
-                        <div className={`mt-6 pt-5 border-t flex items-center justify-between ${isDark || isFocusMode ? 'border-slate-800' : 'border-slate-50'}`}>
-                           <div className="flex items-center gap-2">
-                             <div className="w-1.5 h-1.5 bg-brand-blue rounded-full" />
-                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">{language === 'en' ? 'Geo-Intelligence Detected' : 'Geo-Intel Terdeteksi'}</span>
-                           </div>
-                           <button 
-                            onClick={() => {
-                              const loc = getDetectedLocation(msg.content);
-                              if (loc) setMapConfig({ isOpen: true, location: { lat: loc.lat, lng: loc.lng }, title: loc.name });
-                            }}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border shadow-sm ${isDark || isFocusMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-brand-blue hover:text-white' : 'bg-slate-50 border-slate-100 hover:bg-brand-blue hover:text-white'}`}
-                           >
-                             <MapPinIcon size={14} /> {t.viewMap}
-                           </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  </div>
-                  
-                  {/* Premium Action Bar */}
-                  {!editingId && (
-                    <div className={`mt-3 flex items-center gap-3 px-2 transition-all duration-300 ${
-                      msg.role === 'user' ? 'justify-end' : 'justify-start'
-                    } opacity-100 lg:opacity-0 lg:group-hover:opacity-100`}>
-                      {msg.role === 'assistant' ? (
-                        <>
-                          <ActionButton isDark={isDark} isFocusMode={isFocusMode} onClick={() => handleCopy(msg.content, msg.id)} icon={copiedId === msg.id ? <Check size={14} className="text-green-500" /> : <Copy size={14} />} label={t.copy} />
-                          <ActionButton isDark={isDark} isFocusMode={isFocusMode} onClick={() => handleShare(msg.content, msg.id)} icon={sharedId === msg.id ? <Check size={14} className="text-green-500" /> : <Share2 size={14} />} label={t.share} />
-                          <div className="flex items-center gap-1">
-                            <ActionButton isDark={isDark} isFocusMode={isFocusMode} onClick={() => handleFeedback(msg.id)} icon={feedbackId === msg.id ? <Check size={14} className="text-green-500" /> : <ThumbsUp size={14} />} label={t.like} />
-                            <ActionButton isDark={isDark} isFocusMode={isFocusMode} onClick={() => handleFeedback(msg.id)} icon={<ThumbsDown size={14} />} label={t.dislike} />
-                          </div>
-                          <ActionButton isDark={isDark} isFocusMode={isFocusMode} onClick={() => handleRegenerate(msg.id)} icon={<RotateCcw size={14} />} label={t.regenerate} />
-                        </>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <ActionButton isDark={isDark} isFocusMode={isFocusMode} onClick={() => startEditing(msg)} icon={<Pencil size={14} />} label={t.edit} />
-                          <ActionButton isDark={isDark} isFocusMode={isFocusMode} onClick={() => handleCopy(msg.content, msg.id)} icon={copiedId === msg.id ? <Check size={14} /> : <Copy size={14} />} label={t.copy} />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-            </motion.div>
+              msg={msg}
+              isLiteMode={isLiteMode}
+              isDark={isDark}
+              isFocusMode={isFocusMode}
+              isPlus={isPlus}
+              language={language}
+              t={t}
+              editingId={editingId}
+              editInput={editInput}
+              setEditInput={setEditInput}
+              copiedId={copiedId}
+              sharedId={sharedId}
+              feedbackId={feedbackId}
+              onCopy={handleCopy}
+              onShare={handleShare}
+              onFeedback={handleFeedback}
+              onRegenerate={handleRegenerate}
+              onEdit={startEditing}
+              onCancelEdit={() => setEditingId(null)}
+              onSaveEdit={handleUpdateMessage}
+              onSetMapConfig={setMapConfig}
+              onScrollToBottom={scrollToBottom}
+              isLast={msg.id === messages[messages.length - 1]?.id}
+            />
           ))}
         </AnimatePresence>
         
@@ -1075,3 +925,195 @@ function ActionButton({ icon, label, onClick, isFocusMode = false, isDark = fals
         </button>
     );
 }
+
+const MessageItem = React.memo(({ 
+  msg, isLiteMode, isDark, isFocusMode, isPlus, language, t,
+  editingId, editInput, setEditInput, copiedId, sharedId, feedbackId,
+  onCopy, onShare, onFeedback, onRegenerate, onEdit, onCancelEdit, onSaveEdit,
+  onSetMapConfig, onScrollToBottom, isLast
+}: any) => {
+  const detectLocation = (text: string) => {
+    const places = [
+      { name: 'Jakarta', lat: -6.2088, lng: 106.8456 },
+      { name: 'Surabaya', lat: -7.2575, lng: 112.7521 },
+      { name: 'Bandung', lat: -6.9175, lng: 107.6191 }
+    ];
+    return places.find(p => text.toLowerCase().includes(p.name.toLowerCase()));
+  };
+
+  const loc = msg.role === 'assistant' ? detectLocation(msg.content) : null;
+
+  return (
+    <motion.div
+      initial={isLiteMode ? { opacity: 0 } : { opacity: 0, y: 10 }}
+      animate={isLiteMode ? { opacity: 1 } : { opacity: 1, y: 0 }}
+      transition={isLiteMode ? { duration: 0.1 } : { duration: 0.5 }}
+      className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+    >
+      <div className={`max-w-[92%] sm:max-w-[85%] md:max-w-[75%] group flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+        {msg.role === 'assistant' && (
+          <div className="flex items-center gap-2 mb-2 ml-1">
+            <div className={`w-5 h-5 rounded-md flex items-center justify-center text-white shadow-sm border border-white/10 ${isPlus ? 'bg-gradient-to-tr from-brand-blue to-blue-900' : 'bg-gradient-to-br from-[#021B2B] via-[#0E4D54] to-[#14BCB2]'}`}>
+              <span className="text-[10px] font-serif italic drop-shadow-sm">{isPlus ? <Sparkles size={10} /> : 'M'}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className={`text-[11px] font-black uppercase tracking-widest ${isDark || isFocusMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                Maria {isPlus ? 'Plus' : ''}
+              </span>
+              {isPlus && (
+                <div className="flex items-center gap-1 px-1 py-0.5 bg-brand-blue/10 border border-brand-blue/20 rounded-md">
+                  <span className="text-[6px] font-black text-brand-blue uppercase tracking-widest">Plus</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        <div 
+          className={`px-6 py-4 relative w-full overflow-hidden ${
+            isLiteMode ? '' : 'transition-all duration-500'
+          } ${
+            msg.role === 'user' 
+            ? (isDark || isFocusMode ? 'chat-bubble-user bg-brand-blue/90 shadow-2xl shadow-brand-blue/20' : 'chat-bubble-user') 
+            : (isDark || isFocusMode ? 'bg-slate-900 border border-slate-800 text-slate-200 rounded-[24px] rounded-tl-none' : 'chat-bubble-ai')
+          } ${editingId === msg.id ? 'ring-4 ring-brand-blue/10 border-brand-blue' : ''}`}
+        >
+          {(msg.image || (msg.images && msg.images.length > 0)) && (
+            <div className="mb-4 flex flex-wrap gap-2">
+              {msg.image && (
+                 <div className={`rounded-xl overflow-hidden border border-white/10 shadow-lg max-w-sm ${isLiteMode ? 'shadow-none' : ''}`}>
+                   <img 
+                     src={msg.image.data ? `data:${msg.image.mimeType};base64,${msg.image.data}` : msg.image.url} 
+                     alt="Shared with Maria" 
+                     className="w-full h-auto object-cover max-h-[300px]" 
+                     loading="lazy"
+                   />
+                 </div>
+              )}
+              {msg.images?.map((img: any, idx: number) => (
+                <div key={idx} className={`rounded-xl overflow-hidden border border-white/10 shadow-lg max-w-sm ${isLiteMode ? 'shadow-none' : ''}`}>
+                   <img 
+                     src={img.data ? `data:${img.mimeType};base64,${img.data}` : img.url} 
+                     alt={`Shared ${idx + 1}`} 
+                     className="w-full h-auto object-cover max-h-[300px]" 
+                     loading="lazy"
+                   />
+                </div>
+              ))}
+            </div>
+          )}
+          {editingId === msg.id ? (
+            <div className="flex flex-col gap-3">
+              <textarea
+                value={editInput}
+                onChange={(e) => setEditInput(e.target.value)}
+                className={`bg-transparent text-[15px] leading-relaxed whitespace-pre-wrap outline-none w-full resize-none min-h-[80px] ${isDark || isFocusMode ? 'text-white' : 'text-slate-700'}`}
+                autoFocus
+              />
+              <div className={`flex justify-end gap-3 pt-3 border-t ${isDark || isFocusMode ? 'border-slate-800' : 'border-slate-100'}`}>
+                <button onClick={onCancelEdit} className="px-4 py-1.5 text-xs font-bold text-slate-400 hover:text-slate-600">{t.cancel}</button>
+                <button onClick={() => onSaveEdit(msg.id)} className="px-4 py-1.5 bg-brand-blue text-white rounded-lg text-xs font-bold shadow-md shadow-brand-blue/20">{t.saveChanges}</button>
+              </div>
+            </div>
+          ) : (
+            <div className="markdown-body">
+              {msg.role === 'assistant' && !isLiteMode && isLast && (Date.now() - msg.timestamp) < 5000 ? (
+                <Typewriter 
+                  text={msg.content}
+                  speed={10}
+                  onUpdate={onScrollToBottom}
+                  renderMarkdown={(content) => (
+                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                      {content}
+                    </ReactMarkdown>
+                  )}
+                />
+              ) : (
+                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                  {msg.content}
+                </ReactMarkdown>
+              )}
+
+              {msg.role === 'assistant' && msg.groundingMetadata?.groundingChunks && (
+                <div className={`mt-5 pt-4 border-t ${isDark || isFocusMode ? 'border-slate-800' : 'border-slate-50'}`}>
+                  <div className="flex items-center gap-2 mb-3">
+                     <Globe size={12} className="text-brand-blue" />
+                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                       {language === 'en' ? 'Sources' : 'Sumber Informasi'}
+                     </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                     {msg.groundingMetadata.groundingChunks.filter((chunk: any) => chunk.web).map((chunk: any, chunkIdx: number) => {
+                       const domain = new URL(chunk.web.uri).hostname;
+                       return (
+                         <a 
+                           key={chunkIdx}
+                           href={chunk.web.uri}
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[11px] font-bold transition-all shadow-sm ${
+                             isDark || isFocusMode 
+                             ? 'bg-slate-800/50 border-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white' 
+                             : 'bg-slate-50 border-slate-100 text-slate-600 hover:bg-slate-100 hover:text-brand-blue'
+                           } ${isLiteMode ? 'shadow-none' : ''}`}
+                         >
+                           <img 
+                             src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`} 
+                             alt="" 
+                             className="w-3 h-3 rounded-sm"
+                             referrerPolicy="no-referrer"
+                             loading="lazy"
+                           />
+                           <span className="max-w-[150px] truncate">{chunk.web.title || domain}</span>
+                         </a>
+                       );
+                     })}
+                  </div>
+                </div>
+              )}
+                
+              {msg.role === 'assistant' && loc && (
+                <div className={`mt-6 pt-5 border-t flex items-center justify-between ${isDark || isFocusMode ? 'border-slate-800' : 'border-slate-50'}`}>
+                   <div className="flex items-center gap-2">
+                     <div className="w-1.5 h-1.5 bg-brand-blue rounded-full" />
+                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">{language === 'en' ? 'Geo-Intelligence Detected' : 'Geo-Intel Terdeteksi'}</span>
+                   </div>
+                   <button 
+                    onClick={() => onSetMapConfig({ isOpen: true, location: { lat: loc.lat, lng: loc.lng }, title: loc.name })}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border shadow-sm ${isDark || isFocusMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-brand-blue hover:text-white' : 'bg-slate-50 border-slate-100 hover:bg-brand-blue hover:text-white'}`}
+                   >
+                     <MapPinIcon size={14} /> {t.viewMap}
+                   </button>
+                </div>
+              )}
+            </div>
+          )}
+          </div>
+          
+          {/* Premium Action Bar */}
+          {!editingId && (
+            <div className={`mt-3 flex items-center gap-3 px-2 transition-all duration-300 ${
+              msg.role === 'user' ? 'justify-end' : 'justify-start'
+            } opacity-100 lg:opacity-0 lg:group-hover:opacity-100`}>
+              {msg.role === 'assistant' ? (
+                <>
+                  <ActionButton isDark={isDark} isFocusMode={isFocusMode} onClick={() => onCopy(msg.content, msg.id)} icon={copiedId === msg.id ? <Check size={14} className="text-green-500" /> : <Copy size={14} />} label={t.copy} />
+                  <ActionButton isDark={isDark} isFocusMode={isFocusMode} onClick={() => onShare(msg.content, msg.id)} icon={sharedId === msg.id ? <Check size={14} className="text-green-500" /> : <Share2 size={14} />} label={t.share} />
+                  <div className="flex items-center gap-1">
+                    <ActionButton isDark={isDark} isFocusMode={isFocusMode} onClick={() => onFeedback(msg.id)} icon={feedbackId === msg.id ? <Check size={14} className="text-green-500" /> : <ThumbsUp size={14} />} label={t.like} />
+                    <ActionButton isDark={isDark} isFocusMode={isFocusMode} onClick={() => onFeedback(msg.id)} icon={<ThumbsDown size={14} />} label={t.dislike} />
+                  </div>
+                  <ActionButton isDark={isDark} isFocusMode={isFocusMode} onClick={() => onRegenerate(msg.id)} icon={<RotateCcw size={14} />} label={t.regenerate} />
+                </>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <ActionButton isDark={isDark} isFocusMode={isFocusMode} onClick={() => onEdit(msg)} icon={<Pencil size={14} />} label={t.edit} />
+                  <ActionButton isDark={isDark} isFocusMode={isFocusMode} onClick={() => onCopy(msg.content, msg.id)} icon={copiedId === msg.id ? <Check size={14} /> : <Copy size={14} />} label={t.copy} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+    </motion.div>
+  );
+});

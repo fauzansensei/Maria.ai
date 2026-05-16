@@ -204,8 +204,9 @@ MARIA CORE INTEGRITY PROTOCOL:
                         error?.status === "INTERNAL" || 
                         error?.status === "UNKNOWN";
 
-    const isQuotaExceeded = error?.message?.includes("429") || 
-                            error?.message?.includes("quota") || 
+    const isQuotaExceeded = error?.message?.toLowerCase().includes("429") || 
+                            error?.message?.toLowerCase().includes("quota") || 
+                            error?.message?.toLowerCase().includes("resource_exhausted") ||
                             error?.status === "RESOURCE_EXHAUSTED" ||
                             error?.error?.status === "RESOURCE_EXHAUSTED" ||
                             error?.error?.code === 429;

@@ -34,7 +34,7 @@ service cloud.firestore {
 
     function isValidChat(data) {
       return data.keys().hasAll(['userId', 'title', 'isPinned', 'isFavorite', 'updatedAt']) &&
-             data.keys().size() == 5 &&
+             data.keys().size() >= 5 &&
              data.userId == request.auth.uid &&
              data.title is string && data.title.size() <= 200 &&
              data.isPinned is bool &&
@@ -97,8 +97,7 @@ service cloud.firestore {
       match /messages/{messageId} {
         allow get, list: if isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid;
         allow create: if isSignedIn() && isValidId(messageId) && isValidMessage(incoming(), chatId) &&
-                      (get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid || 
-                       incoming().role == 'user'); // Allow first message creation if user role is 'user' - schema validation handled by isValidMessage
+                      (getAfter(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid);
         allow update, delete: if false;
       }
     }

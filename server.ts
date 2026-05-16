@@ -59,8 +59,9 @@ async function startServer() {
       console.error("Maria Server API Error:", error);
       
       const isQuotaError = error.status === 429 || 
-                          error.message?.includes("429") || 
-                          error.message?.includes("quota") ||
+                          error.message?.toLowerCase().includes("429") || 
+                          error.message?.toLowerCase().includes("quota") ||
+                          error.message?.toLowerCase().includes("resource_exhausted") ||
                           error.status === "RESOURCE_EXHAUSTED";
 
       if (isQuotaError) {

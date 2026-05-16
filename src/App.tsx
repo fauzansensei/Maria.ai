@@ -181,57 +181,61 @@ function MainApp() {
   }, []);
 
   const loadChats = useCallback(async (forceId?: string) => {
-    // Migration logic
-    const migrateLegacyHistory = () => {
+    // Migration logic & Normalization
+    const migrateAndNormalize = () => {
       try {
         const legacyHistory = localStorage.getItem('maria_chat_history');
         const initialChatHistory = localStorage.getItem('maria_history_initial-chat'); // Check for specific old key
         const chatsStr = localStorage.getItem('maria_chats');
         
-        let messages = null;
-        if (legacyHistory && legacyHistory !== 'null') {
-          messages = JSON.parse(legacyHistory);
-        } else if (initialChatHistory && initialChatHistory !== 'null') {
-          messages = JSON.parse(initialChatHistory);
-        }
+        let chatsObj = (chatsStr && chatsStr !== 'null' && chatsStr !== 'undefined') ? JSON.parse(chatsStr) : {};
+        let changed = false;
 
-        if (messages && Array.isArray(messages) && !chatsStr) {
-          const firstUserMsg = messages.find((m: any) => m.role === 'user');
-          const title = firstUserMsg ? (firstUserMsg.content.substring(0, 35) + (firstUserMsg.content.length > 35 ? '...' : '')) : 'Migration Chat';
-          const newId = generateId('legacy');
-          const initialChats = {
-            [newId]: {
-              id: newId,
-              title,
-              messages,
-              updatedAt: Date.now()
-            }
-          };
-          localStorage.setItem('maria_chats', JSON.stringify(initialChats));
-          localStorage.removeItem('maria_chat_history');
-          localStorage.removeItem('maria_history_initial-chat');
-          return newId;
-        }
-        
-        // Specific cleanup for 'initial-chat' ID in maria_chats
-        if (chatsStr && chatsStr.includes('initial-chat')) {
-          const chatsObj = JSON.parse(chatsStr);
-          if (chatsObj['initial-chat']) {
-            const newId = generateId('chat');
-            chatsObj[newId] = { ...chatsObj['initial-chat'], id: newId };
-            delete chatsObj['initial-chat'];
-            localStorage.setItem('maria_chats', JSON.stringify(chatsObj));
-            console.log("Maria: Migrated initial-chat to " + newId);
-            return newId;
+        // Legacy 1: maria_chat_history (old simple list)
+        if (legacyHistory && legacyHistory !== 'null') {
+          const messages = JSON.parse(legacyHistory);
+          if (Array.isArray(messages)) {
+            const firstUserMsg = messages.find((m: any) => m.role === 'user');
+            const title = firstUserMsg ? (firstUserMsg.content.substring(0, 35) + (firstUserMsg.content.length > 35 ? '...' : '')) : 'Migration Chat';
+            const newId = generateId('legacy');
+            chatsObj[newId] = { id: newId, title, updatedAt: Date.now() };
+            localStorage.setItem(`maria_history_${newId}`, JSON.stringify(messages));
+            localStorage.removeItem('maria_chat_history');
+            changed = true;
           }
         }
+
+        // Legacy 2: maria_history_initial-chat
+        if (initialChatHistory && initialChatHistory !== 'null') {
+           const messages = JSON.parse(initialChatHistory);
+           if (Array.isArray(messages)) {
+              const newId = generateId('chat');
+              chatsObj[newId] = { id: newId, title: 'Chat Baru', updatedAt: Date.now() };
+              localStorage.setItem(`maria_history_${newId}`, JSON.stringify(messages));
+              localStorage.removeItem('maria_history_initial-chat');
+              changed = true;
+           }
+        }
+        
+        // Normalization: Extract messages from maria_chats to separate keys
+        Object.keys(chatsObj).forEach(id => {
+          if (chatsObj[id].messages) {
+            localStorage.setItem(`maria_history_${id}`, JSON.stringify(chatsObj[id].messages));
+            delete chatsObj[id].messages; // Keep only metadata
+            changed = true;
+          }
+        });
+
+        if (changed) {
+          localStorage.setItem('maria_chats', JSON.stringify(chatsObj));
+        }
       } catch (e) {
-        console.error("Maria: Migration failed", e);
+        console.error("Maria: Migration/Normalization failed", e);
       }
       return null;
     };
 
-    const migratedId = migrateLegacyHistory();
+    const migratedId = migrateAndNormalize();
 
     // Firebase Sync for chat sessions list (metadata only)
     if (auth?.currentUser) {
@@ -245,24 +249,23 @@ function MainApp() {
             orderBy('updatedAt', 'desc')
           );
           const snap = await getDocs(q);
-          const firebaseSessions: Record<string, ChatSession> = {};
+          const firebaseSessions: Record<string, Partial<ChatSession>> = {};
           
-          const chatsStr = localStorage.getItem('maria_chats');
-          const localChats = (chatsStr && chatsStr !== 'undefined' && chatsStr !== 'null') ? JSON.parse(chatsStr) : {};
-
           snap.forEach((doc) => {
              const data = doc.data();
              firebaseSessions[doc.id] = {
                id: doc.id,
                title: data.title || 'Chat Baru',
-               messages: localChats[doc.id]?.messages || [],
                updatedAt: data.updatedAt || Date.now(),
                isPinned: data.isPinned || false,
                isFavorite: data.isFavorite || false
              };
           });
 
-          // Merge: Firebase is source of truth for metadata, local for active messages
+          const chatsStr = localStorage.getItem('maria_chats');
+          const localChats = (chatsStr && chatsStr !== 'undefined' && chatsStr !== 'null') ? JSON.parse(chatsStr) : {};
+
+          // Merge: Firebase metadata into local metadata
           const merged = { ...localChats, ...firebaseSessions };
           localStorage.setItem('maria_chats', JSON.stringify(merged));
         }
@@ -784,117 +787,28 @@ function MainApp() {
                       </div>
                       <div className="space-y-0.5">
                         {groupedSessions[group].map((session) => (
-                          <div 
+                          <SidebarChatItem 
                             key={session.id}
-                            onClick={() => {
+                            session={session}
+                            activeChatId={activeChatId}
+                            isDark={isDark}
+                            t={t}
+                            renamingId={renamingId}
+                            renamingTitle={renamingTitle}
+                            setRenamingTitle={setRenamingTitle}
+                            submitRename={submitRename}
+                            setRenamingId={setRenamingId}
+                            menuOpenId={menuOpenId}
+                            setMenuOpenId={setMenuOpenId}
+                            onSelectChat={() => {
                               setActiveChatId(session.id);
                               if (window.innerWidth < 1024) setIsSidebarOpen(false);
                             }}
-                            className={`group relative flex items-center justify-between px-3 py-3 rounded-xl transition-all cursor-pointer border ${
-                              activeChatId === session.id 
-                              ? (isDark ? 'bg-brand-blue/10 border-brand-blue/20' : 'bg-brand-blue/5 border-brand-blue/10') 
-                              : `border-transparent ${isDark ? 'hover:bg-slate-900/50' : 'hover:bg-slate-50'}`
-                            }`}
-                          >
-                            <div className="flex items-center gap-3 min-w-0 flex-1">
-                              <MessageSquare size={14} className={activeChatId === session.id ? 'text-brand-blue' : (isDark ? 'text-slate-700' : 'text-slate-300')} />
-                              {renamingId === session.id ? (
-                                <input
-                                  autoFocus
-                                  className={`text-xs font-bold bg-transparent outline-none border-b border-brand-blue w-full ${isDark ? 'text-white' : 'text-slate-900'}`}
-                                  value={renamingTitle}
-                                  onChange={(e) => setRenamingTitle(e.target.value)}
-                                  onBlur={submitRename}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') submitRename();
-                                    if (e.key === 'Escape') setRenamingId(null);
-                                  }}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                              ) : (
-                                <span className={`text-xs font-bold truncate transition-colors ${
-                                  activeChatId === session.id 
-                                  ? (isDark ? 'text-white' : 'text-slate-900') 
-                                  : `group-hover:text-slate-900 ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500'}`
-                                }`}>
-                                  {session.title}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center relative">
-                              {session.isFavorite && (
-                                <Star size={10} className="text-amber-400 fill-amber-400 mr-1" />
-                              )}
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setMenuOpenId(menuOpenId === session.id ? null : session.id);
-                                }}
-                                className={`p-1.5 rounded-lg transition-all ${
-                                  menuOpenId === session.id 
-                                  ? (isDark ? 'bg-slate-800 text-white' : 'bg-slate-100 text-brand-blue')
-                                  : `opacity-0 group-hover:opacity-100 lg:group-hover:opacity-100 ${isDark ? 'text-slate-600 hover:text-white hover:bg-slate-800' : 'text-slate-400 hover:text-brand-blue hover:bg-slate-100'}`
-                                }`}
-                              >
-                                <MoreVertical size={14} />
-                              </button>
-
-                              {/* Dropdown Menu */}
-                              <AnimatePresence>
-                                {menuOpenId === session.id && (
-                                  <motion.div
-                                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                                    className={`absolute right-0 top-10 w-40 rounded-xl border shadow-xl z-[60] overflow-hidden ${
-                                      isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'
-                                    }`}
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <button 
-                                      onClick={(e) => startRename(e, session)}
-                                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium transition-colors ${
-                                        isDark ? 'text-slate-300 hover:bg-slate-800 hover:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-brand-blue'
-                                      }`}
-                                    >
-                                      <Edit2 size={14} />
-                                      <span>{t.rename}</span>
-                                    </button>
-                                    <button 
-                                      onClick={(e) => togglePin(e, session.id)}
-                                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium transition-colors ${
-                                        isDark ? 'text-slate-300 hover:bg-slate-800 hover:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-brand-blue'
-                                      }`}
-                                    >
-                                      {session.isPinned ? <PinOff size={14} /> : <Pin size={14} />}
-                                      <span>{session.isPinned ? t.unpin : t.pin}</span>
-                                    </button>
-                                    <button 
-                                      onClick={(e) => toggleFavorite(e, session.id)}
-                                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium transition-colors ${
-                                        isDark ? 'text-slate-300 hover:bg-slate-800 hover:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-brand-blue'
-                                      }`}
-                                    >
-                                      <Star size={14} className={session.isFavorite ? 'text-amber-400 fill-amber-400' : ''} />
-                                      <span>{session.isFavorite ? 'Unfavorite' : 'Favorite'}</span>
-                                    </button>
-                                    <div className={`border-t ${isDark ? 'border-slate-800' : 'border-slate-50'}`} />
-                                    <button 
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setMenuOpenId(null);
-                                        deleteChat(session.id);
-                                      }}
-                                      className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
-                                    >
-                                      <Trash2 size={14} />
-                                      <span>{t.delete}</span>
-                                    </button>
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
-                            </div>
-                          </div>
+                            onTogglePin={togglePin}
+                            onToggleFavorite={toggleFavorite}
+                            onStartRename={startRename}
+                            onDeleteChat={deleteChat}
+                          />
                         ))}
                       </div>
                     </div>
@@ -985,6 +899,121 @@ function MainApp() {
     </div>
   );
 }
+
+const SidebarChatItem = React.memo(({ 
+  session, activeChatId, isDark, t, renamingId, renamingTitle, 
+  setRenamingTitle, submitRename, setRenamingId, menuOpenId, setMenuOpenId,
+  onSelectChat, onTogglePin, onToggleFavorite, onStartRename, onDeleteChat
+}: any) => {
+  return (
+    <div 
+      onClick={onSelectChat}
+      className={`group relative flex items-center justify-between px-3 py-3 rounded-xl transition-all cursor-pointer border ${
+        activeChatId === session.id 
+        ? (isDark ? 'bg-brand-blue/10 border-brand-blue/20' : 'bg-brand-blue/5 border-brand-blue/10') 
+        : `border-transparent ${isDark ? 'hover:bg-slate-900/50' : 'hover:bg-slate-50'}`
+      }`}
+    >
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <MessageSquare size={14} className={activeChatId === session.id ? 'text-brand-blue' : (isDark ? 'text-slate-700' : 'text-slate-300')} />
+        {renamingId === session.id ? (
+          <input
+            autoFocus
+            className={`text-xs font-bold bg-transparent outline-none border-b border-brand-blue w-full ${isDark ? 'text-white' : 'text-slate-900'}`}
+            value={renamingTitle}
+            onChange={(e) => setRenamingTitle(e.target.value)}
+            onBlur={submitRename}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') submitRename();
+              if (e.key === 'Escape') setRenamingId(null);
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <span className={`text-xs font-bold truncate transition-colors ${
+            activeChatId === session.id 
+            ? (isDark ? 'text-white' : 'text-slate-900') 
+            : `group-hover:text-slate-900 ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500'}`
+          }`}>
+            {session.title}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center relative">
+        {session.isFavorite && (
+          <Star size={10} className="text-amber-400 fill-amber-400 mr-1" />
+        )}
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            setMenuOpenId(menuOpenId === session.id ? null : session.id);
+          }}
+          className={`p-1.5 rounded-lg transition-all ${
+            menuOpenId === session.id 
+            ? (isDark ? 'bg-slate-800 text-white' : 'bg-slate-100 text-brand-blue')
+            : `opacity-0 group-hover:opacity-100 lg:group-hover:opacity-100 ${isDark ? 'text-slate-600 hover:text-white hover:bg-slate-800' : 'text-slate-400 hover:text-brand-blue hover:bg-slate-100'}`
+          }`}
+        >
+          <MoreVertical size={14} />
+        </button>
+
+        {/* Dropdown Menu */}
+        <AnimatePresence>
+          {menuOpenId === session.id && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              className={`absolute right-0 top-10 w-40 rounded-xl border shadow-xl z-[60] overflow-hidden ${
+                isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button 
+                onClick={(e) => onStartRename(e, session)}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium transition-colors ${
+                  isDark ? 'text-slate-300 hover:bg-slate-800 hover:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-brand-blue'
+                }`}
+              >
+                <Edit2 size={14} />
+                <span>{t.rename}</span>
+              </button>
+              <button 
+                onClick={(e) => onTogglePin(e, session.id)}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium transition-colors ${
+                  isDark ? 'text-slate-300 hover:bg-slate-800 hover:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-brand-blue'
+                }`}
+              >
+                {session.isPinned ? <PinOff size={14} /> : <Pin size={14} />}
+                <span>{session.isPinned ? t.unpin : t.pin}</span>
+              </button>
+              <button 
+                onClick={(e) => onToggleFavorite(e, session.id)}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium transition-colors ${
+                  isDark ? 'text-slate-300 hover:bg-slate-800 hover:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-brand-blue'
+                }`}
+              >
+                <Star size={14} className={session.isFavorite ? 'text-amber-400 fill-amber-400' : ''} />
+                <span>{session.isFavorite ? 'Unfavorite' : 'Favorite'}</span>
+              </button>
+              <div className={`border-t ${isDark ? 'border-slate-800' : 'border-slate-50'}`} />
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteChat(session.id);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
+              >
+                <Trash2 size={14} />
+                <span>{t.delete}</span>
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+});
 
 function SidebarGroupItem({ icon, label, count }: { icon: ReactNode, label: string, count: number }) {
   return (
