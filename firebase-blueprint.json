@@ -36,7 +36,8 @@
         "content": { "type": "string" },
         "timestamp": { "type": "number" },
         "image": { "type": "object" },
-        "images": { "type": "array" }
+        "images": { "type": "array" },
+        "groundingMetadata": { "type": "object" }
       }
     },
     "Reminder": {

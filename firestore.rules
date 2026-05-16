@@ -43,11 +43,14 @@ service cloud.firestore {
     }
 
     function isValidMessage(data, chatId) {
-      return data.keys().hasAll(['chatId', 'role', 'content', 'timestamp']) &&
+      return data.keys().hasAll(['id', 'chatId', 'role', 'content', 'timestamp']) &&
+             data.keys().size() <= 8 &&
              data.chatId == chatId &&
              data.role in ['user', 'assistant'] &&
-             data.content is string && data.content.size() <= 5000 &&
-             data.timestamp is number;
+             data.content is string && data.content.size() <= 15000 &&
+             data.timestamp is number &&
+             (!data.keys().hasAny(['images']) || data.images is list) &&
+             (!data.keys().hasAny(['groundingMetadata']) || data.groundingMetadata is map);
     }
 
     function isValidReminder(data) {

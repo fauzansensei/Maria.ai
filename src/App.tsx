@@ -262,7 +262,7 @@ function MainApp() {
           setChatSessions(sortedSessions);
           
           if (!activeChatId || forceId) {
-            const targetId = forceId || migratedId || sortedSessions[0]?.id || 'initial-chat';
+            const targetId = forceId || migratedId || sortedSessions[0]?.id || generateId('chat');
             setActiveChatId(targetId);
           }
         }
@@ -270,7 +270,7 @@ function MainApp() {
         console.error("Maria: Failed to parse chats", e);
       }
     } else {
-      const defaultId = migratedId || 'initial-chat';
+      const defaultId = migratedId || generateId('chat');
       setActiveChatId(defaultId);
     }
   }, [activeChatId]);
@@ -453,7 +453,7 @@ function MainApp() {
       
       const remaining = Object.keys(chatsObj);
       if (activeChatId === id) {
-        const nextId = remaining.length > 0 ? remaining[0] : 'initial-chat';
+        const nextId = remaining.length > 0 ? remaining[0] : generateId('chat');
         setActiveChatId(nextId);
         loadChats(nextId);
       } else {

@@ -33,27 +33,43 @@ async function startServer() {
 
   app.post("/api/maria", async (req, res) => {
     try {
-      const { prompt, contents, systemInstruction, temperature, topP, customApiKey } = req.body;
+      const { contents, systemInstruction, temperature, topP, customApiKey } = req.body;
 
       let ai = genAI;
       if (customApiKey) {
         ai = new GoogleGenAI({ apiKey: customApiKey });
       }
 
-      const model = ai.models.generateContent({
+      const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents,
         config: {
           systemInstruction,
           temperature: temperature || 0.7,
           topP: topP || 0.9,
+          tools: [{ googleSearch: {} }],
         }
       });
 
-      const response = await model;
-      res.json({ text: response.text });
+      res.json({ 
+        text: response.text,
+        groundingMetadata: response.candidates?.[0]?.groundingMetadata 
+      });
     } catch (error: any) {
       console.error("Maria Server API Error:", error);
+      
+      const isQuotaError = error.status === 429 || 
+                          error.message?.includes("429") || 
+                          error.message?.includes("quota") ||
+                          error.status === "RESOURCE_EXHAUSTED";
+
+      if (isQuotaError) {
+        return res.status(429).json({
+          error: "Kuota API Gemini telah habis. Silakan coba lagi nanti atau hubungkan kunci API berbayar di Settings.",
+          status: "RESOURCE_EXHAUSTED"
+        });
+      }
+
       res.status(500).json({ 
         error: error.message || "Internal Server Error",
         status: error.status || "UNKNOWN"

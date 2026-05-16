@@ -17,7 +17,8 @@ import {
   MoreVertical,
   AlertCircle,
   Timer,
-  RefreshCw
+  RefreshCw,
+  Globe
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
@@ -224,6 +225,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
 
     const userMsg: Message = {
       id: generateId('msg-user'),
+      chatId: activeChatId,
       role: 'user',
       content: input,
       timestamp: Date.now(),
@@ -332,7 +334,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
     } catch (e) {}
 
     try {
-      const response = await askMaria(
+      const responseData = await askMaria(
         text, 
         language, 
         images ? images.map(img => ({ data: img.base64, mimeType: img.type })) : undefined,
@@ -343,8 +345,10 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
       );
       const assistantMsg: Message = {
         id: generateId('msg-assistant'),
+        chatId: activeChatId,
         role: 'assistant',
-        content: response,
+        content: responseData.text,
+        groundingMetadata: responseData.groundingMetadata,
         timestamp: Date.now(),
       };
       
@@ -353,6 +357,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
       saveToStorage(finalMessages);
 
       // --- SMART AUTOMATION LOGIC ---
+      const response = responseData.text;
       const autoEnabled = localStorage.getItem('maria_profile') ? JSON.parse(localStorage.getItem('maria_profile')!).preferences?.autoNotify : false;
       if (autoEnabled) {
           const lowerResponse = response.toLowerCase();
@@ -717,6 +722,43 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
                         <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
                           {msg.content}
                         </ReactMarkdown>
+                      )}
+
+                      {msg.role === 'assistant' && msg.groundingMetadata?.groundingChunks && (
+                        <div className={`mt-5 pt-4 border-t ${isDark || isFocusMode ? 'border-slate-800' : 'border-slate-50'}`}>
+                          <div className="flex items-center gap-2 mb-3">
+                             <Globe size={12} className="text-brand-blue" />
+                             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                               {language === 'en' ? 'Sources' : 'Sumber Informasi'}
+                             </span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                             {msg.groundingMetadata.groundingChunks.filter((chunk: any) => chunk.web).map((chunk: any, chunkIdx: number) => {
+                               const domain = new URL(chunk.web.uri).hostname;
+                               return (
+                                 <a 
+                                   key={chunkIdx}
+                                   href={chunk.web.uri}
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[11px] font-bold transition-all shadow-sm ${
+                                     isDark || isFocusMode 
+                                     ? 'bg-slate-800/50 border-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white' 
+                                     : 'bg-slate-50 border-slate-100 text-slate-600 hover:bg-slate-100 hover:text-brand-blue'
+                                   }`}
+                                 >
+                                   <img 
+                                     src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`} 
+                                     alt="" 
+                                     className="w-3 h-3 rounded-sm"
+                                     referrerPolicy="no-referrer"
+                                   />
+                                   <span className="max-w-[150px] truncate">{chunk.web.title || domain}</span>
+                                 </a>
+                               );
+                             })}
+                          </div>
+                        </div>
                       )}
                         
                       {msg.role === 'assistant' && detectLocation(msg.content) && (

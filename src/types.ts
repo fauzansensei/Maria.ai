@@ -1,5 +1,6 @@
 export interface Message {
   id: string;
+  chatId?: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
@@ -13,6 +14,7 @@ export interface Message {
     data: string;
     url?: string;
   }[];
+  groundingMetadata?: any;
 }
 
 export interface ChatSession {
