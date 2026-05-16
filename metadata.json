@@ -1,6 +1,6 @@
 {
-  "name": "Maria AI Agent",
-  "description": "A sophisticated AI agent named Maria designed for advanced information retrieval, featuring local language support and system utilities.",
+  "name": "Maria",
+  "description": "Maria adalah AI Agent yang dirancang untuk membantu Anda dengan berbagai tugas, mulai dari mencari informasi hingga memberikan dukungan dalam bahasa lokal.",
   "requestFramePermissions": ["geolocation"],
   "majorCapabilities": []
 }

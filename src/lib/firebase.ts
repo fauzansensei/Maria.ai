@@ -122,8 +122,12 @@ export const loginWithGoogle = async () => {
   try {
     const result = await signInWithPopup(auth, googleProvider);
     return result.user;
-  } catch (error) {
-    console.error("Error signing in with Google", error);
+  } catch (error: any) {
+    if (error.code === 'auth/popup-closed-by-user') {
+      console.log("Maria AI: Login popup closed by user. No action taken.");
+      return null;
+    }
+    console.error("Maria AI: Error signing in with Google", error);
     throw error;
   }
 };
