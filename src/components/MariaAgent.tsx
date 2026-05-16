@@ -192,34 +192,42 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
       allChats[chatId] = activeChat;
       
       localStorage.setItem('maria_chats', JSON.stringify(allChats));
-      window.dispatchEvent(new Event('storage'));
-
-      // FIREBASE SYNC
+      
+      // FIREBASE SYNC - Simplified and more resilient
       const { auth } = await import('../lib/firebase');
       if (auth?.currentUser) {
         const { doc, setDoc } = await import('firebase/firestore');
         const { db, handleFirestoreError, OperationType } = await import('../lib/firebase');
         if (db) {
           const chatRef = doc(db, 'chats', chatId);
+          // Set metadata FIRST to ensure rules pass for subcollection
           await setDoc(chatRef, {
             userId: auth.currentUser.uid,
             title: title,
             isPinned: (allChats[chatId] as any)?.isPinned || false,
             isFavorite: (allChats[chatId] as any)?.isFavorite || false,
-            updatedAt: activeChat.updatedAt
-          }, { merge: true }).catch(err => handleFirestoreError(err, OperationType.UPDATE, `chats/${chatId}`));
+            updatedAt: Date.now()
+          }, { merge: true }).catch(err => {
+            console.error("Chat sync error:", err);
+            handleFirestoreError(err, OperationType.UPDATE, `chats/${chatId}`);
+          });
 
           // Save latest message to subcollection
           const latestMsg = updatedMessages[updatedMessages.length - 1];
           if (latestMsg) {
-            const msgRef = doc(db, 'chats', chatId, 'messages', latestMsg.id);
-            // Sanitize to avoid undefined fields which Firestore doesn't like
             const { sanitizeForFirestore } = await import('../lib/firebase');
             const sanitizedMsg = sanitizeForFirestore(latestMsg);
-            await setDoc(msgRef, sanitizedMsg).catch(err => handleFirestoreError(err, OperationType.CREATE, `chats/${chatId}/messages/${latestMsg.id}`));
+            const msgRef = doc(db, 'chats', chatId, 'messages', latestMsg.id);
+            await setDoc(msgRef, sanitizedMsg).catch(err => {
+              console.error("Message sync error:", err);
+              handleFirestoreError(err, OperationType.CREATE, `chats/${chatId}/messages/${latestMsg.id}`);
+            });
           }
         }
       }
+
+      // Dispatch event after sync to notify other parts of UI
+      window.dispatchEvent(new Event('storage'));
     } catch (e) {
       console.error("Failed to save to storage", e);
     }
@@ -623,6 +631,15 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
     setPendingImages(prev => prev.filter(img => img.id !== id));
   };
 
+  // Memoized location detection to avoid heavy regex on every render
+  const memoizedLocationResults = useRef<Record<string, any>>({});
+  const getDetectedLocation = (content: string) => {
+    if (memoizedLocationResults.current[content]) return memoizedLocationResults.current[content];
+    const loc = detectLocation(content);
+    memoizedLocationResults.current[content] = loc;
+    return loc;
+  };
+
   return (
     <div className={`flex flex-col h-full bg-transparent overflow-hidden transition-all duration-700 ${isDark || isFocusMode ? 'text-white' : 'text-slate-900'}`}>
       {/* Floating Focus Mode Exit */}
@@ -775,7 +792,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
                         </div>
                       )}
                         
-                      {msg.role === 'assistant' && detectLocation(msg.content) && (
+                      {msg.role === 'assistant' && getDetectedLocation(msg.content) && (
                         <div className={`mt-6 pt-5 border-t flex items-center justify-between ${isDark || isFocusMode ? 'border-slate-800' : 'border-slate-50'}`}>
                            <div className="flex items-center gap-2">
                              <div className="w-1.5 h-1.5 bg-brand-blue rounded-full" />
@@ -783,7 +800,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
                            </div>
                            <button 
                             onClick={() => {
-                              const loc = detectLocation(msg.content);
+                              const loc = getDetectedLocation(msg.content);
                               if (loc) setMapConfig({ isOpen: true, location: { lat: loc.lat, lng: loc.lng }, title: loc.name });
                             }}
                             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border shadow-sm ${isDark || isFocusMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-brand-blue hover:text-white' : 'bg-slate-50 border-slate-100 hover:bg-brand-blue hover:text-white'}`}
@@ -974,11 +991,15 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter' && !e.shiftKey) {
+                              // Mobile Enter key fix (keyCode 13 for older Android)
+                              if ((e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey) {
                                 e.preventDefault();
-                                // Direct call to handleSubmit logic to avoid event bubbling issues
                                 if (input.trim() || pendingImages.length > 0) {
                                   handleSubmit(e);
+                                  // Blur to close keyboard on mobile if needed, but not on desktop
+                                  if (window.innerWidth < 640 && isLiteMode) {
+                                    (e.target as HTMLTextAreaElement).blur();
+                                  }
                                 }
                               }
                             }}
