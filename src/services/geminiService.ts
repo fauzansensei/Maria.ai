@@ -3,7 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 
 // Initialize Gemini according to platform guidelines
 // In AI Studio Build, process.env.GEMINI_API_KEY is automatically replaced during build
-const ai = new GoogleGenAI({ 
+const defaultAi = new GoogleGenAI({ 
   apiKey: process.env.GEMINI_API_KEY || '' 
 });
 
@@ -29,13 +29,18 @@ export async function askMaria(
   prompt: string, 
   languageCode: string, 
   images?: MariaImage[], 
-  preferences?: { personality?: string; guardrailsEnabled?: boolean },
+  preferences?: { personality?: string; guardrailsEnabled?: boolean; customApiKey?: string },
   context?: DeviceContext,
   userName?: string,
   history: any[] = [],
   retries = 2
 ): Promise<string> {
   try {
+    // Determine which AI instance to use
+    let ai = defaultAi;
+    if (preferences?.customApiKey) {
+      ai = new GoogleGenAI({ apiKey: preferences.customApiKey });
+    }
     // 1. INPUT INTEGRITY CHECK (Maria Core Shield - Input Guardrail)
     if (preferences?.guardrailsEnabled !== false) {
       const jailbreakKeywords = [

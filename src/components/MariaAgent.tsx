@@ -207,7 +207,8 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
           if (latestMsg) {
             const msgRef = doc(db, 'chats', chatId, 'messages', latestMsg.id);
             // Sanitize to avoid undefined fields which Firestore doesn't like
-            const sanitizedMsg = JSON.parse(JSON.stringify(latestMsg));
+            const { sanitizeForFirestore } = await import('../lib/firebase');
+            const sanitizedMsg = sanitizeForFirestore(latestMsg);
             await setDoc(msgRef, sanitizedMsg).catch(err => handleFirestoreError(err, OperationType.CREATE, `chats/${chatId}/messages/${latestMsg.id}`));
           }
         }
@@ -286,9 +287,9 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
   };
 
   const processMessage = async (currentMessages: Message[], text: string, images?: { base64: string; type: string }[] | null) => {
-    // Check if we are still in quota cooldown
+    // Check if we are still in quota cooldown (Skip for Plus users)
     const savedLimit = localStorage.getItem('maria_quota_limit');
-    if (savedLimit && parseInt(savedLimit) > Date.now()) {
+    if (!isPlus && savedLimit && parseInt(savedLimit) > Date.now()) {
       setQuotaExhausted(true);
       setCountdown(Math.floor((parseInt(savedLimit) - Date.now()) / 1000));
       return;
@@ -301,7 +302,11 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
     setIsLoading(true);
 
     // Get preferences for personality
-    let preferences = { personality: 'default', useMemory: true, guardrailsEnabled: true };
+    let preferences: { personality: string; useMemory: boolean; guardrailsEnabled: boolean; customApiKey?: string } = { 
+      personality: 'default', 
+      useMemory: true, 
+      guardrailsEnabled: true 
+    };
     const savedProfile = localStorage.getItem('maria_profile');
     if (savedProfile) {
       try {
@@ -310,7 +315,8 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
           preferences = {
             personality: parsed.preferences.personality || 'default',
             useMemory: parsed.preferences.useMemory !== undefined ? parsed.preferences.useMemory : true,
-            guardrailsEnabled: parsed.preferences.guardrailsEnabled !== undefined ? parsed.preferences.guardrailsEnabled : true
+            guardrailsEnabled: parsed.preferences.guardrailsEnabled !== undefined ? parsed.preferences.guardrailsEnabled : true,
+            customApiKey: parsed.isPlus ? parsed.preferences.paidApiKey : undefined
           };
         }
       } catch (e) {}
@@ -808,15 +814,17 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
                 </p>
 
                 <div className="flex flex-col gap-2 w-full">
-                  <button 
-                    onClick={() => {
-                      // Logic for upgrade
-                      setQuotaExhausted(false);
-                    }}
-                    className="w-full py-3.5 rounded-xl bg-brand-blue text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-brand-blue/20 hover:scale-[1.02] active:scale-95 transition-all"
-                  >
-                    {t.upgrade}
-                  </button>
+                  {!isPlus && (
+                    <button 
+                      onClick={() => {
+                        // Logic for upgrade
+                        setQuotaExhausted(false);
+                      }}
+                      className="w-full py-3.5 rounded-xl bg-brand-blue text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-brand-blue/20 hover:scale-[1.02] active:scale-95 transition-all"
+                    >
+                      {t.upgrade}
+                    </button>
+                  )}
                   
                   <button 
                     disabled={countdown > 0}

@@ -11,7 +11,7 @@ export function useDeviceContext(): DeviceContext {
   const [battery, setBattery] = useState<{ level: number; charging: boolean }>({ level: 100, charging: false });
 
   useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 10000); // Update time every 10 seconds for relative accuracy
+    const timer = setInterval(() => setTime(new Date()), 1000); // Update time every second for maximum accuracy
 
     let batteryManager: any = null;
 

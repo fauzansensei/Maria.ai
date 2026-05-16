@@ -64,6 +64,19 @@ export enum OperationType {
   WRITE = 'write',
 }
 
+export function sanitizeForFirestore(obj: any): any {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(sanitizeForFirestore);
+  
+  const sanitized: any = {};
+  for (const key in obj) {
+    if (obj[key] !== undefined) {
+      sanitized[key] = sanitizeForFirestore(obj[key]);
+    }
+  }
+  return sanitized;
+}
+
 interface FirestoreErrorInfo {
   error: string;
   operationType: OperationType;
