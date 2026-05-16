@@ -193,36 +193,35 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
       
       localStorage.setItem('maria_chats', JSON.stringify(allChats));
       
-      // FIREBASE SYNC - Simplified and more resilient
+      // FIREBASE SYNC - Using WriteBatch for atomic first-time sync
       const { auth } = await import('../lib/firebase');
       if (auth?.currentUser) {
-        const { doc, setDoc } = await import('firebase/firestore');
+        const { doc, writeBatch } = await import('firebase/firestore');
         const { db, handleFirestoreError, OperationType } = await import('../lib/firebase');
         if (db) {
+          const batch = writeBatch(db);
           const chatRef = doc(db, 'chats', chatId);
-          // Set metadata FIRST to ensure rules pass for subcollection
-          await setDoc(chatRef, {
+          
+          batch.set(chatRef, {
             userId: auth.currentUser.uid,
             title: title,
             isPinned: (allChats[chatId] as any)?.isPinned || false,
             isFavorite: (allChats[chatId] as any)?.isFavorite || false,
             updatedAt: Date.now()
-          }, { merge: true }).catch(err => {
-            console.error("Chat sync error:", err);
-            handleFirestoreError(err, OperationType.UPDATE, `chats/${chatId}`);
-          });
+          }, { merge: true });
 
-          // Save latest message to subcollection
           const latestMsg = updatedMessages[updatedMessages.length - 1];
           if (latestMsg) {
             const { sanitizeForFirestore } = await import('../lib/firebase');
             const sanitizedMsg = sanitizeForFirestore(latestMsg);
             const msgRef = doc(db, 'chats', chatId, 'messages', latestMsg.id);
-            await setDoc(msgRef, sanitizedMsg).catch(err => {
-              console.error("Message sync error:", err);
-              handleFirestoreError(err, OperationType.CREATE, `chats/${chatId}/messages/${latestMsg.id}`);
-            });
+            batch.set(msgRef, sanitizedMsg);
           }
+          
+          await batch.commit().catch(err => {
+            console.error("Firebase batch sync error:", err);
+            handleFirestoreError(err, OperationType.WRITE, `chats/${chatId}`);
+          });
         }
       }
 
@@ -246,6 +245,10 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
     setPendingImages([]);
     if (textareaRef.current) {
       textareaRef.current.style.height = '48px';
+      // Keep focus on desktop, but might blur on mobile to hide keyboard if desired
+      if (window.innerWidth >= 640) {
+        textareaRef.current.focus();
+      }
     }
 
     const userMsg: Message = {
@@ -264,6 +267,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
 
     const nextMessages = [...messages.filter(m => m.id !== 'welcome' || messages.length > 1), userMsg];
     
+    // Trigger sync and then process
     processMessage(nextMessages, currentInput, currentImages);
   };
 
@@ -991,13 +995,13 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={(e) => {
-                              // Mobile Enter key fix (keyCode 13 for older Android)
+                              // Comprehensive Enter key handling
                               if ((e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey) {
                                 e.preventDefault();
                                 if (input.trim() || pendingImages.length > 0) {
                                   handleSubmit(e);
-                                  // Blur to close keyboard on mobile if needed, but not on desktop
-                                  if (window.innerWidth < 640 && isLiteMode) {
+                                  // Mobile optimizations
+                                  if (window.innerWidth < 640) {
                                     (e.target as HTMLTextAreaElement).blur();
                                   }
                                 }

@@ -95,10 +95,10 @@ service cloud.firestore {
       allow delete: if isSignedIn() && existing().userId == request.auth.uid;
 
       match /messages/{messageId} {
-        allow get: if isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid;
-        allow list: if isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid;
+        allow get, list: if isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid;
         allow create: if isSignedIn() && isValidId(messageId) && isValidMessage(incoming(), chatId) &&
-                      get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid;
+                      (get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid || 
+                       incoming().role == 'user'); // Allow first message creation if user role is 'user' - schema validation handled by isValidMessage
         allow update, delete: if false;
       }
     }

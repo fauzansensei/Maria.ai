@@ -185,24 +185,43 @@ function MainApp() {
     const migrateLegacyHistory = () => {
       try {
         const legacyHistory = localStorage.getItem('maria_chat_history');
+        const initialChatHistory = localStorage.getItem('maria_history_initial-chat'); // Check for specific old key
         const chatsStr = localStorage.getItem('maria_chats');
         
-        if (legacyHistory && legacyHistory !== 'null' && !chatsStr) {
-          const messages = JSON.parse(legacyHistory);
-          if (Array.isArray(messages)) {
-            const firstUserMsg = messages.find((m: any) => m.role === 'user');
-            const title = firstUserMsg ? (firstUserMsg.content.substring(0, 35) + (firstUserMsg.content.length > 35 ? '...' : '')) : 'Migration Chat';
-            const newId = generateId('legacy');
-            const initialChats = {
-              [newId]: {
-                id: newId,
-                title,
-                messages,
-                updatedAt: Date.now()
-              }
-            };
-            localStorage.setItem('maria_chats', JSON.stringify(initialChats));
-            localStorage.removeItem('maria_chat_history');
+        let messages = null;
+        if (legacyHistory && legacyHistory !== 'null') {
+          messages = JSON.parse(legacyHistory);
+        } else if (initialChatHistory && initialChatHistory !== 'null') {
+          messages = JSON.parse(initialChatHistory);
+        }
+
+        if (messages && Array.isArray(messages) && !chatsStr) {
+          const firstUserMsg = messages.find((m: any) => m.role === 'user');
+          const title = firstUserMsg ? (firstUserMsg.content.substring(0, 35) + (firstUserMsg.content.length > 35 ? '...' : '')) : 'Migration Chat';
+          const newId = generateId('legacy');
+          const initialChats = {
+            [newId]: {
+              id: newId,
+              title,
+              messages,
+              updatedAt: Date.now()
+            }
+          };
+          localStorage.setItem('maria_chats', JSON.stringify(initialChats));
+          localStorage.removeItem('maria_chat_history');
+          localStorage.removeItem('maria_history_initial-chat');
+          return newId;
+        }
+        
+        // Specific cleanup for 'initial-chat' ID in maria_chats
+        if (chatsStr && chatsStr.includes('initial-chat')) {
+          const chatsObj = JSON.parse(chatsStr);
+          if (chatsObj['initial-chat']) {
+            const newId = generateId('chat');
+            chatsObj[newId] = { ...chatsObj['initial-chat'], id: newId };
+            delete chatsObj['initial-chat'];
+            localStorage.setItem('maria_chats', JSON.stringify(chatsObj));
+            console.log("Maria: Migrated initial-chat to " + newId);
             return newId;
           }
         }
