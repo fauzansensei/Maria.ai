@@ -1,6 +1,6 @@
 {
-  "name": "Maria",
-  "description": "Maria adalah AI Agent yang dirancang untuk membantu Anda dengan berbagai tugas, mulai dari mencari informasi hingga memberikan dukungan dalam bahasa lokal.",
+  "name": "Maria AI",
+  "description": "Maria adalah AI Agent pintar yang dirancang untuk membantu produktivitas, pencarian informasi, dan dukungan bahasa lokal.",
   "requestFramePermissions": ["geolocation"],
-  "majorCapabilities": []
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

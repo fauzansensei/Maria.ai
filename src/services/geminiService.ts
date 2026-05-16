@@ -1,11 +1,4 @@
 import { SYSTEM_PROMPT, SUPPORTED_LANGUAGES } from "../constants";
-import { GoogleGenAI } from "@google/genai";
-
-// Initialize Gemini according to platform guidelines
-// In AI Studio Build, process.env.GEMINI_API_KEY is automatically replaced during build
-const defaultAi = new GoogleGenAI({ 
-  apiKey: process.env.GEMINI_API_KEY || '' 
-});
 
 export interface MariaImage {
   mimeType: string;
@@ -36,11 +29,6 @@ export async function askMaria(
   retries = 2
 ): Promise<string> {
   try {
-    // Determine which AI instance to use
-    let ai = defaultAi;
-    if (preferences?.customApiKey) {
-      ai = new GoogleGenAI({ apiKey: preferences.customApiKey });
-    }
     // 1. INPUT INTEGRITY CHECK (Maria Core Shield - Input Guardrail)
     if (preferences?.guardrailsEnabled !== false) {
       const jailbreakKeywords = [
@@ -149,17 +137,27 @@ MARIA CORE INTEGRITY PROTOCOL:
       parts: currentParts
     });
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents,
-      config: {
+    const response = await fetch('/api/maria', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents,
         systemInstruction,
-        temperature: 0.7, 
+        temperature: 0.7,
         topP: 0.9,
-      }
+        customApiKey: preferences?.customApiKey
+      })
     });
 
-    const responseText = response.text || "Maaf, saya tidak bisa memberikan jawaban saat ini.";
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Server responded with ${response.status}`);
+    }
+
+    const data = await response.json();
+    const responseText = data.text || "Maaf, saya tidak bisa memberikan jawaban saat ini.";
 
     // 2. OUTPUT INTEGRITY CHECK (Maria Core Shield - Output Guardrail)
     if (preferences?.guardrailsEnabled !== false) {

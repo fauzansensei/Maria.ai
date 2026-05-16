@@ -8,11 +8,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, testFirestoreConnection } from './lib/firebase';
 import MariaAgent from './components/MariaAgent';
-import MultiUtilityWidget from './components/MultiUtilityWidget';
-import DeviceStatusWidget from './components/DeviceStatusWidget';
-import UserProfile from './components/UserProfile';
-import NotificationCenter from './components/NotificationCenter';
-import SavedItems from './components/SavedItems';
+
+// Lazy load non-critical UI components for performance
+const UserProfile = React.lazy(() => import('./components/UserProfile'));
+const NotificationCenter = React.lazy(() => import('./components/NotificationCenter'));
+const SavedItems = React.lazy(() => import('./components/SavedItems'));
+const MultiUtilityWidget = React.lazy(() => import('./components/MultiUtilityWidget'));
+const DeviceStatusWidget = React.lazy(() => import('./components/DeviceStatusWidget'));
 import { 
   Search, Info, Settings, User as UserIcon, Star,
   Menu, X, Clock, Globe, Plus, MoreVertical, ChevronRight, Sparkles,
@@ -857,8 +859,10 @@ function MainApp() {
                 </div>
 
                 <div className={`p-5 border-t mt-auto space-y-3 transition-colors duration-500 ${isDark ? 'border-slate-900 bg-slate-900/10' : 'border-slate-50 bg-slate-50/20'}`}>
-                    <DeviceStatusWidget isDark={isDark} />
-                    <MultiUtilityWidget isDark={isDark} language={language} />
+                    <React.Suspense fallback={null}>
+                      <DeviceStatusWidget isDark={isDark} />
+                      <MultiUtilityWidget isDark={isDark} language={language} />
+                    </React.Suspense>
 
                     <div className="space-y-3">
                       <div className={`flex items-center gap-3 p-3 border rounded-2xl shadow-sm transition-colors ${
@@ -914,25 +918,27 @@ function MainApp() {
         </section>
       </main>
 
-      <UserProfile 
-        isOpen={isProfileOpen} 
-        onClose={() => setIsProfileOpen(false)} 
-        onLanguageChange={setLanguage} 
-        isLiteMode={isLiteMode}
-        isDark={isDark}
-        user={user}
-      />
+      <React.Suspense fallback={null}>
+        <UserProfile 
+          isOpen={isProfileOpen} 
+          onClose={() => setIsProfileOpen(false)} 
+          onLanguageChange={setLanguage} 
+          isLiteMode={isLiteMode}
+          isDark={isDark}
+          user={user}
+        />
 
-      <NotificationCenter 
-        isDark={isDark}
-        isOpen={isNotificationsOpen}
-        onClose={() => setIsNotificationsOpen(false)}
-      />
+        <NotificationCenter 
+          isDark={isDark}
+          isOpen={isNotificationsOpen}
+          onClose={() => setIsNotificationsOpen(false)}
+        />
 
-      <SavedItems 
-        isOpen={isSavedItemsOpen}
-        onClose={() => setIsSavedItemsOpen(false)}
-      />
+        <SavedItems 
+          isOpen={isSavedItemsOpen}
+          onClose={() => setIsSavedItemsOpen(false)}
+        />
+      </React.Suspense>
     </div>
   );
 }
