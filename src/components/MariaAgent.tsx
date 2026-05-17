@@ -190,7 +190,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
       localStorage.setItem('maria_chats', JSON.stringify(allChats));
       
       window.dispatchEvent(new CustomEvent('maria_history_update', { detail: { chatId } }));
-      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('maria_refresh_system'));
       
       // FIREBASE SYNC - metadata + latest message
       const { auth } = await import('../lib/firebase');

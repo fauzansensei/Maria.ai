@@ -165,7 +165,7 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
   const saveProfile = async (nextProfile: UserProfileData) => {
     setProfile(nextProfile);
     localStorage.setItem('maria_profile', JSON.stringify(nextProfile));
-    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new Event('maria_refresh_system'));
 
     if (user) {
       try {
@@ -228,7 +228,7 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
     if (window.confirm(t.confirmDeleteHistory)) {
         localStorage.removeItem('maria_chat_history');
         localStorage.removeItem('maria_chats');
-        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new Event('maria_refresh_system'));
         onClose();
     }
   };
@@ -1062,7 +1062,7 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                                 localStorage.setItem('maria_reminders', JSON.stringify(updated));
                                 setNewReminderTitle('');
                                 setNewReminderDateTime('');
-                                window.dispatchEvent(new Event('storage'));
+                                window.dispatchEvent(new Event('maria_refresh_system'));
                               }}
                               className="w-full flex items-center justify-center gap-2 py-4 bg-brand-blue text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-brand-blue/20 hover:scale-[1.01] active:scale-95 transition-all"
                             >
@@ -1098,7 +1098,7 @@ export default function UserProfile({ isOpen, onClose, onLanguageChange, isLiteM
                                     const updated = reminders.filter(r => r.id !== rem.id);
                                     setReminders(updated);
                                     localStorage.setItem('maria_reminders', JSON.stringify(updated));
-                                    window.dispatchEvent(new Event('storage'));
+                                    window.dispatchEvent(new Event('maria_refresh_system'));
                                   }}
                                   className={`p-2 rounded-xl transition-all ${isDark ? 'hover:bg-red-500/10 text-slate-700 hover:text-red-500' : 'hover:bg-red-50 text-slate-300 hover:text-red-500'}`}
                                 >

@@ -41,13 +41,15 @@ async function startServer() {
       }
 
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-2.0-flash",
         contents,
         config: {
           systemInstruction,
           temperature: temperature || 0.7,
           topP: topP || 0.9,
-          tools: [{ googleSearch: {} }],
+          // googleSearch tool naming might vary between SDK versions, 
+          // ensure compatibility with the new @google/genai v2.
+          tools: [{ google_search: {} }] as any,
         }
       });
 
@@ -98,4 +100,7 @@ async function startServer() {
   });
 }
 
-startServer();
+startServer().catch(err => {
+  console.error("Maria Server Critical Failure:", err);
+  process.exit(1);
+});

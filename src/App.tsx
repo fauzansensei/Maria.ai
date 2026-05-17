@@ -437,15 +437,19 @@ function MainApp() {
 
 
 
+  const refreshAll = useCallback(() => {
+    loadProfile();
+    loadChats();
+    updateUnreadCount();
+  }, [loadProfile, loadChats, updateUnreadCount]);
+
   useEffect(() => {
     testFirestoreConnection();
     if (window.innerWidth >= 1024) {
       setIsSidebarOpen(true);
     }
 
-    loadProfile();
-    loadChats();
-    updateUnreadCount();
+    refreshAll();
 
     // Auto-detect performance mode for older Android devices
     const ua = navigator.userAgent;
@@ -463,13 +467,18 @@ function MainApp() {
       }
     }
 
-    const handleStorage = () => {
+    const handleStorage = (e: StorageEvent | Event) => {
+      // Standard storage event only for other tabs. 
+      // Manual dispatch for same tab should use different logic if needed.
+      if (e instanceof StorageEvent && e.key && !e.key.startsWith('maria_')) return;
+      
       loadProfile();
       loadChats();
       updateUnreadCount();
     };
 
     window.addEventListener('storage', handleStorage);
+    window.addEventListener('maria_refresh_system', refreshAll);
     window.addEventListener('maria_new_notification', updateUnreadCount);
     
     // Check for persisted mock user
@@ -598,13 +607,14 @@ function MainApp() {
 
     return () => {
       window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('maria_refresh_system', refreshAll);
       window.removeEventListener('maria_new_notification', updateUnreadCount);
       window.removeEventListener('maria_mock_login', handleMockLogin);
       window.removeEventListener('maria_mock_logout', handleMockLogout);
       window.removeEventListener('maria_automation' as any, handleAutomation);
       if (typeof unsubscribe === 'function') unsubscribe();
     };
-  }, [updateUnreadCount, loadProfile, loadChats]);
+  }, [updateUnreadCount, loadProfile, loadChats, refreshAll]);
 
   const handleNewChat = () => {
     const newId = generateId('chat');
@@ -621,7 +631,7 @@ function MainApp() {
     };
     localStorage.setItem('maria_chats', JSON.stringify(chatsObj));
     
-    // Sync to Firebase immediately so it's not "lost" on refresh
+    // Sync to Firebase immediately
     if (auth?.currentUser) {
       import('firebase/firestore').then(async ({ doc, setDoc }) => {
         const { db } = await import('./lib/firebase');
@@ -636,7 +646,9 @@ function MainApp() {
         }
       }).catch(console.error);
     }
-    window.dispatchEvent(new Event('storage'));
+    
+    refreshAll();
+    window.dispatchEvent(new Event('maria_refresh_system'));
     
     if (window.innerWidth < 1024) {
       setIsSidebarOpen(false);
@@ -684,7 +696,7 @@ function MainApp() {
         loadChats();
       }
       
-      window.dispatchEvent(new Event('storage'));
+      refreshAll();
     }
   };
 
@@ -713,7 +725,7 @@ function MainApp() {
           }).catch(console.error);
         }
         
-        window.dispatchEvent(new Event('storage'));
+        refreshAll();
       }
     }
     setMenuOpenId(null);
@@ -738,7 +750,7 @@ function MainApp() {
           }).catch(console.error);
         }
 
-        window.dispatchEvent(new Event('storage'));
+        refreshAll();
       }
     }
     setMenuOpenId(null);
@@ -774,7 +786,7 @@ function MainApp() {
           }).catch(console.error);
         }
 
-        window.dispatchEvent(new Event('storage'));
+        refreshAll();
       }
     }
     setRenamingId(null);
