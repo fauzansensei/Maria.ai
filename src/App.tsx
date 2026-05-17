@@ -494,33 +494,71 @@ function MainApp() {
     } catch (e) {}
     
     let unsubscribe = () => {};
+    let unsubscribeUser = () => {};
+    let unsubscribeChats = () => {};
+
     if (auth) {
       try {
         unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+          // Cleanup previous snapshots
+          unsubscribeUser();
+          unsubscribeChats();
+
           if (!currentUser) {
             setUser(null);
             setUserName('Pengguna');
             setUserAvatar(null);
-            // Optionally clear chats or keep local
             return;
           }
           
-          // Only setUser if it actually changed to avoid cycles
-          setUser(prev => (prev?.uid === currentUser.uid ? prev : currentUser));
+          setUser(currentUser);
           
-          // Debounce or slightly delay chat load to ensure profile sync starts
-          setTimeout(() => loadChats(), 100);
-          
-          // Try to load from Firebase
+          // 1. Sync Anonymous Local Chats to User UID
+          const chatsStr = localStorage.getItem('maria_chats');
+          if (chatsStr) {
+            try {
+              const chatsObj = JSON.parse(chatsStr);
+              let changed = false;
+              Object.keys(chatsObj).forEach(id => {
+                if (!chatsObj[id].userId || chatsObj[id].userId === 'anonymous') {
+                  chatsObj[id].userId = currentUser.uid;
+                  changed = true;
+                }
+              });
+              if (changed) {
+                localStorage.setItem('maria_chats', JSON.stringify(chatsObj));
+                // Sync to Firebase (metadata)
+                const { doc, writeBatch } = await import('firebase/firestore');
+                const { db } = await import('./lib/firebase');
+                if (db) {
+                   const batch = writeBatch(db);
+                   Object.keys(chatsObj).forEach(id => {
+                      const chatRef = doc(db, 'chats', id);
+                      batch.set(chatRef, {
+                        userId: currentUser.uid,
+                        title: chatsObj[id].title,
+                        updatedAt: chatsObj[id].updatedAt,
+                        isPinned: chatsObj[id].isPinned || false,
+                        isFavorite: chatsObj[id].isFavorite || false
+                      }, { merge: true });
+                   });
+                   await batch.commit().catch(console.error);
+                }
+              }
+            } catch (e) {
+              console.error("Maria: Failed to migrate anonymous chats", e);
+            }
+          }
+
+          // 2. Real-time Profile Listener
           try {
-            const { doc, getDoc, setDoc } = await import('firebase/firestore');
+            const { doc, onSnapshot, setDoc } = await import('firebase/firestore');
             const { db } = await import('./lib/firebase');
             if (db) {
               const userRef = doc(db, 'users', currentUser.uid);
-              const userSnap = await getDoc(userRef);
-              
-                if (userSnap.exists()) {
-                  const profile = userSnap.data();
+              unsubscribeUser = onSnapshot(userRef, async (snap) => {
+                if (snap.exists()) {
+                  const profile = snap.data();
                   setUserName(profile.name || currentUser.displayName || 'Pengguna');
                   setUserAvatar(profile.avatar || currentUser.photoURL || null);
                   setIsPlus(profile.isPlus || false);
@@ -528,17 +566,16 @@ function MainApp() {
                     setLanguage(profile.preferences.language);
                   }
                   
-                  // Sync quota limit from Firestore
                   if (profile.quotaResetAt) {
                     localStorage.setItem('maria_quota_limit', profile.quotaResetAt.toString());
+                  } else {
+                    localStorage.removeItem('maria_quota_limit');
                   }
 
-                  // Sync local storage for current session fast-load
                   localStorage.setItem('maria_profile', JSON.stringify(profile));
-                  window.dispatchEvent(new Event('storage'));
                   window.dispatchEvent(new Event('maria_refresh_system'));
                 } else {
-                  // Create default profile if not exists
+                  // Initialize profile
                   const defaultProfile = {
                     name: currentUser.displayName || 'Pengguna',
                     email: currentUser.email || '',
@@ -566,22 +603,61 @@ function MainApp() {
                     },
                     notifications: { response: 'both', tasks: 'both' }
                   };
-                  await setDoc(userRef, defaultProfile);
-                  setUserName(defaultProfile.name);
-                  setUserAvatar(defaultProfile.avatar);
-                  localStorage.setItem('maria_profile', JSON.stringify(defaultProfile));
-                  window.dispatchEvent(new Event('storage'));
-                  window.dispatchEvent(new Event('maria_refresh_system'));
+                  await setDoc(userRef, defaultProfile).catch(console.error);
                 }
+              }, (err) => console.error("Profile snapshot error:", err));
+
+              // 3. Real-time Chats Metadata Listener
+              const { collection, query, where } = await import('firebase/firestore');
+              const q = query(collection(db, 'chats'), where('userId', '==', currentUser.uid));
+              unsubscribeChats = onSnapshot(q, (snap) => {
+                const firebaseSessions: Record<string, any> = {};
+                snap.forEach(doc => {
+                  firebaseSessions[doc.id] = { id: doc.id, ...doc.data() };
+                });
+
+                const currentLocal = JSON.parse(localStorage.getItem('maria_chats') || '{}');
+                const deletedIds = JSON.parse(localStorage.getItem('maria_deleted_chats') || '[]');
+                
+                const merged: Record<string, any> = {};
+                // Add from Firebase (respect deletions)
+                Object.keys(firebaseSessions).forEach(id => {
+                  if (!deletedIds.includes(id)) {
+                    merged[id] = firebaseSessions[id];
+                  }
+                });
+                // Merge with Local (local updates might be fresher before sync)
+                Object.keys(currentLocal).forEach(id => {
+                  if (deletedIds.includes(id)) return;
+                  if (merged[id]) {
+                    merged[id] = {
+                      ...merged[id],
+                      ...currentLocal[id],
+                      updatedAt: Math.max(merged[id].updatedAt || 0, currentLocal[id].updatedAt || 0)
+                    };
+                  } else if (currentLocal[id].userId === currentUser.uid) {
+                    merged[id] = currentLocal[id];
+                  }
+                });
+
+                localStorage.setItem('maria_chats', JSON.stringify(merged));
+                
+                // Update state
+                const sessions = Object.values(merged) as ChatSession[];
+                const sorted = sessions.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+                setChatSessions(sorted);
+                
+                if (!activeChatIdRef.current && sorted.length > 0) {
+                  setActiveChatId(sorted[0].id);
+                }
+              }, (err) => console.error("Chats snapshot error:", err));
             }
           } catch (e) {
-            console.error("Maria: Failed to sync profile with Firebase", e);
-            setUserName(currentUser.displayName || 'Pengguna');
-            setUserAvatar(currentUser.photoURL);
+            console.error("Maria: Failed to initialize Firebase listeners", e);
           }
         });
       } catch (e) {
-        console.error("Maria: Auth listener failed", e);
+        console.error("Maria: Auth listener setup failed", e);
       }
     }
 
@@ -621,6 +697,8 @@ function MainApp() {
       window.removeEventListener('maria_mock_logout', handleMockLogout);
       window.removeEventListener('maria_automation' as any, handleAutomation);
       if (typeof unsubscribe === 'function') unsubscribe();
+      unsubscribeUser();
+      unsubscribeChats();
     };
   }, [updateUnreadCount, loadProfile, loadChats, refreshAll]);
 

@@ -103,6 +103,8 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
   }, []);
 
   useEffect(() => {
+    let unsubscribeMessages = () => {};
+
     const loadChat = async () => {
       try {
         const historyStr = localStorage.getItem(`maria_history_${chatId}`);
@@ -110,46 +112,49 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
           const msgs = JSON.parse(historyStr);
           if (Array.isArray(msgs) && msgs.length > 0) {
             setMessages(msgs);
-            return;
+            // We continue to set up snapshot for real-time updates even if we have local cache
           }
         }
 
-        // If not in local, try Firebase
+        // Real-time Messages Listener
         const { auth } = await import('../lib/firebase');
         if (auth?.currentUser) {
-          const { collection, query, getDocs, orderBy } = await import('firebase/firestore');
+          const { collection, query, onSnapshot, orderBy } = await import('firebase/firestore');
           const { db } = await import('../lib/firebase');
           if (db) {
             const q = query(
               collection(db, 'chats', chatId, 'messages'),
               orderBy('timestamp', 'asc')
             );
-            const snap = await getDocs(q);
-            const msgs: Message[] = [];
-            snap.forEach(doc => msgs.push({ id: doc.id, ...doc.data() } as any));
             
-            if (msgs.length > 0) {
-              setMessages(msgs);
-              // Update local cache
-              localStorage.setItem(`maria_history_${chatId}`, JSON.stringify(msgs));
-              return;
-            }
+            unsubscribeMessages = onSnapshot(q, (snap) => {
+              const remoteMsgs: Message[] = [];
+              snap.forEach(doc => remoteMsgs.push({ id: doc.id, ...doc.data() } as any));
+              
+              if (remoteMsgs.length > 0) {
+                setMessages(remoteMsgs);
+                localStorage.setItem(`maria_history_${chatId}`, JSON.stringify(remoteMsgs));
+              }
+            }, (err) => console.error("Messages snapshot error:", err));
           }
         }
       } catch (e) {
         console.error("Failed to load chat history", e);
       }
       
-      // Fallback for migration or new chat
-      const defaultMessages: Message[] = [
-        {
-          id: 'welcome',
-          role: 'assistant',
-          content: t.welcome,
-          timestamp: Date.now(),
-        },
-      ];
-      setMessages(defaultMessages);
+      // Initial empty state if not in local and no user
+      const currentHistory = localStorage.getItem(`maria_history_${chatId}`);
+      if (!currentHistory || currentHistory === 'null') {
+        const defaultMessages: Message[] = [
+          {
+            id: 'welcome',
+            role: 'assistant',
+            content: t.welcome,
+            timestamp: Date.now(),
+          },
+        ];
+        setMessages(defaultMessages);
+      }
     };
 
     loadChat();
@@ -157,12 +162,15 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
     // Custom event to handle history updates across components
     const handleHistoryUpdate = (e: any) => {
       if (e.detail?.chatId === chatId) {
-        loadChat();
+        // loadChat(); // Handled by onSnapshot for users
       }
     };
 
     window.addEventListener('maria_history_update' as any, handleHistoryUpdate);
-    return () => window.removeEventListener('maria_history_update' as any, handleHistoryUpdate);
+    return () => {
+      window.removeEventListener('maria_history_update' as any, handleHistoryUpdate);
+      if (typeof unsubscribeMessages === 'function') unsubscribeMessages();
+    };
   }, [chatId, t.welcome]);
 
   const scrollToBottom = () => {
