@@ -11,7 +11,8 @@
         "joinedDate": { "type": "string" },
         "isPlus": { "type": "boolean" },
         "preferences": { "type": "object" },
-        "notifications": { "type": "object" }
+        "notifications": { "type": "object" },
+        "quotaResetAt": { "type": "number", "description": "Timestamp when the message quota resets." }
       }
     },
     "Chat": {

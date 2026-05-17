@@ -326,8 +326,7 @@ function MainApp() {
           if (db) {
             const q = query(
               collection(db, 'chats'), 
-              where('userId', '==', auth.currentUser.uid),
-              orderBy('updatedAt', 'desc')
+              where('userId', '==', auth.currentUser.uid)
             );
             const snap = await getDocs(q);
             const firebaseSessions: Record<string, Partial<ChatSession>> = {};
@@ -520,51 +519,60 @@ function MainApp() {
               const userRef = doc(db, 'users', currentUser.uid);
               const userSnap = await getDoc(userRef);
               
-              if (userSnap.exists()) {
-                const profile = userSnap.data();
-                setUserName(profile.name || currentUser.displayName || 'Pengguna');
-                setUserAvatar(profile.avatar || currentUser.photoURL || null);
-                setIsPlus(profile.isPlus || false);
-                if (profile.preferences?.language) {
-                  setLanguage(profile.preferences.language);
+                if (userSnap.exists()) {
+                  const profile = userSnap.data();
+                  setUserName(profile.name || currentUser.displayName || 'Pengguna');
+                  setUserAvatar(profile.avatar || currentUser.photoURL || null);
+                  setIsPlus(profile.isPlus || false);
+                  if (profile.preferences?.language) {
+                    setLanguage(profile.preferences.language);
+                  }
+                  
+                  // Sync quota limit from Firestore
+                  if (profile.quotaResetAt) {
+                    localStorage.setItem('maria_quota_limit', profile.quotaResetAt.toString());
+                  }
+
+                  // Sync local storage for current session fast-load
+                  localStorage.setItem('maria_profile', JSON.stringify(profile));
+                  window.dispatchEvent(new Event('storage'));
+                  window.dispatchEvent(new Event('maria_refresh_system'));
+                } else {
+                  // Create default profile if not exists
+                  const defaultProfile = {
+                    name: currentUser.displayName || 'Pengguna',
+                    email: currentUser.email || '',
+                    avatar: currentUser.photoURL || null,
+                    joinedDate: new Date().toLocaleDateString('id-ID'),
+                    isPlus: false,
+                    quotaResetAt: 0,
+                    preferences: { 
+                      theme: 'light', 
+                      language: 'id', 
+                      personality: 'ramah', 
+                      accentColor: 'blue', 
+                      performanceMode: false, 
+                      guardrailsEnabled: true,
+                      style_tone: 'default',
+                      warmth: 'default',
+                      enthusiasm: 'default',
+                      titles_lists: 'default',
+                      emoji: 'default',
+                      quick_answer: true,
+                      nickname: '',
+                      job: '',
+                      use_history: true,
+                      web_search: true
+                    },
+                    notifications: { response: 'both', tasks: 'both' }
+                  };
+                  await setDoc(userRef, defaultProfile);
+                  setUserName(defaultProfile.name);
+                  setUserAvatar(defaultProfile.avatar);
+                  localStorage.setItem('maria_profile', JSON.stringify(defaultProfile));
+                  window.dispatchEvent(new Event('storage'));
+                  window.dispatchEvent(new Event('maria_refresh_system'));
                 }
-                // Sync local storage for current session fast-load
-                localStorage.setItem('maria_profile', JSON.stringify(profile));
-                window.dispatchEvent(new Event('storage'));
-              } else {
-                // Create default profile if not exists
-                const defaultProfile = {
-                  name: currentUser.displayName || 'Pengguna',
-                  email: currentUser.email || '',
-                  avatar: currentUser.photoURL || null,
-                  joinedDate: new Date().toLocaleDateString('id-ID'),
-                  isPlus: false,
-                  preferences: { 
-                    theme: 'light', 
-                    language: 'id', 
-                    personality: 'ramah', 
-                    accentColor: 'blue', 
-                    performanceMode: false, 
-                    guardrailsEnabled: true,
-                    style_tone: 'default',
-                    warmth: 'default',
-                    enthusiasm: 'default',
-                    titles_lists: 'default',
-                    emoji: 'default',
-                    quick_answer: true,
-                    nickname: '',
-                    job: '',
-                    use_history: true,
-                    web_search: true
-                  },
-                  notifications: { response: 'both', tasks: 'both' }
-                };
-                await setDoc(userRef, defaultProfile);
-                setUserName(defaultProfile.name);
-                setUserAvatar(defaultProfile.avatar);
-                localStorage.setItem('maria_profile', JSON.stringify(defaultProfile));
-                window.dispatchEvent(new Event('storage'));
-              }
             }
           } catch (e) {
             console.error("Maria: Failed to sync profile with Firebase", e);

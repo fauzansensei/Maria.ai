@@ -79,10 +79,27 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
           setIsPlus(profile.isPlus || false);
         } catch (e) {}
       }
+
+      const savedLimit = localStorage.getItem('maria_quota_limit');
+      if (savedLimit) {
+        const timestamp = parseInt(savedLimit);
+        if (timestamp > Date.now()) {
+          setQuotaExhausted(true);
+          setResetTimestamp(timestamp);
+          setCountdown(Math.floor((timestamp - Date.now()) / 1000));
+        } else {
+          setQuotaExhausted(false);
+          localStorage.removeItem('maria_quota_limit');
+        }
+      }
     };
     loadProfile();
     window.addEventListener('storage', loadProfile);
-    return () => window.removeEventListener('storage', loadProfile);
+    window.addEventListener('maria_refresh_system', loadProfile);
+    return () => {
+      window.removeEventListener('storage', loadProfile);
+      window.removeEventListener('maria_refresh_system', loadProfile);
+    };
   }, []);
 
   useEffect(() => {
@@ -457,6 +474,16 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
         setResetTimestamp(limitTimestamp);
         setQuotaExhausted(true);
         setCountdown(Math.floor((limitTimestamp - Date.now()) / 1000));
+
+        // Sync quota limit to Firebase Profile
+        const { auth } = await import('../lib/firebase');
+        if (auth?.currentUser) {
+          const { doc, updateDoc } = await import('firebase/firestore');
+          const { db } = await import('../lib/firebase');
+          if (db) {
+             await updateDoc(doc(db, 'users', auth.currentUser.uid), { quotaResetAt: limitTimestamp });
+          }
+        }
         
         // Remove the failing user message from state so it doesn't stay in the UI
         setMessages(currentMessages.slice(0, -1));

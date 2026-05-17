@@ -29,7 +29,8 @@ service cloud.firestore {
              data.joinedDate is string &&
              data.isPlus is bool &&
              data.preferences is map &&
-             data.notifications is map;
+             data.notifications is map &&
+             (!data.keys().hasAny(['quotaResetAt']) || data.quotaResetAt is number);
     }
 
     function isValidChat(data) {
@@ -82,7 +83,7 @@ service cloud.firestore {
                     incoming().email == existing().email && 
                     incoming().joinedDate == existing().joinedDate &&
                     incoming().isPlus == existing().isPlus && 
-                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'preferences', 'notifications']);
+                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'preferences', 'notifications', 'quotaResetAt']);
     }
 
     match /chats/{chatId} {
