@@ -190,6 +190,7 @@ function MainApp() {
         
         let chatsObj = (chatsStr && chatsStr !== 'null' && chatsStr !== 'undefined') ? JSON.parse(chatsStr) : {};
         let changed = false;
+        let migrationTargetId = null;
 
         // Legacy 1: maria_chat_history (old simple list)
         if (legacyHistory && legacyHistory !== 'null') {
@@ -216,6 +217,22 @@ function MainApp() {
               changed = true;
            }
         }
+
+        // Legacy 3: initial-chat key inside maria_chats
+        if (chatsObj['initial-chat']) {
+           const newId = generateId('chat');
+           const initialChatData = chatsObj['initial-chat'];
+           chatsObj[newId] = { ...initialChatData, id: newId, title: initialChatData.title || 'Chat Baru' };
+           delete chatsObj['initial-chat'];
+           
+           const history = localStorage.getItem('maria_history_initial-chat');
+           if (history) {
+             localStorage.setItem(`maria_history_${newId}`, history);
+             localStorage.removeItem('maria_history_initial-chat');
+           }
+           migrationTargetId = newId;
+           changed = true;
+        }
         
         // Normalization: Extract messages from maria_chats to separate keys
         Object.keys(chatsObj).forEach(id => {
@@ -229,10 +246,11 @@ function MainApp() {
         if (changed) {
           localStorage.setItem('maria_chats', JSON.stringify(chatsObj));
         }
+        return migrationTargetId;
       } catch (e) {
         console.error("Maria: Migration/Normalization failed", e);
+        return null;
       }
-      return null;
     };
 
     const migratedId = migrateAndNormalize();
