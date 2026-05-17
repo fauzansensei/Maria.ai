@@ -182,17 +182,20 @@ function MainApp() {
 
   const loadChats = useCallback(async (forceId?: string) => {
     // Migration logic & Normalization
-    const migrateAndNormalize = () => {
+    const migrateAndNormalize = async () => {
       try {
+        const migrationDone = localStorage.getItem('maria_migration_v2_done');
+        if (migrationDone) return null;
+
         const legacyHistory = localStorage.getItem('maria_chat_history');
-        const initialChatHistory = localStorage.getItem('maria_history_initial-chat'); // Check for specific old key
+        const initialChatHistory = localStorage.getItem('maria_history_initial-chat');
         const chatsStr = localStorage.getItem('maria_chats');
         
         let chatsObj = (chatsStr && chatsStr !== 'null' && chatsStr !== 'undefined') ? JSON.parse(chatsStr) : {};
         let changed = false;
         let migrationTargetId = null;
 
-        // Legacy 1: maria_chat_history (old simple list)
+        // Legacy 1: maria_chat_history
         if (legacyHistory && legacyHistory !== 'null') {
           const messages = JSON.parse(legacyHistory);
           if (Array.isArray(messages)) {
@@ -206,56 +209,57 @@ function MainApp() {
           }
         }
 
-        // Legacy 2: maria_history_initial-chat
-        if (initialChatHistory && initialChatHistory !== 'null') {
-           const messages = JSON.parse(initialChatHistory);
-           if (Array.isArray(messages)) {
-              const newId = generateId('chat');
-              chatsObj[newId] = { id: newId, title: 'Chat Baru', updatedAt: Date.now() };
-              localStorage.setItem(`maria_history_${newId}`, JSON.stringify(messages));
-              localStorage.removeItem('maria_history_initial-chat');
-              changed = true;
-           }
-        }
-
-        // Legacy 3: initial-chat key inside maria_chats
-        if (chatsObj['initial-chat']) {
+        // Legacy 2 & 3: initial-chat
+        const isInitialInObj = !!chatsObj['initial-chat'];
+        if (initialChatHistory || isInitialInObj) {
            const newId = generateId('chat');
-           const initialChatData = chatsObj['initial-chat'];
-           chatsObj[newId] = { ...initialChatData, id: newId, title: initialChatData.title || 'Chat Baru' };
+           const initialData = chatsObj['initial-chat'] || { title: 'Chat Baru' };
+           chatsObj[newId] = { ...initialData, id: newId, updatedAt: Date.now() };
            delete chatsObj['initial-chat'];
            
-           const history = localStorage.getItem('maria_history_initial-chat');
-           if (history) {
-             localStorage.setItem(`maria_history_${newId}`, history);
-             localStorage.removeItem('maria_history_initial-chat');
+           if (initialChatHistory) {
+              localStorage.setItem(`maria_history_${newId}`, initialChatHistory);
+              localStorage.removeItem('maria_history_initial-chat');
            }
+           
+           // Cleanup in Firebase if possible
+           if (auth?.currentUser) {
+             try {
+                const { doc, deleteDoc } = await import('firebase/firestore');
+                const { db } = await import('./lib/firebase');
+                if (db) {
+                   await deleteDoc(doc(db, 'chats', 'initial-chat'));
+                }
+             } catch (e) {}
+           }
+
            migrationTargetId = newId;
            changed = true;
         }
         
-        // Normalization: Extract messages from maria_chats to separate keys
+        // Normalization
         Object.keys(chatsObj).forEach(id => {
           if (chatsObj[id].messages) {
             localStorage.setItem(`maria_history_${id}`, JSON.stringify(chatsObj[id].messages));
-            delete chatsObj[id].messages; // Keep only metadata
+            delete chatsObj[id].messages;
             changed = true;
           }
         });
 
         if (changed) {
           localStorage.setItem('maria_chats', JSON.stringify(chatsObj));
+          localStorage.setItem('maria_migration_v2_done', 'true');
         }
         return migrationTargetId;
       } catch (e) {
-        console.error("Maria: Migration/Normalization failed", e);
+        console.error("Maria: Migration failed", e);
         return null;
       }
     };
 
-    const migratedId = migrateAndNormalize();
+    const migratedId = await migrateAndNormalize();
 
-    // Firebase Sync for chat sessions list (metadata only)
+    // Firebase Sync
     if (auth?.currentUser) {
       try {
         const { collection, query, where, getDocs, orderBy } = await import('firebase/firestore');
@@ -283,12 +287,35 @@ function MainApp() {
           const chatsStr = localStorage.getItem('maria_chats');
           const localChats = (chatsStr && chatsStr !== 'undefined' && chatsStr !== 'null') ? JSON.parse(chatsStr) : {};
 
-          // Merge: Firebase metadata into local metadata
-          const merged = { ...localChats, ...firebaseSessions };
+          // Filtering: if migration is done, we never want 'initial-chat' back from Firebase
+          const migrationDone = localStorage.getItem('maria_migration_v2_done');
+          if (migrationDone && firebaseSessions['initial-chat']) {
+             delete firebaseSessions['initial-chat'];
+          }
+
+          // Merge Strategy: Deep merge metadata, preferring more recent updates if possible, 
+          // but fundamentally trust local state for flags changed recently.
+          const merged = { ...firebaseSessions };
+          Object.keys(localChats).forEach(id => {
+            if (merged[id]) {
+               // If it exists in both, merge them but prefer internal flags from local if more recent
+               merged[id] = {
+                 ...merged[id],
+                 ...localChats[id],
+                 updatedAt: Math.max(merged[id].updatedAt || 0, localChats[id].updatedAt || 0)
+               };
+            } else {
+               // If only in local, keep it (unless it's initial-chat post-migration)
+               if (!(id === 'initial-chat' && migrationDone)) {
+                 merged[id] = localChats[id];
+               }
+            }
+          });
+          
           localStorage.setItem('maria_chats', JSON.stringify(merged));
         }
       } catch (e) {
-        console.error("Maria: Failed to sync chat sessions", e);
+        console.error("Maria: Sync failed", e);
       }
     }
 
@@ -301,9 +328,9 @@ function MainApp() {
           const sortedSessions = sessions.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
           setChatSessions(sortedSessions);
           
-          if (!activeChatId || forceId) {
-            const targetId = forceId || migratedId || sortedSessions[0]?.id || generateId('chat');
-            setActiveChatId(targetId);
+          if (forceId || !activeChatId) {
+             const targetId = forceId || migratedId || sortedSessions[0]?.id || generateId('chat');
+             setActiveChatId(targetId);
           }
         }
       } catch (e) {
@@ -313,7 +340,8 @@ function MainApp() {
       const defaultId = migratedId || generateId('chat');
       setActiveChatId(defaultId);
     }
-  }, [activeChatId]);
+  }, []); // Remove activeChatId from dependencies to prevent loops
+
 
   useEffect(() => {
     testFirestoreConnection();
@@ -483,16 +511,32 @@ function MainApp() {
     const newId = generateId('chat');
     setActiveChatId(newId);
     
-    // Create empty session entry
     const chatsStr = localStorage.getItem('maria_chats');
     const chatsObj = chatsStr ? JSON.parse(chatsStr) : {};
+    const chatTitle = t.newChat;
+    
     chatsObj[newId] = {
       id: newId,
-      title: t.newChat,
-      messages: [],
+      title: chatTitle,
       updatedAt: Date.now()
     };
     localStorage.setItem('maria_chats', JSON.stringify(chatsObj));
+    
+    // Sync to Firebase immediately so it's not "lost" on refresh
+    if (auth?.currentUser) {
+      import('firebase/firestore').then(async ({ doc, setDoc }) => {
+        const { db } = await import('./lib/firebase');
+        if (db) {
+          await setDoc(doc(db, 'chats', newId), {
+            userId: auth.currentUser!.uid,
+            title: chatTitle,
+            updatedAt: Date.now(),
+            isPinned: false,
+            isFavorite: false
+          });
+        }
+      }).catch(console.error);
+    }
     window.dispatchEvent(new Event('storage'));
     
     if (window.innerWidth < 1024) {
@@ -500,13 +544,34 @@ function MainApp() {
     }
   };
 
-  const deleteChat = (id: string) => {
+  const deleteChat = async (id: string) => {
     const chatsStr = localStorage.getItem('maria_chats');
     if (chatsStr) {
       const chatsObj = JSON.parse(chatsStr);
       delete chatsObj[id];
       localStorage.setItem('maria_chats', JSON.stringify(chatsObj));
+      localStorage.removeItem(`maria_history_${id}`);
       
+      // FIREBASE SYNC - Delete from cloud
+      if (auth?.currentUser) {
+        try {
+          const { doc, deleteDoc, collection, getDocs } = await import('firebase/firestore');
+          const { db, handleFirestoreError, OperationType } = await import('./lib/firebase');
+          if (db) {
+            // Delete metadata
+            await deleteDoc(doc(db, 'chats', id)).catch(err => {
+              handleFirestoreError(err, OperationType.DELETE, `chats/${id}`);
+            });
+            
+            // Note: Deleting a document doesn't delete subcollections in Firestore.
+            // But for our simplified sync, metadata deletion is the primary guard.
+            // For completeness, we could list and delete messages but it's expensive.
+          }
+        } catch (e) {
+          console.error("Maria: Remote delete failed", e);
+        }
+      }
+
       const remaining = Object.keys(chatsObj);
       if (activeChatId === id) {
         const nextId = remaining.length > 0 ? remaining[0] : generateId('chat');
@@ -534,6 +599,17 @@ function MainApp() {
       if (chatsObj[id]) {
         chatsObj[id].isPinned = !chatsObj[id].isPinned;
         localStorage.setItem('maria_chats', JSON.stringify(chatsObj));
+        
+        // Sync to Firebase
+        if (auth?.currentUser) {
+          import('firebase/firestore').then(async ({ doc, updateDoc }) => {
+            const { db } = await import('./lib/firebase');
+            if (db) {
+               await updateDoc(doc(db, 'chats', id), { isPinned: chatsObj[id].isPinned });
+            }
+          }).catch(console.error);
+        }
+        
         window.dispatchEvent(new Event('storage'));
       }
     }
@@ -548,6 +624,17 @@ function MainApp() {
       if (chatsObj[id]) {
         chatsObj[id].isFavorite = !chatsObj[id].isFavorite;
         localStorage.setItem('maria_chats', JSON.stringify(chatsObj));
+        
+        // Sync to Firebase
+        if (auth?.currentUser) {
+          import('firebase/firestore').then(async ({ doc, updateDoc }) => {
+            const { db } = await import('./lib/firebase');
+            if (db) {
+               await updateDoc(doc(db, 'chats', id), { isFavorite: chatsObj[id].isFavorite });
+            }
+          }).catch(console.error);
+        }
+
         window.dispatchEvent(new Event('storage'));
       }
     }
@@ -573,6 +660,17 @@ function MainApp() {
       if (chatsObj[renamingId]) {
         chatsObj[renamingId].title = renamingTitle.trim();
         localStorage.setItem('maria_chats', JSON.stringify(chatsObj));
+
+        // Sync to Firebase
+        if (auth?.currentUser) {
+          import('firebase/firestore').then(async ({ doc, updateDoc }) => {
+            const { db } = await import('./lib/firebase');
+            if (db) {
+               await updateDoc(doc(db, 'chats', renamingId), { title: renamingTitle.trim() });
+            }
+          }).catch(console.error);
+        }
+
         window.dispatchEvent(new Event('storage'));
       }
     }
