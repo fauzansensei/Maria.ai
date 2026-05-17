@@ -18,7 +18,8 @@ import {
   AlertCircle,
   Timer,
   RefreshCw,
-  Globe
+  Globe,
+  Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
@@ -438,6 +439,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
       
     const isQuotaExceeded = error?.message?.toLowerCase().includes("429") || 
                             error?.message?.toLowerCase().includes("quota") || 
+                            error?.message?.toLowerCase().includes("kuota") || 
                             error?.message?.toLowerCase().includes("resource_exhausted") ||
                             error?.status === "RESOURCE_EXHAUSTED" ||
                             error?.error?.status === "RESOURCE_EXHAUSTED" ||
@@ -456,8 +458,10 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
         setQuotaExhausted(true);
         setCountdown(Math.floor((limitTimestamp - Date.now()) / 1000));
         
-        // Remove the failing message from optimistic UI
+        // Remove the failing user message from state so it doesn't stay in the UI
         setMessages(currentMessages.slice(0, -1));
+        // Also update storage to remove the failing message
+        saveToStorage(currentMessages.slice(0, -1));
         return;
       }
 
@@ -641,6 +645,12 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
     return loc;
   };
 
+  const handleDeleteMessage = (id: string) => {
+    const updatedMessages = messages.filter(m => m.id !== id);
+    setMessages(updatedMessages);
+    saveToStorage(updatedMessages);
+  };
+
   return (
     <div className={`flex flex-col h-full bg-transparent overflow-hidden transition-all duration-700 ${isDark || isFocusMode ? 'text-white' : 'text-slate-900'}`}>
       {/* Floating Focus Mode Exit */}
@@ -686,6 +696,7 @@ export default function MariaAgent({ chatId, language, userName, isFocusMode = f
               onFeedback={handleFeedback}
               onRegenerate={handleRegenerate}
               onEdit={startEditing}
+              onDelete={handleDeleteMessage}
               onCancelEdit={() => setEditingId(null)}
               onSaveEdit={handleUpdateMessage}
               onSetMapConfig={setMapConfig}
@@ -929,7 +940,7 @@ function ActionButton({ icon, label, onClick, isFocusMode = false, isDark = fals
 const MessageItem = React.memo(({ 
   msg, isLiteMode, isDark, isFocusMode, isPlus, language, t,
   editingId, editInput, setEditInput, copiedId, sharedId, feedbackId,
-  onCopy, onShare, onFeedback, onRegenerate, onEdit, onCancelEdit, onSaveEdit,
+  onCopy, onShare, onFeedback, onRegenerate, onEdit, onDelete, onCancelEdit, onSaveEdit,
   onSetMapConfig, onScrollToBottom, isLast
 }: any) => {
   const detectLocation = (text: string) => {
@@ -1104,11 +1115,13 @@ const MessageItem = React.memo(({
                     <ActionButton isDark={isDark} isFocusMode={isFocusMode} onClick={() => onFeedback(msg.id)} icon={<ThumbsDown size={14} />} label={t.dislike} />
                   </div>
                   <ActionButton isDark={isDark} isFocusMode={isFocusMode} onClick={() => onRegenerate(msg.id)} icon={<RotateCcw size={14} />} label={t.regenerate} />
+                  <ActionButton isDark={isDark} isFocusMode={isFocusMode} onClick={() => onDelete(msg.id)} icon={<Trash2 size={14} />} label={t.delete || 'Delete'} />
                 </>
               ) : (
                 <div className="flex items-center gap-2">
                   <ActionButton isDark={isDark} isFocusMode={isFocusMode} onClick={() => onEdit(msg)} icon={<Pencil size={14} />} label={t.edit} />
                   <ActionButton isDark={isDark} isFocusMode={isFocusMode} onClick={() => onCopy(msg.content, msg.id)} icon={copiedId === msg.id ? <Check size={14} /> : <Copy size={14} />} label={t.copy} />
+                  <ActionButton isDark={isDark} isFocusMode={isFocusMode} onClick={() => onDelete(msg.id)} icon={<Trash2 size={14} />} label={t.delete || 'Delete'} />
                 </div>
               )}
             </div>

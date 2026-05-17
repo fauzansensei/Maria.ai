@@ -502,6 +502,12 @@ function MainApp() {
     }
   };
 
+  const clearChat = (id: string) => {
+    localStorage.removeItem(`maria_history_${id}`);
+    window.dispatchEvent(new CustomEvent('maria_history_update', { detail: { chatId: id } }));
+    setMenuOpenId(null);
+  };
+
   const togglePin = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     const chatsStr = localStorage.getItem('maria_chats');
@@ -808,6 +814,7 @@ function MainApp() {
                             onToggleFavorite={toggleFavorite}
                             onStartRename={startRename}
                             onDeleteChat={deleteChat}
+                            onClearChat={clearChat}
                           />
                         ))}
                       </div>
@@ -903,7 +910,7 @@ function MainApp() {
 const SidebarChatItem = React.memo(({ 
   session, activeChatId, isDark, t, renamingId, renamingTitle, 
   setRenamingTitle, submitRename, setRenamingId, menuOpenId, setMenuOpenId,
-  onSelectChat, onTogglePin, onToggleFavorite, onStartRename, onDeleteChat
+  onSelectChat, onTogglePin, onToggleFavorite, onStartRename, onDeleteChat, onClearChat
 }: any) => {
   return (
     <div 
@@ -995,6 +1002,18 @@ const SidebarChatItem = React.memo(({
               >
                 <Star size={14} className={session.isFavorite ? 'text-amber-400 fill-amber-400' : ''} />
                 <span>{session.isFavorite ? 'Unfavorite' : 'Favorite'}</span>
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClearChat(session.id);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium transition-colors ${
+                  isDark ? 'text-slate-300 hover:bg-slate-800 hover:text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-brand-blue'
+                }`}
+              >
+                <RotateCcw size={14} />
+                <span>{t.clearChat || 'Clear Chat'}</span>
               </button>
               <div className={`border-t ${isDark ? 'border-slate-800' : 'border-slate-50'}`} />
               <button 

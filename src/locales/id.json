@@ -81,6 +81,8 @@
   "pin": "Sematkan",
   "unpin": "Lepas Sematan",
   "delete": "Hapus",
+  "deleteMessage": "Hapus Pesan",
+  "clearChat": "Bersihkan Chat",
   "liteMode": "Mode Ringan",
   "fullMode": "Mode Penuh",
   "dashSettings": "Pengaturan Dashboard",

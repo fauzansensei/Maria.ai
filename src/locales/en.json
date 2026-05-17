@@ -81,6 +81,8 @@
   "pin": "Pin",
   "unpin": "Unpin",
   "delete": "Delete",
+  "deleteMessage": "Delete Message",
+  "clearChat": "Clear Chat",
   "liteMode": "Lite Mode",
   "fullMode": "Full Mode",
   "dashSettings": "Dashboard Settings",

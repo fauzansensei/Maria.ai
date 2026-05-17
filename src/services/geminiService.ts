@@ -206,6 +206,7 @@ MARIA CORE INTEGRITY PROTOCOL:
 
     const isQuotaExceeded = error?.message?.toLowerCase().includes("429") || 
                             error?.message?.toLowerCase().includes("quota") || 
+                            error?.message?.toLowerCase().includes("kuota") || 
                             error?.message?.toLowerCase().includes("resource_exhausted") ||
                             error?.status === "RESOURCE_EXHAUSTED" ||
                             error?.error?.status === "RESOURCE_EXHAUSTED" ||
