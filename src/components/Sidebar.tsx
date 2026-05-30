@@ -238,6 +238,7 @@ export default function Sidebar({
           <button
             type="button"
             onClick={onToggleCollapse}
+            aria-label="Sembunyikan Sidebar"
             className="p-1.5 rounded-lg bg-transparent hover:bg-slate-800/60 text-slate-400 hover:text-white transition-all cursor-pointer"
             title="Sembunyikan Sidebar"
           >
@@ -263,6 +264,7 @@ export default function Sidebar({
                 onToggleCollapse(); // Auto-close sidebar drawer on mobile for seamless navigation
               }
             }}
+            aria-label="New Chat Baru"
             className={`w-full py-3 px-4 rounded-xl text-left text-xs text-white font-medium bg-gradient-to-r ${currentTheme.bgGradient} hover:opacity-95 transition-all shadow-md active:scale-[0.985] flex items-center gap-3 cursor-pointer`}
           >
             <MessageSquare className="w-4 h-4" />
@@ -279,6 +281,7 @@ export default function Sidebar({
                   onToggleCollapse();
                 }
               }}
+              aria-label="Buka Library"
               className={`w-full py-2.5 px-3 rounded-lg transition-all text-xs font-semibold flex items-center gap-3 text-left cursor-pointer ${
                 activeView === "library"
                   ? "text-white bg-[#1c1e24] font-semibold"
@@ -297,6 +300,7 @@ export default function Sidebar({
                   onToggleCollapse();
                 }
               }}
+              aria-label="Buka Discover"
               className={`w-full py-2.5 px-3 rounded-lg transition-all text-xs font-semibold flex items-center gap-3 text-left cursor-pointer ${
                 activeView === "discover"
                   ? "text-white bg-[#1c1e24] font-semibold"
@@ -315,6 +319,7 @@ export default function Sidebar({
                   onToggleCollapse(); // Auto-close sidebar drawer on mobile for seamless navigation
                 }
               }}
+              aria-label="Buka Pengaturan Akun"
               className="w-full py-2.5 px-3 rounded-lg text-slate-300 hover:text-white hover:bg-[#1a1c23]/60 transition-all text-xs font-semibold flex items-center gap-3 text-left cursor-pointer"
             >
               <Settings className="w-4 h-4" />
@@ -357,6 +362,7 @@ export default function Sidebar({
                               setEditingId(null);
                             }
                           }}
+                          aria-label="Isi nama baru percakapan"
                           className="flex-grow bg-[#0f1013] border border-blue-500 rounded-lg px-2 py-1 text-white text-[11px] font-medium focus:outline-hidden"
                           autoFocus
                         />
@@ -366,6 +372,7 @@ export default function Sidebar({
                             if (onRenameThread) onRenameThread(thread.id, editTitle);
                             setEditingId(null);
                           }}
+                          aria-label="Simpan nama percakapan baru"
                           className="p-1 text-emerald-400 hover:bg-slate-800 rounded-md shrink-0 cursor-pointer"
                         >
                           <Check className="w-3.5 h-3.5" />
@@ -373,6 +380,7 @@ export default function Sidebar({
                         <button
                           type="button"
                           onClick={() => setEditingId(null)}
+                          aria-label="Batal ganti nama percakapan"
                           className="p-1 text-rose-450 hover:bg-slate-800 rounded-md shrink-0 cursor-pointer"
                         >
                           <X className="w-3.5 h-3.5" />
@@ -390,6 +398,7 @@ export default function Sidebar({
                               onToggleCollapse();
                             }
                           }}
+                          aria-label={`Pilih percakapan: ${thread.title}`}
                           className="flex-1 py-2.5 pl-3.5 pr-10 text-left truncate cursor-pointer flex items-center gap-2"
                         >
                           {thread.isPinned && (
@@ -406,6 +415,7 @@ export default function Sidebar({
                               e.stopPropagation();
                               setActiveMenuId(activeMenuId === thread.id ? null : thread.id);
                             }}
+                            aria-label={`Menu opsi percakapan: ${thread.title}`}
                             className={`p-1.5 rounded-full hover:bg-slate-800/85 text-slate-450 hover:text-white transition-opacity duration-150 cursor-pointer ${
                               isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                             }`}
@@ -438,6 +448,7 @@ export default function Sidebar({
                                   setActiveMenuId(null);
                                   if (onShareThread) onShareThread(thread.id);
                                 }}
+                                aria-label="Bagikan percakapan"
                                 className="w-full px-3.5 py-2.5 text-left hover:bg-[#252831] flex items-center gap-2.5 transition-colors cursor-pointer text-slate-300 hover:text-white"
                               >
                                 <Share2 className="w-3.5 h-3.5 text-slate-400" />
@@ -452,6 +463,7 @@ export default function Sidebar({
                                   setActiveMenuId(null);
                                   if (onPinThread) onPinThread(thread.id);
                                 }}
+                                aria-label={thread.isPinned ? "Lepaskan sematan percakapan" : "Sematkan percakapan"}
                                 className="w-full px-3.5 py-2.5 text-left hover:bg-[#252831] flex items-center gap-2.5 transition-colors cursor-pointer text-slate-300 hover:text-white"
                               >
                                 <Pin className="w-3.5 h-3.5 text-slate-400" />
@@ -467,6 +479,7 @@ export default function Sidebar({
                                   setEditingId(thread.id);
                                   setEditTitle(thread.title);
                                 }}
+                                aria-label="Ganti nama percakapan"
                                 className="w-full px-3.5 py-2.5 text-left hover:bg-[#252831] flex items-center gap-2.5 transition-colors cursor-pointer text-slate-300 hover:text-white"
                               >
                                 <Pencil className="w-3.5 h-3.5 text-slate-400" />
@@ -484,6 +497,7 @@ export default function Sidebar({
                                   setActiveMenuId(null);
                                   if (onDeleteThread) onDeleteThread(thread.id);
                                 }}
+                                aria-label="Hapus percakapan"
                                 className="w-full px-3.5 py-2.5 text-left hover:bg-rose-500/10 text-rose-400 hover:text-rose-300 flex items-center gap-2.5 transition-colors cursor-pointer font-medium"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -507,7 +521,7 @@ export default function Sidebar({
           {/* Promo Plus Card exactly like Screenshot 1 */}
           <div className="p-4 rounded-xl bg-[#15171d] border border-slate-800/80 hover:border-slate-800 transition-colors shadow-inner flex flex-col gap-2.5">
             <div className="flex items-start gap-2.5">
-              <div className="p-1 rounded-md bg-blue-500/10 mt-0.5 shrink-0">
+              <div className="p-1 rounded-md bg-blue-500/10 mt-0.5 shrink-0 animate-pulse-slow">
                 <Sparkles className="w-4 h-4 text-blue-400 font-bold" />
               </div>
               <div>
@@ -523,6 +537,7 @@ export default function Sidebar({
             <button
               type="button"
               onClick={() => setShowUpgradeModal(true)}
+              aria-label="Upgrade ke Maria Plus"
               className="w-full py-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-[11px] font-bold shadow-md transition-all active:scale-[0.975] cursor-pointer"
             >
               Upgrade
@@ -530,9 +545,11 @@ export default function Sidebar({
           </div>
 
           {/* User profile info bar cell */}
-          <div 
+          <button 
+            type="button"
             onClick={onOpenProfile || onToggleSettings}
-            className="p-2 sm:p-2.5 rounded-xl bg-[#111317] hover:bg-[#1a1d23] border border-slate-850 cursor-pointer transition-all hover:scale-[1.01] active:opacity-90 flex items-center justify-between gap-2 md:gap-3"
+            aria-label="Profil dan Pengaturan Akun"
+            className="w-full p-2 sm:p-2.5 rounded-xl bg-[#111317] hover:bg-[#1a1d23] border border-slate-850 cursor-pointer transition-all hover:scale-[1.01] active:opacity-90 flex items-center justify-between gap-2 md:gap-3 text-left"
             title="Klik untuk membuka Pengaturan Profil"
           >
             <div className="flex items-center gap-2.5 min-w-0">
@@ -561,7 +578,7 @@ export default function Sidebar({
             </div>
 
             <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-          </div>
+          </button>
         </div>
       </div>
 
@@ -591,6 +608,7 @@ export default function Sidebar({
               <button
                 type="button"
                 onClick={() => setShowUpgradeModal(false)}
+                aria-label="Tutup modal upgrade"
                 className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
@@ -617,6 +635,7 @@ export default function Sidebar({
                       <button
                         type="button"
                         onClick={() => setUpgradePlan("monthly")}
+                        aria-label="Pilih Paket Bulanan"
                         className={`py-1.5 px-4 text-[10px] font-bold rounded-lg transition-all ${
                           upgradePlan === "monthly" ? `${getAccentBgClass()} text-white shadow-md` : "text-slate-300 hover:text-white"
                         }`}
@@ -626,6 +645,7 @@ export default function Sidebar({
                       <button
                         type="button"
                         onClick={() => setUpgradePlan("yearly")}
+                        aria-label="Pilih Paket Tahunan"
                         className={`relative py-1.5 px-4 text-[10px] font-bold rounded-lg transition-all flex items-center gap-1 ${
                           upgradePlan === "yearly" ? `${getAccentBgClass()} text-white shadow-md` : "text-slate-300 hover:text-white"
                         }`}
@@ -689,6 +709,7 @@ export default function Sidebar({
                     <button
                       type="button"
                       onClick={() => setPaymentMethod("qris")}
+                      aria-label="Pilih Metode QRIS"
                       className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
                         paymentMethod === "qris"
                           ? "bg-emerald-500/10 border-emerald-500/80 text-white"
@@ -703,6 +724,7 @@ export default function Sidebar({
                     <button
                       type="button"
                       onClick={() => setPaymentMethod("bank")}
+                      aria-label="Pilih Metode Virtual Account Bank"
                       className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
                         paymentMethod === "bank"
                           ? "bg-blue-500/10 border-blue-500/80 text-white"
@@ -717,6 +739,7 @@ export default function Sidebar({
                     <button
                       type="button"
                       onClick={() => setPaymentMethod("gpay")}
+                      aria-label="Pilih Metode Google Pay"
                       className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
                         paymentMethod === "gpay"
                           ? "bg-slate-100 text-slate-900 border-white font-semibold"
