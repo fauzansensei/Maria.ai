@@ -175,7 +175,7 @@ export default function Sidebar({
   const userEmail = localStorage.getItem("maria_user_email") || "pengguna@example.com";
 
   const useInitialsAvatar = localStorage.getItem("maria_use_initials_avatar") !== "false"; // default to true
-  const avatarBgColor = localStorage.getItem("maria_avatar_bg_color") || "bg-emerald-600";
+  const avatarBgColor = localStorage.getItem("maria_avatar_bg_color") || "bg-[#064e3b]";
   const userHandle = localStorage.getItem("maria_username_handle") || "@basitfauzan42";
 
   const getInitials = (name: string) => {

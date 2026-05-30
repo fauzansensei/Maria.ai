@@ -2,10 +2,13 @@ import React, { useState, useEffect } from "react";
 import { Message, UserSettings, AppNotification, ChatThread } from "./types";
 import { DEFAULT_SETTINGS, THEME_OPTIONS } from "./constants";
 import ChatArea from "./components/ChatArea";
-import SettingsDashboard from "./components/SettingsDashboard";
 import Sidebar from "./components/Sidebar";
-import DiscoverArea, { DiscoveryAgent } from "./components/DiscoverArea";
-import LibraryArea from "./components/LibraryArea";
+import type { DiscoveryAgent } from "./components/DiscoverArea";
+
+// Lazy-loaded components to improve PageSpeed performance & bundle splitting
+const SettingsDashboard = React.lazy(() => import("./components/SettingsDashboard"));
+const DiscoverArea = React.lazy(() => import("./components/DiscoverArea"));
+const LibraryArea = React.lazy(() => import("./components/LibraryArea"));
 import { 
   Bot, 
   Settings, 
@@ -191,7 +194,7 @@ export default function App() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [profileDisplayName, setProfileDisplayName] = useState(() => settings.username || "basit fauzan");
   const [profileUsername, setProfileUsername] = useState(() => localStorage.getItem("maria_username_handle") || "@basitfauzan42");
-  const [profileAvatarBg, setProfileAvatarBg] = useState(() => localStorage.getItem("maria_avatar_bg_color") || "bg-[#10b981]"); // beautiful emerald green bg
+  const [profileAvatarBg, setProfileAvatarBg] = useState(() => localStorage.getItem("maria_avatar_bg_color") || "bg-[#064e3b]"); // premium deep green bg
   const [showColorSelector, setShowColorSelector] = useState(false);
 
   useEffect(() => {
@@ -863,22 +866,36 @@ export default function App() {
           )}
 
           {activeView === "library" && (
-            <LibraryArea
-              settings={settings}
-              bookmarkedMessages={bookmarkedMessages}
-              onToggleBookmark={handleToggleBookmark}
-              onUsePromptFormula={handleUsePromptFormula}
-              onExit={() => setActiveView("chat")}
-            />
+            <React.Suspense fallback={
+              <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#0b0f17] text-slate-400">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-3" />
+                <p className="text-xs font-sans font-medium tracking-wide">Memuat pustaka Maria...</p>
+              </div>
+            }>
+              <LibraryArea
+                settings={settings}
+                bookmarkedMessages={bookmarkedMessages}
+                onToggleBookmark={handleToggleBookmark}
+                onUsePromptFormula={handleUsePromptFormula}
+                onExit={() => setActiveView("chat")}
+              />
+            </React.Suspense>
           )}
 
           {activeView === "discover" && (
-            <DiscoverArea
-              settings={settings}
-              onSelectAgent={handleSelectAgent}
-              onUsePrompt={handleUsePromptFormula}
-              onExit={() => setActiveView("chat")}
-            />
+            <React.Suspense fallback={
+              <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#0b0f17] text-slate-400">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-emerald-500 mb-3" />
+                <p className="text-xs font-sans font-medium tracking-wide">Mengeksplorasi modul pintar...</p>
+              </div>
+            }>
+              <DiscoverArea
+                settings={settings}
+                onSelectAgent={handleSelectAgent}
+                onUsePrompt={handleUsePromptFormula}
+                onExit={() => setActiveView("chat")}
+              />
+            </React.Suspense>
           )}
         </main>
 
@@ -893,18 +910,25 @@ export default function App() {
             
             {/* Modal centerpiece card container */}
             <div className="relative w-full max-w-xl md:max-w-2xl bg-[#171717] rounded-3xl border border-zinc-850 shadow-2xl h-[85vh] max-h-[640px] flex flex-col overflow-hidden animate-fade-in z-55">
-              <SettingsDashboard
-                settings={settings}
-                onSaveSettings={(s) => {
-                  handleSaveSettings(s);
-                }}
-                onClearHistory={handleClearHistory}
-                messageCount={messages.length}
-                onClose={() => setIsSettingsOpen(false)}
-                onAddSystemNotification={handleAddSystemNotification}
-                onSimulateEmail={handleSimulateEmail}
-                onSimulatePush={handleSimulatePush}
-              />
+              <React.Suspense fallback={
+                <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#171717] text-zinc-400">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-zinc-500 mb-3" />
+                  <p className="text-xs font-sans font-medium tracking-wide">Memuat Dasbor Pengaturan...</p>
+                </div>
+              }>
+                <SettingsDashboard
+                  settings={settings}
+                  onSaveSettings={(s) => {
+                    handleSaveSettings(s);
+                  }}
+                  onClearHistory={handleClearHistory}
+                  messageCount={messages.length}
+                  onClose={() => setIsSettingsOpen(false)}
+                  onAddSystemNotification={handleAddSystemNotification}
+                  onSimulateEmail={handleSimulateEmail}
+                  onSimulatePush={handleSimulatePush}
+                />
+              </React.Suspense>
             </div>
           </div>
         )}
@@ -975,14 +999,14 @@ export default function App() {
                       <span className="text-[9px] uppercase font-bold tracking-wider text-slate-300 block font-sans">Pilih warna</span>
                       <div className="grid grid-cols-4 gap-1.5 justify-items-center">
                         {[
-                          { bg: "bg-[#10b981]", name: "Emerald" },
-                          { bg: "bg-[#3b82f6]", name: "Blue" },
-                          { bg: "bg-[#8b5cf6]", name: "Purple" },
-                          { bg: "bg-[#f43f5e]", name: "Rose" },
-                          { bg: "bg-[#f59e0b]", name: "Amber" },
-                          { bg: "bg-[#06b6d4]", name: "Cyan" },
-                          { bg: "bg-[#ec4899]", name: "Pink" },
-                          { bg: "bg-[#4b5563]", name: "Gray" }
+                          { bg: "bg-[#064e3b]", name: "Deep Emerald" },
+                          { bg: "bg-[#1e3a8a]", name: "Deep Blue" },
+                          { bg: "bg-[#581c87]", name: "Deep Purple" },
+                          { bg: "bg-[#881337]", name: "Deep Rose" },
+                          { bg: "bg-[#78350f]", name: "Deep Amber" },
+                          { bg: "bg-[#164e63]", name: "Deep Cyan" },
+                          { bg: "bg-[#831843]", name: "Deep Pink" },
+                          { bg: "bg-[#1e293b]", name: "Deep Slate" }
                         ].map((c) => (
                           <button
                             key={c.bg}
@@ -993,6 +1017,7 @@ export default function App() {
                             }}
                             className={`w-5.5 h-5.5 rounded-full ${c.bg} hover:scale-110 active:scale-90 transition-all border border-white/10 shrink-0 cursor-pointer`}
                             title={c.name}
+                            aria-label={`Ubah warna profil ke ${c.name}`}
                           />
                         ))}
                       </div>
