@@ -935,7 +935,7 @@ export default function App() {
                     setIsProfileOpen(false);
                     setShowColorSelector(false);
                   }} 
-                  className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer text-slate-400"
+                  className="p-1 rounded-full text-slate-305 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer"
                   title="Tutup"
                 >
                   <X className="w-4 h-4" />
@@ -972,7 +972,7 @@ export default function App() {
                   {/* Dynamic Color Popover */}
                   {showColorSelector && (
                     <div className="absolute top-[92px] left-1/2 transform -translate-x-1/2 bg-[#171a21] border border-slate-800 rounded-xl p-2.5 z-55 shadow-xl w-[180px] animate-fade-in space-y-1.5 text-center">
-                      <span className="text-[9px] uppercase font-bold tracking-wider text-slate-400 block font-sans">Pilih warna</span>
+                      <span className="text-[9px] uppercase font-bold tracking-wider text-slate-300 block font-sans">Pilih warna</span>
                       <div className="grid grid-cols-4 gap-1.5 justify-items-center">
                         {[
                           { bg: "bg-[#10b981]", name: "Emerald" },
@@ -1005,7 +1005,7 @@ export default function App() {
                   
                   {/* Nama tampilan */}
                   <div className="space-y-1">
-                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-1 font-sans">
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider pl-1 font-sans">
                       Nama tampilan
                     </label>
                     <input
@@ -1019,7 +1019,7 @@ export default function App() {
 
                   {/* Nama pengguna */}
                   <div className="space-y-1">
-                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-1 font-sans">
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider pl-1 font-sans">
                       Nama pengguna
                     </label>
                     <div className="relative">
@@ -1040,7 +1040,7 @@ export default function App() {
                   </div>
 
                   {/* Note about group chats */}
-                  <p className="text-[10.5px] text-slate-450 leading-normal pl-0.5 pt-0.5 select-none font-sans">
+                  <p className="text-[10.5px] text-slate-300 font-medium leading-normal pl-0.5 pt-0.5 select-none font-sans">
                     Profil Anda membantu orang mengenali Anda di obrolan grup.
                   </p>
                 </div>
@@ -1054,7 +1054,7 @@ export default function App() {
                     setIsProfileOpen(false);
                     setShowColorSelector(false);
                   }}
-                  className="px-4 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800/60 text-slate-400 hover:text-white transition-all cursor-pointer font-semibold"
+                  className="px-4 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800/60 text-slate-300 hover:text-white transition-all cursor-pointer font-semibold"
                 >
                   Batalkan
                 </button>
@@ -1114,14 +1114,14 @@ export default function App() {
               <h3 className="font-display font-medium text-white tracking-tight mb-2 text-base">
                 Hapus percakapan?
               </h3>
-              <p className="text-xs text-slate-400 mb-6 leading-relaxed">
+              <p className="text-xs text-slate-350 font-medium mb-6 leading-relaxed">
                 Apakah Anda yakin ingin menghapus percakapan <span className="font-semibold text-slate-200">"{(threads.find(t => t.id === threadToDeleteId))?.title || "Percakapan"}"</span> secara permanen dari riwayat Anda? Tindakan ini tidak dapat dibatalkan.
               </p>
               <div className="flex items-center justify-end gap-2 text-[11px] font-bold">
                 <button
                   type="button"
                   onClick={() => setThreadToDeleteId(null)}
-                  className="px-4 py-2 rounded-lg bg-transparent hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer font-semibold"
+                  className="px-4 py-2 rounded-lg bg-transparent hover:bg-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer font-semibold"
                 >
                   Batal
                 </button>
@@ -1147,17 +1147,17 @@ export default function App() {
             />
             {/* Modal Card */}
             <div className="relative bg-[#1e222b] border border-slate-800/80 rounded-2xl max-w-sm w-full p-6 shadow-2xl animate-fade-in z-55 text-slate-100">
-              <h3 className="font-display font-medium text-white tracking-tight mb-2 text-base">
+               <h3 className="font-display font-medium text-white tracking-tight mb-2 text-base">
                 Hapus riwayat obrolan?
               </h3>
-              <p className="text-xs text-slate-400 mb-6 leading-relaxed flex-col select-text">
+              <p className="text-xs text-slate-350 font-medium mb-6 leading-relaxed flex-col select-text">
                 Tindakan ini akan menghapus habis seluruh percakapan yang tersimpan dengan asisten Maria secara permanen dari perangkat ini. Apakah Anda ingin melanjutkan?
               </p>
               <div className="flex items-center justify-end gap-2 text-[11px] font-bold">
                 <button
                   type="button"
                   onClick={() => setIsClearingAllHistory(false)}
-                  className="px-4 py-2 rounded-lg bg-transparent hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer font-semibold"
+                  className="px-4 py-2 rounded-lg bg-transparent hover:bg-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer font-semibold"
                 >
                   Batal
                 </button>

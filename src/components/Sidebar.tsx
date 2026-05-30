@@ -282,7 +282,7 @@ export default function Sidebar({
               className={`w-full py-2.5 px-3 rounded-lg transition-all text-xs font-semibold flex items-center gap-3 text-left cursor-pointer ${
                 activeView === "library"
                   ? "text-white bg-[#1c1e24] font-semibold"
-                  : "text-slate-400 hover:text-slate-100 hover:bg-[#1a1c23]/60"
+                  : "text-slate-300 hover:text-white hover:bg-[#1a1c23]/60"
               }`}
             >
               <FileText className="w-4 h-4" />
@@ -300,7 +300,7 @@ export default function Sidebar({
               className={`w-full py-2.5 px-3 rounded-lg transition-all text-xs font-semibold flex items-center gap-3 text-left cursor-pointer ${
                 activeView === "discover"
                   ? "text-white bg-[#1c1e24] font-semibold"
-                  : "text-slate-400 hover:text-slate-100 hover:bg-[#1a1c23]/60"
+                  : "text-slate-300 hover:text-white hover:bg-[#1a1c23]/60"
               }`}
             >
               <Compass className="w-4 h-4" />
@@ -315,7 +315,7 @@ export default function Sidebar({
                   onToggleCollapse(); // Auto-close sidebar drawer on mobile for seamless navigation
                 }
               }}
-              className="w-full py-2.5 px-3 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-[#1a1c23]/60 transition-all text-xs font-semibold flex items-center gap-3 text-left cursor-pointer"
+              className="w-full py-2.5 px-3 rounded-lg text-slate-300 hover:text-white hover:bg-[#1a1c23]/60 transition-all text-xs font-semibold flex items-center gap-3 text-left cursor-pointer"
             >
               <Settings className="w-4 h-4" />
               <span>Pengaturan</span>
@@ -324,7 +324,7 @@ export default function Sidebar({
 
           {/* CHATS Section Header */}
           <div className="space-y-1.5 pt-1">
-            <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-3 select-none">
+            <span className="block text-[10px] font-extrabold text-slate-350 uppercase tracking-widest pl-3 select-none">
               CHATS
             </span>
 
@@ -340,7 +340,7 @@ export default function Sidebar({
                     className={`group relative w-full rounded-xl flex items-center justify-between text-[11px] font-medium leading-tight text-left transition-all duration-200 ${
                       isActive 
                         ? "bg-[#1c1e24] text-white font-semibold" 
-                        : "text-slate-400 hover:text-slate-200 hover:bg-[#15171d]/60"
+                        : "text-slate-300 hover:text-white hover:bg-[#15171d]/60"
                     }`}
                   >
                     {isEditing ? (
@@ -514,7 +514,7 @@ export default function Sidebar({
                 <span className="block text-xs font-bold text-white tracking-tight leading-none mb-1">
                   Upgrade to Maria Plus!
                 </span>
-                <span className="block text-[10px] text-slate-400 leading-snug">
+                <span className="block text-[10px] text-slate-300 font-medium leading-snug">
                   Unlock faster responses & unlimited chats with Maria Plus.
                 </span>
               </div>
@@ -605,7 +605,7 @@ export default function Sidebar({
                   <h3 className="font-display font-bold text-white text-lg sm:text-xl tracking-tight">
                     Upgrade ke MARIA Plus!
                   </h3>
-                  <p className="text-xs text-slate-400 max-w-sm mx-auto leading-normal">
+                  <p className="text-xs text-slate-300 max-w-sm mx-auto leading-normal">
                     Rasakan kekuatan asisten super instan tanpa batasan harian, dan fitur kustomisasi terlengkap.
                   </p>
                 </div>
@@ -618,7 +618,7 @@ export default function Sidebar({
                         type="button"
                         onClick={() => setUpgradePlan("monthly")}
                         className={`py-1.5 px-4 text-[10px] font-bold rounded-lg transition-all ${
-                          upgradePlan === "monthly" ? `${getAccentBgClass()} text-white shadow-md` : "text-slate-400 hover:text-white"
+                          upgradePlan === "monthly" ? `${getAccentBgClass()} text-white shadow-md` : "text-slate-300 hover:text-white"
                         }`}
                       >
                         Bulanan
@@ -627,7 +627,7 @@ export default function Sidebar({
                         type="button"
                         onClick={() => setUpgradePlan("yearly")}
                         className={`relative py-1.5 px-4 text-[10px] font-bold rounded-lg transition-all flex items-center gap-1 ${
-                          upgradePlan === "yearly" ? `${getAccentBgClass()} text-white shadow-md` : "text-slate-400 hover:text-white"
+                          upgradePlan === "yearly" ? `${getAccentBgClass()} text-white shadow-md` : "text-slate-300 hover:text-white"
                         }`}
                       >
                         Tahunan
@@ -645,7 +645,7 @@ export default function Sidebar({
                         ✓ Menghemat <strong className="font-bold">Rp 960.000 / tahun</strong> (Hanya setara Rp 49.000 / bln!)
                       </span>
                     ) : (
-                      <span className="text-slate-400">
+                      <span className="text-slate-300">
                         Hemat Rp 960.000 jika Anda beralih ke <strong className="text-emerald-400 cursor-pointer hover:underline" onClick={() => setUpgradePlan("yearly")}>Paket Tahunan</strong>
                       </span>
                     )}
@@ -660,7 +660,7 @@ export default function Sidebar({
                       {upgradePlan === "yearly" ? "Rp 49.000" : "Rp 129.000"}
                     </span>
                     <div className="text-left font-sans text-xs">
-                      <div className="text-slate-400 font-medium leading-none">/ bulan</div>
+                      <div className="text-slate-300 font-medium leading-none">/ bulan</div>
                       <div className="text-[9px] text-[#22c55e] font-bold mt-0.5 px-1 py-[1px] rounded bg-emerald-500/10 inline-block border border-emerald-500/10">
                         Termasuk PPN 11%
                       </div>
@@ -671,7 +671,7 @@ export default function Sidebar({
                       Ditagih sebesar Rp 588.000 / tahun setelah dipotong diskon 60%
                     </span>
                   ) : (
-                    <span className="block text-[9px] text-slate-400 pt-1">
+                    <span className="block text-[9px] text-slate-300 pt-1">
                       Ditagih per bulan secara fleksibel dan bebas dibatalkan sewaktu-waktu.
                     </span>
                   )}
@@ -679,7 +679,7 @@ export default function Sidebar({
 
                 {/* Payment Methods Selector inside Modal */}
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-400">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
                     <span>Metode Pembayaran</span>
                     <span className="text-[9px] text-emerald-400 font-medium bg-emerald-500/5 px-1.5 py-0.5 rounded border border-emerald-500/10">Instan & Terverifikasi</span>
                   </div>
@@ -692,7 +692,7 @@ export default function Sidebar({
                       className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
                         paymentMethod === "qris"
                           ? "bg-emerald-500/10 border-emerald-500/80 text-white"
-                          : "bg-slate-850/40 border-slate-800 hover:border-slate-700 text-slate-400"
+                          : "bg-slate-850/40 border-slate-800 hover:border-slate-700 text-slate-300"
                       }`}
                     >
                       <span className="text-[10px] font-bold">QRIS / E-Money</span>
@@ -706,7 +706,7 @@ export default function Sidebar({
                       className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
                         paymentMethod === "bank"
                           ? "bg-blue-500/10 border-blue-500/80 text-white"
-                          : "bg-slate-850/40 border-slate-800 hover:border-slate-700 text-slate-400"
+                          : "bg-slate-850/40 border-slate-800 hover:border-slate-700 text-slate-300"
                       }`}
                     >
                       <span className="text-[10px] font-bold">Virtual Account</span>
@@ -720,7 +720,7 @@ export default function Sidebar({
                       className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
                         paymentMethod === "gpay"
                           ? "bg-slate-100 text-slate-900 border-white font-semibold"
-                          : "bg-slate-850/40 border-slate-800 hover:border-slate-700 text-slate-400"
+                          : "bg-slate-850/40 border-slate-800 hover:border-slate-700 text-slate-300"
                       }`}
                     >
                       <span className="text-[10px] font-bold">Google Pay</span>
@@ -796,7 +796,7 @@ export default function Sidebar({
                 </form>
 
                 <div className="text-center">
-                  <span className="text-[9px] text-slate-500 leading-normal block">
+                  <span className="text-[9px] text-slate-350 leading-normal block">
                     Metode pembayaran terenkripsi 250+ bit SSL aman. Batalkan langganan kapan saja dengan mudah.
                   </span>
                 </div>

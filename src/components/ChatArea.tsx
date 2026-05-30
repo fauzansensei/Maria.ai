@@ -834,7 +834,7 @@ export default function ChatArea({
                 </span>
               </div>
               
-              <p className="text-[11px] text-slate-400 flex items-center gap-1.5 leading-none mt-1">
+              <p className="text-[11px] text-slate-600 font-medium flex items-center gap-1.5 leading-none mt-1">
                 {isLoading ? (
                   <span className="text-blue-650 animate-pulse font-bold">Sedang memproses instruksi cerdas...</span>
                 ) : (
@@ -920,14 +920,14 @@ export default function ChatArea({
               <button
                 type="button"
                 onClick={onToggleSidebar}
-                className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg border border-slate-200 cursor-pointer transition-all flex items-center justify-center shadow-3xs"
+                className="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg border border-slate-200 cursor-pointer transition-all flex items-center justify-center shadow-3xs"
                 title={isSidebarCollapsed ? "Tampilkan Menu" : "Sembunyikan Menu"}
               >
                 <Menu className="w-4 h-4" />
               </button>
             )}
 
-            <div className="hidden lg:block text-[10px] font-bold text-slate-400 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md font-mono uppercase tracking-wider">
+            <div className="hidden lg:block text-[10px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md font-mono uppercase tracking-wider">
               {new Date().toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" })}
             </div>
           </div>
@@ -987,11 +987,11 @@ export default function ChatArea({
                     className={`flex flex-col space-y-1 group ${isAi ? "items-start" : "items-end"}`}
                   >
                     {/* Role Header label */}
-                    <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                      <span className="font-bold text-slate-500">
+                    <div className="flex items-center gap-2 text-[10px] text-slate-500 font-medium">
+                      <span className="font-bold text-slate-700">
                         {isAi ? "Maria AI" : greetingName}
                       </span>
-                      <span className="text-slate-200">•</span>
+                      <span className="text-slate-300 font-extrabold">•</span>
                       <span>
                         {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
@@ -1315,7 +1315,7 @@ export default function ChatArea({
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     disabled={isLoading}
-                    className="w-full bg-slate-100 border-none rounded-xl py-3.5 pl-[62px] pr-14 text-xs focus:ring-1 focus:ring-slate-300 hover:bg-slate-200/50 focus:bg-white outline-none transition-all duration-200 placeholder:text-slate-400"
+                    className="w-full bg-slate-100 border-none rounded-xl py-3.5 pl-[62px] pr-14 text-xs text-slate-800 font-medium focus:ring-1 focus:ring-slate-300 hover:bg-slate-200/50 focus:bg-white outline-none transition-all duration-200 placeholder:text-slate-500"
                   />
                   <button
                     type="submit"
@@ -1332,9 +1332,9 @@ export default function ChatArea({
               )}
             </form>
 
-            <div className="flex items-center justify-between text-[10px] text-slate-400 px-2 mt-2 font-mono uppercase tracking-tight">
+            <div className="flex items-center justify-between text-[10px] text-slate-500 px-2 mt-2 font-mono uppercase tracking-tight font-medium">
               <span>Model NLP: Gemini 3.5 Flash (Advanced Cognition)</span>
-              <span className="flex items-center gap-1 font-sans text-[9px] uppercase font-bold text-slate-400">
+              <span className="flex items-center gap-1 font-sans text-[9px] uppercase font-bold text-slate-600">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                 Enter untuk kirim
               </span>
