@@ -125,6 +125,7 @@ export default function WidgetsList({
                       type="checkbox"
                       checked={r.done}
                       onChange={() => handleToggleReminder(r.id)}
+                      aria-label={`Tandai selesai pengingat: ${r.text}`}
                       className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer"
                     />
                     <span className={`text-[11px] truncate leading-normal ${r.done ? "text-slate-500 line-through font-medium" : "text-slate-700"}`}>
@@ -142,6 +143,7 @@ export default function WidgetsList({
                     <button
                       type="button"
                       onClick={() => handleDeleteReminder(r.id)}
+                      aria-label={`Hapus agenda: ${r.text}`}
                       className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-300 hover:text-red-500 rounded transition-all cursor-pointer"
                     >
                       <X className="w-3 h-3" />
@@ -158,10 +160,12 @@ export default function WidgetsList({
                 placeholder="Tambahkan agenda..."
                 value={newReminderText}
                 onChange={(e) => setNewReminderText(e.target.value)}
+                aria-label="Isi agenda baru"
                 className="flex-1 px-2.5 py-1 text-[11px] bg-slate-50 hover:bg-slate-100 focus:bg-white rounded-md border border-slate-200 outline-none focus:border-blue-500 placeholder:text-slate-400 transition-all"
               />
               <button
                 type="submit"
+                aria-label="Tambah agenda baru"
                 className="p-1 rounded bg-slate-900 text-white hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />

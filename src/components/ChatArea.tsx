@@ -775,6 +775,7 @@ export default function ChatArea({
             </div>
             <button
               onClick={() => setIsWidgetPanelExpanded(false)}
+              aria-label="Tutup Dasbor Personal"
               className="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-650 cursor-pointer transition-colors"
             >
               <X className="w-3.5 h-3.5" />
@@ -811,6 +812,7 @@ export default function ChatArea({
               <button
                 onClick={() => setIsWidgetPanelExpanded(true)}
                 title="Buka Dasbor Widgets"
+                aria-label="Buka Dasbor Widgets"
                 className="hidden md:block p-1.5 rounded hover:bg-slate-100 text-slate-500 border border-slate-200 cursor-pointer transition-colors"
               >
                 <LayoutDashboard className="w-4 h-4" />
@@ -855,6 +857,7 @@ export default function ChatArea({
               <button
                 type="button"
                 onClick={() => setIsNotificationTrayOpen(!isNotificationTrayOpen)}
+                aria-label="Daftar Pemberitahuan"
                 className="relative p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg border border-slate-200 cursor-pointer transition-all flex items-center justify-center"
               >
                 <Bell className="w-4 h-4" />
@@ -920,8 +923,9 @@ export default function ChatArea({
               <button
                 type="button"
                 onClick={onToggleSidebar}
+                aria-label={isSidebarCollapsed ? "Tampilkan Menu Samping" : "Sembunyikan Menu Samping"}
                 className="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg border border-slate-200 cursor-pointer transition-all flex items-center justify-center shadow-3xs"
-                title={isSidebarCollapsed ? "Tampilkan Menu" : "Sembunyikan Menu"}
+                title={isSidebarCollapsed ? "Tampilkan Menu Samping" : "Sembunyikan Menu Samping"}
               >
                 <Menu className="w-4 h-4" />
               </button>
@@ -947,7 +951,7 @@ export default function ChatArea({
                 <h2 className="font-display font-bold text-xl text-slate-800 tracking-tight">
                   Halo, {greetingName}! Kembali Bersama Maria AI.
                 </h2>
-                <p className="text-xs text-slate-400 max-w-lg leading-relaxed">
+                <p className="text-xs text-slate-600 max-w-lg leading-relaxed font-medium">
                   Asisten bertenaga NLP canggih Anda yang dilengkapi memori konteks penuh, pemahaman nuansa emosional kata, dan penyesuaian personalisasi tata letak berdasar keinginan Anda.
                 </p>
               </div>
@@ -968,7 +972,7 @@ export default function ChatArea({
                         &rarr;
                       </span>
                     </div>
-                    <p className="text-[10.5px] text-slate-400 leading-normal">
+                    <p className="text-[10.5px] text-slate-600 leading-normal font-medium">
                       {s.desc}
                     </p>
                   </button>
@@ -1188,10 +1192,10 @@ export default function ChatArea({
               {/* Loader Wave panel */}
               {isLoading && (
                 <div className="flex flex-col items-start space-y-1.5 animate-pulse-slow">
-                  <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
-                    <span className="font-bold text-slate-500">Maria AI</span>
-                    <span className="text-slate-200">•</span>
-                    <span className="text-slate-400 flex items-center gap-1">
+                  <div className="flex items-center gap-1.5 text-[10px] text-slate-600 font-medium">
+                    <span className="font-bold text-slate-650">Maria AI</span>
+                    <span className="text-slate-400 font-extrabold">•</span>
+                    <span className="text-slate-600 flex items-center gap-1 font-semibold">
                       Sedang bernalar secara interaktif...
                     </span>
                   </div>
@@ -1302,6 +1306,7 @@ export default function ChatArea({
                       type="button"
                       onClick={startRecording}
                       disabled={isLoading}
+                      aria-label="Rekam Memo Suara"
                       className="p-1.5 cursor-pointer text-slate-455 hover:text-red-500 hover:bg-slate-200/60 rounded-lg transition-all"
                       title="Rekam Memo Suara"
                     >
@@ -1315,11 +1320,13 @@ export default function ChatArea({
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     disabled={isLoading}
+                    aria-label="Input Chat Utama"
                     className="w-full bg-slate-100 border-none rounded-xl py-3.5 pl-[62px] pr-14 text-xs text-slate-800 font-medium focus:ring-1 focus:ring-slate-300 hover:bg-slate-200/50 focus:bg-white outline-none transition-all duration-200 placeholder:text-slate-500"
                   />
                   <button
                     type="submit"
                     disabled={(!inputText.trim() && !attachedImage && !voiceBase64) || isLoading}
+                    aria-label="Kirim Pesan"
                     className={`absolute right-2.5 p-2 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 text-white ${
                       (inputText.trim() || attachedImage || voiceBase64) && !isLoading
                         ? `${themeStyle.primary.split(" ")[0]} shadow-sm`
