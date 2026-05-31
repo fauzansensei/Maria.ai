@@ -47,11 +47,12 @@
         overflow: hidden;
       }
       .sk-sidebar {
-        width: 260px;
-        background-color: #0f172a;
+        width: 280px;
+        background-color: #0e0f12;
+        border-right: 1px solid #1e2025;
         display: flex;
         flex-direction: column;
-        padding: 24px 16px;
+        padding: 24px 20px;
         box-sizing: border-box;
         flex-shrink: 0;
       }
@@ -65,7 +66,7 @@
       }
       .sk-header {
         height: 56px;
-        border-bottom: 1px solid #f1f5f9;
+        border-bottom: 1px solid #e2e8f0;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -87,7 +88,7 @@
       }
       .sk-bottom-bar {
         padding: 16px;
-        border-top: 1px solid #f1f5f9;
+        border-top: 1px solid #e2e8f0;
         background-color: #ffffff;
         box-sizing: border-box;
         display: flex;
@@ -120,7 +121,7 @@
         50% { opacity: 0.35; }
       }
       
-      @media (max-width: 768px) {
+      @media (max-width: 1023px) {
         .sk-sidebar {
           display: none;
         }
@@ -138,46 +139,83 @@
     <div id="root">
       <!-- High-Fidelity Static Layout Skeleton (renders in ~0.1s on Mobile & Desktop) -->
       <div class="sk-container">
-        <div class="sk-sidebar">
-          <div class="sk-dark-shimmer" style="height: 38px; margin-bottom: 24px; width: 75%;"></div>
-          <div class="sk-dark-shimmer" style="height: 48px; margin-bottom: 16px; border-radius: 12px;"></div>
-          <div class="sk-dark-shimmer" style="height: 36px; margin-bottom: 12px; width: 85%;"></div>
-          <div class="sk-dark-shimmer" style="height: 36px; margin-bottom: 12px; width: 90%;"></div>
-          <div class="sk-dark-shimmer" style="height: 36px; margin-bottom: 12px; width: 70%;"></div>
+        <div class="sk-sidebar" id="maria-ai-sidebar-skeleton">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 24px;">
+            <div class="sk-dark-shimmer" style="height: 32px; width: 32px; border-radius: 10px; background-color: #3b82f6;"></div>
+            <div style="color: white; font-weight: 600; font-family: 'Outfit', sans-serif; font-size: 16px; letter-spacing: -0.025em;">Maria AI</div>
+          </div>
+          <div class="sk-dark-shimmer" style="height: 48px; margin-bottom: 20px; border-radius: 12px; opacity: 0.8;"></div>
+          <!-- Menu links mimicking exact Sidebar items -->
+          <div style="font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; color: #94a3b8; display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px; padding-left: 8px;">
+            <div style="display: flex; align-items: center; gap: 12px; opacity: 0.8;">
+              <div style="width: 6px; height: 6px; border-radius: 50%; background-color: #3b82f6;"></div>
+              <span>Library</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; opacity: 0.8;">
+              <div style="width: 6px; height: 6px; border-radius: 50%; background-color: #10b981;"></div>
+              <span>Discover</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; opacity: 0.8;">
+              <div style="width: 6px; height: 6px; border-radius: 50%; background-color: #8b5cf6;"></div>
+              <span>Pengaturan</span>
+            </div>
+          </div>
           <div style="flex: 1;"></div>
-          <div class="sk-dark-shimmer" style="height: 48px; border-radius: 12px;"></div>
+          <div class="sk-dark-shimmer" style="height: 48px; border-radius: 12px; opacity: 0.7;"></div>
         </div>
         
         <div class="sk-main">
           <div class="sk-header">
-            <div class="sk-shimmer" style="width: 100px; height: 22px;"></div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div class="sk-shimmer" style="width: 8px; height: 8px; border-radius: 50%; background-color: #10b981;"></div>
+              <div style="font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; text-transform: uppercase;">Maria AI</div>
+            </div>
             <div style="display: flex; gap: 12px;">
-              <div class="sk-shimmer" style="width: 30px; height: 30px; border-radius: 50%;"></div>
-              <div class="sk-shimmer" style="width: 30px; height: 30px; border-radius: 50%;"></div>
+              <div class="sk-shimmer" style="width: 32px; height: 32px; border-radius: 8px;"></div>
+              <div class="sk-shimmer" style="width: 32px; height: 32px; border-radius: 8px;"></div>
             </div>
           </div>
           
           <div class="sk-content">
-            <div class="sk-shimmer" style="width: 48px; height: 48px; border-radius: 12px; margin-bottom: 24px; background-color: #2563eb; opacity: 0.85;"></div>
-            <div class="sk-shimmer" style="width: 240px; height: 24px; margin-bottom: 12px;"></div>
-            <div class="sk-shimmer" style="width: 320px; height: 14px; margin-bottom: 32px; max-width: 100%;"></div>
+            <div class="sk-shimmer" style="width: 64px; height: 64px; border-radius: 16px; margin-bottom: 24px; background-color: #3b82f6; opacity: 0.95; display: flex; align-items: center; justify-content: center;">
+              <div style="width: 24px; height: 24px; border-radius: 50%; background-color: #ffffff; opacity: 0.4; animation: sk-pulse-anim 1.4s infinite ease-in-out;"></div>
+            </div>
+            <h2 style="font-family: 'Outfit', sans-serif; font-size: 21px; font-weight: 700; color: #1e293b; margin: 0 0 10px 0; letter-spacing: -0.025em; text-align: center;">Halo! Kembali Bersama Maria AI.</h2>
+            <p style="font-family: 'Inter', sans-serif; font-size: 11.5px; color: #475569; margin: 0 0 32px 0; text-align: center; max-width: 480px; line-height: 1.6; font-weight: 500;">
+              Asisten bertenaga NLP canggih Anda yang dilengkapi memori konteks penuh untuk membantu produktivitas Anda.
+            </p>
             
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; width: 100%; box-sizing: border-box;">
-              <div style="border: 1px solid #f1f5f9; padding: 16px; border-radius: 12px; background-color: #f8fafc;">
-                <div class="sk-shimmer" style="width: 110px; height: 14px; margin-bottom: 8px;"></div>
-                <div class="sk-shimmer" style="width: 85%; height: 10px;"></div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; width: 100%; box-sizing: border-box;">
+              <!-- starter 1 -->
+              <div style="border: 1px solid #e2e8f0; padding: 14px 16px; border-radius: 12px; background-color: #f8fafc; text-align: left; box-sizing: border-box;">
+                <div style="font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 705; color: #1e293b; margin-bottom: 4px;">Email Profesional</div>
+                <div style="font-family: 'Inter', sans-serif; font-size: 10.5px; color: #64748b; line-height: 1.4; font-weight: 500;">Tulis email negosiasi cuti atau tanggapan keluhan.</div>
               </div>
-              <div style="border: 1px solid #f1f5f9; padding: 16px; border-radius: 12px; background-color: #f8fafc;">
-                <div class="sk-shimmer" style="width: 130px; height: 14px; margin-bottom: 8px;"></div>
-                <div class="sk-shimmer" style="width: 75%; height: 10px;"></div>
+              <!-- starter 2 -->
+              <div style="border: 1px solid #e2e8f0; padding: 14px 16px; border-radius: 12px; background-color: #f8fafc; text-align: left; box-sizing: border-box;">
+                <div style="font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 705; color: #1e293b; margin-bottom: 4px;">Analisis Ide Bisnis</div>
+                <div style="font-family: 'Inter', sans-serif; font-size: 10.5px; color: #64748b; line-height: 1.4; font-weight: 500;">Minta pandangan Maria untuk meriset kompetitor.</div>
+              </div>
+              <!-- starter 3 -->
+              <div style="border: 1px solid #e2e8f0; padding: 14px 16px; border-radius: 12px; background-color: #f8fafc; text-align: left; box-sizing: border-box;">
+                <div style="font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 705; color: #1e293b; margin-bottom: 4px;">Koreksi Tata Bahasa</div>
+                <div style="font-family: 'Inter', sans-serif; font-size: 10.5px; color: #64748b; line-height: 1.4; font-weight: 500;">Perbaiki tulisan agar rapi, formal, dan meyakinkan.</div>
+              </div>
+              <!-- starter 4 -->
+              <div style="border: 1px solid #e2e8f0; padding: 14px 16px; border-radius: 12px; background-color: #f8fafc; text-align: left; box-sizing: border-box;">
+                <div style="font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 705; color: #1e293b; margin-bottom: 4px;">Buat Rencana Belajar</div>
+                <div style="font-family: 'Inter', sans-serif; font-size: 10.5px; color: #64748b; line-height: 1.4; font-weight: 500;">Mendesain jadwal belajar topik baru selama 30 hari.</div>
               </div>
             </div>
           </div>
           
           <div class="sk-bottom-bar">
             <div class="sk-bottom-input">
-              <div class="sk-shimmer" style="width: 140px; height: 14px; background-color: #cbd5e1;"></div>
-              <div class="sk-shimmer" style="width: 24px; height: 24px; border-radius: 50%; background-color: #cbd5e1;"></div>
+              <div style="font-family: 'Inter', sans-serif; font-size: 11px; color: #94a3b8; font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                <div style="width: 5px; height: 5px; border-radius: 50%; background-color: #94a3b8; opacity: 0.6;"></div>
+                <span>Tanya Maria...</span>
+              </div>
+              <div class="sk-shimmer" style="width: 28px; height: 28px; border-radius: 8px; background-color: #cbd5e1; opacity: 0.6;"></div>
             </div>
           </div>
         </div>
