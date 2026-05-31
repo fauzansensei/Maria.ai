@@ -192,6 +192,10 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false); // Controls responsive drawer tracker
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
+    const saved = localStorage.getItem("maria_is_logged_in");
+    return saved !== "false"; // default is true (logged in)
+  });
   const [profileDisplayName, setProfileDisplayName] = useState(() => settings.username || "basit fauzan");
   const [profileUsername, setProfileUsername] = useState(() => localStorage.getItem("maria_username_handle") || "@basitfauzan42");
   const [profileAvatarBg, setProfileAvatarBg] = useState(() => localStorage.getItem("maria_avatar_bg_color") || "bg-[#064e3b]"); // premium deep green bg
@@ -863,6 +867,7 @@ export default function App() {
           useInitialsAvatarProp={profileUseInitials}
           profileAvatarBgProp={profileAvatarBg}
           profileUsernameHandleProp={profileUsername}
+          isLoggedIn={isLoggedIn}
         />
 
         {/* Center Main Dynamic Workspace */}
@@ -872,7 +877,7 @@ export default function App() {
               messages={messages}
               isLoading={isLoading}
               onSendMessage={handleSendMessage}
-              settings={settings}
+              settings={isLoggedIn ? settings : { ...settings, username: "user" }}
               notifications={notifications}
               onMarkNotificationRead={handleMarkNotificationRead}
               onClearNotifications={handleClearNotifications}
@@ -974,7 +979,7 @@ export default function App() {
               {/* Modal Header */}
               <div className="flex items-center justify-between p-4 pb-2">
                 <h3 className="font-sans font-semibold text-white text-[15px]">
-                  Edit profil
+                  {isLoggedIn ? "Edit profil" : "Masuk ke Akun"}
                 </h3>
                 <button 
                   type="button" 
@@ -1006,7 +1011,7 @@ export default function App() {
                   {profileUseInitials ? (
                     <div className={`w-[84px] h-[84px] rounded-full ${profileAvatarBg} flex items-center justify-center border border-slate-700 shadow-lg text-white font-bold text-2xl select-none transition-all duration-350`}>
                       {(() => {
-                        const name = profileDisplayName || "basit fauzan";
+                        const name = isLoggedIn ? (profileDisplayName || "basit fauzan") : "user";
                         const parts = name.trim().split(/\s+/);
                         if (parts.length === 0 || !parts[0]) return "P";
                         if (parts.length === 1) return parts[0].substring(0, Math.min(2, parts[0].length)).toUpperCase();
@@ -1167,6 +1172,25 @@ export default function App() {
 
               {/* Modal Footer Buttons */}
               <div className="flex items-center justify-end gap-2.5 p-4 pt-1.5 pb-4 font-bold text-[11px]">
+                {isLoggedIn && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsLoggedIn(false);
+                      localStorage.setItem("maria_is_logged_in", "false");
+                      setIsProfileOpen(false);
+                      setShowColorSelector(false);
+                      handleAddSystemNotification(
+                        "Keluar Akun",
+                        "Anda telah keluar ke akun tamu (user).",
+                        "info"
+                      );
+                    }}
+                    className="mr-auto px-3.5 py-2.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-xl transition-all font-semibold"
+                  >
+                    Keluar
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -1203,20 +1227,28 @@ export default function App() {
                     // 5. Save the custom uploaded or preset avatar URL
                     localStorage.setItem("maria_user_avatar", profileAvatarUrl);
 
+                    // Mark as logged in if they were not logged in!
+                    if (!isLoggedIn) {
+                      setIsLoggedIn(true);
+                      localStorage.setItem("maria_is_logged_in", "true");
+                    }
+
                     // Hide modal
                     setIsProfileOpen(false);
                     setShowColorSelector(false);
 
                     // Toast success message
                     handleAddSystemNotification(
-                      "Profil Diperbarui",
-                      `Profil Anda diubah menjadi ${finalDisplayName} (${finalUsername}).`,
+                      isLoggedIn ? "Profil Diperbarui" : "Berhasil Masuk Akun",
+                      isLoggedIn 
+                        ? `Profil Anda diubah menjadi ${finalDisplayName} (${finalUsername}).`
+                        : `Halo ${finalDisplayName}! Selamat datang kembali di Maria AI.`,
                       "success"
                     );
                   }}
                   className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold transition-all shadow-md active:scale-95 cursor-pointer"
                 >
-                  Simpan
+                  {isLoggedIn ? "Simpan" : "Masuk"}
                 </button>
               </div>
             </div>
@@ -1367,7 +1399,9 @@ export default function App() {
 
                   {/* Body Content */}
                   <div className="space-y-3">
-                    <p className="text-[11px] font-medium text-emerald-300">Halo Kak Basit,</p>
+                    <p className="text-[11px] font-medium text-emerald-300">
+                      Halo Kak {isLoggedIn ? (settings.username || "Basit") : "User"},
+                    </p>
                     
                     <div className="p-4 bg-slate-900 border border-slate-800/40 rounded-xl text-[11px] text-zinc-200 select-text leading-relaxed">
                       {simulatedEmail.body}

@@ -721,7 +721,7 @@ export default function SettingsDashboard({
       const idx = Math.floor(Math.random() * 2);
       title = idx === 0 ? "📅 Agenda Rutin Belajar" : "⏰ Batas Waktu Tugas Codex";
       body = idx === 0 
-        ? "Kak Basit, sesi tinjauan metode Agile & Scrum akan dimulai dalam 15 menit. Siapkan catatanmu ya!" 
+        ? `Kak ${settings.username || "Basit"}, sesi tinjauan metode Agile & Scrum akan dimulai dalam 15 menit. Siapkan catatanmu ya!` 
         : "Tugas Codex 'Refactoring Navigation' dijadwalkan selesai hari ini pukul 17.00. Butuh bantuan Maria?";
       systemType = "reminder";
     } else if (type === "updates") {

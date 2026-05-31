@@ -48,6 +48,7 @@ interface SidebarProps {
   useInitialsAvatarProp?: boolean;
   profileAvatarBgProp?: string;
   profileUsernameHandleProp?: string;
+  isLoggedIn?: boolean;
 }
 
 // Preset Mock Chats matching Screenshot list exactly & loaded dynamically
@@ -143,7 +144,8 @@ export default function Sidebar({
   profileAvatarProp,
   useInitialsAvatarProp,
   profileAvatarBgProp,
-  profileUsernameHandleProp
+  profileUsernameHandleProp,
+  isLoggedIn = true
 }: SidebarProps) {
   const currentTheme = THEME_OPTIONS.find(t => t.value === settings.theme) || THEME_OPTIONS[0];
 
@@ -178,13 +180,21 @@ export default function Sidebar({
   const [paymentMethod, setPaymentMethod] = useState<"gpay" | "qris" | "bank">("qris");
 
   // Load avatar and user properties precisely matching Settings / LocalStorage / Props
-  const userAvatar = profileAvatarProp !== undefined ? profileAvatarProp : (localStorage.getItem("maria_user_avatar") || "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150&h=150&fit=crop&q=80");
-  const userDisplayName = settings.username || "Pengguna";
-  const userEmail = localStorage.getItem("maria_user_email") || "pengguna@example.com";
+  const userAvatar = isLoggedIn
+    ? (profileAvatarProp !== undefined ? profileAvatarProp : (localStorage.getItem("maria_user_avatar") || "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150&h=150&fit=crop&q=80"))
+    : "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&q=80";
+  const userDisplayName = isLoggedIn ? (settings.username || "Pengguna") : "user";
+  const userEmail = isLoggedIn ? (localStorage.getItem("maria_user_email") || "pengguna@example.com") : "user@example.com";
 
-  const useInitialsAvatar = useInitialsAvatarProp !== undefined ? useInitialsAvatarProp : (localStorage.getItem("maria_use_initials_avatar") !== "false"); // default to true
-  const avatarBgColor = profileAvatarBgProp !== undefined ? profileAvatarBgProp : (localStorage.getItem("maria_avatar_bg_color") || "bg-[#064e3b]");
-  const userHandle = profileUsernameHandleProp !== undefined ? profileUsernameHandleProp : (localStorage.getItem("maria_username_handle") || "@basitfauzan42");
+  const useInitialsAvatar = isLoggedIn
+    ? (useInitialsAvatarProp !== undefined ? useInitialsAvatarProp : (localStorage.getItem("maria_use_initials_avatar") !== "false"))
+    : true; // default to initials for "user"
+  const avatarBgColor = isLoggedIn
+    ? (profileAvatarBgProp !== undefined ? profileAvatarBgProp : (localStorage.getItem("maria_avatar_bg_color") || "bg-[#064e3b]"))
+    : "bg-slate-600";
+  const userHandle = isLoggedIn
+    ? (profileUsernameHandleProp !== undefined ? profileUsernameHandleProp : (localStorage.getItem("maria_username_handle") || "@basitfauzan42"))
+    : "@user";
 
   const getInitials = (name: string) => {
     const parts = name.trim().split(/\s+/);
