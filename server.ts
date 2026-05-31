@@ -3,12 +3,16 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import compression from "compression";
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = 3000;
+
+// Enable gzip/deflate resource compression for high PageSpeed performance scores
+app.use(compression());
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -306,9 +310,21 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    // Serve production static build
+    // Serve production static build with long-term immutable caching headers to maximize PageSpeed Page Performance metrics (LCP/FCP)
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, {
+      maxAge: "1y", // Cache static assets heavily for 1 year
+      immutable: true, // Mark assets as immutable so the browser doesn't send revalidation requests
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith(".html")) {
+          // Do NOT cache HTML files to ensure updates are fetched instantly by users
+          res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        } else {
+          // Cache JS, CSS, SVG, and other bundles aggressively
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        }
+      }
+    }));
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });

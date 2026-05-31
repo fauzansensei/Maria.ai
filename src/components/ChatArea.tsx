@@ -1061,7 +1061,7 @@ export default function ChatArea({
                             <div className="space-y-2.5">
                               {m.image && (
                                 <div className="max-w-xs sm:max-w-md rounded-xl overflow-hidden border border-slate-200/50 shadow-3xs">
-                                  <img src={m.image} className="w-full h-auto max-h-60 object-contain rounded-lg" alt="Lampiran" referrerPolicy="no-referrer" />
+                                  <img src={m.image} className="w-full h-auto max-h-60 object-contain rounded-lg" alt="Lampiran" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
                                 </div>
                               )}
                               {m.audio && (
@@ -1228,7 +1228,7 @@ export default function ChatArea({
               <div className="flex items-center gap-3 p-2.5 bg-slate-50 border border-slate-200 border-b-0 rounded-t-xl animate-fade-in text-[11px]">
                 {attachedImage && (
                   <div className="relative group bg-white border border-slate-250 rounded-lg p-1 shadow-2xs shrink-0">
-                    <img src={attachedImage} className="w-12 h-12 object-cover rounded" referrerPolicy="no-referrer" />
+                    <img src={attachedImage} className="w-12 h-12 object-cover rounded" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
                     <button
                       type="button"
                       onClick={() => setAttachedImage(null)}

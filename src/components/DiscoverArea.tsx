@@ -284,7 +284,7 @@ export default function DiscoverArea({
               >
                 <div className="flex gap-3.5">
                   <div className="relative w-12 h-12 rounded-xl border border-slate-700 overflow-hidden shrink-0 shadow-lg">
-                    <img src={agent.avatar} alt={agent.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" referrerPolicy="no-referrer" />
+                    <img src={agent.avatar} alt={agent.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
                     <span className="absolute bottom-1 right-1 w-5 h-5 flex items-center justify-center bg-[#14151b]/90 border border-slate-800 rounded-lg text-xs leading-none shadow select-none">
                       {agent.emoji}
                     </span>

@@ -1020,6 +1020,8 @@ export default function App() {
                         alt="Preview Foto Profil" 
                         className="w-full h-full object-cover" 
                         referrerPolicy="no-referrer"
+                        loading="lazy"
+                        decoding="async"
                       />
                     </div>
                   )}
@@ -1077,7 +1079,7 @@ export default function App() {
                               className="w-7.5 h-7.5 rounded-full overflow-hidden border border-slate-700 hover:border-emerald-500 hover:scale-110 active:scale-95 transition-all shrink-0 cursor-pointer bg-slate-950"
                               title={`Preset ${idx + 1}`}
                             >
-                              <img src={url} alt={`Preset ${idx + 1}`} className="w-full h-full object-cover" />
+                              <img src={url} alt={`Preset ${idx + 1}`} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                             </button>
                           ))}
                         </div>

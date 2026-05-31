@@ -572,6 +572,8 @@ export default function Sidebar({
                     alt="User Avatar Cell" 
                     className="w-full h-full object-cover" 
                     referrerPolicy="no-referrer"
+                    loading="lazy"
+                    decoding="async"
                   />
                 </div>
               )}
