@@ -42,6 +42,10 @@ const safeParseResponse = async (response: Response) => {
 };
 
 export default function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
+    return localStorage.getItem("maria_is_logged_in") === "true";
+  });
+
   // Load settings from localStorage or defaults
   const [settings, setSettings] = useState<UserSettings>(() => {
     const saved = localStorage.getItem("maria_settings2");
@@ -935,6 +939,7 @@ export default function App() {
           useInitialsAvatarProp={profileUseInitials}
           profileAvatarBgProp={profileAvatarBg}
           profileUsernameHandleProp={profileUsername}
+          isLoggedIn={isLoggedIn}
         />
 
         {/* Center Main Dynamic Workspace */}
@@ -957,6 +962,8 @@ export default function App() {
               onEditUserMessage={handleEditUserMessage}
               onToggleBookmark={handleToggleBookmark}
               bookmarkedMessages={bookmarkedMessages}
+              isLoggedIn={isLoggedIn}
+              onOpenLogin={() => setIsProfileOpen(true)}
             />
           )}
 
@@ -1047,7 +1054,7 @@ export default function App() {
               {/* Modal Header */}
               <div className="flex items-center justify-between p-4 pb-2">
                 <h3 className="font-sans font-semibold text-white text-[15px]">
-                  Edit profil
+                  {isLoggedIn ? "Edit profil" : "Masuk ke Akun"}
                 </h3>
                 <button 
                   type="button" 
@@ -1240,6 +1247,25 @@ export default function App() {
 
               {/* Modal Footer Buttons */}
               <div className="flex items-center justify-end gap-2.5 p-4 pt-1.5 pb-4 font-bold text-[11px]">
+                {isLoggedIn && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsLoggedIn(false);
+                      localStorage.setItem("maria_is_logged_in", "false");
+                      setIsProfileOpen(false);
+                      setShowColorSelector(false);
+                      handleAddSystemNotification(
+                        "Keluar Akun",
+                        "Anda telah keluar ke akun tamu (user).",
+                        "info"
+                      );
+                    }}
+                    className="mr-auto px-3.5 py-2.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-xl transition-all font-semibold cursor-pointer"
+                  >
+                    Keluar
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -1276,20 +1302,26 @@ export default function App() {
                     // 5. Save the custom uploaded or preset avatar URL
                     localStorage.setItem("maria_user_avatar", profileAvatarUrl);
 
+                    // Mark as logged in
+                    setIsLoggedIn(true);
+                    localStorage.setItem("maria_is_logged_in", "true");
+
                     // Hide modal
                     setIsProfileOpen(false);
                     setShowColorSelector(false);
 
                     // Toast success message
                     handleAddSystemNotification(
-                      "Profil Diperbarui",
-                      `Profil Anda diubah menjadi ${finalDisplayName} (${finalUsername}).`,
+                      isLoggedIn ? "Profil Diperbarui" : "Berhasil Masuk Akun",
+                      isLoggedIn 
+                        ? `Profil Anda diubah menjadi ${finalDisplayName} (${finalUsername}).`
+                        : `Halo ${finalDisplayName}! Selamat datang di Maria AI.`,
                       "success"
                     );
                   }}
                   className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold transition-all shadow-md active:scale-95 cursor-pointer"
                 >
-                  Simpan
+                  {isLoggedIn ? "Simpan" : "Masuk"}
                 </button>
               </div>
             </div>

@@ -50,6 +50,7 @@ interface SidebarProps {
   useInitialsAvatarProp?: boolean;
   profileAvatarBgProp?: string;
   profileUsernameHandleProp?: string;
+  isLoggedIn?: boolean;
 }
 
 // Preset Mock Chats matching Screenshot list exactly & loaded dynamically
@@ -146,7 +147,8 @@ export default function Sidebar({
   profileAvatarProp,
   useInitialsAvatarProp,
   profileAvatarBgProp,
-  profileUsernameHandleProp
+  profileUsernameHandleProp,
+  isLoggedIn = false
 }: SidebarProps) {
   const currentTheme = THEME_OPTIONS.find(t => t.value === settings.theme) || THEME_OPTIONS[0];
 
@@ -182,12 +184,18 @@ export default function Sidebar({
 
   // Load avatar and user properties precisely matching Settings / LocalStorage / Props
   const userAvatar = profileAvatarProp !== undefined ? profileAvatarProp : (localStorage.getItem("maria_user_avatar") || "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150&h=150&fit=crop&q=80");
-  const userDisplayName = settings.username || "Pengguna";
-  const userEmail = localStorage.getItem("maria_user_email") || "pengguna@example.com";
+  const userDisplayName = isLoggedIn ? (settings.username || "Pengguna") : "user";
+  const userEmail = isLoggedIn ? (localStorage.getItem("maria_user_email") || "pengguna@example.com") : "user@example.com";
 
-  const useInitialsAvatar = useInitialsAvatarProp !== undefined ? useInitialsAvatarProp : (localStorage.getItem("maria_use_initials_avatar") !== "false");
-  const avatarBgColor = profileAvatarBgProp !== undefined ? profileAvatarBgProp : (localStorage.getItem("maria_avatar_bg_color") || "bg-[#064e3b]");
-  const userHandle = profileUsernameHandleProp !== undefined ? profileUsernameHandleProp : (localStorage.getItem("maria_username_handle") || "@basitfauzan42");
+  const useInitialsAvatar = isLoggedIn 
+    ? (useInitialsAvatarProp !== undefined ? useInitialsAvatarProp : (localStorage.getItem("maria_use_initials_avatar") !== "false"))
+    : true;
+  const avatarBgColor = isLoggedIn 
+    ? (profileAvatarBgProp !== undefined ? profileAvatarBgProp : (localStorage.getItem("maria_avatar_bg_color") || "bg-[#064e3b]"))
+    : "bg-slate-600";
+  const userHandle = isLoggedIn 
+    ? (profileUsernameHandleProp !== undefined ? profileUsernameHandleProp : (localStorage.getItem("maria_username_handle") || "@basitfauzan42"))
+    : "@user";
 
   const getInitials = (name: string) => {
     const parts = name.trim().split(/\s+/);
@@ -544,31 +552,52 @@ export default function Sidebar({
         {/* BOTTOM STICKY: Upgrade panel & user info cell */}
         <div className="p-4 space-y-4 bg-transparent border-t border-[#1a1c21]">
           
-          {/* Promo Plus Card exactly like Screenshot 1 */}
-          <div className="p-4 rounded-xl bg-[#15171d] border border-slate-800/80 hover:border-slate-800 transition-colors shadow-inner flex flex-col gap-2.5">
-            <div className="flex items-start gap-2.5">
-              <div className="p-1 rounded-md bg-blue-500/10 mt-0.5 shrink-0 animate-pulse-slow">
-                <Sparkles className="w-4 h-4 text-blue-400 font-bold" />
+          {isLoggedIn ? (
+            /* Promo Plus Card exactly like Screenshot 1 */
+            <div className="p-4 rounded-xl bg-[#15171d] border border-slate-800/80 hover:border-slate-800 transition-colors shadow-inner flex flex-col gap-2.5">
+              <div className="flex items-start gap-2.5">
+                <div className="p-1 rounded-md bg-blue-500/10 mt-0.5 shrink-0 animate-pulse-slow">
+                  <Sparkles className="w-4 h-4 text-blue-400 font-bold" />
+                </div>
+                <div>
+                  <span className="block text-xs font-bold text-white tracking-tight leading-none mb-1">
+                    Upgrade to Maria Plus!
+                  </span>
+                  <span className="block text-[10px] text-slate-300 font-medium leading-snug">
+                    Unlock faster responses & unlimited chats with Maria Plus.
+                  </span>
+                </div>
               </div>
-              <div>
-                <span className="block text-xs font-bold text-white tracking-tight leading-none mb-1">
-                  Upgrade to Maria Plus!
-                </span>
-                <span className="block text-[10px] text-slate-300 font-medium leading-snug">
-                  Unlock faster responses & unlimited chats with Maria Plus.
-                </span>
-              </div>
-            </div>
 
-            <button
-              type="button"
-              onClick={() => setShowUpgradeModal(true)}
-              aria-label="Upgrade ke Maria Plus"
-              className="w-full py-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-[11px] font-bold shadow-md transition-all active:scale-[0.975] cursor-pointer"
-            >
-              Upgrade
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={() => setShowUpgradeModal(true)}
+                aria-label="Upgrade ke Maria Plus"
+                className="w-full py-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-[11px] font-bold shadow-md transition-all active:scale-[0.975] cursor-pointer"
+              >
+                Upgrade
+              </button>
+            </div>
+          ) : (
+            /* ChatGPT style guest prompt panel exactly like Screenshot 6 */
+            <div className="p-4 rounded-xl bg-[#15171d] border border-slate-800/80 hover:border-slate-800 transition-all duration-250 text-left space-y-3 shadow-inner">
+              <div>
+                <span className="block text-xs font-bold text-white tracking-tight leading-snug mb-1">
+                  Dapatkan respons yang disesuaikan
+                </span>
+                <span className="block text-[10px] text-slate-400 font-medium leading-relaxed pl-0.5">
+                  Masuk untuk mendapatkan jawaban didasarkan pada obrolan yang disimpan, serta membuat gambar dan mengunggah file.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={onOpenProfile}
+                className="w-full py-2.5 rounded-lg bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold transition-all duration-200 cursor-pointer shadow-sm active:scale-[0.975] font-sans"
+              >
+                Masuk
+              </button>
+            </div>
+          )}
 
           {/* User profile info bar cell */}
           <button 

@@ -56,6 +56,8 @@ interface ChatAreaProps {
   onEditUserMessage?: (messageId: string, newContent: string) => void;
   onToggleBookmark?: (message: Message) => void;
   bookmarkedMessages?: Message[];
+  isLoggedIn?: boolean;
+  onOpenLogin?: () => void;
 }
 
 // Config lists for resolving color schema & icons for requested external web apps
@@ -541,6 +543,8 @@ export default function ChatArea({
   onEditUserMessage,
   onToggleBookmark,
   bookmarkedMessages = [],
+  isLoggedIn = false,
+  onOpenLogin,
 }: ChatAreaProps) {
   const [inputText, setInputText] = useState("");
 
@@ -884,9 +888,28 @@ export default function ChatArea({
               </button>
             )}
 
-            <div className="hidden lg:block text-[10px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md font-mono uppercase tracking-wider">
-              {new Date().toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" })}
-            </div>
+            {isLoggedIn ? (
+              <div className="hidden lg:block text-[10px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md font-mono uppercase tracking-wider">
+                {new Date().toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" })}
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 ml-1 select-none">
+                <button
+                  type="button"
+                  onClick={onOpenLogin}
+                  className="px-3.5 py-1.5 rounded-full text-xs font-semibold text-slate-705 hover:text-slate-900 hover:bg-slate-100 cursor-pointer transition-all duration-200"
+                >
+                  Masuk
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenLogin}
+                  className="px-4 py-1.5 rounded-full text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow-xs cursor-pointer transition-all duration-200"
+                >
+                  Daftar gratis
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -894,11 +917,11 @@ export default function ChatArea({
         <div className={`flex-grow overflow-y-auto p-6 ${messages.length === 0 ? "flex flex-col items-center justify-center" : "space-y-6"}`}>
           {messages.length === 0 ? (
             
-            // Clean stylized centered minimalist Maria AI logo matching Image 3 with exact favicon asset geometry
-            <div className="flex flex-col items-center justify-center select-none py-12 animate-fade-in animate-duration-300">
-              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl overflow-hidden shadow-lg bg-gradient-to-tr from-blue-500 to-emerald-500 flex items-center justify-center duration-300 transition-all hover:scale-105 hover:shadow-xl hover:shadow-blue-500/10 active:scale-95">
+            // Clean stylized centered minimalist Maria welcome panel matching Screenshot 5 with beautiful center typography
+            <div className="flex flex-col items-center justify-center select-none py-12 animate-fade-in animate-duration-300 max-w-xl mx-auto text-center">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl overflow-hidden shadow-md bg-gradient-to-tr from-blue-500 to-emerald-500 flex items-center justify-center duration-300 transition-all hover:scale-105 active:scale-95 mb-6">
                 <svg
-                  className="w-16 h-16 text-white pointer-events-none"
+                  className="w-11 h-11 text-white pointer-events-none"
                   viewBox="0 0 32 32"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
@@ -909,6 +932,12 @@ export default function ChatArea({
                   />
                 </svg>
               </div>
+              <h2 className="font-sans font-bold text-slate-800 text-2xl sm:text-3xl tracking-tight leading-tight select-text mb-2">
+                Dari mana kita harus mulai?
+              </h2>
+              <p className="text-xs sm:text-[12.5px] text-slate-500 font-medium max-w-sm mx-auto leading-relaxed mt-1">
+                Tanyakan apa saja untuk mulai mendapat ide bisnis atau penjelasan interaktif tepercaya dari Maria AI.
+              </p>
             </div>
           ) : (
             
