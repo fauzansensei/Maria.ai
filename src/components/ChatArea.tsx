@@ -765,59 +765,12 @@ export default function ChatArea({
   return (
     <div className="flex h-full bg-slate-50 relative overflow-hidden select-none font-sans">
       
-      {/* 1. COLLAPSIBLE COLLATERAL LEFT PANEL: USER INDIVIDUAL LAYOUT WIDGETS DISPLAY */}
-      {isWidgetPanelExpanded && (
-        <div className="hidden md:flex flex-col w-[260px] bg-slate-550 border-r border-slate-200 h-full shrink-0 overflow-y-auto p-4 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
-            <div className="flex items-center gap-1.5">
-              <LayoutDashboard className="w-4 h-4 text-slate-500" />
-              <span className="text-xs font-bold text-slate-700">Dasbor Personal</span>
-            </div>
-            <button
-              onClick={() => setIsWidgetPanelExpanded(false)}
-              aria-label="Tutup Dasbor Personal"
-              className="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-650 cursor-pointer transition-colors"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <WidgetsList
-            settings={settings}
-            messageCount={messages.length}
-            onSelectPrompt={(txt) => setInputText(txt)}
-            themeStyle={themeStyle}
-          />
-
-          {settings.widgets?.filter(w => w.visible).length === 0 && (
-            <div className="text-center py-8 text-slate-400">
-              <p className="text-[10px] italic">Semua widget sedang dinonaktifkan.</p>
-              <p className="text-[9px] mt-1 leading-normal">
-                Buka "Tata Letak" pada pengaturan kanan untuk menampilkan widget favorit Anda.
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* 2. MAIN CHAT AREA AREA viewport */}
       <div className="flex-1 flex flex-col h-full bg-white relative overflow-hidden">
         
         {/* Dynamic Theme Banner Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-xs shrink-0">
           <div className="flex items-center gap-3">
-
-            {/* Collapse widget desktop trigger button */}
-            {!isWidgetPanelExpanded && (
-              <button
-                onClick={() => setIsWidgetPanelExpanded(true)}
-                title="Buka Dasbor Widgets"
-                aria-label="Buka Dasbor Widgets"
-                className="hidden md:block p-1.5 rounded hover:bg-slate-100 text-slate-500 border border-slate-200 cursor-pointer transition-colors"
-              >
-                <LayoutDashboard className="w-4 h-4" />
-              </button>
-            )}
 
             <div className="relative">
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-display font-bold shadow-sm select-none bg-gradient-to-tr ${themeStyle.bgGradient}`}>
@@ -938,45 +891,23 @@ export default function ChatArea({
         </div>
 
         {/* Messages Stream Container */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className={`flex-grow overflow-y-auto p-6 ${messages.length === 0 ? "flex flex-col items-center justify-center" : "space-y-6"}`}>
           {messages.length === 0 ? (
             
-            // Empty Dashboard Welcome state with prompts
-            <div className="max-w-2xl mx-auto py-10 space-y-8 flex flex-col items-center text-center select-none animate-fade-in animate-duration-250">
-              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center border shadow-sm bg-gradient-to-tr ${themeStyle.primaryBg}`}>
-                <Sparkles className="w-8 h-8 shrink-0 animate-pulse-slow active:scale-110 transition-transform" />
-              </div>
-
-              <div className="space-y-2.5">
-                <h2 className="font-display font-bold text-xl text-slate-800 tracking-tight">
-                  Halo, {greetingName}! Kembali Bersama Maria AI.
-                </h2>
-                <p className="text-xs text-slate-600 max-w-lg leading-relaxed font-medium">
-                  Asisten bertenaga NLP canggih Anda yang dilengkapi memori konteks penuh, pemahaman nuansa emosional kata, dan penyesuaian personalisasi tata letak berdasar keinginan Anda.
-                </p>
-              </div>
-
-              {/* Prompt Starters */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full mt-2">
-                {PROMPT_STARTERS.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => onSendMessage(s.text)}
-                    className="p-3 px-4 rounded-xl text-left bg-slate-50 hover:bg-white hover:shadow-sm active:bg-slate-50 border border-slate-200 hover:border-blue-500/60 outline-none transition-all duration-200 cursor-pointer group"
-                  >
-                    <div className="flex items-center justify-between mb-1 font-sans">
-                      <span className="text-xs font-bold text-slate-800 font-display group-hover:text-blue-600 transition-colors">
-                        {s.title}
-                      </span>
-                      <span className="text-xs opacity-0 group-hover:opacity-100 text-blue-500 transition-opacity">
-                        &rarr;
-                      </span>
-                    </div>
-                    <p className="text-[10.5px] text-slate-600 leading-normal font-medium">
-                      {s.desc}
-                    </p>
-                  </button>
-                ))}
+            // Clean stylized centered minimalist Maria AI logo matching Image 3 with exact favicon asset geometry
+            <div className="flex flex-col items-center justify-center select-none py-12 animate-fade-in animate-duration-300">
+              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl overflow-hidden shadow-lg bg-gradient-to-tr from-blue-500 to-emerald-500 flex items-center justify-center duration-300 transition-all hover:scale-105 hover:shadow-xl hover:shadow-blue-500/10 active:scale-95">
+                <svg
+                  className="w-16 h-16 text-white pointer-events-none"
+                  viewBox="0 0 32 32"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M16 6C16 10.5 14.5 13.5 11.5 15C8.5 16.5 6 16.5 6 16.5C6 16.5 8.5 16.5 11.5 18C14.5 19.5 16 22.5 16 27C16 22.5 17.5 19.5 20.5 18C23.5 16.5 26 16.5 26 16.5C26 16.5 23.5 16.5 20.5 15C17.5 13.5 16 10.5 16 6Z"
+                    fill="currentColor"
+                  />
+                </svg>
               </div>
             </div>
           ) : (
