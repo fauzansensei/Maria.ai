@@ -1323,7 +1323,7 @@ export default function ChatArea({
 
                   <input
                     type="text"
-                    placeholder={isLoading ? "Mohon tunggu, Maria sedang memproses..." : `Kirim pesan atau tanyakan apa saja ke Maria, ${greetingName}...`}
+                    placeholder={isLoading ? "Mohon tunggu, Maria sedang memproses..." : "Tanya Maria..."}
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     disabled={isLoading}
@@ -1347,7 +1347,7 @@ export default function ChatArea({
             </form>
 
             <div className="flex items-center justify-between text-[10px] text-slate-500 px-2 mt-2 font-mono uppercase tracking-tight font-medium">
-              <span>Model NLP: Gemini 3.5 Flash (Advanced Cognition)</span>
+              <span>Maria adalah AI dapat melakukan kesalahan</span>
               <span className="flex items-center gap-1 font-sans text-[9px] uppercase font-bold text-slate-600">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                 Enter untuk kirim
