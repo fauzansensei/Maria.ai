@@ -196,6 +196,25 @@ export default function App() {
   const [profileUsername, setProfileUsername] = useState(() => localStorage.getItem("maria_username_handle") || "@basitfauzan42");
   const [profileAvatarBg, setProfileAvatarBg] = useState(() => localStorage.getItem("maria_avatar_bg_color") || "bg-[#064e3b]"); // premium deep green bg
   const [showColorSelector, setShowColorSelector] = useState(false);
+  const [profileUseInitials, setProfileUseInitials] = useState(() => localStorage.getItem("maria_use_initials_avatar") !== "false");
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState(() => localStorage.getItem("maria_user_avatar") || "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150&h=150&fit=crop&q=80");
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleProfileImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (loadEvent) => {
+        if (loadEvent.target?.result) {
+          setProfileAvatarUrl(loadEvent.target.result as string);
+          setProfileUseInitials(false);
+          setShowColorSelector(false); // Close selector dropdown
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   useEffect(() => {
     setProfileDisplayName(settings.username || "basit fauzan");
@@ -840,6 +859,10 @@ export default function App() {
           onShareThread={handleShareThread}
           activeView={activeView}
           onViewChange={setActiveView}
+          profileAvatarProp={profileAvatarUrl}
+          useInitialsAvatarProp={profileUseInitials}
+          profileAvatarBgProp={profileAvatarBg}
+          profileUsernameHandleProp={profileUsername}
         />
 
         {/* Center Main Dynamic Workspace */}
@@ -969,58 +992,127 @@ export default function App() {
               {/* Modal Body */}
               <div className="p-4 pt-1 flex flex-col items-center space-y-4">
                 
-                {/* Large Initials Circle Avatar with Camera Button */}
+                {/* File Input for uploading custom image */}
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleProfileImageUpload} 
+                  accept="image/*" 
+                  className="hidden" 
+                />
+
+                {/* Large Circle Avatar or Initials with Camera Button */}
                 <div className="relative mt-2">
-                  <div className={`w-[84px] h-[84px] rounded-full ${profileAvatarBg} flex items-center justify-center border border-slate-705 shadow-lg text-white font-bold text-2xl select-none transition-all duration-350`}>
-                    {(() => {
-                      const name = profileDisplayName || "basit fauzan";
-                      const parts = name.trim().split(/\s+/);
-                      if (parts.length === 0 || !parts[0]) return "P";
-                      if (parts.length === 1) return parts[0].substring(0, Math.min(2, parts[0].length)).toUpperCase();
-                      return (parts[0][0] + parts[1][0]).toUpperCase();
-                    })()}
-                  </div>
+                  {profileUseInitials ? (
+                    <div className={`w-[84px] h-[84px] rounded-full ${profileAvatarBg} flex items-center justify-center border border-slate-700 shadow-lg text-white font-bold text-2xl select-none transition-all duration-350`}>
+                      {(() => {
+                        const name = profileDisplayName || "basit fauzan";
+                        const parts = name.trim().split(/\s+/);
+                        if (parts.length === 0 || !parts[0]) return "P";
+                        if (parts.length === 1) return parts[0].substring(0, Math.min(2, parts[0].length)).toUpperCase();
+                        return (parts[0][0] + parts[1][0]).toUpperCase();
+                      })()}
+                    </div>
+                  ) : (
+                    <div className="w-[84px] h-[84px] rounded-full overflow-hidden border border-slate-705 shadow-lg bg-slate-900 transition-all duration-350 shrink-0">
+                      <img 
+                        src={profileAvatarUrl} 
+                        alt="Preview Foto Profil" 
+                        className="w-full h-full object-cover" 
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                  )}
                   
                   {/* Camera Icon Button */}
                   <button
                     type="button"
                     onClick={() => setShowColorSelector(!showColorSelector)}
                     className="absolute bottom-0 right-0 w-[28px] h-[28px] rounded-full bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center shadow-md border border-slate-600 cursor-pointer active:scale-95 transition-all"
-                    title="Ubah warna latar"
+                    title="Ubah Foto / Warna Latar"
                   >
                     <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
                       <path d="M4 4h3l2-2h6l2 2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm8 3a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6z" />
                     </svg>
                   </button>
 
-                  {/* Dynamic Color Popover */}
+                  {/* Dynamic Color & Image Popover */}
                   {showColorSelector && (
-                    <div className="absolute top-[92px] left-1/2 transform -translate-x-1/2 bg-[#171a21] border border-slate-800 rounded-xl p-2.5 z-55 shadow-xl w-[180px] animate-fade-in space-y-1.5 text-center">
-                      <span className="text-[9px] uppercase font-bold tracking-wider text-slate-300 block font-sans">Pilih warna</span>
-                      <div className="grid grid-cols-4 gap-1.5 justify-items-center">
-                        {[
-                          { bg: "bg-[#064e3b]", name: "Deep Emerald" },
-                          { bg: "bg-[#1e3a8a]", name: "Deep Blue" },
-                          { bg: "bg-[#581c87]", name: "Deep Purple" },
-                          { bg: "bg-[#881337]", name: "Deep Rose" },
-                          { bg: "bg-[#78350f]", name: "Deep Amber" },
-                          { bg: "bg-[#164e63]", name: "Deep Cyan" },
-                          { bg: "bg-[#831843]", name: "Deep Pink" },
-                          { bg: "bg-[#1e293b]", name: "Deep Slate" }
-                        ].map((c) => (
-                          <button
-                            key={c.bg}
-                            type="button"
-                            onClick={() => {
-                              setProfileAvatarBg(c.bg);
-                              setShowColorSelector(false);
-                            }}
-                            className={`w-5.5 h-5.5 rounded-full ${c.bg} hover:scale-110 active:scale-90 transition-all border border-white/10 shrink-0 cursor-pointer`}
-                            title={c.name}
-                            aria-label={`Ubah warna profil ke ${c.name}`}
-                          />
-                        ))}
+                    <div className="absolute top-[92px] left-1/2 transform -translate-x-1/2 bg-[#171a21] border border-slate-800 rounded-xl p-3.5 z-55 shadow-2xl w-[260px] animate-fade-in space-y-3.5">
+                      
+                      {/* Section 1: Upload Photo & Presets */}
+                      <div className="space-y-2">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-slate-300 block font-sans text-left pl-0.5">FOTO PROFIL</span>
+                        
+                        {/* Custom File Upload Button */}
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="w-full py-2 px-3 rounded-lg border border-dashed border-slate-800 bg-slate-800/40 hover:bg-slate-800 text-slate-200 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                        >
+                          <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                          </svg>
+                          Unggah Foto Profil
+                        </button>
+
+                        {/* Preset Avatars Row */}
+                        <div className="grid grid-cols-6 gap-1.5 pt-1">
+                          {[
+                            "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&q=80",
+                            "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?w=100&h=100&fit=crop&q=80",
+                            "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&q=80",
+                            "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&h=100&fit=crop&q=80",
+                            "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&h=100&fit=crop&q=80",
+                            "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&q=80"
+                          ].map((url, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => {
+                                setProfileAvatarUrl(url);
+                                setProfileUseInitials(false);
+                                setShowColorSelector(false);
+                              }}
+                              className="w-7.5 h-7.5 rounded-full overflow-hidden border border-slate-700 hover:border-emerald-500 hover:scale-110 active:scale-95 transition-all shrink-0 cursor-pointer bg-slate-950"
+                              title={`Preset ${idx + 1}`}
+                            >
+                              <img src={url} alt={`Preset ${idx + 1}`} className="w-full h-full object-cover" />
+                            </button>
+                          ))}
+                        </div>
                       </div>
+
+                      {/* Section 2: Initials Colored Background Palette */}
+                      <div className="space-y-1.5 pt-2.5 border-t border-slate-800/60">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-slate-300 block font-sans text-left pl-0.5">WARNA INISIAL</span>
+                        <div className="grid grid-cols-4 gap-1.5 justify-items-center">
+                          {[
+                            { bg: "bg-[#064e3b]", name: "Deep Emerald" },
+                            { bg: "bg-[#1e3a8a]", name: "Deep Blue" },
+                            { bg: "bg-[#581c87]", name: "Deep Purple" },
+                            { bg: "bg-[#881337]", name: "Deep Rose" },
+                            { bg: "bg-[#78350f]", name: "Deep Amber" },
+                            { bg: "bg-[#164e63]", name: "Deep Cyan" },
+                            { bg: "bg-[#831843]", name: "Deep Pink" },
+                            { bg: "bg-[#1e293b]", name: "Deep Slate" }
+                          ].map((c) => (
+                            <button
+                              key={c.bg}
+                              type="button"
+                              onClick={() => {
+                                setProfileAvatarBg(c.bg);
+                                setProfileUseInitials(true);
+                                setShowColorSelector(false);
+                              }}
+                              className={`w-5.5 h-5.5 rounded-full ${c.bg} hover:scale-110 active:scale-90 transition-all border border-white/10 shrink-0 cursor-pointer`}
+                              title={c.name}
+                              aria-label={`Ubah warna profil ke ${c.name}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
                     </div>
                   )}
                 </div>
@@ -1103,8 +1195,11 @@ export default function App() {
                     // 3. Save avatar bg color
                     localStorage.setItem("maria_avatar_bg_color", profileAvatarBg);
 
-                    // 4. Save to use initials avatar as true
-                    localStorage.setItem("maria_use_initials_avatar", "true");
+                    // 4. Save to use initials avatar setting
+                    localStorage.setItem("maria_use_initials_avatar", profileUseInitials ? "true" : "false");
+
+                    // 5. Save the custom uploaded or preset avatar URL
+                    localStorage.setItem("maria_user_avatar", profileAvatarUrl);
 
                     // Hide modal
                     setIsProfileOpen(false);

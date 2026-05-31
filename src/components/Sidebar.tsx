@@ -44,6 +44,10 @@ interface SidebarProps {
   onShareThread?: (id: string) => void;
   activeView?: "chat" | "library" | "discover";
   onViewChange?: (view: "chat" | "library" | "discover") => void;
+  profileAvatarProp?: string;
+  useInitialsAvatarProp?: boolean;
+  profileAvatarBgProp?: string;
+  profileUsernameHandleProp?: string;
 }
 
 // Preset Mock Chats matching Screenshot list exactly & loaded dynamically
@@ -135,7 +139,11 @@ export default function Sidebar({
   onDeleteThread,
   onShareThread,
   activeView = "chat",
-  onViewChange
+  onViewChange,
+  profileAvatarProp,
+  useInitialsAvatarProp,
+  profileAvatarBgProp,
+  profileUsernameHandleProp
 }: SidebarProps) {
   const currentTheme = THEME_OPTIONS.find(t => t.value === settings.theme) || THEME_OPTIONS[0];
 
@@ -169,14 +177,14 @@ export default function Sidebar({
   const [upgradeSuccess, setUpgradeSuccess] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"gpay" | "qris" | "bank">("qris");
 
-  // Load avatar and user properties precisely matching Settings / LocalStorage
-  const userAvatar = localStorage.getItem("maria_user_avatar") || "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150&h=150&fit=crop&q=80";
+  // Load avatar and user properties precisely matching Settings / LocalStorage / Props
+  const userAvatar = profileAvatarProp !== undefined ? profileAvatarProp : (localStorage.getItem("maria_user_avatar") || "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150&h=150&fit=crop&q=80");
   const userDisplayName = settings.username || "Pengguna";
   const userEmail = localStorage.getItem("maria_user_email") || "pengguna@example.com";
 
-  const useInitialsAvatar = localStorage.getItem("maria_use_initials_avatar") !== "false"; // default to true
-  const avatarBgColor = localStorage.getItem("maria_avatar_bg_color") || "bg-[#064e3b]";
-  const userHandle = localStorage.getItem("maria_username_handle") || "@basitfauzan42";
+  const useInitialsAvatar = useInitialsAvatarProp !== undefined ? useInitialsAvatarProp : (localStorage.getItem("maria_use_initials_avatar") !== "false"); // default to true
+  const avatarBgColor = profileAvatarBgProp !== undefined ? profileAvatarBgProp : (localStorage.getItem("maria_avatar_bg_color") || "bg-[#064e3b]");
+  const userHandle = profileUsernameHandleProp !== undefined ? profileUsernameHandleProp : (localStorage.getItem("maria_username_handle") || "@basitfauzan42");
 
   const getInitials = (name: string) => {
     const parts = name.trim().split(/\s+/);

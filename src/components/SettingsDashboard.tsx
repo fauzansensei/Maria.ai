@@ -786,6 +786,7 @@ export default function SettingsDashboard({
             onClick={onClose} 
             className="p-1 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
             title="Tutup Pengaturan"
+            aria-label="Tutup Pengaturan"
           >
             <X className="w-4 h-4" />
           </button>
@@ -898,6 +899,7 @@ export default function SettingsDashboard({
                 <button
                   type="button"
                   onClick={() => setActiveDropdownId(activeDropdownId === "umum-appearance" ? null : "umum-appearance")}
+                  aria-label="Pilih Penampilan Aplikasi"
                   className="bg-[#212121] hover:bg-[#2b2b2b] text-zinc-200 border border-[#2e2e2e]/60 text-[11px] font-medium rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-1.5 cursor-pointer w-28 text-left"
                 >
                   <span>{appearance}</span>
@@ -928,6 +930,7 @@ export default function SettingsDashboard({
                 <button
                   type="button"
                   onClick={() => setActiveDropdownId(activeDropdownId === "umum-contrast" ? null : "umum-contrast")}
+                  aria-label="Pilih Kontras Aplikasi"
                   className="bg-[#212121] hover:bg-[#2b2b2b] text-zinc-200 border border-[#2e2e2e]/60 text-[11px] font-medium rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-1.5 cursor-pointer w-28 text-left"
                 >
                   <span>{contrast}</span>
@@ -958,6 +961,7 @@ export default function SettingsDashboard({
                 <button
                   type="button"
                   onClick={() => setActiveDropdownId(activeDropdownId === "umum-accent" ? null : "umum-accent")}
+                  aria-label="Pilih Warna Aksen Aplikasi"
                   className="bg-[#212121] hover:bg-[#2b2b2b] text-zinc-200 border border-[#2e2e2e]/60 text-[11px] font-medium rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-1.5 cursor-pointer w-28 text-left"
                 >
                   <div className="flex items-center gap-1.5">
@@ -1018,6 +1022,7 @@ export default function SettingsDashboard({
                 <button
                   type="button"
                   onClick={() => setActiveDropdownId(activeDropdownId === "umum-lang" ? null : "umum-lang")}
+                  aria-label="Pilih Bahasa Aplikasi"
                   className="bg-[#212121] hover:bg-[#2b2b2b] text-zinc-200 border border-[#2e2e2e]/60 text-[11px] font-medium rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-1.5 cursor-pointer w-40 text-left"
                 >
                   <span className="truncate">{language}</span>
@@ -1065,6 +1070,7 @@ export default function SettingsDashboard({
                 <button
                   type="button"
                   onClick={() => setActiveDropdownId(activeDropdownId === "umum-spoken-lang" ? null : "umum-spoken-lang")}
+                  aria-label="Pilih Bahasa Lisan"
                   className="bg-[#212121] hover:bg-[#2b2b2b] text-zinc-200 border border-[#2e2e2e]/60 text-[11px] font-medium rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-1.5 cursor-pointer w-36 text-left"
                 >
                   <span className="truncate">{spokenLanguage}</span>

@@ -1138,6 +1138,7 @@ export default function ChatArea({
                               onClick={() => {
                                 if (onSetFeedback) onSetFeedback(m.id, m.feedback === "like" ? null as any : "like");
                               }}
+                              aria-label="Tanggapan Membantu"
                               className={`transition-all cursor-pointer p-0.5 rounded ${
                                 m.feedback === "like" ? "text-emerald-600 bg-emerald-100/60" : "hover:text-slate-700"
                               }`}
@@ -1150,6 +1151,7 @@ export default function ChatArea({
                               onClick={() => {
                                 if (onSetFeedback) onSetFeedback(m.id, m.feedback === "dislike" ? null as any : "dislike");
                               }}
+                              aria-label="Tanggapan Tidak Membantu"
                               className={`transition-all cursor-pointer p-0.5 rounded ${
                                 m.feedback === "dislike" ? "text-red-500 bg-red-100/60" : "hover:text-slate-700"
                               }`}
@@ -1165,6 +1167,7 @@ export default function ChatArea({
                             <button
                               type="button"
                               onClick={() => onToggleBookmark(m)}
+                              aria-label={bookmarkedMessages?.some(b => b.id === m.id) ? "Hapus dari Library" : "Simpan ke Library"}
                               className={`transition-all cursor-pointer px-1.5 py-0.5 rounded flex items-center gap-1 text-[9px] ${
                                 bookmarkedMessages?.some(b => b.id === m.id)
                                   ? "text-amber-500 bg-amber-500/10 border border-amber-500/15 font-bold"
@@ -1229,6 +1232,7 @@ export default function ChatArea({
                     <button
                       type="button"
                       onClick={() => setAttachedImage(null)}
+                      aria-label="Hapus Lampiran Gambar"
                       className="absolute -top-1.5 -right-1.5 bg-red-500 text-white p-0.5 rounded-full hover:bg-red-650 shadow-sm transition-colors cursor-pointer"
                       title="Hapus"
                     >
@@ -1246,6 +1250,7 @@ export default function ChatArea({
                         setVoiceBase64(null);
                         setVoiceBlob(null);
                       }}
+                      aria-label="Hapus Memo Suara"
                       className="bg-slate-100 hover:bg-slate-200 text-slate-500 p-0.5 rounded hover:text-slate-850 cursor-pointer transition-colors"
                       title="Hapus Memo"
                     >
@@ -1271,6 +1276,7 @@ export default function ChatArea({
                     <button
                       type="button"
                       onClick={cancelRecording}
+                      aria-label="Batalkan Merekam Memo Suara"
                       className="px-3 py-1.5 bg-slate-100 hover:bg-[#eaeaea] text-slate-600 rounded-lg font-bold text-[10.5px] cursor-pointer active:scale-95 transition-all"
                     >
                       Batalkan
@@ -1278,6 +1284,7 @@ export default function ChatArea({
                     <button
                       type="button"
                       onClick={stopRecording}
+                      aria-label="Selesai Merekam Memo Suara"
                       className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-[10.5px] cursor-pointer shadow-sm active:scale-95 transition-all"
                     >
                       Selesai
