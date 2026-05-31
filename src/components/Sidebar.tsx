@@ -20,7 +20,8 @@ import {
   Share2,
   Pin,
   Pencil,
-  Trash2
+  Trash2,
+  Archive
 } from "lucide-react";
 import { Message, UserSettings, ChatThread } from "../types";
 import { THEME_OPTIONS } from "../constants";
@@ -42,6 +43,7 @@ interface SidebarProps {
   onRenameThread?: (id: string, newTitle: string) => void;
   onDeleteThread?: (id: string) => void;
   onShareThread?: (id: string) => void;
+  onArchiveThread?: (id: string) => void;
   activeView?: "chat" | "library" | "discover";
   onViewChange?: (view: "chat" | "library" | "discover") => void;
   profileAvatarProp?: string;
@@ -139,6 +141,7 @@ export default function Sidebar({
   onRenameThread,
   onDeleteThread,
   onShareThread,
+  onArchiveThread,
   activeView = "chat",
   onViewChange,
   profileAvatarProp,
@@ -471,6 +474,21 @@ export default function Sidebar({
                               >
                                 <Share2 className="w-3.5 h-3.5 text-slate-400" />
                                 <span>Bagikan percakapan</span>
+                              </button>
+
+                              {/* Option: Archive */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveMenuId(null);
+                                  if (onArchiveThread) onArchiveThread(thread.id);
+                                }}
+                                aria-label="Arsipkan percakapan"
+                                className="w-full px-3.5 py-2.5 text-left hover:bg-[#252831] flex items-center gap-2.5 transition-colors cursor-pointer text-slate-300 hover:text-white"
+                              >
+                                <Archive className="w-3.5 h-3.5 text-slate-400" />
+                                <span>Arsipkan ke Pustaka</span>
                               </button>
 
                               {/* Option: Pin */}

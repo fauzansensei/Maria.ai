@@ -17,7 +17,8 @@ import {
   Clock, 
   ChevronRight,
   ExternalLink,
-  MessageSquare
+  MessageSquare,
+  Archive
 } from "lucide-react";
 import { Message, UserSettings } from "../types";
 import { THEME_OPTIONS } from "../constants";
@@ -35,6 +36,7 @@ interface LibraryAreaProps {
   bookmarkedMessages: Message[];
   onToggleBookmark: (msg: Message) => void;
   onUsePromptFormula: (formula: string) => void;
+  onRestoreSavedChat?: (savedChat: any) => void;
   onExit: () => void;
 }
 
@@ -43,11 +45,59 @@ export default function LibraryArea({
   bookmarkedMessages,
   onToggleBookmark,
   onUsePromptFormula,
+  onRestoreSavedChat,
   onExit
 }: LibraryAreaProps) {
   const currentTheme = THEME_OPTIONS.find(t => t.value === settings.theme) || THEME_OPTIONS[0];
-  const [activeTab, setActiveTab] = useState<"bookmarks" | "my-prompts" | "my-docs">("bookmarks");
+  const [activeTab, setActiveTab] = useState<"bookmarks" | "saved-chats" | "my-prompts" | "my-docs">("bookmarks");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Saved Chats (Obrolan Diarsipkan) state
+  const [savedChats, setSavedChats] = useState<any[]>(() => {
+    const saved = localStorage.getItem("maria_saved_chats");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse maria_saved_chats", e);
+      }
+    }
+    // Return a default beautiful starter if none exists, as recommended by Maria
+    return [
+      {
+        id: "chat_001",
+        title: "Optimasi Web Serverless",
+        timestamp: new Date().toISOString(),
+        snippet: "Analisis teknis migrasi serverless, optimasi environment variable dan caching...",
+        messages: [
+          {
+            id: "m1",
+            role: "user",
+            content: "Bagaimana melakukan optimasi platform Vercel?",
+            timestamp: new Date(Date.now() - 120000).toISOString()
+          },
+          {
+            id: "m2",
+            role: "assistant",
+            content: "Gunakan environment variables untuk API Key, minimalkan I/O disk dengan Client-Side Storage, dan manfaatkan caching edge network Vercel untuk performa sub-100ms.",
+            timestamp: new Date().toISOString()
+          }
+        ]
+      }
+    ];
+  });
+
+  // Save changes to localStorage for saved_chats
+  const saveSavedChats = (updated: any[]) => {
+    setSavedChats(updated);
+    localStorage.setItem("maria_saved_chats", JSON.stringify(updated));
+  };
+
+  const handleDeleteSavedChat = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = savedChats.filter(c => c.id !== id);
+    saveSavedChats(updated);
+  };
 
   // My Custom Prompts section states
   const [myPrompts, setMyPrompts] = useState<CustomPromptFormula[]>(() => {
@@ -217,6 +267,20 @@ export default function LibraryArea({
 
         <button
           type="button"
+          onClick={() => setActiveTab("saved-chats")}
+          className={`py-3.5 relative cursor-pointer flex items-center gap-2 transition-colors ${
+            activeTab === "saved-chats" ? "text-white" : "hover:text-slate-200"
+          }`}
+        >
+          <Archive className="w-4 h-4" />
+          <span>Arsip Chat ({savedChats.length})</span>
+          {activeTab === "saved-chats" && (
+            <div className={`absolute bottom-0 left-0 right-0 h-[2.5px] bg-gradient-to-r ${currentTheme.bgGradient} rounded-t-full`} />
+          )}
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveTab("my-prompts")}
           className={`py-3.5 relative cursor-pointer flex items-center gap-2 transition-colors ${
             activeTab === "my-prompts" ? "text-white" : "hover:text-slate-200"
@@ -328,6 +392,79 @@ export default function LibraryArea({
                       >
                         <MessageSquare className="w-3 h-3" />
                         <span>Kirim ke Chat Baru</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab: Saved Chats (Obrolan Diarsipkan) */}
+        {activeTab === "saved-chats" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between text-xs pb-1.5 border-b border-slate-800/60">
+              <span className="text-slate-400">Arsip Sesi Obrolan Terpilih Anda</span>
+              <span className="text-slate-500 text-[10px] italic">Jumlah: {savedChats.length} Sesi</span>
+            </div>
+
+            {savedChats.length === 0 ? (
+              <div className="py-20 text-center space-y-3.5 max-w-sm mx-auto">
+                <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-500">
+                  <Archive className="w-5 h-5" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-xs font-bold text-white">Belum Ada Sesi Diarsipkan</h4>
+                  <p className="text-[10px] text-[#64748b] leading-normal font-sans">
+                    Anda dapat menyimpan percakapan aktif dari menu samping (Sidebar). Klik tombol tindakan percakapan lalu pilih <strong className="text-slate-300">Arsipkan ke Pustaka</strong> untuk menyimpannya di sini.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {savedChats.map(chat => (
+                  <div
+                    key={chat.id}
+                    className="p-4 rounded-xl bg-[#14151b] border border-slate-800/85 hover:border-slate-750 transition-all text-left flex flex-col justify-between gap-4 group"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-slate-500 font-mono">ID: {chat.id.slice(0, 8)}</span>
+                        
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteSavedChat(chat.id, e)}
+                          className="p-1 hover:bg-slate-800 rounded text-slate-500 hover:text-red-400 cursor-pointer duration-200 transition-colors"
+                          title="Hapus Sesi"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-1 text-left">
+                        <span className="block text-xs font-bold text-white tracking-tight line-clamp-1">{chat.title}</span>
+                        <p className="text-[10.5px] text-slate-400 leading-relaxed italic line-clamp-3 p-2.5 rounded-lg border border-slate-901 bg-[#0a0b0f]/40 font-mono">
+                          {chat.snippet || "Tidak ada cuplikan isi..."}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-slate-850 pt-2.5 text-[10px]">
+                      <span className="text-slate-500">
+                        {new Date(chat.timestamp).toLocaleDateString("id-ID", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onRestoreSavedChat) {
+                            onRestoreSavedChat(chat);
+                          }
+                        }}
+                        className="py-1 px-3 bg-[#4f46e5]/80 hover:bg-[#4f46e5] text-white rounded-lg font-semibold flex items-center gap-1 cursor-pointer duration-200 transition-all shadow-sm"
+                      >
+                        <MessageSquare className="w-3 h-3" />
+                        <span>Puluhkan & Lanjutkan</span>
                       </button>
                     </div>
                   </div>

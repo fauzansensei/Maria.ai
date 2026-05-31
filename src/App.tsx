@@ -797,6 +797,77 @@ export default function App() {
     }
   };
 
+  // Archive thread to private Library (local storage)
+  const handleArchiveThread = (id: string) => {
+    const thread = threads.find(t => t.id === id);
+    if (!thread) return;
+
+    try {
+      const saved = localStorage.getItem("maria_saved_chats");
+      const savedChats = saved ? JSON.parse(saved) : [];
+
+      if (savedChats.some((c: any) => c.id === id)) {
+        handleAddSystemNotification(
+          "Sudah Diarsipkan",
+          `Percakapan "${thread.title}" sudah ada di Pustaka Pribadi Anda.`,
+          "info"
+        );
+        return;
+      }
+
+      // Generate snippet
+      const assistantMsgs = thread.messages.filter(m => m.role === "assistant");
+      const snippetVal = assistantMsgs.length > 0
+        ? assistantMsgs[assistantMsgs.length - 1].content.slice(0, 120) + "..."
+        : "Sesi percakapan kosong...";
+
+      const newSavedChat = {
+        id: thread.id,
+        title: thread.title,
+        timestamp: new Date().toISOString(),
+        snippet: snippetVal,
+        messages: thread.messages
+      };
+
+      savedChats.push(newSavedChat);
+      localStorage.setItem("maria_saved_chats", JSON.stringify(savedChats));
+
+      handleAddSystemNotification(
+        "Arsip Berhasil",
+        `Percakapan "${thread.title}" berhasil diarsipkan ke Pustaka Library!`,
+        "success"
+      );
+    } catch (e) {
+      console.error("Gagal menyimpan ke Library:", e);
+    }
+  };
+
+  // Restore archived chat back to actual chat area
+  const handleRestoreSavedChat = (savedChat: any) => {
+    try {
+      if (!threads.some(t => t.id === savedChat.id)) {
+        const restoredThread: ChatThread = {
+          id: savedChat.id,
+          title: savedChat.title,
+          isPinned: false,
+          messages: savedChat.messages
+        };
+        setThreads(prev => [restoredThread, ...prev]);
+      }
+      setActiveThreadId(savedChat.id);
+      setMessages(savedChat.messages);
+      setActiveView("chat");
+
+      handleAddSystemNotification(
+        "Arsip Dipulihkan",
+        `Percakapan "${savedChat.title}" berhasil dipulihkan ke menu samping!`,
+        "success"
+      );
+    } catch (e) {
+      console.error("Gagal memulihkan arsip chat:", e);
+    }
+  };
+
   // Wipes conversations trigger
   const handleClearHistory = () => {
     setIsClearingAllHistory(true);
@@ -861,6 +932,7 @@ export default function App() {
           onRenameThread={handleRenameThread}
           onDeleteThread={handleDeleteThread}
           onShareThread={handleShareThread}
+          onArchiveThread={handleArchiveThread}
           activeView={activeView}
           onViewChange={setActiveView}
           profileAvatarProp={profileAvatarUrl}
@@ -905,6 +977,7 @@ export default function App() {
                 bookmarkedMessages={bookmarkedMessages}
                 onToggleBookmark={handleToggleBookmark}
                 onUsePromptFormula={handleUsePromptFormula}
+                onRestoreSavedChat={handleRestoreSavedChat}
                 onExit={() => setActiveView("chat")}
               />
             </React.Suspense>
