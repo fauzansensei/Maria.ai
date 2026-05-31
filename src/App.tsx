@@ -3,9 +3,9 @@ import { Message, UserSettings, AppNotification, ChatThread } from "./types";
 import { DEFAULT_SETTINGS, THEME_OPTIONS } from "./constants";
 import type { DiscoveryAgent } from "./components/DiscoverArea";
 
-// Lazy-loaded components to improve PageSpeed performance & bundle splitting
-const Sidebar = React.lazy(() => import("./components/Sidebar"));
-const ChatArea = React.lazy(() => import("./components/ChatArea"));
+// Static imports for primary main-screen components to avoid lazy-loading network handshakes and CLS
+import Sidebar from "./components/Sidebar";
+import ChatArea from "./components/ChatArea";
 const SettingsDashboard = React.lazy(() => import("./components/SettingsDashboard"));
 const DiscoverArea = React.lazy(() => import("./components/DiscoverArea"));
 const LibraryArea = React.lazy(() => import("./components/LibraryArea"));
@@ -840,93 +840,52 @@ export default function App() {
       {/* Main Layout Container */}
       <div className="flex-grow flex overflow-hidden relative">
         
-        {/* Far Left Sidebar: Beautiful Dark Maria Sidebar Vibe wrapped in a high-fidelity Suspend skeleton */}
-        <React.Suspense fallback={
-          <div className={`${isSidebarCollapsed ? "w-0 md:w-16" : "w-[260px]"} bg-[#0f172a] h-full flex-shrink-0 flex flex-col p-6 border-r border-slate-800/40 transition-all duration-300`}>
-            {/* Dark Sidebar Shimmer Skeleton */}
-            <div className="h-9 w-3/4 bg-slate-800 rounded-lg animate-pulse mb-6" />
-            <div className="h-12 w-full bg-slate-800 rounded-xl animate-pulse mb-4" />
-            <div className="space-y-3 flex-1">
-              <div className="h-9 w-11/12 bg-slate-800/65 rounded-lg animate-pulse" />
-              <div className="h-9 w-5/6 bg-slate-800/65 rounded-lg animate-pulse" />
-              <div className="h-9 w-3/4 bg-slate-800/65 rounded-lg animate-pulse" />
-            </div>
-            <div className="h-12 w-full bg-slate-800 rounded-xl animate-pulse" />
-          </div>
-        }>
-          <Sidebar 
-            settings={settings}
-            messages={messages}
-            onLoadChatHistory={(msgs) => setMessages(msgs)}
-            onNewChat={handleNewChat}
-            onToggleSettings={() => setIsSettingsOpen(!isSettingsOpen)}
-            onOpenProfile={() => setIsProfileOpen(true)}
-            isCollapsed={isSidebarCollapsed}
-            onToggleCollapse={() => setIsSidebarCollapsed(true)}
-            threads={threads}
-            activeThreadId={activeThreadId}
-            onSelectThread={handleSelectThread}
-            onPinThread={handlePinThread}
-            onRenameThread={handleRenameThread}
-            onDeleteThread={handleDeleteThread}
-            onShareThread={handleShareThread}
-            activeView={activeView}
-            onViewChange={setActiveView}
-            profileAvatarProp={profileAvatarUrl}
-            useInitialsAvatarProp={profileUseInitials}
-            profileAvatarBgProp={profileAvatarBg}
-            profileUsernameHandleProp={profileUsername}
-          />
-        </React.Suspense>
+        {/* Far Left Sidebar: Beautiful Dark Maria Sidebar Vibe */}
+        <Sidebar 
+          settings={settings}
+          messages={messages}
+          onLoadChatHistory={(msgs) => setMessages(msgs)}
+          onNewChat={handleNewChat}
+          onToggleSettings={() => setIsSettingsOpen(!isSettingsOpen)}
+          onOpenProfile={() => setIsProfileOpen(true)}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(true)}
+          threads={threads}
+          activeThreadId={activeThreadId}
+          onSelectThread={handleSelectThread}
+          onPinThread={handlePinThread}
+          onRenameThread={handleRenameThread}
+          onDeleteThread={handleDeleteThread}
+          onShareThread={handleShareThread}
+          activeView={activeView}
+          onViewChange={setActiveView}
+          profileAvatarProp={profileAvatarUrl}
+          useInitialsAvatarProp={profileUseInitials}
+          profileAvatarBgProp={profileAvatarBg}
+          profileUsernameHandleProp={profileUsername}
+        />
 
         {/* Center Main Dynamic Workspace */}
         <main className="flex-1 h-full min-w-0 relative">
           {activeView === "chat" && (
-            <React.Suspense fallback={
-              <div className="flex-1 flex flex-col h-full bg-white relative animate-pulse">
-                {/* Header skeleton matching Real ChatArea */}
-                <div className="h-[56px] border-b border-slate-100 flex items-center justify-between px-6">
-                  <div className="h-4 w-32 bg-slate-100 rounded" />
-                  <div className="flex gap-3">
-                    <div className="h-8 w-8 bg-slate-100 rounded-full" />
-                    <div className="h-8 w-8 bg-slate-100 rounded-full" />
-                  </div>
-                </div>
-                {/* Body skeleton matching Real Workspace */}
-                <div className="flex-1 flex flex-col items-center justify-center p-8 max-w-2xl mx-auto w-full">
-                  <div className="h-12 w-12 bg-blue-50/80 rounded-xl mb-6 animate-bounce" />
-                  <div className="h-6 w-56 bg-slate-100 rounded mb-3" />
-                  <div className="h-4 w-80 bg-slate-100 rounded mb-8" />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                    <div className="h-16 bg-slate-50 border border-slate-100/80 rounded-xl p-4" />
-                    <div className="h-16 bg-slate-50 border border-slate-100/80 rounded-xl p-4" />
-                  </div>
-                </div>
-                {/* Bottom console skeleton */}
-                <div className="p-4 border-t border-slate-50 flex justify-center">
-                  <div className="w-full max-w-2xl h-12 bg-slate-50 rounded-xl border border-slate-100" />
-                </div>
-              </div>
-            }>
-              <ChatArea
-                messages={messages}
-                isLoading={isLoading}
-                onSendMessage={handleSendMessage}
-                settings={settings}
-                notifications={notifications}
-                onMarkNotificationRead={handleMarkNotificationRead}
-                onClearNotifications={handleClearNotifications}
-                onAddSystemNotification={handleAddSystemNotification}
-                isSidebarCollapsed={isSidebarCollapsed}
-                onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                onToggleSettings={() => setIsSettingsOpen(!isSettingsOpen)}
-                onRegenerateResponse={handleRegenerateResponse}
-                onSetFeedback={handleSetFeedback}
-                onEditUserMessage={handleEditUserMessage}
-                onToggleBookmark={handleToggleBookmark}
-                bookmarkedMessages={bookmarkedMessages}
-              />
-            </React.Suspense>
+            <ChatArea
+              messages={messages}
+              isLoading={isLoading}
+              onSendMessage={handleSendMessage}
+              settings={settings}
+              notifications={notifications}
+              onMarkNotificationRead={handleMarkNotificationRead}
+              onClearNotifications={handleClearNotifications}
+              onAddSystemNotification={handleAddSystemNotification}
+              isSidebarCollapsed={isSidebarCollapsed}
+              onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              onToggleSettings={() => setIsSettingsOpen(!isSettingsOpen)}
+              onRegenerateResponse={handleRegenerateResponse}
+              onSetFeedback={handleSetFeedback}
+              onEditUserMessage={handleEditUserMessage}
+              onToggleBookmark={handleToggleBookmark}
+              bookmarkedMessages={bookmarkedMessages}
+            />
           )}
 
           {activeView === "library" && (
