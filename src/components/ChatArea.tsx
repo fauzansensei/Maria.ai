@@ -888,28 +888,9 @@ export default function ChatArea({
               </button>
             )}
 
-            {isLoggedIn ? (
-              <div className="hidden lg:block text-[10px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md font-mono uppercase tracking-wider">
-                {new Date().toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" })}
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 ml-1 select-none">
-                <button
-                  type="button"
-                  onClick={onOpenLogin}
-                  className="px-3.5 py-1.5 rounded-full text-xs font-semibold text-slate-705 hover:text-slate-900 hover:bg-slate-100 cursor-pointer transition-all duration-200"
-                >
-                  Masuk
-                </button>
-                <button
-                  type="button"
-                  onClick={onOpenLogin}
-                  className="px-4 py-1.5 rounded-full text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow-xs cursor-pointer transition-all duration-200"
-                >
-                  Daftar gratis
-                </button>
-              </div>
-            )}
+            <div className="hidden lg:block text-[10px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md font-mono uppercase tracking-wider">
+              {new Date().toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" })}
+            </div>
           </div>
         </div>
 
