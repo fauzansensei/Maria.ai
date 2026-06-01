@@ -206,7 +206,8 @@ Pastikan nama aplikasi ringkas dan link URL-nya valid dan lengkap dengan protoko
       "gemini-3.5-flash", 
       "gemini-2.5-flash", 
       "gemini-3.1-flash-lite", 
-      "gemini-flash-latest"
+      "gemini-flash-latest",
+      "gemini-3.1-pro-preview"
     ];
     let response = null;
     let fallbackUsed = "";
@@ -235,10 +236,23 @@ Pastikan nama aplikasi ringkas dan link URL-nya valid dan lengkap dengan protoko
           }
         } catch (err: any) {
           tempError = err;
-          const errMsg = err?.message || err || "";
-          console.warn(`[Attempt ${attempt}/${maxRetries}] Model ${modelName} call failed:`, errMsg);
+          const errMsg = (err?.message || (typeof err === "string" ? err : JSON.stringify(err)) || "").toUpperCase();
+          console.warn(`[Attempt ${attempt}/${maxRetries}] Model ${modelName} call failed:`, err?.message || err);
+          
+          // Fast-escape on 503 (UNAVAILABLE) or 429 (quota exceeded), proceed to alternate models instead of waiting
+          const isOverloadedOrQuota = 
+            errMsg.includes("503") || 
+            errMsg.includes("UNAVAILABLE") || 
+            errMsg.includes("429") || 
+            errMsg.includes("RESOURCE_EXHAUSTED");
+            
+          if (isOverloadedOrQuota) {
+            console.warn(`[Fast Path Fallback] Model ${modelName} is overloaded/unavailable (${errMsg}). Skipping duplicate attempts to find a healthy backup immediately.`);
+            break; 
+          }
+
           if (attempt < maxRetries) {
-            const delay = 400 * attempt; // 400ms, 800ms backoff
+            const delay = 350 * attempt; // 350ms backoff
             await sleep(delay);
           }
         }
