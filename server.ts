@@ -202,7 +202,12 @@ Pastikan nama aplikasi ringkas dan link URL-nya valid dan lengkap dengan protoko
     }
 
     // Generate content with automated robust model fallback list in case of 503 or 429 overloads
-    const modelsToTry = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"];
+    const modelsToTry = [
+      "gemini-3.5-flash", 
+      "gemini-2.5-flash", 
+      "gemini-3.1-flash-lite", 
+      "gemini-flash-latest"
+    ];
     let response = null;
     let fallbackUsed = "";
     let lastError: any = null;
@@ -210,18 +215,50 @@ Pastikan nama aplikasi ringkas dan link URL-nya valid dan lengkap dengan protoko
     // Helper functions for retrying
     const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+    // Try generating content with retry attempts and exponential backoff
+    const tryGenerateWithRetry = async (
+      modelName: string,
+      contents: any,
+      config: any,
+      maxRetries = 2
+    ) => {
+      let tempError = null;
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const res = await ai.models.generateContent({
+            model: modelName,
+            contents,
+            config,
+          });
+          if (res && res.text) {
+            return res;
+          }
+        } catch (err: any) {
+          tempError = err;
+          const errMsg = err?.message || err || "";
+          console.warn(`[Attempt ${attempt}/${maxRetries}] Model ${modelName} call failed:`, errMsg);
+          if (attempt < maxRetries) {
+            const delay = 400 * attempt; // 400ms, 800ms backoff
+            await sleep(delay);
+          }
+        }
+      }
+      throw tempError;
+    };
+
     for (const modelName of modelsToTry) {
       // Attempt 1: Full structured conversation history
       try {
         console.log(`Sending API request using model: ${modelName} (With full history)`);
-        response = await ai.models.generateContent({
-          model: modelName,
-          contents: balancedHistory,
-          config: {
+        response = await tryGenerateWithRetry(
+          modelName,
+          balancedHistory,
+          {
             systemInstruction,
             temperature: tone === "Creative" ? 1.0 : tone === "Minimalist" ? 0.35 : 0.7,
           },
-        });
+          2 // up to 2 retry attempts
+        );
         
         if (response && response.text) {
           fallbackUsed = modelName;
@@ -232,8 +269,8 @@ Pastikan nama aplikasi ringkas dan link URL-nya valid dan lengkap dengan protoko
         console.warn(`Model ${modelName} encountered API error during full history attempt:`, err?.message || err);
         lastError = err;
         
-        // Wait 350ms before moving on or retrying
-        await sleep(350);
+        // Wait 300ms before attempting single-shot fallback
+        await sleep(300);
 
         // Attempt 2: Single-shot fallback (only the last user query) to fit tight buffer limits or mitigate tokens
         try {
@@ -244,14 +281,15 @@ Pastikan nama aplikasi ringkas dan link URL-nya valid dan lengkap dengan protoko
               parts: [{ text: lastUserMessage ? lastUserMessage.content : "Halo Maria!" }]
             }
           ];
-          response = await ai.models.generateContent({
-            model: modelName,
-            contents: singleShotPrompt,
-            config: {
+          response = await tryGenerateWithRetry(
+            modelName,
+            singleShotPrompt,
+            {
               systemInstruction: systemInstruction + "\n- CATATAN KHUSUS: Layanan memori penuh sedang dialihkan ke batas hemat memori cadangan. Berikan respons mandiri yang bermutu.",
               temperature: tone === "Creative" ? 1.0 : tone === "Minimalist" ? 0.35 : 0.7,
             },
-          });
+            2 // up to 2 retry attempts
+          );
           
           if (response && response.text) {
             fallbackUsed = modelName + " (Single-Shot Dynamic Fallback)";
