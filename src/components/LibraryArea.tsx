@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Message, UserSettings } from "../types";
 import { THEME_OPTIONS } from "../constants";
+import { safeLocalStorageSetItem } from "../utils";
 
 export interface CustomPromptFormula {
   id: string;
@@ -90,7 +91,7 @@ export default function LibraryArea({
   // Save changes to localStorage for saved_chats
   const saveSavedChats = (updated: any[]) => {
     setSavedChats(updated);
-    localStorage.setItem("maria_saved_chats", JSON.stringify(updated));
+    safeLocalStorageSetItem("maria_saved_chats", JSON.stringify(updated));
   };
 
   const handleDeleteSavedChat = (id: string, e: React.MouseEvent) => {
@@ -102,7 +103,14 @@ export default function LibraryArea({
   // My Custom Prompts section states
   const [myPrompts, setMyPrompts] = useState<CustomPromptFormula[]>(() => {
     const saved = localStorage.getItem("maria_my_prompts");
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {
+        console.error("Failed to parse My Prompts:", e);
+      }
+    }
     return [
       {
         id: "mp-1",
@@ -129,7 +137,7 @@ export default function LibraryArea({
 
   const saveMyPromptsToStorage = (updated: CustomPromptFormula[]) => {
     setMyPrompts(updated);
-    localStorage.setItem("maria_my_prompts", JSON.stringify(updated));
+    safeLocalStorageSetItem("maria_my_prompts", JSON.stringify(updated));
   };
 
   const handleOpenNewPromptForm = () => {

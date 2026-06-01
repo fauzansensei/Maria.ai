@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { UserSettings, MariaTone, LanguageStyle, AppTheme } from "../types";
 import { THEME_OPTIONS } from "../constants";
+import { safeLocalStorageSetItem } from "../utils";
 import { 
   Settings, 
   Bell, 
@@ -30,16 +31,16 @@ interface VoiceOption {
 }
 
 export const VOICE_OPTIONS: VoiceOption[] = [
-  { value: "Maria", label: "Maria 🎀", category: "anime", desc: "Signature (Lembut & Ceria)" },
-  { value: "Aiko", label: "Aiko 🍡", category: "anime", desc: "Manis, Ceria & Imut" },
-  { value: "Haruka", label: "Haruka 🌸", category: "anime", desc: "Tenang, Kalem & Damai" },
-  { value: "Sora", label: "Sora 🌌", category: "anime", desc: "Penuh Semangat & Jiwa Petualang" },
-  { value: "Spruce", label: "Spruce 🌲", category: "non-anime", desc: "Sabar & Karismatik (Pria)" },
-  { value: "Breeze", label: "Breeze 🍃", category: "non-anime", desc: "Hangat & Bersahabat (Wanita)" },
-  { value: "Cove", label: "Cove 🌊", category: "non-anime", desc: "Profesional & Berwibawa (Pria)" },
-  { value: "Ember", label: "Ember 🔥", category: "non-anime", desc: "Gaya Bicara Ringkas & Cepat" },
-  { value: "Juniper", label: "Juniper 🌿", category: "non-anime", desc: "Cerdas, Cepat & Ceria (Wanita)" }
+  { value: "Maria", label: "Maria 🎀", category: "anime", desc: "Signature (Karakter Maria)" },
+  { value: "Sarah", label: "Sarah 🍃", category: "anime", desc: "Karakter Sarah" },
+  { value: "Jack", label: "Jack (Jeck) 🎙️", category: "non-anime", desc: "Karakter Jack" }
 ];
+
+export const daftarSuara = {
+  Jack: "/audio/NoteJack_Speech_1780061685696.mp3",
+  Maria: "/audio/NoteMaria_Speech_1780061670457.mp3",
+  Sarah: "/audio/NoteSarah_Speech_1780062141697.mp3"
+};
 
 interface SettingsDashboardProps {
   settings: UserSettings;
@@ -76,20 +77,35 @@ export default function SettingsDashboard({
   const [voiceVoice, setVoiceVoice] = useState(() => {
     const saved = localStorage.getItem("maria_voice");
     const exists = saved && VOICE_OPTIONS.some(v => v.value === saved);
-    return exists ? saved : "Spruce";
+    return exists ? saved : "Maria";
   });
   const [voiceStreamSplit, setVoiceStreamSplit] = useState(() => localStorage.getItem("maria_stream_split") === "true");
 
   // Smart Notification System states
-  const [remindersNotif, setRemindersNotif] = useState<string[]>(() => 
-    JSON.parse(localStorage.getItem("notif_reminders") || '["In-App", "Push"]')
-  );
-  const [updatesNotif, setUpdatesNotif] = useState<string[]>(() => 
-    JSON.parse(localStorage.getItem("notif_updates") || '["In-App", "Email"]')
-  );
-  const [suggestionsNotif, setSuggestionsNotif] = useState<string[]>(() => 
-    JSON.parse(localStorage.getItem("notif_suggestions") || '["In-App"]')
-  );
+  const [remindersNotif, setRemindersNotif] = useState<string[]>(() => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem("notif_reminders") || '["In-App", "Push"]');
+      return Array.isArray(parsed) ? parsed : ["In-App", "Push"];
+    } catch {
+      return ["In-App", "Push"];
+    }
+  });
+  const [updatesNotif, setUpdatesNotif] = useState<string[]>(() => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem("notif_updates") || '["In-App", "Email"]');
+      return Array.isArray(parsed) ? parsed : ["In-App", "Email"];
+    } catch {
+      return ["In-App", "Email"];
+    }
+  });
+  const [suggestionsNotif, setSuggestionsNotif] = useState<string[]>(() => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem("notif_suggestions") || '["In-App"]');
+      return Array.isArray(parsed) ? parsed : ["In-App"];
+    } catch {
+      return ["In-App"];
+    }
+  });
 
   // Personalization & Tone Characteristics
   const [basicToneStyle, setBasicToneStyle] = useState<MariaTone>(settings.tone || "Professional");
@@ -121,6 +137,48 @@ export default function SettingsDashboard({
 
   // Safe voice synthesis active browser engine tracker
   const [activeEngineName, setActiveEngineName] = useState<string>("");
+
+  const currentAudioRef = React.useRef<HTMLAudioElement | null>(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      }
+    };
+  }, []);
+
+  const putarSuaraKarakter = (namaKarakter: string) => {
+    const fileAudio = daftarSuara[namaKarakter as keyof typeof daftarSuara];
+
+    if (fileAudio) {
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current.currentTime = 0;
+      }
+
+      setIsPlayingAudio(true);
+      const audio = new Audio(fileAudio);
+      currentAudioRef.current = audio;
+
+      audio.onended = () => {
+        setIsPlayingAudio(false);
+      };
+
+      audio.onerror = () => {
+        setIsPlayingAudio(false);
+      };
+
+      audio.play().catch(error => {
+        setIsPlayingAudio(false);
+        console.log("Audio gagal berputar otomatis karena aturan browser:", error);
+      });
+    } else {
+      console.log("Karakter suara tidak ditemukan!");
+    }
+  };
 
   useEffect(() => {
     if ("speechSynthesis" in window) {
@@ -233,7 +291,7 @@ export default function SettingsDashboard({
   const handleToggleValue = (key: string, current: boolean, setter: (v: boolean) => void) => {
     const next = !current;
     setter(next);
-    localStorage.setItem(key, String(next));
+    safeLocalStorageSetItem(key, String(next));
     
     // If it's a critical app configuration, save it
     if (key === "maria_dictation") {
@@ -243,11 +301,15 @@ export default function SettingsDashboard({
 
   const handleDropdownSelect = (dropdownKey: string, value: string, setter: (v: string) => void) => {
     setter(value);
-    localStorage.setItem(dropdownKey, value);
+    safeLocalStorageSetItem(dropdownKey, value);
     setActiveDropdownId(null);
 
     if (dropdownKey === "maria_accent_color") {
       triggerSave({ accentVal: value });
+    }
+
+    if (dropdownKey === "maria_voice") {
+      putarSuaraKarakter(value);
     }
   };
 
@@ -423,10 +485,13 @@ export default function SettingsDashboard({
 
   // Play synthesized bell chime preview or actual Speech Synthesis preview
   const playVoiceChime = () => {
+    putarSuaraKarakter(voiceVoice);
+    return;
+
     if (isPlayingAudio) return;
     setIsPlayingAudio(true);
 
-    const selectedVoiceObj = VOICE_OPTIONS.find(v => v.value === voiceVoice) || VOICE_OPTIONS[4];
+    const selectedVoiceObj = VOICE_OPTIONS.find(v => v.value === voiceVoice) || VOICE_OPTIONS[0];
     
     if ("speechSynthesis" in window) {
       try {
@@ -686,7 +751,7 @@ export default function SettingsDashboard({
       next = [...currentValues, type];
     }
     setter(next);
-    localStorage.setItem(notifKey, JSON.stringify(next));
+    safeLocalStorageSetItem(notifKey, JSON.stringify(next));
     
     // Quick flash feedback
     setSaveBannerText("Aturan notifikasi diperbarui");
@@ -1120,35 +1185,15 @@ export default function SettingsDashboard({
                     onClick={() => setActiveDropdownId(activeDropdownId === "umum-voice" ? null : "umum-voice")}
                     className="bg-[#212121] hover:bg-[#2b2b2b] text-zinc-200 border border-[#2e2e2e]/60 text-[11px] font-medium rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-1.5 cursor-pointer w-36 text-left"
                   >
-                    <span className="truncate">{(VOICE_OPTIONS.find(v => v.value === voiceVoice) || VOICE_OPTIONS[4]).label}</span>
+                    <span className="truncate">{(VOICE_OPTIONS.find(v => v.value === voiceVoice) || VOICE_OPTIONS[0]).label}</span>
                     <ChevronDown className="w-3 h-3 text-zinc-500 shrink-0" />
                   </button>
                   {activeDropdownId === "umum-voice" && (
                     <div className="absolute right-0 top-9 bg-[#212121] border border-[#2d2d2d] shadow-2xl rounded-xl py-1 z-55 text-[11.5px] w-56 text-zinc-300 max-h-72 overflow-y-auto">
                       <div className="px-3 py-1.5 text-[9.5px] text-zinc-500 font-bold uppercase tracking-wider border-b border-[#2d2d2d]/40 mb-1">
-                        🌸 Suara Anime (AI Voice)
+                        🗣️ Karakter Suara
                       </div>
-                      {VOICE_OPTIONS.filter(v => v.category === "anime").map((opt) => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => handleDropdownSelect("maria_voice", opt.value, setVoiceVoice)}
-                          className="w-full px-3 py-2 text-left hover:bg-[#2e2e2e] flex flex-col justify-start transition-colors cursor-pointer group"
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <span className="font-semibold text-zinc-100 group-hover:text-white">{opt.label}</span>
-                            {voiceVoice === opt.value && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()}`} />}
-                          </div>
-                          <span className="text-[9.5px] text-zinc-500 mt-0.5">{opt.desc}</span>
-                        </button>
-                      ))}
-                      
-                      <div className="h-[1px] bg-[#2d2d2d] my-1.5" />
-                      
-                      <div className="px-3 py-1.5 text-[9.5px] text-zinc-500 font-bold uppercase tracking-wider border-b border-[#2d2d2d]/40 mb-1">
-                        🎙️ Suara Profesional (Non-Anime)
-                      </div>
-                      {VOICE_OPTIONS.filter(v => v.category === "non-anime").map((opt) => (
+                      {VOICE_OPTIONS.map((opt) => (
                         <button
                           key={opt.value}
                           type="button"
@@ -1535,7 +1580,7 @@ export default function SettingsDashboard({
                   value={userJob}
                   onChange={(e) => {
                     setUserJob(e.target.value);
-                    localStorage.setItem("maria_user_job", e.target.value);
+                    safeLocalStorageSetItem("maria_user_job", e.target.value);
                   }}
                   className="w-full bg-[#212121] border border-[#2d2d2d] rounded-xl text-xs px-3.5 py-2.5 text-zinc-300 outline-none focus:border-zinc-500"
                   placeholder="Pekerjaan atau profesi Anda..."
@@ -1550,7 +1595,7 @@ export default function SettingsDashboard({
                   value={userBio}
                   onChange={(e) => {
                     setUserBio(e.target.value);
-                    localStorage.setItem("maria_user_bio", e.target.value);
+                    safeLocalStorageSetItem("maria_user_bio", e.target.value);
                   }}
                   className="w-full bg-[#212121] border border-[#2d2d2d] rounded-xl text-xs px-3.5 py-2.5 text-zinc-300 outline-none focus:border-zinc-500"
                   placeholder="Minat, nilai, atau preferensi yang perlu diingat"

@@ -62,7 +62,8 @@ export default function WidgetsList({
   };
 
   // Sort widgets by user layout order
-  const sortedWidgets = [...(settings.widgets || [])].sort((a, b) => a.order - b.order);
+  const widgetsList = Array.isArray(settings?.widgets) ? settings.widgets : [];
+  const sortedWidgets = [...widgetsList].sort((a, b) => a.order - b.order);
 
   // Render individual widget based on id
   const renderWidget = (widget: WidgetLayout) => {

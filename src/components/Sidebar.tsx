@@ -187,7 +187,7 @@ export default function Sidebar({
   const userDisplayName = isLoggedIn ? (settings.username || "Pengguna") : "user";
   const userEmail = isLoggedIn ? (localStorage.getItem("maria_user_email") || "pengguna@example.com") : "user@example.com";
 
-  const useInitialsAvatar = isLoggedIn 
+  const shouldShowInitialsAvatar = isLoggedIn 
     ? (useInitialsAvatarProp !== undefined ? useInitialsAvatarProp : (localStorage.getItem("maria_use_initials_avatar") !== "false"))
     : true;
   const avatarBgColor = isLoggedIn 
@@ -609,7 +609,7 @@ export default function Sidebar({
               title="Klik untuk membuka Pengaturan Profil"
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                {useInitialsAvatar ? (
+                {shouldShowInitialsAvatar ? (
                   <div className={`w-8 h-8 rounded-full ${avatarBgColor} flex items-center justify-center border border-slate-705 shadow-sm shrink-0 text-white font-bold text-[11px] select-none`}>
                     {getInitials(userDisplayName)}
                   </div>
@@ -855,6 +855,10 @@ export default function Sidebar({
                   <div className="flex items-center gap-2.5">
                     <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 stroke-[3]" />
                     <span>Akses eksklusif template asisten premium tak terbatas</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 stroke-[3]" />
+                    <span>Dukungan penuh kustomisasi Karakter Maria secara berkala</span>
                   </div>
                 </div>
 

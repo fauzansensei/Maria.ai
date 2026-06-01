@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Message, UserSettings, AppNotification, ChatThread } from "./types";
 import { DEFAULT_SETTINGS, THEME_OPTIONS } from "./constants";
 import type { DiscoveryAgent } from "./components/DiscoverArea";
+import { safeLocalStorageSetItem } from "./utils";
 
 // Static imports for primary main-screen components to avoid lazy-loading network handshakes and CLS
 import Sidebar from "./components/Sidebar";
@@ -69,7 +70,8 @@ export default function App() {
     const saved = localStorage.getItem("maria_messages");
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
       } catch (e) {
         console.error("Failed to parse messages", e);
       }
@@ -82,7 +84,8 @@ export default function App() {
     const saved = localStorage.getItem("maria_threads");
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
       } catch (e) {
         console.error("Failed to parse threads", e);
       }
@@ -176,7 +179,8 @@ export default function App() {
     const saved = localStorage.getItem("maria_notifications");
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
       } catch (e) {
         console.error("Failed to parse notifications", e);
       }
@@ -269,7 +273,7 @@ export default function App() {
           "success"
         );
       }
-      localStorage.setItem("maria_bookmarks", JSON.stringify(updated));
+      safeLocalStorageSetItem("maria_bookmarks", JSON.stringify(updated));
       return updated;
     });
   };
@@ -293,7 +297,7 @@ export default function App() {
     
     // Update settings in memory and LocalStorage
     setSettings(updatedSettings);
-    localStorage.setItem("maria_settings2", JSON.stringify(updatedSettings));
+    safeLocalStorageSetItem("maria_settings2", JSON.stringify(updatedSettings));
 
     // Force messages list
     setMessages([welcomeMsg]);
@@ -319,7 +323,7 @@ export default function App() {
   };
 
   const handleUsePromptFormula = (formulaText: string) => {
-    localStorage.setItem("maria_pending_prompt", formulaText);
+    safeLocalStorageSetItem("maria_pending_prompt", formulaText);
     setActiveView("chat");
     handleAddSystemNotification(
       "Prompt Dipakai",
@@ -346,7 +350,7 @@ export default function App() {
   // Save settings when modified
   const handleSaveSettings = (newSettings: UserSettings) => {
     setSettings(newSettings);
-    localStorage.setItem("maria_settings2", JSON.stringify(newSettings));
+    safeLocalStorageSetItem("maria_settings2", JSON.stringify(newSettings));
     
     // Determine active theme name
     const themeName = THEME_OPTIONS.find(t => t.value === newSettings.theme)?.name || "Kustom";
@@ -361,7 +365,7 @@ export default function App() {
 
   // Save threads when modified
   useEffect(() => {
-    localStorage.setItem("maria_threads", JSON.stringify(threads));
+    safeLocalStorageSetItem("maria_threads", JSON.stringify(threads));
   }, [threads]);
 
   // Synchronize active thread with messages and active ID
@@ -371,13 +375,13 @@ export default function App() {
         t.id === activeThreadId ? { ...t, messages } : t
       ));
     }
-    localStorage.setItem("maria_messages", JSON.stringify(messages));
-    localStorage.setItem("maria_active_thread_id", activeThreadId);
+    safeLocalStorageSetItem("maria_messages", JSON.stringify(messages));
+    safeLocalStorageSetItem("maria_active_thread_id", activeThreadId);
   }, [messages, activeThreadId]);
 
   // Save notifications when modified
   useEffect(() => {
-    localStorage.setItem("maria_notifications", JSON.stringify(notifications));
+    safeLocalStorageSetItem("maria_notifications", JSON.stringify(notifications));
   }, [notifications]);
 
   // Play polite system chime when actions succeed
@@ -830,7 +834,7 @@ export default function App() {
       };
 
       savedChats.push(newSavedChat);
-      localStorage.setItem("maria_saved_chats", JSON.stringify(savedChats));
+      safeLocalStorageSetItem("maria_saved_chats", JSON.stringify(savedChats));
 
       handleAddSystemNotification(
         "Arsip Berhasil",
