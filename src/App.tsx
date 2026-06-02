@@ -79,99 +79,40 @@ export default function App() {
     return [];
   });
 
-  // Load chat threads from localStorage or populate with default mocks
+  // Load chat threads from localStorage or populate with empty state
   const [threads, setThreads] = useState<ChatThread[]>(() => {
     const saved = localStorage.getItem("maria_threads");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          // Filter out the initial mock/placeholder threads so the user starts with an empty chat list as requested
+          return parsed.filter(t => 
+            t.id !== "horror-script" && 
+            t.id !== "clean-nav" && 
+            t.id !== "car-diagnosis" && 
+            t.id !== "parenting"
+          );
+        }
       } catch (e) {
         console.error("Failed to parse threads", e);
       }
     }
-    return [
-      {
-        id: "horror-script",
-        title: "A Short script for a horror...",
-        isPinned: false,
-        messages: [
-          {
-            id: "mock-h1-u",
-            role: "user",
-            content: "Tolong tuliskan naskah film pendek horror singkat tentang sebuah jam weker kuno di kamar hotel kuno.",
-            timestamp: new Date(Date.now() - 36000000).toISOString(),
-          },
-          {
-            id: "mock-h1-a",
-            role: "assistant",
-            content: "Berikut adalah naskah film pendek horor singkat berdurasi 2 menit:\n\n**Judul: DETAK TERAKHIR**\n\n*Scene 1: Kamar Hotel Klasik #404 - Tengah Malam.*\nLampu temaram berkedip manja di atas ranjang. Riko (25) memandang jam weker kuno berbahan perunggu yang bersemayam di nakas kayu ek tua. Detaknya terdengar aneh—terlalu lambat. \n*Tik... Tok... Tik...*\n\n*Scene 2: Kamar Mandi.*\nRiko membasuh wajahnya dengan air dingin untuk mengusir rasa penat. Tiba-tiba saja, detakan jam weker perunggu yang berasal dari kamar tidur mendadak terhenti seketika. Keheningan total menyergap seisi ruangan.\n\n*Scene 3: Kamar Tidur.*\nDia perlahan melangkah kembali ke tempat tidur. Begitu terpana melihat jam weker kuno tersebut kini menunjuk tepat di angka 03:00 dini hari dan jarum detiknya berputar terbalik dengan sangat cepat!\n\nSaat Riko menatapnya lekat-lekat, bayangan hitam tinggi nan kurus muncul tepat di belakang lehernya...\n\nSaran saya, tambahkan latar suara instrumen gending angker di bagian klimaks adegan ini Kak. Bagaimana menurut Anda?",
-            timestamp: new Date(Date.now() - 35900000).toISOString(),
-          }
-        ]
-      },
-      {
-        id: "clean-nav",
-        title: "Can you help me in making...",
-        isPinned: false,
-        messages: [
-          {
-            id: "mock-h2-u",
-            role: "user",
-            content: "Can you help me in making a clean responsive navigation component using React and Tailwind CSS?",
-            timestamp: new Date(Date.now() - 28000000).toISOString(),
-          },
-          {
-            id: "mock-h2-a",
-            role: "assistant",
-            content: "Absolutely! Here is a pristine, production-ready React component styled with Tailwind CSS containing a responsive mobile layout drawer:\n\n```tsx\nimport React, { useState } from 'react';\nimport { Menu, X, Compass, User } from 'lucide-react';\n\nexport default function Navigation() {\n  const [isOpen, setIsOpen] = useState(false);\n  \n  return (\n    <nav className=\"bg-slate-900 border-b border-slate-800 text-white\">\n      <div className=\"max-w-7xl mx-auto px-4 sm:px-6 lg:px-8\">\n        <div className=\"flex items-center justify-between h-16\">\n          <span className=\"font-bold font-display text-lg tracking-tight text-white\">Voxa AI</span>\n          \n          {/* Desktop link items */}\n          <div className=\"hidden md:flex items-center gap-6\">\n            <a href=\"#\" className=\"text-slate-300 hover:text-white text-xs font-semibold\">Library</a>\n            <a href=\"#\" className=\"text-slate-300 hover:text-white text-xs font-semibold\">Discover</a>\n          </div>\n          \n          {/* Mobile hamburger menu button */}\n          <button \n            onClick={() => setIsOpen(!isOpen)} \n            className=\"md:hidden p-2 hover:bg-slate-850 rounded-lg\"\n          >\n            {isOpen ? <X className=\"w-5 h-5\" /> : <Menu className=\"w-5 h-5\" />}\n          </button>\n        </div>\n      </div>\n    </nav>\n  );\n}\n```\n\n### Why this is polished:\n1. **Desktop-First Integrity**: Scales smoothly down to mobile targets with absolute standard flex alignment.\n2. **Clean Typography**: Uses sharp tracking tweaks on the label lines.\n\nWould you like me to add code examples representing animated transitions using `@motion/react` as well?",
-            timestamp: new Date(Date.now() - 27900000).toISOString(),
-          }
-        ]
-      },
-      {
-        id: "car-diagnosis",
-        title: "My car is not working...",
-        isPinned: false,
-        messages: [
-          {
-            id: "mock-h3-u",
-            role: "user",
-            content: "My car is not working. Mobil saya tidak mau menyala saat starter, tapi ada bunyi klik tek-tek-tek berulang kali dengan cepat. Kira-kira kenapa ya?",
-            timestamp: new Date(Date.now() - 18000000).toISOString(),
-          },
-          {
-            id: "mock-h3-a",
-            role: "assistant",
-            content: "Berdasarkan rujukan tanda mekanis, bunyi **tek-tek-tek cepat** saat Anda mencoba memosisikan kontak ke starter adalah gejala mutlak dari **Aki Tekor / Lemah (Battery low voltage / discharged)**.\n\nBerikut tata cara melalukan analisis mandiri:\n\n1. **Periksa Terminal Aki**: Pastikan katup kepala aki bersih bebas daki korosi putih kehijauan, dan terpasang sangat kencang.\n2. **Uji Penerangan Utama**: Nyalakan saklar lampu sorot jauh mobil Anda. Jika lampu meredup parah saat starter diputar, voltase aki sisa sedikit.\n3. **Masalah Dinamo Starter**: Jika aki dipastikan sepenuhnya prima namun suara masih timbul, komutator atau arang brush dinamo as starter Anda mungkin aus.\n\n**Saran Tindakan Cepat:** Anda bisa meminta bantuan kawan dekat untuk melakukan jumper listrik aki, atau mengontak teknisi jasa panggilan aki untuk penukaran yang bergaransi resmi.",
-            timestamp: new Date(Date.now() - 17900000).toISOString(),
-          }
-        ]
-      },
-      {
-        id: "parenting",
-        title: "Respected Parenting Advice...",
-        isPinned: false,
-        messages: [
-          {
-            id: "mock-h4-u",
-            role: "user",
-            content: "Bagaimana cara mendidik anak agar mandiri sejak dini tanpa terkesan memaksa anak?",
-            timestamp: new Date(Date.now() - 9000000).toISOString(),
-          },
-          {
-            id: "mock-h4-a",
-            role: "assistant",
-            content: "Mendidik buah hati agar mandiri membutuhkan kepemimpinan non-otoriter berlandaskan empati hangat. Berikut takaran efektif:\n\n* **Tawarkan Pilihan Terstruktur (Otonomi Terbatas)**:\n  Contoh: Daripada berkata kasar *'Segera rapikan kamar tidurmu!'*, ganti dengan kalimat santun *'Kakak mau merapikan rak buku dulu atau melipat kain selimut dulu hari ini?'*\n\n* **Hargai Ikhtiar/Usaha, Bukan Hanya Finis**:\n  Walaupun letak ikat tali sepatu mereka masih miring, cukup beri apresiasi setinggi langit atas kesabarannya berproses sendirian.\n\n* **Berikan Konsekuensi Logis Secara Tenang**:\n  Biarkan anak belajar dari pengalaman nyata yang aman untuk mengasah kalkulasi logikanya di masa mendatang.",
-            timestamp: new Date(Date.now() - 8900050).toISOString(),
-          }
-        ]
-      }
-    ];
+    return [];
   });
 
   const [activeThreadId, setActiveThreadId] = useState<string>(() => {
-    return localStorage.getItem("maria_active_thread_id") || "";
+    const savedActive = localStorage.getItem("maria_active_thread_id") || "";
+    // If the active thread was one of the mock threads, reset back to new chat
+    if (
+      savedActive === "horror-script" || 
+      savedActive === "clean-nav" || 
+      savedActive === "car-diagnosis" || 
+      savedActive === "parenting"
+    ) {
+      return "";
+    }
+    return savedActive;
   });
 
   // Real-time Notification Logs State

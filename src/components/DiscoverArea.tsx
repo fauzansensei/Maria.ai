@@ -94,7 +94,7 @@ const DISCOVERY_AGENTS: DiscoveryAgent[] = [
     name: "Rendra (Copywriter)",
     roleTitle: "Kreator Konten & Judul Viral",
     description: "Butuh ide takarir (caption) TikTok, naskah iklan persuasif, atau email newsletter yang memiliki konversi penjualan super tinggi?",
-    avatar: "https://images.unsplash.com/photo-1628157582853-a796fa650a6a?w=150&h=150&fit=crop&q=80",
+    avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&h=150&fit=crop&q=80",
     emoji: "✍️",
     category: "creative",
     startingMessage: "Halo Kreator! Saya Rendra. Mari kita sulap ide biasa menjadi tulisan spektakuler yang menarik perhatian audiens Anda sejak detik pertama!",

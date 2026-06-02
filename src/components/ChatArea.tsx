@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import { Message, PromptStarter, UserSettings, AppNotification } from "../types";
 import { PROMPT_STARTERS, THEME_OPTIONS } from "../constants";
 import WidgetsList from "./WidgetsList";
+import { compressImage } from "../utils";
 import { 
   Send, 
   Sparkles, 
@@ -608,14 +609,27 @@ export default function ChatArea({
     if (!file) return;
     
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       if (event.target?.result && typeof event.target.result === "string") {
-        setAttachedImage(event.target.result);
-        onAddSystemNotification(
-          "Gambar Terlampir",
-          `Gambar "${file.name}" berhasil diunggah dan siap dikirim ke Maria.`,
-          "success"
-        );
+        try {
+          const rawBase64 = event.target.result;
+          // Dynamically scale/compress image to lightweight JPEG format (~20-50KB)
+          const compressed = await compressImage(rawBase64);
+          setAttachedImage(compressed);
+          onAddSystemNotification(
+            "Gambar Terlampir",
+            `Gambar "${file.name}" berhasil diunggah dan siap dikirim ke Maria.`,
+            "success"
+          );
+        } catch (compressionErr) {
+          // Robust fallback
+          setAttachedImage(event.target.result);
+          onAddSystemNotification(
+            "Gambar Terlampir",
+            `Gambar "${file.name}" berhasil diunggah.`,
+            "success"
+          );
+        }
       }
     };
     reader.readAsDataURL(file);

@@ -129,6 +129,12 @@ Contoh:
 Pastikan nama aplikasi ringkas dan link URL-nya valid dan lengkap dengan protokol (http/https). Tuliskan juga kalimat pengantar yang ramah di chat Anda (contoh: "Baik Kak! Saya bantu siapkan tombol pintasan untuk membuka YouTube langsung di tab baru. Silakan klik tombol di bawah ini ya!").
 - KEMAMPUAN KONTEKS & MEMORI: Anda memiliki memori percakapan yang kuat. Perhatikan pesan-pesan sebelumnya dalam riwayat chat. Jika relevan, hubungkan jawaban baru Anda dengan topik yang sudah dibahas di atas (misal: 'Seperti yang telah kita bahas mengenai...', 'Melanjutkan rincian rencana Anda sebelumnya...').
 - PEMAHAMAN ALAMIAH & NUANSA (NLP): Pahami makna implisit, ketidakpastian, atau nada emosi pengguna. Sesuaikan respons Anda dengan dinamika sentimen percakapan.
+- INFORMASI WAKTU REALTIME SEKARANG (INTEGRASI JAM GLOBAL):
+  * Waktu Sistem Server (UTC): ${new Date().toISOString()}
+  * Hari & Tanggal (WIB / UTC+7): ${new Intl.DateTimeFormat('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Jakarta' }).format(new Date())}
+  * Hari & Tanggal (WITA / UTC+8): ${new Intl.DateTimeFormat('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Makassar' }).format(new Date())}
+  * Hari & Tanggal (WIT / UTC+9): ${new Intl.DateTimeFormat('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Jayapura' }).format(new Date())}
+  * Kak ${username} saat ini dapat menanyakan hari, tanggal, atau jam sekarang. Gunakan informasi dinamis di atas untuk menjawab dengan sangat akurat sesuai waktu aslinya.
 `;
 
     if (sentimentHint) {
@@ -204,7 +210,6 @@ Pastikan nama aplikasi ringkas dan link URL-nya valid dan lengkap dengan protoko
     // Generate content with automated robust model fallback list in case of 503 or 429 overloads
     const modelsToTry = [
       "gemini-3.5-flash", 
-      "gemini-2.5-flash", 
       "gemini-3.1-flash-lite", 
       "gemini-flash-latest",
       "gemini-3.1-pro-preview"
@@ -282,6 +287,18 @@ Pastikan nama aplikasi ringkas dan link URL-nya valid dan lengkap dengan protoko
       } catch (err: any) {
         console.warn(`Model ${modelName} encountered API error during full history attempt:`, err?.message || err);
         lastError = err;
+
+        const errMsg = (err?.message || (typeof err === "string" ? err : JSON.stringify(err)) || "").toUpperCase();
+        const isOverloadedOrQuota = 
+          errMsg.includes("503") || 
+          errMsg.includes("UNAVAILABLE") || 
+          errMsg.includes("429") || 
+          errMsg.includes("RESOURCE_EXHAUSTED");
+
+        if (isOverloadedOrQuota) {
+          console.warn(`[Fast Path Fallback] Skipping single-shot fallback for ${modelName} due to persistent error condition (${errMsg}) to try alternative models immediately.`);
+          continue; // Proceed directly to the next model in modelsToTry
+        }
         
         // Wait 300ms before attempting single-shot fallback
         await sleep(300);
