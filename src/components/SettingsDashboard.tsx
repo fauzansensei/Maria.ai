@@ -107,6 +107,97 @@ export default function SettingsDashboard({
   // Controls for interactive drop downs
   const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
 
+  // Custom Firebase States for User-Provided Credentials (Project Maria)
+  const [fbApiKey, setFbApiKey] = useState("");
+  const [fbProjectId, setFbProjectId] = useState("");
+  const [fbAuthDomain, setFbAuthDomain] = useState("");
+  const [fbAppId, setFbAppId] = useState("");
+  const [fbDatabaseId, setFbDatabaseId] = useState("");
+  const [fbStorageBucket, setFbStorageBucket] = useState("");
+  const [fbSenderId, setFbSenderId] = useState("");
+  const [isUsingCustomFirebase, setIsUsingCustomFirebase] = useState(false);
+  const [fbError, setFbError] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const savedConfig = localStorage.getItem("maria_custom_firebase_config");
+      if (savedConfig) {
+        const parsed = JSON.parse(savedConfig);
+        if (parsed) {
+          setFbApiKey(parsed.apiKey || "");
+          setFbProjectId(parsed.projectId || "");
+          setFbAuthDomain(parsed.authDomain || "");
+          setFbAppId(parsed.appId || "");
+          setFbDatabaseId(parsed.firestoreDatabaseId || "");
+          setFbStorageBucket(parsed.storageBucket || "");
+          setFbSenderId(parsed.messagingSenderId || "");
+          setIsUsingCustomFirebase(true);
+        }
+      }
+    } catch {}
+  }, []);
+
+  const handleSaveCustomFirebase = () => {
+    setFbError(null);
+    if (!fbProjectId || !fbApiKey) {
+      setFbError("Gagal menyimpan: Project ID dan API Key wajib diisi!");
+      return;
+    }
+    const newConfig = {
+      projectId: fbProjectId.trim(),
+      apiKey: fbApiKey.trim(),
+      authDomain: fbAuthDomain.trim() || `${fbProjectId.trim()}.firebaseapp.com`,
+      firestoreDatabaseId: fbDatabaseId.trim() || "(default)",
+      appId: fbAppId.trim(),
+      storageBucket: fbStorageBucket.trim() || `${fbProjectId.trim()}.firebasestorage.app`,
+      messagingSenderId: fbSenderId.trim() || ""
+    };
+    try {
+      localStorage.setItem("maria_custom_firebase_config", JSON.stringify(newConfig));
+      setIsUsingCustomFirebase(true);
+      if (onAddSystemNotification) {
+        onAddSystemNotification(
+          "Firebase Diperbarui",
+          "Konfigurasi Firebase berhasil disimpan. Memuat ulang halaman untuk menghubungkan database baru Anda...",
+          "success"
+        );
+      }
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err) {
+      console.error(err);
+      setFbError("Gagal menulis konfigurasi ke penyimpanan lokal.");
+    }
+  };
+
+  const handleResetCustomFirebase = () => {
+    try {
+      localStorage.removeItem("maria_custom_firebase_config");
+      setFbApiKey("");
+      setFbProjectId("");
+      setFbAuthDomain("");
+      setFbAppId("");
+      setFbDatabaseId("");
+      setFbStorageBucket("");
+      setFbSenderId("");
+      setIsUsingCustomFirebase(false);
+      setFbError(null);
+      if (onAddSystemNotification) {
+        onAddSystemNotification(
+          "Firebase Dikembalikan",
+          "Konfigurasi Firebase dikembalikan ke bawaan sistem. Memuat ulang halaman...",
+          "info"
+        );
+      }
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   // Sound play triggered audio synthesis
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
@@ -1859,6 +1950,116 @@ export default function SettingsDashboard({
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Hapus Semua</span>
                 </button>
+              </div>
+
+              {/* Konfigurasi Firebase Kustom (Project Maria) */}
+              <div className="pt-4 mt-4 border-t border-[#2a2a2a] space-y-3">
+                <div className="flex items-center gap-1.5 text-zinc-100 font-bold text-xs uppercase tracking-wider">
+                  <Database className={`w-3.5 h-3.5 ${getAccentTextClass()}`} />
+                  <span>Koneksi Firebase Pribadi (Project Maria)</span>
+                  {isUsingCustomFirebase && (
+                    <span className="text-[8.5px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-bold animate-pulse">
+                      AKTIF
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-[10px] text-zinc-400 leading-relaxed">
+                  Jika database bawaan mengalami kendala otorisasi/izin, Anda dapat menghubungkan Maria AI ke project Google Firebase Anda sendiri, sehingga dapat mendaftar dan menyimpan percakapan secara lancar.
+                </p>
+
+                {fbError && (
+                  <div className="p-2 rounded-lg bg-rose-950/25 border border-rose-950 text-rose-400 text-[9.5px] flex items-start gap-1.5">
+                    <ShieldAlert className="w-3 h-3 mt-0.5 shrink-0" />
+                    <span>{fbError}</span>
+                  </div>
+                )}
+
+                {/* Formulir Input */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1">
+                    <label className="text-[9.5px] font-medium text-zinc-400 block">Project ID *</label>
+                    <input
+                      type="text"
+                      value={fbProjectId}
+                      onChange={(e) => setFbProjectId(e.target.value)}
+                      placeholder="e.g. maria-ai-chat"
+                      className="w-full px-2 py-1.5 bg-[#151515] border border-zinc-800 focus:border-zinc-700 text-zinc-200 rounded-lg text-[10.5px] outline-hidden placeholder:text-zinc-650"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9.5px] font-medium text-zinc-400 block">API Key *</label>
+                    <input
+                      type="password"
+                      value={fbApiKey}
+                      onChange={(e) => setFbApiKey(e.target.value)}
+                      placeholder="AIzaSy..."
+                      className="w-full px-2 py-1.5 bg-[#151515] border border-zinc-800 focus:border-zinc-700 text-zinc-200 rounded-lg text-[10.5px] outline-hidden placeholder:text-zinc-650"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9.5px] font-medium text-zinc-400 block">Auth Domain (Opsional)</label>
+                    <input
+                      type="text"
+                      value={fbAuthDomain}
+                      onChange={(e) => setFbAuthDomain(e.target.value)}
+                      placeholder="maria-ai-chat.firebaseapp.com"
+                      className="w-full px-2 py-1.5 bg-[#151515] border border-zinc-800 focus:border-zinc-700 text-zinc-200 rounded-lg text-[10.5px] outline-hidden placeholder:text-zinc-650"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9.5px] font-medium text-zinc-400 block">App ID (Opsional)</label>
+                    <input
+                      type="text"
+                      value={fbAppId}
+                      onChange={(e) => setFbAppId(e.target.value)}
+                      placeholder="1:12345:web:abcd"
+                      className="w-full px-2 py-1.5 bg-[#151515] border border-zinc-800 focus:border-zinc-700 text-zinc-200 rounded-lg text-[10.5px] outline-hidden placeholder:text-zinc-650"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9.5px] font-medium text-zinc-400 block">Firestore DB ID (Opsional)</label>
+                    <input
+                      type="text"
+                      value={fbDatabaseId}
+                      onChange={(e) => setFbDatabaseId(e.target.value)}
+                      placeholder="(default)"
+                      className="w-full px-2 py-1.5 bg-[#151515] border border-zinc-800 focus:border-zinc-700 text-zinc-200 rounded-lg text-[10.5px] outline-hidden placeholder:text-zinc-650"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9.5px] font-medium text-zinc-400 block">Storage Bucket (Opsional)</label>
+                    <input
+                      type="text"
+                      value={fbStorageBucket}
+                      onChange={(e) => setFbStorageBucket(e.target.value)}
+                      placeholder="maria-ai-chat.firebasestorage.app"
+                      className="w-full px-2 py-1.5 bg-[#151515] border border-zinc-800 focus:border-zinc-700 text-zinc-200 rounded-lg text-[10.5px] outline-hidden placeholder:text-zinc-650"
+                    />
+                  </div>
+                </div>
+
+                {/* Tombol Aksi */}
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleSaveCustomFirebase}
+                    className={`px-3 py-1.5 text-[10.5px] font-bold rounded-lg text-white transition-all cursor-pointer flex items-center gap-1 shadow-sm ${getAccentBgClass(true)}`}
+                  >
+                    <Check className="w-3 h-3" />
+                    <span>Hubungkan Project Maria</span>
+                  </button>
+
+                  {isUsingCustomFirebase && (
+                    <button
+                      type="button"
+                      onClick={handleResetCustomFirebase}
+                      className="px-3 py-1.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-350 hover:text-white text-[10.5px] font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1"
+                    >
+                      <span>Gunakan Default Bawaan</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
             </div>

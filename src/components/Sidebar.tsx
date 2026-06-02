@@ -602,45 +602,43 @@ export default function Sidebar({
             </div>
           )}
 
-          {/* User profile info bar cell */}
-          {isLoggedIn && (
-            <button 
-              type="button"
-              onClick={onOpenProfile || onToggleSettings}
-              aria-label="Profil dan Pengaturan Akun"
-              className="w-full p-2 sm:p-2.5 rounded-xl bg-[#111317] hover:bg-[#1a1d23] border border-slate-850 cursor-pointer transition-all hover:scale-[1.01] active:opacity-90 flex items-center justify-between gap-2 md:gap-3 text-left"
-              title="Klik untuk membuka Pengaturan Profil"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                {shouldShowInitialsAvatar ? (
-                  <div className={`w-8 h-8 rounded-full ${avatarBgColor} flex items-center justify-center border border-slate-705 shadow-sm shrink-0 text-white font-bold text-[11px] select-none`}>
-                    {getInitials(userDisplayName)}
-                  </div>
-                ) : (
-                  <div className="w-8 h-8 rounded-full overflow-hidden border border-slate-700 shadow-sm shrink-0">
-                    <img 
-                      src={userAvatar} 
-                      alt="User Avatar Cell" 
-                      className="w-full h-full object-cover" 
-                      referrerPolicy="no-referrer"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  </div>
-                )}
-                <div className="min-w-0 flex-1 leading-normal select-none">
-                  <span className="block text-xs font-bold text-white truncate">
-                    {userDisplayName}
-                  </span>
-                  <span className="block text-[9px] text-slate-400 truncate">
-                    {userHandle.startsWith("@") ? userHandle : `@${userHandle}`}
-                  </span>
+          {/* User profile info bar cell (always visible) */}
+          <button 
+            type="button"
+            onClick={onOpenProfile || onToggleSettings}
+            aria-label="Profil dan Pengaturan Akun"
+            className="w-full p-2 sm:p-2.5 rounded-xl bg-[#111317] hover:bg-[#1a1d23] border border-slate-850 cursor-pointer transition-all hover:scale-[1.01] active:opacity-90 flex items-center justify-between gap-2 md:gap-3 text-left"
+            title="Klik untuk membuka Pengaturan Profil"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              {shouldShowInitialsAvatar ? (
+                <div className={`w-8 h-8 rounded-full ${avatarBgColor} flex items-center justify-center border border-slate-705 shadow-sm shrink-0 text-white font-bold text-[11px] select-none`}>
+                  {getInitials(userDisplayName)}
                 </div>
+              ) : (
+                <div className="w-8 h-8 rounded-full overflow-hidden border border-slate-700 shadow-sm shrink-0">
+                  <img 
+                    src={userAvatar} 
+                    alt="User Avatar Cell" 
+                    className="w-full h-full object-cover" 
+                    referrerPolicy="no-referrer"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+              )}
+              <div className="min-w-0 flex-1 leading-normal select-none">
+                <span className="block text-xs font-bold text-white truncate">
+                  {userDisplayName}
+                </span>
+                <span className="block text-[9px] text-slate-400 truncate">
+                  {isLoggedIn ? (userHandle.startsWith("@") ? userHandle : `@${userHandle}`) : "Mode Tamu Lokal"}
+                </span>
               </div>
+            </div>
 
-              <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            </button>
-          )}
+            <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          </button>
         </div>
       </div>
 

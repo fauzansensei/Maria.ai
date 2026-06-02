@@ -1,10 +1,35 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import firebaseConfig from '../firebase-applet-config.json';
+import firebaseConfigRaw from '../firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId); /* CRITICAL: The app will break without this line */
+// Dynamic resolver to load user custom Firebase/Google API configuration
+function getActiveFirebaseConfig() {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const saved = window.localStorage.getItem('maria_custom_firebase_config');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.projectId && parsed.apiKey) {
+          return parsed;
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Failed to parse custom firebase config from localStorage:', e);
+  }
+  return firebaseConfigRaw;
+}
+
+const firebaseConfig = getActiveFirebaseConfig();
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+
+// If database ID is absent/empty, default to standard Firestore database context
+const dbId = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId.trim() !== "" 
+  ? firebaseConfig.firestoreDatabaseId 
+  : undefined;
+
+export const db = dbId ? getFirestore(app, dbId) : getFirestore(app); /* CRITICAL: The app will break without this line */
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
