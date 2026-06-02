@@ -22,7 +22,8 @@ import {
 } from "lucide-react";
 import { Message, UserSettings } from "../types";
 import { THEME_OPTIONS } from "../constants";
-import { safeLocalStorageSetItem } from "../utils";
+import { auth, db, handleFirestoreError, OperationType } from "../firebase";
+import { doc, updateDoc, onSnapshot } from "firebase/firestore";
 
 export interface CustomPromptFormula {
   id: string;
@@ -55,14 +56,6 @@ export default function LibraryArea({
 
   // Saved Chats (Obrolan Diarsipkan) state
   const [savedChats, setSavedChats] = useState<any[]>(() => {
-    const saved = localStorage.getItem("maria_saved_chats");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Failed to parse maria_saved_chats", e);
-      }
-    }
     // Return a default beautiful starter if none exists, as recommended by Maria
     return [
       {
@@ -88,10 +81,37 @@ export default function LibraryArea({
     ];
   });
 
-  // Save changes to localStorage for saved_chats
-  const saveSavedChats = (updated: any[]) => {
+  // Synchronize custom prompts & saved chats with Firestore if logged in
+  useEffect(() => {
+    if (!auth.currentUser) return;
+    
+    const userRef = doc(db, "users", auth.currentUser.uid);
+    const unsub = onSnapshot(userRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        if (data.savedChats) {
+          setSavedChats(data.savedChats);
+        }
+        if (data.myPrompts) {
+          setMyPrompts(data.myPrompts);
+        }
+      }
+    }, (err) => {
+      handleFirestoreError(err, OperationType.GET, `users/${auth.currentUser?.uid}`);
+    });
+
+    return () => unsub();
+  }, []);
+
+  // Save changes to Firestore for saved_chats
+  const saveSavedChats = async (updated: any[]) => {
     setSavedChats(updated);
-    safeLocalStorageSetItem("maria_saved_chats", JSON.stringify(updated));
+    if (auth.currentUser) {
+      const userRef = doc(db, "users", auth.currentUser.uid);
+      await updateDoc(userRef, {
+        savedChats: updated
+      }).catch(err => handleFirestoreError(err, OperationType.UPDATE, `users/${auth.currentUser?.uid}`));
+    }
   };
 
   const handleDeleteSavedChat = (id: string, e: React.MouseEvent) => {
@@ -102,15 +122,6 @@ export default function LibraryArea({
 
   // My Custom Prompts section states
   const [myPrompts, setMyPrompts] = useState<CustomPromptFormula[]>(() => {
-    const saved = localStorage.getItem("maria_my_prompts");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      } catch (e) {
-        console.error("Failed to parse My Prompts:", e);
-      }
-    }
     return [
       {
         id: "mp-1",
@@ -135,9 +146,14 @@ export default function LibraryArea({
   const [promptFormCategory, setPromptFormCategory] = useState("Edukasi");
   const [promptFormFormula, setPromptFormFormula] = useState("");
 
-  const saveMyPromptsToStorage = (updated: CustomPromptFormula[]) => {
+  const saveMyPromptsToStorage = async (updated: CustomPromptFormula[]) => {
     setMyPrompts(updated);
-    safeLocalStorageSetItem("maria_my_prompts", JSON.stringify(updated));
+    if (auth.currentUser) {
+      const userRef = doc(db, "users", auth.currentUser.uid);
+      await updateDoc(userRef, {
+        myPrompts: updated
+      }).catch(err => handleFirestoreError(err, OperationType.UPDATE, `users/${auth.currentUser?.uid}`));
+    }
   };
 
   const handleOpenNewPromptForm = () => {

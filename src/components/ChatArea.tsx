@@ -59,6 +59,8 @@ interface ChatAreaProps {
   bookmarkedMessages?: Message[];
   isLoggedIn?: boolean;
   onOpenLogin?: () => void;
+  pendingPrompt?: string | null;
+  onClearPendingPrompt?: () => void;
 }
 
 // Config lists for resolving color schema & icons for requested external web apps
@@ -546,17 +548,41 @@ export default function ChatArea({
   bookmarkedMessages = [],
   isLoggedIn = false,
   onOpenLogin,
+  pendingPrompt,
+  onClearPendingPrompt,
 }: ChatAreaProps) {
   const [inputText, setInputText] = useState("");
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
-  // Load a pending prompt stored in localStorage cleanly (used by Library / Discover redirection)
+  // Auto-grow textarea height on content change
   useEffect(() => {
-    const pending = localStorage.getItem("maria_pending_prompt");
-    if (pending) {
-      setInputText(pending);
-      localStorage.removeItem("maria_pending_prompt");
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 180)}px`;
     }
-  }, [messages]);
+  }, [inputText]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault(); // Prevent standard newline behavior of textarea
+      if (inputText.trim() || attachedImage || voiceBase64) {
+        if (!isLoading) {
+          const form = e.currentTarget.closest("form");
+          if (form) {
+            form.requestSubmit();
+          }
+        }
+      }
+    }
+  };
+
+  // Load a pending prompt stored in reactive states cleanly (used by Library / Discover redirection)
+  useEffect(() => {
+    if (pendingPrompt) {
+      setInputText(pendingPrompt);
+      onClearPendingPrompt?.();
+    }
+  }, [pendingPrompt, onClearPendingPrompt]);
   const [isCopiedId, setIsCopiedId] = useState<string | null>(null);
   const [isWidgetPanelExpanded, setIsWidgetPanelExpanded] = useState(true);
   const [isNotificationTrayOpen, setIsNotificationTrayOpen] = useState(false);
@@ -1276,14 +1302,17 @@ export default function ChatArea({
                     </button>
                   </div>
 
-                  <input
-                    type="text"
+                  <textarea
+                    ref={textareaRef}
                     placeholder={isLoading ? "Mohon tunggu, Maria sedang memproses..." : "Tanya Maria..."}
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
+                    onKeyDown={handleKeyDown}
                     disabled={isLoading}
                     aria-label="Input Chat Utama"
-                    className="w-full bg-slate-100 border-none rounded-xl py-3.5 pl-[62px] pr-14 text-xs text-slate-800 font-medium focus:ring-1 focus:ring-slate-300 hover:bg-slate-200/50 focus:bg-white outline-none transition-all duration-200 placeholder:text-slate-500"
+                    rows={1}
+                    className="w-full bg-slate-100 border-none rounded-xl py-3 pl-[62px] pr-14 text-xs text-slate-800 font-medium focus:ring-1 focus:ring-slate-300 hover:bg-slate-200/50 focus:bg-white outline-none transition-all duration-200 placeholder:text-slate-500 overflow-y-auto resize-none leading-relaxed align-middle block min-h-[44px] max-h-[180px]"
+                    style={{ height: "auto" }}
                   />
                   <button
                     type="submit"

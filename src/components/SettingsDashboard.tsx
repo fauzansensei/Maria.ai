@@ -67,67 +67,42 @@ export default function SettingsDashboard({
 }: SettingsDashboardProps) {
   const [activeTab, setActiveTab] = useState<MenuTab>("umum");
 
-  // Load and synchronize states with localStorage for supreme persistence
-  const [appearance, setAppearance] = useState(() => localStorage.getItem("maria_appearance") || "Gelap");
-  const [contrast, setContrast] = useState(() => localStorage.getItem("maria_contrast") || "Sistem");
-  const [accentColor, setAccentColor] = useState(() => localStorage.getItem("maria_accent_color") || "Biru");
-  const [language, setLanguage] = useState(() => localStorage.getItem("maria_language") || "Deteksi otomatis");
-  const [dictationEnabled, setDictationEnabled] = useState(() => localStorage.getItem("maria_dictation") !== "false");
-  const [spokenLanguage, setSpokenLanguage] = useState(() => localStorage.getItem("maria_spoken_lang") || "Deteksi otomatis");
-  const [voiceVoice, setVoiceVoice] = useState(() => {
-    const saved = localStorage.getItem("maria_voice");
-    const exists = saved && VOICE_OPTIONS.some(v => v.value === saved);
-    return exists ? saved : "Maria";
-  });
-  const [voiceStreamSplit, setVoiceStreamSplit] = useState(() => localStorage.getItem("maria_stream_split") === "true");
+  // Load and synchronize states with memory defaults
+  const [appearance, setAppearance] = useState("Gelap");
+  const [contrast, setContrast] = useState("Sistem");
+  const [accentColor, setAccentColor] = useState("Biru");
+  const [language, setLanguage] = useState("Deteksi otomatis");
+  const [dictationEnabled, setDictationEnabled] = useState(true);
+  const [spokenLanguage, setSpokenLanguage] = useState("Deteksi otomatis");
+  const [voiceVoice, setVoiceVoice] = useState("Maria");
+  const [voiceStreamSplit, setVoiceStreamSplit] = useState(false);
 
   // Smart Notification System states
-  const [remindersNotif, setRemindersNotif] = useState<string[]>(() => {
-    try {
-      const parsed = JSON.parse(localStorage.getItem("notif_reminders") || '["In-App", "Push"]');
-      return Array.isArray(parsed) ? parsed : ["In-App", "Push"];
-    } catch {
-      return ["In-App", "Push"];
-    }
-  });
-  const [updatesNotif, setUpdatesNotif] = useState<string[]>(() => {
-    try {
-      const parsed = JSON.parse(localStorage.getItem("notif_updates") || '["In-App", "Email"]');
-      return Array.isArray(parsed) ? parsed : ["In-App", "Email"];
-    } catch {
-      return ["In-App", "Email"];
-    }
-  });
-  const [suggestionsNotif, setSuggestionsNotif] = useState<string[]>(() => {
-    try {
-      const parsed = JSON.parse(localStorage.getItem("notif_suggestions") || '["In-App"]');
-      return Array.isArray(parsed) ? parsed : ["In-App"];
-    } catch {
-      return ["In-App"];
-    }
-  });
+  const [remindersNotif, setRemindersNotif] = useState<string[]>(["In-App", "Push"]);
+  const [updatesNotif, setUpdatesNotif] = useState<string[]>(["In-App", "Email"]);
+  const [suggestionsNotif, setSuggestionsNotif] = useState<string[]>(["In-App"]);
 
   // Personalization & Tone Characteristics
   const [basicToneStyle, setBasicToneStyle] = useState<MariaTone>(settings.tone || "Professional");
-  const [charWarm, setCharWarm] = useState(() => localStorage.getItem("char_warm") || "Default");
-  const [charEnthusiastic, setCharEnthusiastic] = useState(() => localStorage.getItem("char_enthusiastic") || "Default");
-  const [charList, setCharList] = useState(() => localStorage.getItem("char_list") || "Default");
-  const [charEmoji, setCharEmoji] = useState(() => localStorage.getItem("char_emoji") || "Default");
-  const [quickAnswers, setQuickAnswers] = useState(() => localStorage.getItem("char_quick") !== "false");
+  const [charWarm, setCharWarm] = useState("Default");
+  const [charEnthusiastic, setCharEnthusiastic] = useState("Default");
+  const [charList, setCharList] = useState("Default");
+  const [charEmoji, setCharEmoji] = useState("Default");
+  const [quickAnswers, setQuickAnswers] = useState(true);
   const [customInstructions, setCustomInstructions] = useState(settings.customPrompt || "");
   const [userNickname, setUserNickname] = useState(settings.username || "Pengguna");
-  const [userJob, setUserJob] = useState(() => localStorage.getItem("maria_user_job") || "Designer Interior");
-  const [userBio, setUserBio] = useState(() => localStorage.getItem("maria_user_bio") || "Minat, nilai, atau preferensi yang perlu diingat");
-  const [memSave, setMemSave] = useState(() => localStorage.getItem("mem_save") !== "false");
-  const [memRef, setMemRef] = useState(() => localStorage.getItem("mem_ref") !== "false");
+  const [userJob, setUserJob] = useState("Designer Interior");
+  const [userBio, setUserBio] = useState("Minat, nilai, atau preferensi yang perlu diingat");
+  const [memSave, setMemSave] = useState(true);
+  const [memRef, setMemRef] = useState(true);
 
   // Advanced collapsible customization triggers
   const [isAdvancedExpanded, setIsAdvancedExpanded] = useState(true);
-  const [advWeb, setAdvWeb] = useState(() => localStorage.getItem("adv_web") !== "false");
-  const [advCanvas, setAdvCanvas] = useState(() => localStorage.getItem("adv_canvas") !== "false");
-  const [advVoiceChat, setAdvVoiceChat] = useState(() => localStorage.getItem("adv_voice_chat") !== "false");
-  const [advSmartVoice, setAdvSmartVoice] = useState(() => localStorage.getItem("adv_smart_voice") !== "false");
-  const [advConnector, setAdvConnector] = useState(() => localStorage.getItem("adv_connector") !== "false");
+  const [advWeb, setAdvWeb] = useState(true);
+  const [advCanvas, setAdvCanvas] = useState(true);
+  const [advVoiceChat, setAdvVoiceChat] = useState(true);
+  const [advSmartVoice, setAdvSmartVoice] = useState(true);
+  const [advConnector, setAdvConnector] = useState(true);
 
   // Controls for interactive drop downs
   const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
@@ -258,12 +233,12 @@ export default function SettingsDashboard({
     const updatedSettings: UserSettings = {
       username: updates.username !== undefined ? updates.username : userNickname,
       tone: updates.tone !== undefined ? updates.tone : basicToneStyle,
-      languageStyle: updates.langStyle !== undefined ? updates.langStyle : (localStorage.getItem("maria_language_style") as LanguageStyle || "Baku"),
+      languageStyle: updates.langStyle !== undefined ? updates.langStyle : (settings.languageStyle || "Baku"),
       customPrompt: updates.customPrompt !== undefined ? updates.customPrompt : customInstructions,
       theme: updates.theme !== undefined ? updates.theme : settings.theme,
       widgets: settings.widgets,
       notifications: {
-        soundEnabled: updates.notifications?.soundEnabled !== undefined ? updates.notifications.soundEnabled : (localStorage.getItem("maria_sound_enabled") !== "false"),
+        soundEnabled: updates.notifications?.soundEnabled !== undefined ? updates.notifications.soundEnabled : (settings.notifications?.soundEnabled !== false),
         statusUpdates: settings.notifications?.statusUpdates ?? true,
         remindersEnabled: settings.notifications?.remindersEnabled ?? true,
       }

@@ -2,7 +2,29 @@ import React, { useState, useEffect } from "react";
 import { Message, UserSettings, AppNotification, ChatThread } from "./types";
 import { DEFAULT_SETTINGS, THEME_OPTIONS } from "./constants";
 import type { DiscoveryAgent } from "./components/DiscoverArea";
-import { safeLocalStorageSetItem } from "./utils";
+import { 
+  auth, 
+  db, 
+  googleProvider, 
+  OperationType, 
+  handleFirestoreError 
+} from "./firebase";
+import { 
+  onAuthStateChanged, 
+  signInWithPopup, 
+  signOut 
+} from "firebase/auth";
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  updateDoc, 
+  deleteDoc, 
+  query, 
+  where, 
+  onSnapshot,
+  getDocs
+} from "firebase/firestore";
 
 // Static imports for primary main-screen components to avoid lazy-loading network handshakes and CLS
 import Sidebar from "./components/Sidebar";
@@ -43,110 +65,32 @@ const safeParseResponse = async (response: Response) => {
 };
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    return localStorage.getItem("maria_is_logged_in") === "true";
-  });
-
-  // Load settings from localStorage or defaults
-  const [settings, setSettings] = useState<UserSettings>(() => {
-    const saved = localStorage.getItem("maria_settings2");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Fallback for settings properties if they don't exist yet
-        return {
-          ...DEFAULT_SETTINGS,
-          ...parsed,
-        };
-      } catch (e) {
-        console.error("Failed to parse settings", e);
-      }
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [threads, setThreads] = useState<ChatThread[]>([]);
+  const [activeThreadId, setActiveThreadId] = useState<string>("");
+  const [savedChats, setSavedChats] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([
+    {
+      id: "not-init",
+      title: "Sistem Aktif",
+      body: "Asisten pintar Maria Anda diaktifkan dan terhubung.",
+      type: "success",
+      timestamp: new Date().toISOString(),
+      read: false,
     }
-    return DEFAULT_SETTINGS;
-  });
-
-  // Load chat messages from localStorage
-  const [messages, setMessages] = useState<Message[]>(() => {
-    const saved = localStorage.getItem("maria_messages");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      } catch (e) {
-        console.error("Failed to parse messages", e);
-      }
-    }
-    return [];
-  });
-
-  // Load chat threads from localStorage or populate with empty state
-  const [threads, setThreads] = useState<ChatThread[]>(() => {
-    const saved = localStorage.getItem("maria_threads");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          // Filter out the initial mock/placeholder threads so the user starts with an empty chat list as requested
-          return parsed.filter(t => 
-            t.id !== "horror-script" && 
-            t.id !== "clean-nav" && 
-            t.id !== "car-diagnosis" && 
-            t.id !== "parenting"
-          );
-        }
-      } catch (e) {
-        console.error("Failed to parse threads", e);
-      }
-    }
-    return [];
-  });
-
-  const [activeThreadId, setActiveThreadId] = useState<string>(() => {
-    const savedActive = localStorage.getItem("maria_active_thread_id") || "";
-    // If the active thread was one of the mock threads, reset back to new chat
-    if (
-      savedActive === "horror-script" || 
-      savedActive === "clean-nav" || 
-      savedActive === "car-diagnosis" || 
-      savedActive === "parenting"
-    ) {
-      return "";
-    }
-    return savedActive;
-  });
-
-  // Real-time Notification Logs State
-  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
-    const saved = localStorage.getItem("maria_notifications");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      } catch (e) {
-        console.error("Failed to parse notifications", e);
-      }
-    }
-    return [
-      {
-        id: "not-init",
-        title: "Sistem Aktif",
-        body: "Asisten pintar Maria Anda diaktifkan dan terhubung.",
-        type: "success",
-        timestamp: new Date().toISOString(),
-        read: false,
-      }
-    ];
-  });
+  ]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false); // Controls responsive drawer tracker
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [profileDisplayName, setProfileDisplayName] = useState(() => settings.username || "basit fauzan");
-  const [profileUsername, setProfileUsername] = useState(() => localStorage.getItem("maria_username_handle") || "@basitfauzan42");
-  const [profileAvatarBg, setProfileAvatarBg] = useState(() => localStorage.getItem("maria_avatar_bg_color") || "bg-[#064e3b]"); // premium deep green bg
+  const [profileDisplayName, setProfileDisplayName] = useState("basit fauzan");
+  const [profileUsername, setProfileUsername] = useState("@basitfauzan42");
+  const [profileAvatarBg, setProfileAvatarBg] = useState("bg-[#064e3b]"); // premium deep green bg
   const [showColorSelector, setShowColorSelector] = useState(false);
-  const [profileUseInitials, setProfileUseInitials] = useState(() => localStorage.getItem("maria_use_initials_avatar") !== "false");
-  const [profileAvatarUrl, setProfileAvatarUrl] = useState(() => localStorage.getItem("maria_user_avatar") || "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150&h=150&fit=crop&q=80");
+  const [profileUseInitials, setProfileUseInitials] = useState(true);
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState("https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150&h=150&fit=crop&q=80");
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -186,37 +130,35 @@ export default function App() {
 
   // Library and Discover states matching Maria AI suggestions
   const [activeView, setActiveView] = useState<"chat" | "library" | "discover">("chat");
-  const [bookmarkedMessages, setBookmarkedMessages] = useState<Message[]>(() => {
-    try {
-      const saved = localStorage.getItem("maria_bookmarks");
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [bookmarkedMessages, setBookmarkedMessages] = useState<Message[]>([]);
 
-  const handleToggleBookmark = (msg: Message) => {
-    setBookmarkedMessages(prev => {
-      const exists = prev.some(b => b.id === msg.id);
-      let updated;
-      if (exists) {
-        updated = prev.filter(b => b.id !== msg.id);
-        handleAddSystemNotification(
-          "Penanda Dihapus",
-          "Pesan telah dihapus dari pustaka Library Anda.",
-          "info"
-        );
-      } else {
-        updated = [...prev, msg];
-        handleAddSystemNotification(
-          "Pesan Ditambahkan",
-          "Pesan berhasil ditandai dan disimpan di dalam Library.",
-          "success"
-        );
-      }
-      safeLocalStorageSetItem("maria_bookmarks", JSON.stringify(updated));
-      return updated;
-    });
+  const handleToggleBookmark = async (msg: Message) => {
+    let nextBookmarks: Message[] = [];
+    const exists = bookmarkedMessages.some(b => b.id === msg.id);
+    if (exists) {
+      nextBookmarks = bookmarkedMessages.filter(b => b.id !== msg.id);
+      handleAddSystemNotification(
+        "Penanda Dihapus",
+        "Pesan telah dihapus dari pustaka Library Anda.",
+        "info"
+      );
+    } else {
+      nextBookmarks = [...bookmarkedMessages, msg];
+      handleAddSystemNotification(
+        "Pesan Ditambahkan",
+        "Pesan berhasil ditandai dan disimpan di dalam Library.",
+        "success"
+      );
+    }
+
+    setBookmarkedMessages(nextBookmarks);
+
+    if (isLoggedIn && auth.currentUser) {
+      const userRef = doc(db, "users", auth.currentUser.uid);
+      await updateDoc(userRef, {
+        bookmarks: nextBookmarks
+      }).catch(err => handleFirestoreError(err, OperationType.UPDATE, `users/${auth.currentUser?.uid}`));
+    }
   };
 
   const handleSelectAgent = (agent: DiscoveryAgent) => {
@@ -236,9 +178,14 @@ export default function App() {
       tone: agent.id === "aiko-chat" ? "Warm" : agent.id === "sora-coder" ? "Technical" : agent.id === "rendra-copy" ? "Creative" : "Professional"
     };
     
-    // Update settings in memory and LocalStorage
+    // Update settings inside memory and sync to Firestore
     setSettings(updatedSettings);
-    safeLocalStorageSetItem("maria_settings2", JSON.stringify(updatedSettings));
+    if (isLoggedIn && auth.currentUser) {
+      const userRef = doc(db, "users", auth.currentUser.uid);
+      updateDoc(userRef, {
+        settings: updatedSettings
+      }).catch(err => handleFirestoreError(err, OperationType.UPDATE, `users/${auth.currentUser?.uid}`));
+    }
 
     // Force messages list
     setMessages([welcomeMsg]);
@@ -263,8 +210,10 @@ export default function App() {
     );
   };
 
+  const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
+
   const handleUsePromptFormula = (formulaText: string) => {
-    safeLocalStorageSetItem("maria_pending_prompt", formulaText);
+    setPendingPrompt(formulaText);
     setActiveView("chat");
     handleAddSystemNotification(
       "Prompt Dipakai",
@@ -288,10 +237,122 @@ export default function App() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // 1. Firebase Auth and Profile real-time listener
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsLoggedIn(true);
+        // Sync user document
+        const userRef = doc(db, "users", user.uid);
+        const unsubscribeUser = onSnapshot(userRef, (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            if (data.settings) {
+              setSettings(data.settings);
+            }
+            if (data.bookmarks) {
+              setBookmarkedMessages(data.bookmarks);
+            }
+            if (data.savedChats) {
+              setSavedChats(data.savedChats);
+            }
+            if (data.displayName) {
+              setProfileDisplayName(data.displayName);
+            }
+            if (data.username) {
+              setProfileUsername(data.username);
+            }
+            if (data.avatarUrl) {
+              setProfileAvatarUrl(data.avatarUrl);
+              setProfileUseInitials(false);
+            }
+          } else {
+            // New user registration - initialize user doc
+            setDoc(userRef, {
+              displayName: user.displayName || "basit fauzan",
+              username: "@" + (user.email?.split("@")[0] || "basitfauzan42"),
+              email: user.email || "basitfauzan42@gmail.com",
+              avatarUrl: user.photoURL || "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150&h=150&fit=crop&q=80",
+              settings: DEFAULT_SETTINGS,
+              bookmarks: [],
+              savedChats: [],
+              myPrompts: []
+            }).catch(e => handleFirestoreError(e, OperationType.CREATE, `users/${user.uid}`));
+          }
+        });
+
+        // Sync user threads
+        const threadsQuery = query(collection(db, "threads"), where("userId", "==", user.uid));
+        const unsubscribeThreads = onSnapshot(threadsQuery, (querySnapshot) => {
+          const loadedThreads: ChatThread[] = [];
+          querySnapshot.forEach((docSnap) => {
+            const threadData = docSnap.data();
+            loadedThreads.push({
+              id: docSnap.id,
+              title: threadData.title || "Percakapan",
+              isPinned: threadData.isPinned || false,
+              messages: [] // messages are loaded per active thread
+            });
+          });
+          setThreads(loadedThreads);
+        });
+
+        return () => {
+          unsubscribeUser();
+          unsubscribeThreads();
+        };
+      } else {
+        setIsLoggedIn(false);
+        setSettings(DEFAULT_SETTINGS);
+        setBookmarkedMessages([]);
+        setSavedChats([]);
+        setThreads([]);
+        setMessages([]);
+        setActiveThreadId("");
+      }
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
+  // 2. Real-time active chat thread messages listener
+  useEffect(() => {
+    if (!activeThreadId || !isLoggedIn || !auth.currentUser) {
+      return;
+    }
+
+    const messagesQuery = collection(db, "threads", activeThreadId, "messages");
+    const unsubscribeMessages = onSnapshot(messagesQuery, (querySnapshot) => {
+      const loadedMessages: Message[] = [];
+      querySnapshot.forEach((docSnap) => {
+        const msgData = docSnap.data();
+        loadedMessages.push({
+          id: docSnap.id,
+          role: msgData.role,
+          content: msgData.content,
+          timestamp: msgData.timestamp,
+          isError: msgData.isError || false,
+          isEdited: msgData.isEdited || false,
+          feedback: msgData.feedback || null
+        });
+      });
+      loadedMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      setMessages(loadedMessages);
+    });
+
+    return () => unsubscribeMessages();
+  }, [activeThreadId, isLoggedIn]);
+
   // Save settings when modified
-  const handleSaveSettings = (newSettings: UserSettings) => {
+  const handleSaveSettings = async (newSettings: UserSettings) => {
     setSettings(newSettings);
-    safeLocalStorageSetItem("maria_settings2", JSON.stringify(newSettings));
+    
+    if (isLoggedIn && auth.currentUser) {
+      const userRef = doc(db, "users", auth.currentUser.uid);
+      await updateDoc(userRef, {
+        settings: newSettings
+      }).catch(err => handleFirestoreError(err, OperationType.UPDATE, `users/${auth.currentUser?.uid}`));
+    }
     
     // Determine active theme name
     const themeName = THEME_OPTIONS.find(t => t.value === newSettings.theme)?.name || "Kustom";
@@ -304,26 +365,14 @@ export default function App() {
     );
   };
 
-  // Save threads when modified
+  // Synchronize active thread with messages in guest mode
   useEffect(() => {
-    safeLocalStorageSetItem("maria_threads", JSON.stringify(threads));
-  }, [threads]);
-
-  // Synchronize active thread with messages and active ID
-  useEffect(() => {
-    if (activeThreadId) {
+    if (!isLoggedIn && activeThreadId) {
       setThreads(prev => prev.map(t => 
         t.id === activeThreadId ? { ...t, messages } : t
       ));
     }
-    safeLocalStorageSetItem("maria_messages", JSON.stringify(messages));
-    safeLocalStorageSetItem("maria_active_thread_id", activeThreadId);
-  }, [messages, activeThreadId]);
-
-  // Save notifications when modified
-  useEffect(() => {
-    safeLocalStorageSetItem("maria_notifications", JSON.stringify(notifications));
-  }, [notifications]);
+  }, [messages, activeThreadId, isLoggedIn]);
 
   // Play polite system chime when actions succeed
   const playNotificationChime = () => {
@@ -420,13 +469,23 @@ export default function App() {
         ? firstMessageText.substring(0, 25) + "..." 
         : firstMessageText;
       
-      const newThread: ChatThread = {
-        id: currentThreadId,
-        title,
-        isPinned: false,
-        messages: []
-      };
-      setThreads(prev => [newThread, ...prev]);
+      if (isLoggedIn && auth.currentUser) {
+        // Save thread in Firestore
+        await setDoc(doc(db, "threads", currentThreadId), {
+          title,
+          isPinned: false,
+          userId: auth.currentUser.uid,
+          createdAt: new Date().toISOString()
+        }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${currentThreadId}`));
+      } else {
+        const newThread: ChatThread = {
+          id: currentThreadId,
+          title,
+          isPinned: false,
+          messages: []
+        };
+        setThreads(prev => [newThread, ...prev]);
+      }
       setActiveThreadId(currentThreadId);
     }
 
@@ -439,8 +498,22 @@ export default function App() {
       ...(audio ? { audio } : {}),
     };
 
-    const updatedMessages = [...messages, userMsg];
-    setMessages(updatedMessages);
+    const postMessages = [...messages, userMsg];
+
+    if (isLoggedIn && auth.currentUser) {
+      await setDoc(doc(db, "threads", currentThreadId, "messages", userMsg.id), {
+        id: userMsg.id,
+        role: userMsg.role,
+        content: userMsg.content,
+        timestamp: userMsg.timestamp,
+        isError: false,
+        isEdited: false,
+        feedback: null
+      }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${currentThreadId}/messages/${userMsg.id}`));
+    } else {
+      setMessages(postMessages);
+    }
+
     setIsLoading(true);
 
     try {
@@ -450,7 +523,7 @@ export default function App() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          messages: updatedMessages,
+          messages: postMessages,
           settings,
         }),
       });
@@ -464,7 +537,20 @@ export default function App() {
           content: data.content,
           timestamp: data.timestamp || new Date().toISOString(),
         };
-        setMessages((prev) => [...prev, assistantMsg]);
+
+        if (isLoggedIn && auth.currentUser) {
+          await setDoc(doc(db, "threads", currentThreadId, "messages", assistantMsg.id), {
+            id: assistantMsg.id,
+            role: assistantMsg.role,
+            content: assistantMsg.content,
+            timestamp: assistantMsg.timestamp,
+            isError: false,
+            isEdited: false,
+            feedback: null
+          }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${currentThreadId}/messages/${assistantMsg.id}`));
+        } else {
+          setMessages((prev) => [...prev, assistantMsg]);
+        }
         
         // Notify user about incoming answer
         handleAddSystemNotification(
@@ -481,7 +567,20 @@ export default function App() {
           timestamp: new Date().toISOString(),
           isError: true,
         };
-        setMessages((prev) => [...prev, errorMsg]);
+
+        if (isLoggedIn && auth.currentUser) {
+          await setDoc(doc(db, "threads", currentThreadId, "messages", errorMsg.id), {
+            id: errorMsg.id,
+            role: errorMsg.role,
+            content: errorMsg.content,
+            timestamp: errorMsg.timestamp,
+            isError: true,
+            isEdited: false,
+            feedback: null
+          }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${currentThreadId}/messages/${errorMsg.id}`));
+        } else {
+          setMessages((prev) => [...prev, errorMsg]);
+        }
         
         handleAddSystemNotification(
           "Peringatan Sambungan", 
@@ -498,7 +597,20 @@ export default function App() {
         timestamp: new Date().toISOString(),
         isError: true,
       };
-      setMessages((prev) => [...prev, errorMsg]);
+
+      if (isLoggedIn && auth.currentUser) {
+        await setDoc(doc(db, "threads", currentThreadId, "messages", errorMsg.id), {
+          id: errorMsg.id,
+          role: errorMsg.role,
+          content: errorMsg.content,
+          timestamp: errorMsg.timestamp,
+          isError: true,
+          isEdited: false,
+          feedback: null
+        }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${currentThreadId}/messages/${errorMsg.id}`));
+      } else {
+        setMessages((prev) => [...prev, errorMsg]);
+      }
 
       handleAddSystemNotification(
         "Koneksi Offline", 
@@ -521,7 +633,16 @@ export default function App() {
     const precedingMessages = messages.slice(0, msgIdx);
     if (precedingMessages.length === 0) return;
 
-    setMessages(precedingMessages);
+    if (isLoggedIn && auth.currentUser && activeThreadId) {
+      // Delete any Firestore messages from msgIdx onwards
+      const messagesToDelete = messages.slice(msgIdx);
+      for (const m of messagesToDelete) {
+        await deleteDoc(doc(db, "threads", activeThreadId, "messages", m.id)).catch(err => handleFirestoreError(err, OperationType.DELETE, `threads/${activeThreadId}/messages/${m.id}`));
+      }
+    } else {
+      setMessages(precedingMessages);
+    }
+
     setIsLoading(true);
 
     try {
@@ -545,7 +666,20 @@ export default function App() {
           content: data.content,
           timestamp: data.timestamp || new Date().toISOString(),
         };
-        setMessages((prev) => [...prev, assistantMsg]);
+
+        if (isLoggedIn && auth.currentUser && activeThreadId) {
+          await setDoc(doc(db, "threads", activeThreadId, "messages", assistantMsg.id), {
+            id: assistantMsg.id,
+            role: assistantMsg.role,
+            content: assistantMsg.content,
+            timestamp: assistantMsg.timestamp,
+            isError: false,
+            isEdited: false,
+            feedback: null
+          }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${assistantMsg.id}`));
+        } else {
+          setMessages((prev) => [...prev, assistantMsg]);
+        }
 
         handleAddSystemNotification(
           "Respons Baru dari Maria",
@@ -560,7 +694,20 @@ export default function App() {
           timestamp: new Date().toISOString(),
           isError: true,
         };
-        setMessages((prev) => [...prev, errorMsg]);
+
+        if (isLoggedIn && auth.currentUser && activeThreadId) {
+          await setDoc(doc(db, "threads", activeThreadId, "messages", errorMsg.id), {
+            id: errorMsg.id,
+            role: errorMsg.role,
+            content: errorMsg.content,
+            timestamp: errorMsg.timestamp,
+            isError: true,
+            isEdited: false,
+            feedback: null
+          }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${errorMsg.id}`));
+        } else {
+          setMessages((prev) => [...prev, errorMsg]);
+        }
       }
     } catch (networkError: any) {
       console.error("Regenerate Error:", networkError);
@@ -571,17 +718,36 @@ export default function App() {
         timestamp: new Date().toISOString(),
         isError: true,
       };
-      setMessages((prev) => [...prev, errorMsg]);
+
+      if (isLoggedIn && auth.currentUser && activeThreadId) {
+        await setDoc(doc(db, "threads", activeThreadId, "messages", errorMsg.id), {
+          id: errorMsg.id,
+          role: errorMsg.role,
+          content: errorMsg.content,
+          timestamp: errorMsg.timestamp,
+          isError: true,
+          isEdited: false,
+          feedback: null
+        }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${errorMsg.id}`));
+      } else {
+        setMessages((prev) => [...prev, errorMsg]);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   // Sets feedback status (like/dislike) for a message
-  const handleSetFeedback = (messageId: string, feedback: "like" | "dislike") => {
-    setMessages((prev) =>
-      prev.map((m) => (m.id === messageId ? { ...m, feedback } : m))
-    );
+  const handleSetFeedback = async (messageId: string, feedback: "like" | "dislike") => {
+    if (isLoggedIn && auth.currentUser && activeThreadId) {
+      await updateDoc(doc(db, "threads", activeThreadId, "messages", messageId), {
+        feedback
+      }).catch(err => handleFirestoreError(err, OperationType.UPDATE, `threads/${activeThreadId}/messages/${messageId}`));
+    } else {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === messageId ? { ...m, feedback } : m))
+      );
+    }
   };
 
   // Edits a user's previous message and triggers a response rebuild
@@ -598,7 +764,27 @@ export default function App() {
     };
 
     const nextMessages = [...messages.slice(0, msgIdx), updatedUserMsg];
-    setMessages(nextMessages);
+
+    if (isLoggedIn && auth.currentUser && activeThreadId) {
+      // Delete any Firestore messages from msgIdx onwards first
+      const messagesToDelete = messages.slice(msgIdx);
+      for (const m of messagesToDelete) {
+        await deleteDoc(doc(db, "threads", activeThreadId, "messages", m.id)).catch(err => handleFirestoreError(err, OperationType.DELETE, `threads/${activeThreadId}/messages/${m.id}`));
+      }
+      // Save updatedUserMsg
+      await setDoc(doc(db, "threads", activeThreadId, "messages", updatedUserMsg.id), {
+        id: updatedUserMsg.id,
+        role: updatedUserMsg.role,
+        content: updatedUserMsg.content,
+        timestamp: updatedUserMsg.timestamp,
+        isError: false,
+        isEdited: true,
+        feedback: null
+      }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${updatedUserMsg.id}`));
+    } else {
+      setMessages(nextMessages);
+    }
+
     setIsLoading(true);
 
     try {
@@ -622,7 +808,20 @@ export default function App() {
           content: data.content,
           timestamp: data.timestamp || new Date().toISOString(),
         };
-        setMessages((prev) => [...prev, assistantMsg]);
+
+        if (isLoggedIn && auth.currentUser && activeThreadId) {
+          await setDoc(doc(db, "threads", activeThreadId, "messages", assistantMsg.id), {
+            id: assistantMsg.id,
+            role: assistantMsg.role,
+            content: assistantMsg.content,
+            timestamp: assistantMsg.timestamp,
+            isError: false,
+            isEdited: false,
+            feedback: null
+          }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${assistantMsg.id}`));
+        } else {
+          setMessages((prev) => [...prev, assistantMsg]);
+        }
 
         handleAddSystemNotification(
           "Pesan Diperbarui",
@@ -637,7 +836,20 @@ export default function App() {
           timestamp: new Date().toISOString(),
           isError: true,
         };
-        setMessages((prev) => [...prev, errorMsg]);
+
+        if (isLoggedIn && auth.currentUser && activeThreadId) {
+          await setDoc(doc(db, "threads", activeThreadId, "messages", errorMsg.id), {
+            id: errorMsg.id,
+            role: errorMsg.role,
+            content: errorMsg.content,
+            timestamp: errorMsg.timestamp,
+            isError: true,
+            isEdited: false,
+            feedback: null
+          }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${errorMsg.id}`));
+        } else {
+          setMessages((prev) => [...prev, errorMsg]);
+        }
       }
     } catch (networkError: any) {
       console.error("Edit Message Error:", networkError);
@@ -648,18 +860,33 @@ export default function App() {
         timestamp: new Date().toISOString(),
         isError: true,
       };
-      setMessages((prev) => [...prev, errorMsg]);
+
+      if (isLoggedIn && auth.currentUser && activeThreadId) {
+        await setDoc(doc(db, "threads", activeThreadId, "messages", errorMsg.id), {
+          id: errorMsg.id,
+          role: errorMsg.role,
+          content: errorMsg.content,
+          timestamp: errorMsg.timestamp,
+          isError: true,
+          isEdited: false,
+          feedback: null
+        }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${errorMsg.id}`));
+      } else {
+        setMessages((prev) => [...prev, errorMsg]);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   // Select active thread
-  const handleSelectThread = (id: string) => {
-    const thread = threads.find(t => t.id === id);
-    if (thread) {
-      setActiveThreadId(id);
-      setMessages(thread.messages);
+  const handleSelectThread = async (id: string) => {
+    setActiveThreadId(id);
+    if (!isLoggedIn) {
+      const thread = threads.find(t => t.id === id);
+      if (thread) {
+        setMessages(thread.messages);
+      }
     }
   };
 
@@ -670,28 +897,43 @@ export default function App() {
   };
 
   // Toggle thread pin status
-  const handlePinThread = (id: string) => {
-    setThreads(prev => prev.map(t => 
-      t.id === id ? { ...t, isPinned: !t.isPinned } : t
-    ));
-    
+  const handlePinThread = async (id: string) => {
     const thread = threads.find(t => t.id === id);
-    if (thread) {
-      const isNowPinned = !thread.isPinned;
-      handleAddSystemNotification(
-        isNowPinned ? "Disematkan" : "Sematkan Dilepas", 
-        `Percakapan "${thread.title}" kini telah ${isNowPinned ? "disematkan ke atas" : "dilepas"}.`, 
-        "success"
-      );
+    if (!thread) return;
+
+    const isNowPinned = !thread.isPinned;
+
+    if (isLoggedIn && auth.currentUser) {
+      await updateDoc(doc(db, "threads", id), {
+        isPinned: isNowPinned
+      }).catch(err => handleFirestoreError(err, OperationType.UPDATE, `threads/${id}`));
+    } else {
+      setThreads(prev => prev.map(t => 
+        t.id === id ? { ...t, isPinned: isNowPinned } : t
+      ));
     }
+    
+    handleAddSystemNotification(
+      isNowPinned ? "Disematkan" : "Sematkan Dilepas", 
+      `Percakapan "${thread.title}" kini telah ${isNowPinned ? "disematkan ke atas" : "dilepas"}.`, 
+      "success"
+    );
   };
 
   // Rename thread
-  const handleRenameThread = (id: string, newTitle: string) => {
+  const handleRenameThread = async (id: string, newTitle: string) => {
     if (!newTitle.trim()) return;
-    setThreads(prev => prev.map(t => 
-      t.id === id ? { ...t, title: newTitle.trim() } : t
-    ));
+
+    if (isLoggedIn && auth.currentUser) {
+      await updateDoc(doc(db, "threads", id), {
+        title: newTitle.trim()
+      }).catch(err => handleFirestoreError(err, OperationType.UPDATE, `threads/${id}`));
+    } else {
+      setThreads(prev => prev.map(t => 
+        t.id === id ? { ...t, title: newTitle.trim() } : t
+      ));
+    }
+
     handleAddSystemNotification(
       "Ganti Nama", 
       `Nama percakapan berhasil diubah menjadi "${newTitle}".`, 
@@ -705,12 +947,23 @@ export default function App() {
   };
 
   // Execute actual deletion of specified thread
-  const executeDeleteThread = () => {
+  const executeDeleteThread = async () => {
     if (!threadToDeleteId) return;
     const threadToDelete = threads.find(t => t.id === threadToDeleteId);
     const title = threadToDelete ? threadToDelete.title : "Percakapan";
     
-    setThreads(prev => prev.filter(t => t.id !== threadToDeleteId));
+    if (isLoggedIn && auth.currentUser) {
+      const threadId = threadToDeleteId;
+      const messagesSnapshot = await getDocs(collection(db, "threads", threadId, "messages")).catch(() => null);
+      if (messagesSnapshot) {
+        for (const docSnap of messagesSnapshot.docs) {
+          await deleteDoc(doc(db, "threads", threadId, "messages", docSnap.id)).catch(() => {});
+        }
+      }
+      await deleteDoc(doc(db, "threads", threadId)).catch(err => handleFirestoreError(err, OperationType.DELETE, `threads/${threadId}`));
+    } else {
+      setThreads(prev => prev.filter(t => t.id !== threadToDeleteId));
+    }
     
     if (activeThreadId === threadToDeleteId) {
       setActiveThreadId("");
@@ -742,49 +995,49 @@ export default function App() {
     }
   };
 
-  // Archive thread to private Library (local storage)
-  const handleArchiveThread = (id: string) => {
+  // Archive thread to private Library (local storage / firestore)
+  const handleArchiveThread = async (id: string) => {
     const thread = threads.find(t => t.id === id);
     if (!thread) return;
 
-    try {
-      const saved = localStorage.getItem("maria_saved_chats");
-      const savedChats = saved ? JSON.parse(saved) : [];
-
-      if (savedChats.some((c: any) => c.id === id)) {
-        handleAddSystemNotification(
-          "Sudah Diarsipkan",
-          `Percakapan "${thread.title}" sudah ada di Pustaka Pribadi Anda.`,
-          "info"
-        );
-        return;
-      }
-
-      // Generate snippet
-      const assistantMsgs = thread.messages.filter(m => m.role === "assistant");
-      const snippetVal = assistantMsgs.length > 0
-        ? assistantMsgs[assistantMsgs.length - 1].content.slice(0, 120) + "..."
-        : "Sesi percakapan kosong...";
-
-      const newSavedChat = {
-        id: thread.id,
-        title: thread.title,
-        timestamp: new Date().toISOString(),
-        snippet: snippetVal,
-        messages: thread.messages
-      };
-
-      savedChats.push(newSavedChat);
-      safeLocalStorageSetItem("maria_saved_chats", JSON.stringify(savedChats));
-
+    if (savedChats.some((c: any) => c.id === id)) {
       handleAddSystemNotification(
-        "Arsip Berhasil",
-        `Percakapan "${thread.title}" berhasil diarsipkan ke Pustaka Library!`,
-        "success"
+        "Sudah Diarsipkan",
+        `Percakapan "${thread.title}" sudah ada di Pustaka Pribadi Anda.`,
+        "info"
       );
-    } catch (e) {
-      console.error("Gagal menyimpan ke Library:", e);
+      return;
     }
+
+    // Generate snippet
+    const assistantMsgs = thread.messages.filter(m => m.role === "assistant");
+    const snippetVal = assistantMsgs.length > 0
+      ? assistantMsgs[assistantMsgs.length - 1].content.slice(0, 120) + "..."
+      : "Sesi percakapan kosong...";
+
+    const newSavedChat = {
+      id: thread.id,
+      title: thread.title,
+      timestamp: new Date().toISOString(),
+      snippet: snippetVal,
+      messages: thread.messages
+    };
+
+    const updatedSavedChats = [...savedChats, newSavedChat];
+    setSavedChats(updatedSavedChats);
+
+    if (isLoggedIn && auth.currentUser) {
+      const userRef = doc(db, "users", auth.currentUser.uid);
+      await updateDoc(userRef, {
+        savedChats: updatedSavedChats
+      }).catch(err => handleFirestoreError(err, OperationType.UPDATE, `users/${auth.currentUser?.uid}`));
+    }
+
+    handleAddSystemNotification(
+      "Arsip Berhasil",
+      `Percakapan "${thread.title}" berhasil diarsipkan ke Pustaka Library!`,
+      "success"
+    );
   };
 
   // Restore archived chat back to actual chat area
@@ -819,13 +1072,29 @@ export default function App() {
   };
 
   // Execute actual clearing of all history
-  const executeClearHistory = () => {
+  const executeClearHistory = async () => {
+    if (isLoggedIn && auth.currentUser) {
+      // Delete all user's threads from Firestore
+      const threadsQuery = query(collection(db, "threads"), where("userId", "==", auth.currentUser.uid));
+      const threadsSnap = await getDocs(threadsQuery).catch(() => null);
+      if (threadsSnap) {
+        for (const threadDoc of threadsSnap.docs) {
+          // Delete messages first
+          const messagesSnap = await getDocs(collection(db, "threads", threadDoc.id, "messages")).catch(() => null);
+          if (messagesSnap) {
+            for (const msgDoc of messagesSnap.docs) {
+              await deleteDoc(doc(db, "threads", threadDoc.id, "messages", msgDoc.id)).catch(() => {});
+            }
+          }
+          // Delete thread
+          await deleteDoc(doc(db, "threads", threadDoc.id)).catch(() => {});
+        }
+      }
+    }
+
     setMessages([]);
     setThreads([]);
     setActiveThreadId("");
-    localStorage.removeItem("maria_messages");
-    localStorage.removeItem("maria_threads");
-    localStorage.removeItem("maria_active_thread_id");
     
     handleAddSystemNotification(
       "Riwayat Berhasil Dihapus", 
@@ -909,6 +1178,8 @@ export default function App() {
               bookmarkedMessages={bookmarkedMessages}
               isLoggedIn={isLoggedIn}
               onOpenLogin={() => setIsProfileOpen(true)}
+              pendingPrompt={pendingPrompt}
+              onClearPendingPrompt={() => setPendingPrompt(null)}
             />
           )}
 
@@ -1192,13 +1463,13 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Modal Footer Buttons */}
+                   {/* Modal Footer Buttons */}
                   <div className="flex items-center justify-end gap-2.5 p-4 pt-1.5 pb-4 font-bold text-[11px]">
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
+                        await signOut(auth).catch(() => {});
                         setIsLoggedIn(false);
-                        localStorage.setItem("maria_is_logged_in", "false");
                         setIsProfileOpen(false);
                         setShowColorSelector(false);
                         handleAddSystemNotification(
@@ -1223,7 +1494,7 @@ export default function App() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         const finalDisplayName = profileDisplayName.trim() || "basit fauzan";
                         const finalUsername = profileUsername.trim() || "@basitfauzan42";
                         
@@ -1233,19 +1504,16 @@ export default function App() {
                           username: finalDisplayName
                         };
                         setSettings(updatedSettings);
-                        localStorage.setItem("maria_settings2", JSON.stringify(updatedSettings));
 
-                        // 2. Save user handle
-                        localStorage.setItem("maria_username_handle", finalUsername);
-
-                        // 3. Save avatar bg color
-                        localStorage.setItem("maria_avatar_bg_color", profileAvatarBg);
-
-                        // 4. Save to use initials avatar setting
-                        localStorage.setItem("maria_use_initials_avatar", profileUseInitials ? "true" : "false");
-
-                        // 5. Save the custom uploaded or preset avatar URL
-                        localStorage.setItem("maria_user_avatar", profileAvatarUrl);
+                        if (isLoggedIn && auth.currentUser) {
+                          const userRef = doc(db, "users", auth.currentUser.uid);
+                          await updateDoc(userRef, {
+                            displayName: finalDisplayName,
+                            username: finalUsername,
+                            avatarUrl: profileAvatarUrl,
+                            settings: updatedSettings
+                          }).catch(err => handleFirestoreError(err, OperationType.UPDATE, `users/${auth.currentUser?.uid}`));
+                        }
 
                         // Hide modal
                         setIsProfileOpen(false);
@@ -1291,46 +1559,33 @@ export default function App() {
                     {/* Styled authentic Google button */}
                     <button
                       type="button"
-                      onClick={() => {
-                        const finalDisplayName = "Fauzan";
-                        const finalUsername = "@basitfauzan42";
-                        const finalEmail = "basitfauzan42@gmail.com";
-                        
-                        // 1. Settings
-                        const updatedSettings: UserSettings = {
-                          ...settings,
-                          username: finalDisplayName
-                        };
-                        setSettings(updatedSettings);
-                        localStorage.setItem("maria_settings2", JSON.stringify(updatedSettings));
+                      onClick={async () => {
+                        try {
+                          const result = await signInWithPopup(auth, googleProvider);
+                          const user = result.user;
+                          
+                          const finalDisplayName = user.displayName || "Fauzan";
+                          const finalUsername = "@" + (user.email?.split("@")[0] || "basitfauzan42");
+                          const finalEmail = user.email || "basitfauzan42@gmail.com";
+                          
+                          // Sync component states
+                          setProfileDisplayName(finalDisplayName);
+                          setProfileUsername(finalUsername);
+                          setIsLoggedIn(true);
 
-                        // 2. Profile variables and localStorage
-                        localStorage.setItem("maria_username_handle", finalUsername);
-                        localStorage.setItem("maria_user_email", finalEmail);
-                        localStorage.setItem("maria_avatar_bg_color", "bg-[#064e3b]");
-                        localStorage.setItem("maria_use_initials_avatar", "true");
-                        localStorage.setItem("maria_user_avatar", "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150&h=150&fit=crop&q=80");
+                          // Close modals
+                          setIsProfileOpen(false);
+                          setShowColorSelector(false);
 
-                        // Sync component states
-                        setProfileDisplayName(finalDisplayName);
-                        setProfileUsername(finalUsername);
-                        setProfileUseInitials(true);
-                        setProfileAvatarBg("bg-[#064e3b]");
-
-                        // Set log in status
-                        setIsLoggedIn(true);
-                        localStorage.setItem("maria_is_logged_in", "true");
-
-                        // Close modals
-                        setIsProfileOpen(false);
-                        setShowColorSelector(false);
-
-                        // Success notification
-                        handleAddSystemNotification(
-                          "Berhasil Masuk Akun",
-                          `Halo ${finalDisplayName}! Selamat datang di Maria AI dengan Google (${finalEmail}).`,
-                          "success"
-                        );
+                          // Success notification
+                          handleAddSystemNotification(
+                            "Berhasil Masuk Akun",
+                            `Halo ${finalDisplayName}! Selamat datang di Maria AI dengan Google (${finalEmail}).`,
+                            "success"
+                          );
+                        } catch (err) {
+                          console.error("Sign in error:", err);
+                        }
                       }}
                       className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-100 text-slate-900 font-bold py-2.5 px-4 rounded-xl transition-all shadow-md active:scale-975 cursor-pointer max-w-[260px] border border-slate-200"
                     >

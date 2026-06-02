@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { Message, UserSettings, ChatThread } from "../types";
 import { THEME_OPTIONS } from "../constants";
+import { auth } from "../firebase";
 
 // Theme specs matching Screenshot 1 (Voxa Dark Vibe)
 interface SidebarProps {
@@ -182,19 +183,19 @@ export default function Sidebar({
   const [upgradeSuccess, setUpgradeSuccess] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"gpay" | "qris" | "bank">("qris");
 
-  // Load avatar and user properties precisely matching Settings / LocalStorage / Props
-  const userAvatar = profileAvatarProp !== undefined ? profileAvatarProp : (localStorage.getItem("maria_user_avatar") || "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150&h=150&fit=crop&q=80");
-  const userDisplayName = isLoggedIn ? (settings.username || "Pengguna") : "user";
-  const userEmail = isLoggedIn ? (localStorage.getItem("maria_user_email") || "pengguna@example.com") : "user@example.com";
+  // Load avatar and user properties precisely matching Settings / Props / Firebase
+  const userAvatar = profileAvatarProp !== undefined ? profileAvatarProp : (auth.currentUser?.photoURL || "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150&h=150&fit=crop&q=80");
+  const userDisplayName = isLoggedIn ? (settings.username || auth.currentUser?.displayName || "Pengguna") : "user";
+  const userEmail = isLoggedIn ? (auth.currentUser?.email || "basitfauzan42@gmail.com") : "user@example.com";
 
   const shouldShowInitialsAvatar = isLoggedIn 
-    ? (useInitialsAvatarProp !== undefined ? useInitialsAvatarProp : (localStorage.getItem("maria_use_initials_avatar") !== "false"))
+    ? (useInitialsAvatarProp !== undefined ? useInitialsAvatarProp : !auth.currentUser?.photoURL)
     : true;
   const avatarBgColor = isLoggedIn 
-    ? (profileAvatarBgProp !== undefined ? profileAvatarBgProp : (localStorage.getItem("maria_avatar_bg_color") || "bg-[#064e3b]"))
+    ? (profileAvatarBgProp !== undefined ? profileAvatarBgProp : "bg-[#064e3b]")
     : "bg-slate-600";
   const userHandle = isLoggedIn 
-    ? (profileUsernameHandleProp !== undefined ? profileUsernameHandleProp : (localStorage.getItem("maria_username_handle") || "@basitfauzan42"))
+    ? (profileUsernameHandleProp !== undefined ? profileUsernameHandleProp : ("@" + (auth.currentUser?.email ? auth.currentUser.email.split("@")[0] : "basitfauzan42")))
     : "@user";
 
   const getInitials = (name: string) => {

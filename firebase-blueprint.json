@@ -1,0 +1,77 @@
+{
+  "entities": {
+    "UserSettings": {
+      "title": "UserSettings",
+      "description": "User preference settings for the assistant",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string" },
+        "tone": { "type": "string" },
+        "languageStyle": { "type": "string" },
+        "customPrompt": { "type": "string" },
+        "theme": { "type": "string" }
+      },
+      "required": ["username", "tone", "languageStyle", "theme"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Information about the logged in user",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string" },
+        "username": { "type": "string" },
+        "email": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "avatarBg": { "type": "string" },
+        "useInitials": { "type": "boolean" },
+        "isLoggedIn": { "type": "boolean" }
+      },
+      "required": ["displayName", "email", "isLoggedIn"]
+    },
+    "ChatThread": {
+      "title": "ChatThread",
+      "description": "A conversation thread history metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "userId": { "type": "string" },
+        "isPinned": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "userId", "createdAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "An individual chat message within a thread",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "isError": { "type": "boolean" },
+        "image": { "type": "string" },
+        "audio": { "type": "string" },
+        "feedback": { "type": "string", "enum": ["like", "dislike"] },
+        "isEdited": { "type": "boolean" }
+      },
+      "required": ["id", "role", "content", "timestamp"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User account profiles and settings"
+    },
+    "threads/{threadId}": {
+      "schema": "ChatThread",
+      "description": "Conversation threads"
+    },
+    "threads/{threadId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Messages inside a specific thread"
+    }
+  }
+}
