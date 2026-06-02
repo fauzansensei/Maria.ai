@@ -53,7 +53,9 @@ import {
   Lock,
   LogIn,
   Info,
-  ChevronDown
+  ChevronDown,
+  Database,
+  RefreshCw
 } from "lucide-react";
 
 const safeParseResponse = async (response: Response) => {
@@ -81,8 +83,41 @@ export default function App() {
     setIsIframe(window.self !== window.top);
   }, []);
 
-  const [authMethod, setAuthMethod] = useState<"google" | "email" | "anon">("google");
+  const [authMethod, setAuthMethod] = useState<"google" | "email" | "anon" | "firebase">("google");
   const [showGoogleGuide, setShowGoogleGuide] = useState<boolean>(false);
+  
+  // States for Custom Firebase SDK Configuration
+  const [customFirebaseJson, setCustomFirebaseJson] = useState("");
+  const [isCustomFirebaseSaved, setIsCustomFirebaseSaved] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return !!localStorage.getItem("maria_custom_firebase_config");
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("maria_custom_firebase_config");
+      if (saved) {
+        try {
+          setCustomFirebaseJson(JSON.stringify(JSON.parse(saved), null, 2));
+        } catch {
+          setCustomFirebaseJson(saved);
+        }
+      } else {
+        const template = {
+          apiKey: "SALIN_API_KEY_ANDA_DI_SINI",
+          authDomain: "PROJECT_ID.firebaseapp.com",
+          projectId: "PROJECT_ID",
+          storageBucket: "PROJECT_ID.firebasestorage.app",
+          messagingSenderId: "SENDER_ID",
+          appId: "APP_ID",
+          firestoreDatabaseId: ""
+        };
+        setCustomFirebaseJson(JSON.stringify(template, null, 2));
+      }
+    }
+  }, [authMethod]);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [isSignUpMode, setIsSignUpMode] = useState(false);
@@ -1598,7 +1633,7 @@ export default function App() {
                   <div className="p-5 pt-3 pb-6 flex flex-col space-y-4 w-full">
                     
                     {/* Method Tabs */}
-                    <div className="flex bg-[#12151b] p-1 rounded-xl border border-slate-805/60 text-[10px] font-bold">
+                    <div className="flex bg-[#12151b] p-1 rounded-xl border border-slate-850/60 text-[8.5px] sm:text-[10px] font-bold">
                       <button
                         type="button"
                         onClick={() => { setAuthMethod("google"); setAuthLocalError(null); }}
@@ -1619,6 +1654,13 @@ export default function App() {
                         className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${authMethod === "anon" ? "bg-slate-800 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"}`}
                       >
                         Koneksi Cepat (Anon)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setAuthMethod("firebase"); setAuthLocalError(null); }}
+                        className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${authMethod === "firebase" ? "bg-slate-800 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"}`}
+                      >
+                        Firebase Kustom
                       </button>
                     </div>
 
@@ -1975,6 +2017,104 @@ export default function App() {
                         >
                           Mulai Koneksi Cepat
                         </button>
+                      </div>
+                    )}
+
+                    {/* METHOD 4: CUSTOM FIREBASE CONFIGURATION */}
+                    {authMethod === "firebase" && (
+                      <div className="space-y-3 pt-1 text-left">
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between pl-0.5">
+                            <label className="block text-[9.5px] font-bold text-slate-400 uppercase tracking-wider font-sans">
+                              Konfigurasi Firebase JSON (SDK)
+                            </label>
+                            <span className="text-[8.5px] text-emerald-400 font-semibold uppercase">LocalStorage</span>
+                          </div>
+                          
+                          <p className="text-[9.5px] text-slate-400 font-medium leading-relaxed mb-2 font-sans text-justify">
+                            Salin JSON konfigurasi web app dari <strong>Firebase Console &gt; Project Settings</strong> untuk mengatasi ketidakcocokan kredensial / API Key:
+                          </p>
+
+                          <textarea
+                            value={customFirebaseJson}
+                            onChange={(e) => setCustomFirebaseJson(e.target.value)}
+                            placeholder={`{
+  "apiKey": "AIzaSy...",
+  "authDomain": "...",
+  "projectId": "...",
+  "storageBucket": "...",
+  "messagingSenderId": "...",
+  "appId": "..."
+}`}
+                            rows={8}
+                            className="w-full bg-[#12151b] border border-slate-805/60 focus:border-emerald-500 rounded-xl px-3 py-2 text-white text-[10.5px] focus:outline-hidden transition-all font-mono placeholder-slate-700 leading-normal"
+                          />
+                        </div>
+
+                        {/* Custom Buttons */}
+                        <div className="pt-1 flex flex-col gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              try {
+                                setAuthLocalError(null);
+                                const trimmed = customFirebaseJson.trim();
+                                if (!trimmed) {
+                                  throw new Error("Konfigurasi JSON tidak boleh kosong!");
+                                }
+                                const parsed = JSON.parse(trimmed);
+                                if (!parsed.apiKey || !parsed.projectId) {
+                                  throw new Error("Format tidak valid! Minimal harus memiliki 'apiKey' dan 'projectId'.");
+                                }
+                                
+                                localStorage.setItem("maria_custom_firebase_config", JSON.stringify(parsed));
+                                setIsCustomFirebaseSaved(true);
+                                
+                                handleAddSystemNotification(
+                                  "Konfigurasi Tersimpan",
+                                  "Firebase SDK telah diatur menggunakan kredensial kustom Anda. Memuat ulang halaman...",
+                                  "success"
+                                );
+                                
+                                setTimeout(() => {
+                                  window.location.reload();
+                                }, 1500);
+                              } catch (err: any) {
+                                setAuthLocalError("Gagal menyimpan JSON: " + (err.message || String(err)) + "\n\nPastikan format JSON Anda menggunakan tanda petik ganda (\") untuk kunci dan nilai.");
+                              }
+                            }}
+                            className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 font-extrabold py-2 px-4 rounded-xl text-white text-xs select-none shadow-md transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5 animate-[spin_4s_linear_infinite]" />
+                            <span>Simpan & Muat Ulang Aplikasi</span>
+                          </button>
+
+                          {isCustomFirebaseSaved ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAuthLocalError(null);
+                                localStorage.removeItem("maria_custom_firebase_config");
+                                setIsCustomFirebaseSaved(false);
+                                handleAddSystemNotification(
+                                  "Reset Berhasil",
+                                  "Kembali menggunakan konfigurasi default bawaan. Memuat ulang halaman...",
+                                  "info"
+                                );
+                                setTimeout(() => {
+                                  window.location.reload();
+                                }, 1500);
+                              }}
+                              className="w-[#100%] bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-1.5 rounded-lg text-[10px] cursor-pointer transition-colors"
+                            >
+                              Reset ke Konfigurasi Bawaan (Default)
+                            </button>
+                          ) : (
+                            <div className="text-center text-[9px] text-slate-500 font-medium font-sans">
+                              Menggunakan konfigurasi sistem bawaan.
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
 
