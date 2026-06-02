@@ -51,7 +51,9 @@ import {
   ChevronRight,
   User,
   Lock,
-  LogIn
+  LogIn,
+  Info,
+  ChevronDown
 } from "lucide-react";
 
 const safeParseResponse = async (response: Response) => {
@@ -80,6 +82,7 @@ export default function App() {
   }, []);
 
   const [authMethod, setAuthMethod] = useState<"google" | "email" | "anon">("google");
+  const [showGoogleGuide, setShowGoogleGuide] = useState<boolean>(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [isSignUpMode, setIsSignUpMode] = useState(false);
@@ -1653,6 +1656,53 @@ export default function App() {
                           </p>
                         </div>
 
+                        {/* Collapsible Helper Guide for Firebase Setup & Domains */}
+                        <div className="w-full max-w-[270px] border border-slate-800 rounded-xl bg-[#0b0d10] text-left select-none overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => setShowGoogleGuide(!showGoogleGuide)}
+                            className="w-full flex items-center justify-between p-2.5 hover:bg-slate-900 transition-colors text-slate-400 hover:text-white"
+                          >
+                            <div className="flex items-center gap-1.5 font-sans font-bold text-[10.5px]">
+                              <Info className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>Mengapa Google Login Gagal?</span>
+                            </div>
+                            <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform ${showGoogleGuide ? 'rotate-180' : ''}`} />
+                          </button>
+                          
+                          {showGoogleGuide && (
+                            <div className="p-3 border-t border-slate-900 bg-slate-950/40 space-y-2.5 text-[9.5px] text-slate-300 leading-relaxed font-sans max-h-[180px] overflow-y-auto">
+                              <div>
+                                <p className="font-bold text-slate-200">1. Server / Domain Belum Terdaftar</p>
+                                <p className="text-slate-400 mt-0.5">
+                                  Firebase Auth membatasi login di domain tidak dikenal. Anda perlu menambahkan domain berikut ke daftar aman:
+                                </p>
+                                <code className="block mt-1 p-1 bg-slate-900 text-emerald-400 rounded-sm text-center font-mono select-all text-[8.5px]">
+                                  {window.location.hostname}
+                                </code>
+                                <p className="text-slate-500 mt-1">
+                                  Tambahkan di: <em>Firebase Console &gt; Authentication &gt; Settings &gt; Authorized domains</em>.
+                                </p>
+                              </div>
+                              <div className="border-t border-slate-900 pt-2">
+                                <p className="font-bold text-slate-200">2. Provider Google Belum Aktif</p>
+                                <p className="text-slate-400 mt-0.5">
+                                  Secara default, Google Sign-In perlu diaktifkan manual.
+                                </p>
+                                <p className="text-slate-500 mt-0.5">
+                                  Buka: <em>Firebase Console &gt; Authentication &gt; Sign-in method</em>, lalu aktifkan provider <strong>Google</strong>.
+                                </p>
+                              </div>
+                              <div className="border-t border-slate-900 pt-2 text-amber-400">
+                                <p className="font-bold">3. Solusi Instan Tanpa Setting:</p>
+                                <p className="text-slate-400 mt-0.5">
+                                  Jika Anda belum memiliki akses ke Firebase Console, silakan gunakan tab <strong>"Email"</strong> atau <strong>"Koneksi Cepat (Anon)"</strong> di atas agar bisa langsung bercakap dengan Maria AI tanpa konfigurasi!
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
                         {/* Inline Iframe Guide Warning for AI Studio Previews */}
                         {isIframe && (
                           <div className="w-full max-w-[270px] p-2.5 bg-teal-950/25 border border-teal-500/20 rounded-xl text-[10px] text-teal-350 text-left space-y-2 leading-relaxed font-sans">
@@ -1706,10 +1756,20 @@ export default function App() {
                                   "success"
                                 );
                               } catch (err: any) {
-                                console.error("Sign in error:", err);
-                                setAuthLocalError(
-                                  "Pop-up gagal dibuka (diblokir browser). Silakan klik tombol 'Buka Aplikasi di Tab Baru' terlebih dahulu di atas, atau klik 'Metode Pengalihan (Redirect)' di bawah ini."
-                                );
+                                console.error("Sign in error details:", err);
+                                let message = "Gagal masuk: " + (err.message || String(err));
+                                if (err.code === "auth/popup-blocked") {
+                                  message = "Pop-up diblokir oleh browser komputer Anda. Harap izinkan pop-up untuk situs ini, gunakan tombol 'Buka Aplikasi di Tab Baru' di atas, atau silakan gunakan 'Metode Pengalihan (Redirect)'.";
+                                } else if (err.code === "auth/unauthorized-domain") {
+                                  message = "Gagal (auth/unauthorized-domain): Domain '" + window.location.hostname + "' belum diotorisasi di Firebase Authentication Console. Silakan tambahkan domain ini ke daftar aman di Firebase Console atau gunakan tab Email / Koneksi Cepat.";
+                                } else if (err.code === "auth/operation-not-allowed") {
+                                  message = "Gagal (auth/operation-not-allowed): Google Sign-In belum diaktifkan di Firebase Console Anda. Silakan aktifkan provider Google di menu Authentication > Sign-in method di Firebase.";
+                                } else if (err.code === "auth/network-request-failed") {
+                                  message = "Gagal: Hubungan jaringan gagal atau dibatasi. Silakan cek koneksi internet Anda atau gunakan tab Email.";
+                                } else if (err.message && err.message.includes("unauthorized-domain")) {
+                                  message = "Firebase Error: Domain '" + window.location.hostname + "' tidak diizinkan. Daftarkan domain ini di Authorized Domains Firebase Console untuk mengizinkan login.";
+                                }
+                                setAuthLocalError(message);
                               } finally {
                                 setIsAuthenticating(false);
                               }
@@ -1735,10 +1795,14 @@ export default function App() {
                               try {
                                 await signInWithRedirect(auth, googleProvider);
                               } catch (err: any) {
-                                console.error("Sign in redirect error:", err);
-                                setAuthLocalError(
-                                  "Gagal mengalihkan halaman ke Google: " + (err.message || err)
-                                );
+                                console.error("Sign in redirect error details:", err);
+                                let message = "Gagal mengalihkan halaman ke Google: " + (err.message || String(err));
+                                if (err.code === "auth/unauthorized-domain") {
+                                  message = "Firebase Error: Domain '" + window.location.hostname + "' belum diotorisasi. Tambahkan di Authorized Domains pada Firebase Console Anda.";
+                                } else if (err.code === "auth/operation-not-allowed") {
+                                  message = "Firebase Error: Google Sign-in dinonaktifkan di Firebase Console.";
+                                }
+                                setAuthLocalError(message);
                                 setIsAuthenticating(false);
                               }
                             }}
