@@ -523,6 +523,7 @@ export default function App() {
       if (isLoggedIn && auth.currentUser) {
         // Save thread in Firestore
         await setDoc(doc(db, "threads", currentThreadId), {
+          id: currentThreadId,
           title,
           isPinned: false,
           userId: auth.currentUser.uid,

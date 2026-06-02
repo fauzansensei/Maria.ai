@@ -31,7 +31,7 @@ service cloud.firestore {
 
     // Validate Chat Threads
     function isValidThread(data) {
-      return data.id is string && data.id.size() <= 128
+      return (!('id' in data) || (data.id is string && data.id.size() <= 128))
          && data.title is string && data.title.size() <= 300
          && data.userId == request.auth.uid
          && (!('isPinned' in data) || data.isPinned == null || data.isPinned is bool);
