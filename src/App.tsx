@@ -74,6 +74,11 @@ const safeParseResponse = async (response: Response) => {
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [isIframe, setIsIframe] = useState<boolean>(false);
+  useEffect(() => {
+    setIsIframe(window.self !== window.top);
+  }, []);
+
   const [authMethod, setAuthMethod] = useState<"google" | "email" | "anon">("google");
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -1648,6 +1653,30 @@ export default function App() {
                           </p>
                         </div>
 
+                        {/* Inline Iframe Guide Warning for AI Studio Previews */}
+                        {isIframe && (
+                          <div className="w-full max-w-[270px] p-2.5 bg-teal-950/25 border border-teal-500/20 rounded-xl text-[10px] text-teal-350 text-left space-y-2 leading-relaxed font-sans">
+                            <div className="flex gap-1.5 items-center font-bold text-teal-400">
+                              <Sparkles className="w-3.5 h-3.5 shrink-0 animate-ping-once text-emerald-400" />
+                              <span>Saran Kompatibilitas Preview</span>
+                            </div>
+                            <p>
+                              Anda sedang membuka di dalam frame editor. Agar Google Sign-In atau fitur web modern berfungsi penuh tanpa restriksi browser (blocking cookie/pop-up), jalankan di Tab Baru!
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                // Double safeguard to resolve actual target domain correctly
+                                const targetUrl = window.location.href;
+                                window.open(targetUrl, "_blank");
+                              }}
+                              className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold py-1.5 px-3 rounded-lg text-[9px] uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+                            >
+                              🚀 Buka Aplikasi di Tab Baru
+                            </button>
+                          </div>
+                        )}
+
                         <div className="w-full flex flex-col gap-2.5 items-center justify-center max-w-[260px] pb-1">
                           {/* Option 1: Popup (good for desktop tabs) */}
                           <button
@@ -1679,7 +1708,7 @@ export default function App() {
                               } catch (err: any) {
                                 console.error("Sign in error:", err);
                                 setAuthLocalError(
-                                  "Pop-up gagal dibuka (diblokir browser). Silakan klik tombol 'Metode Pengalihan (Redirect)' di bawah ini atau gunakan tab 'Email' / 'Koneksi Cepat' di atas."
+                                  "Pop-up gagal dibuka (diblokir browser). Silakan klik tombol 'Buka Aplikasi di Tab Baru' terlebih dahulu di atas, atau klik 'Metode Pengalihan (Redirect)' di bawah ini."
                                 );
                               } finally {
                                 setIsAuthenticating(false);
