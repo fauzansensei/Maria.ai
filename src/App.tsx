@@ -15,7 +15,9 @@ import {
   signOut,
   signInAnonymously,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword
+  createUserWithEmailAndPassword,
+  signInWithRedirect,
+  getRedirectResult
 } from "firebase/auth";
 import { 
   collection, 
@@ -247,6 +249,43 @@ export default function App() {
     // Add event listener
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Google Sign-In Redirect Handler (vital for mobile/iframe pop-up bypass)
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result && result.user) {
+          const user = result.user;
+          const finalDisplayName = user.displayName || "Fauzan";
+          const finalUsername = "@" + (user.email?.split("@")[0] || "basitfauzan42");
+          const finalEmail = user.email || "basitfauzan42@gmail.com";
+          
+          setProfileDisplayName(finalDisplayName);
+          setProfileUsername(finalUsername);
+          setIsLoggedIn(true);
+
+          setIsProfileOpen(false);
+          setShowColorSelector(false);
+
+          handleAddSystemNotification(
+            "Berhasil Masuk Akun",
+            `Sesi dipulihkan! Selamat datang ${finalDisplayName} @ Maria AI (${finalEmail}).`,
+            "success"
+          );
+        }
+      })
+      .catch((err: any) => {
+        console.error("Firebase auth redirect result error:", err);
+        if (err.code && err.code !== "auth/redirect-cancelled-by-user") {
+          setAuthLocalError(`Gagal memulihkan sesi Google: ${err.message || err}`);
+          handleAddSystemNotification(
+            "Google Auth Gagal (Redirect)",
+            `Hubungkan kembali akun Google Anda: ${err.message || err}`,
+            "reminder"
+          );
+        }
+      });
   }, []);
 
   // 1. Firebase Auth and Profile real-time listener
@@ -1604,55 +1643,86 @@ export default function App() {
                             Masuk dengan Google
                           </h4>
                           <p className="text-[10.5px] text-slate-400 font-medium leading-relaxed font-sans">
-                            Hubungkan akun Google Anda secara langsung. Catatan: Jika diletakkan dalam iframe browser, pop-up Google mungkin diblokir.
+                            Hubungkan akun Google Anda secara langsung. <span className="text-[#10b981] font-semibold">Khusus HP / Mobile</span>: Gunakan tombol <strong>"Metode Pengalihan (Redirect)"</strong> agar bypass pop-up yang diblokir otomatis.
                           </p>
                         </div>
 
-                        <button
-                          type="button"
-                          disabled={isAuthenticating}
-                          onClick={async () => {
-                            setAuthLocalError(null);
-                            setIsAuthenticating(true);
-                            try {
-                              const result = await signInWithPopup(auth, googleProvider);
-                              const user = result.user;
-                              
-                              const finalDisplayName = user.displayName || "Fauzan";
-                              const finalUsername = "@" + (user.email?.split("@")[0] || "basitfauzan42");
-                              const finalEmail = user.email || "basitfauzan42@gmail.com";
-                              
-                              setProfileDisplayName(finalDisplayName);
-                              setProfileUsername(finalUsername);
-                              setIsLoggedIn(true);
+                        <div className="w-full flex flex-col gap-2.5 items-center justify-center max-w-[260px] pb-1">
+                          {/* Option 1: Popup (good for desktop tabs) */}
+                          <button
+                            type="button"
+                            disabled={isAuthenticating}
+                            onClick={async () => {
+                              setAuthLocalError(null);
+                              setIsAuthenticating(true);
+                              try {
+                                const result = await signInWithPopup(auth, googleProvider);
+                                const user = result.user;
+                                
+                                const finalDisplayName = user.displayName || "Fauzan";
+                                const finalUsername = "@" + (user.email?.split("@")[0] || "basitfauzan42");
+                                const finalEmail = user.email || "basitfauzan42@gmail.com";
+                                
+                                setProfileDisplayName(finalDisplayName);
+                                setProfileUsername(finalUsername);
+                                setIsLoggedIn(true);
 
-                              setIsProfileOpen(false);
-                              setShowColorSelector(false);
+                                setIsProfileOpen(false);
+                                setShowColorSelector(false);
 
-                              handleAddSystemNotification(
-                                "Berhasil Masuk Akun",
-                                `Halo ${finalDisplayName}! Selamat datang di Maria AI dengan Google (${finalEmail}).`,
-                                "success"
-                              );
-                            } catch (err: any) {
-                              console.error("Sign in error:", err);
-                              setAuthLocalError(
-                                "Masuk Google Gagal: Pop-up diblokir atau provider belum diaktifkan di Firebase Console. Coba buka Tab Baru, atau silakan gunakan 'Koneksi Cepat (Anon)' atau 'Email' di atas agar bypass pop-up."
-                              );
-                            } finally {
-                              setIsAuthenticating(false);
-                            }
-                          }}
-                          className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-100 text-slate-900 font-bold py-2.5 px-4 rounded-xl transition-all shadow-md active:scale-975 cursor-pointer max-w-[260px] border border-slate-200 mt-1 disabled:opacity-60 font-sans text-xs"
-                        >
-                          <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                            <path d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.08H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.92l3.66-2.82z" fill="#FBBC05"/>
-                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.08l3.66 2.82c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-                          </svg>
-                          <span>Masuk dengan Google</span>
-                        </button>
+                                handleAddSystemNotification(
+                                  "Berhasil Masuk Akun",
+                                  `Halo ${finalDisplayName}! Selamat datang di Maria AI dengan Google (${finalEmail}).`,
+                                  "success"
+                                );
+                              } catch (err: any) {
+                                console.error("Sign in error:", err);
+                                setAuthLocalError(
+                                  "Pop-up gagal dibuka (diblokir browser). Silakan klik tombol 'Metode Pengalihan (Redirect)' di bawah ini atau gunakan tab 'Email' / 'Koneksi Cepat' di atas."
+                                );
+                              } finally {
+                                setIsAuthenticating(false);
+                              }
+                            }}
+                            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-100 text-slate-900 font-bold py-2.5 px-4 rounded-xl transition-all shadow-md active:scale-975 cursor-pointer disabled:opacity-60 font-sans text-xs"
+                          >
+                            <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                              <path d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.08H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.92l3.66-2.82z" fill="#FBBC05"/>
+                              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.08l3.66 2.82c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+                            </svg>
+                            <span>Metode Pop-up (Biasa)</span>
+                          </button>
+
+                          {/* Option 2: Redirect (highly compatible for mobile browser/iframe) */}
+                          <button
+                            type="button"
+                            disabled={isAuthenticating}
+                            onClick={async () => {
+                              setAuthLocalError(null);
+                              setIsAuthenticating(true);
+                              try {
+                                await signInWithRedirect(auth, googleProvider);
+                              } catch (err: any) {
+                                console.error("Sign in redirect error:", err);
+                                setAuthLocalError(
+                                  "Gagal mengalihkan halaman ke Google: " + (err.message || err)
+                                );
+                                setIsAuthenticating(false);
+                              }
+                            }}
+                            className="w-full flex items-center justify-center gap-2.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/20 hover:border-emerald-500/40 font-bold py-2.5 px-4 rounded-xl transition-all shadow-md active:scale-975 cursor-pointer disabled:opacity-60 font-sans text-xs"
+                          >
+                            <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                              <path d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.08H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.92l3.66-2.82z" fill="#FBBC05"/>
+                              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.08l3.66 2.82c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+                            </svg>
+                            <span>Metode Pengalihan (Redirect)</span>
+                          </button>
+                        </div>
                       </div>
                     )}
 
