@@ -52,6 +52,8 @@ interface SidebarProps {
   profileAvatarBgProp?: string;
   profileUsernameHandleProp?: string;
   isLoggedIn?: boolean;
+  isPlus?: boolean;
+  onUpgradeSuccess?: () => void;
 }
 
 // Preset Mock Chats matching Screenshot list exactly & loaded dynamically
@@ -149,7 +151,9 @@ export default function Sidebar({
   useInitialsAvatarProp,
   profileAvatarBgProp,
   profileUsernameHandleProp,
-  isLoggedIn = false
+  isLoggedIn = false,
+  isPlus = false,
+  onUpgradeSuccess
 }: SidebarProps) {
   const currentTheme = THEME_OPTIONS.find(t => t.value === settings.theme) || THEME_OPTIONS[0];
 
@@ -218,6 +222,9 @@ export default function Sidebar({
     setTimeout(() => {
       setUpgradeSuccess(false);
       setShowUpgradeModal(false);
+      if (onUpgradeSuccess) {
+        onUpgradeSuccess();
+      }
       alert("Selamat! Anda kini telah resmi terdaftar sebagai Anggota MARIA Plus ✨ Nikmati prioritas respon cerdas tak terbatas.");
     }, 1500);
   };
@@ -248,7 +255,9 @@ export default function Sidebar({
           <div className="flex items-center gap-2.5">
             {/* Glowing Star Logo */}
             <div className={`w-8 h-8 rounded-xl bg-gradient-to-tr ${currentTheme.bgGradient} flex items-center justify-center shadow-[0_0_15px_rgba(59,130,246,0.35)]`}>
-              <Sparkles className="w-4.5 h-4.5 text-white animate-pulse-slow font-bold" />
+              <svg className="w-5 h-5 text-white animate-pulse-slow" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16 6C16 10.5 14.5 13.5 11.5 15C8.5 16.5 6 16.5 6 16.5C6 16.5 8.5 16.5 11.5 18C14.5 19.5 16 22.5 16 27C16 22.5 17.5 19.5 20.5 18C23.5 16.5 26 16.5 26 16.5C26 16.5 23.5 16.5 20.5 15C17.5 13.5 16 10.5 16 6Z" fill="currentColor"/>
+              </svg>
             </div>
             <span className="font-display font-medium text-[17px] tracking-tight text-white font-semibold flex items-center">
               Maria AI
@@ -556,31 +565,49 @@ export default function Sidebar({
         <div className="p-4 space-y-4 bg-transparent border-t border-[#1a1c21]">
           
           {isLoggedIn ? (
-            /* Promo Plus Card exactly like Screenshot 1 */
-            <div className="p-4 rounded-xl bg-[#15171d] border border-slate-800/80 hover:border-slate-800 transition-colors shadow-inner flex flex-col gap-2.5">
-              <div className="flex items-start gap-2.5">
-                <div className="p-1 rounded-md bg-blue-500/10 mt-0.5 shrink-0 animate-pulse-slow">
-                  <Sparkles className="w-4 h-4 text-blue-400 font-bold" />
-                </div>
-                <div>
-                  <span className="block text-xs font-bold text-white tracking-tight leading-none mb-1">
-                    Upgrade to Maria Plus!
-                  </span>
-                  <span className="block text-[10px] text-slate-300 font-medium leading-snug">
-                    Unlock faster responses & unlimited chats with Maria Plus.
-                  </span>
+            isPlus ? (
+              <div className="p-4 rounded-xl bg-gradient-to-tr from-[#1E1B4B]/80 to-[#311042]/80 border border-indigo-500/30 shadow-lg flex flex-col gap-2">
+                <div className="flex items-start gap-2.5">
+                  <div className="p-1 rounded-md bg-indigo-500/20 mt-0.5 shrink-0">
+                    <Sparkles className="w-4 h-4 text-indigo-300 font-bold" />
+                  </div>
+                  <div>
+                    <span className="block text-xs font-bold text-white tracking-tight leading-none mb-1">
+                      MARIA Plus Aktif ✨
+                    </span>
+                    <span className="block text-[10px] text-indigo-200 font-medium leading-snug">
+                      Anda menikmati akses prioritas tinggi tanpa batas.
+                    </span>
+                  </div>
                 </div>
               </div>
+            ) : (
+              /* Promo Plus Card exactly like Screenshot 1 */
+              <div className="p-4 rounded-xl bg-[#15171d] border border-slate-800/80 hover:border-slate-800 transition-colors shadow-inner flex flex-col gap-2.5">
+                <div className="flex items-start gap-2.5">
+                  <div className="p-1 rounded-md bg-blue-500/10 mt-0.5 shrink-0 animate-pulse-slow">
+                    <Sparkles className="w-4 h-4 text-blue-400 font-bold" />
+                  </div>
+                  <div>
+                    <span className="block text-xs font-bold text-white tracking-tight leading-none mb-1">
+                      Upgrade to Maria Plus!
+                    </span>
+                    <span className="block text-[10px] text-slate-300 font-medium leading-snug">
+                      Unlock faster responses & unlimited chats with Maria Plus.
+                    </span>
+                  </div>
+                </div>
 
-              <button
-                type="button"
-                onClick={() => setShowUpgradeModal(true)}
-                aria-label="Upgrade ke Maria Plus"
-                className="w-full py-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-[11px] font-bold shadow-md transition-all active:scale-[0.975] cursor-pointer"
-              >
-                Upgrade
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setShowUpgradeModal(true)}
+                  aria-label="Upgrade ke Maria Plus"
+                  className="w-full py-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-[11px] font-bold shadow-md transition-all active:scale-[0.975] cursor-pointer"
+                >
+                  Upgrade
+                </button>
+              </div>
+            )
           ) : (
             /* ChatGPT style guest prompt panel exactly like Screenshot 6 */
             <div className="p-4 rounded-xl bg-[#15171d] border border-slate-800/80 hover:border-slate-800 transition-all duration-250 text-left space-y-3 shadow-inner">

@@ -188,6 +188,12 @@ export default function App() {
   // Library and Discover states matching Maria AI suggestions
   const [activeView, setActiveView] = useState<"chat" | "library" | "discover">("chat");
   const [bookmarkedMessages, setBookmarkedMessages] = useState<Message[]>([]);
+  const [isPlus, setIsPlus] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("maria_is_plus") === "true";
+    }
+    return false;
+  });
 
   const handleToggleBookmark = async (msg: Message) => {
     let nextBookmarks: Message[] = [];
@@ -1249,6 +1255,15 @@ export default function App() {
           profileAvatarBgProp={profileAvatarBg}
           profileUsernameHandleProp={profileUsername}
           isLoggedIn={isLoggedIn}
+          isPlus={isPlus}
+          onUpgradeSuccess={() => {
+            setIsPlus(true);
+            try {
+              localStorage.setItem("maria_is_plus", "true");
+            } catch (e) {
+              console.error(e);
+            }
+          }}
         />
 
         {/* Center Main Dynamic Workspace */}
@@ -1275,6 +1290,7 @@ export default function App() {
               onOpenLogin={() => setIsProfileOpen(true)}
               pendingPrompt={pendingPrompt}
               onClearPendingPrompt={() => setPendingPrompt(null)}
+              isPlus={isPlus}
             />
           )}
 
