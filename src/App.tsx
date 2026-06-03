@@ -379,6 +379,8 @@ export default function App() {
               myPrompts: []
             }).catch(e => handleFirestoreError(e, OperationType.CREATE, `users/${user.uid}`));
           }
+        }, (error) => {
+          handleFirestoreError(error, OperationType.GET, `users/${user.uid}`);
         });
 
         // Sync user threads
@@ -395,6 +397,8 @@ export default function App() {
             });
           });
           setThreads(loadedThreads);
+        }, (error) => {
+          handleFirestoreError(error, OperationType.LIST, "threads");
         });
 
         return () => {
@@ -438,6 +442,8 @@ export default function App() {
       });
       loadedMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
       setMessages(loadedMessages);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, `threads/${activeThreadId}/messages`);
     });
 
     return () => unsubscribeMessages();
@@ -1645,41 +1651,9 @@ export default function App() {
                 </>
               ) : (
                 <>
-                  {/* Styled multi-method login interface */}
+                  {/* Styled Google login interface */}
                   <div className="p-5 pt-3 pb-6 flex flex-col space-y-4 w-full">
                     
-                    {/* Method Tabs */}
-                    <div className="flex bg-[#12151b] p-1 rounded-xl border border-slate-850/60 text-[8.5px] sm:text-[10px] font-bold">
-                      <button
-                        type="button"
-                        onClick={() => { setAuthMethod("google"); setAuthLocalError(null); }}
-                        className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${authMethod === "google" ? "bg-slate-800 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"}`}
-                      >
-                        Google
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setAuthMethod("email"); setAuthLocalError(null); }}
-                        className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${authMethod === "email" ? "bg-slate-800 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"}`}
-                      >
-                        Email
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setAuthMethod("anon"); setAuthLocalError(null); }}
-                        className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${authMethod === "anon" ? "bg-slate-800 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"}`}
-                      >
-                        Koneksi Cepat (Anon)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setAuthMethod("firebase"); setAuthLocalError(null); }}
-                        className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${authMethod === "firebase" ? "bg-slate-800 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"}`}
-                      >
-                        Firebase Kustom
-                      </button>
-                    </div>
-
                     {authLocalError && (
                       <div className="p-3 bg-rose-950/20 border border-rose-900/40 rounded-xl text-[10.5px] text-rose-300 flex flex-col gap-2 items-start text-left leading-relaxed">
                         <div className="flex gap-2 items-start">
@@ -1694,7 +1668,7 @@ export default function App() {
                               💡 Solusi Cepat Pop-up Diblokir:
                             </p>
                             <p>
-                              Platform editor preview membatasi pop-up browser secara default demi keamanan. Anda punya 3 solusi instan:
+                              Platform editor preview membatasi pop-up browser secara default demi keamanan. Anda punya solusi instan:
                             </p>
                             <div className="grid grid-cols-1 gap-2 mt-2 w-full">
                               <button
@@ -1723,43 +1697,7 @@ export default function App() {
                               >
                                 💻 Buka Aplikasi Di Tab Baru
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setAuthMethod("anon");
-                                  setAuthLocalError(null);
-                                }}
-                                className="w-full bg-slate-900 hover:bg-slate-850 border border-slate-700/50 text-slate-300 font-bold py-1.5 px-3 rounded-lg transition-all text-center cursor-pointer text-[9.5px] font-sans"
-                              >
-                                ⚡️ Lewati Login & Gunakan Koneksi Cepat (Anon)
-                              </button>
                             </div>
-                          </div>
-                        )}
-
-                        {(authLocalError.toLowerCase().includes("api-key-not-valid") || 
-                          authLocalError.toLowerCase().includes("invalid-api-key") || 
-                          authLocalError.toLowerCase().includes("unauthorized") ||
-                          authLocalError.toLowerCase().includes("key-not-valid") ||
-                          authLocalError.toLowerCase().includes("kunci api") ||
-                          authLocalError.toLowerCase().includes("kredensial")) && (
-                          <div className="mt-1.5 pt-2 border-t border-rose-900/40 w-full space-y-2 text-[10px] text-rose-200">
-                            <p className="font-extrabold text-rose-400 flex items-center gap-1">
-                              💡 Solusi Masalah API Key / Firebase Baru:
-                            </p>
-                            <p>
-                              Anda telah mengganti atau menyetel ulang kredensial Firebase Anda, namun situs ini secara default masih mencoba memuat konfigurasi default lama.
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setAuthMethod("firebase");
-                                setAuthLocalError(null);
-                              }}
-                              className="mt-1 w-full bg-rose-900/40 hover:bg-rose-900/60 border border-rose-700/65 text-white font-extrabold py-2 px-3 rounded-lg hover:scale-[1.01] active:scale-95 transition-all text-center cursor-pointer font-sans"
-                            >
-                              ⚙️ Klik di Sini Untuk Mengatur Firebase Kustom Anda
-                            </button>
                           </div>
                         )}
                       </div>
@@ -1771,28 +1709,27 @@ export default function App() {
                       </div>
                     )}
 
-                    {/* METHOD 1: GOOGLE */}
-                    {authMethod === "google" && (
-                      <div className="flex flex-col items-center justify-center text-center space-y-5 select-none pt-2">
-                        <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-md border border-slate-200 shrink-0">
-                          <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                            <path d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.08H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.92l3.66-2.82z" fill="#FBBC05"/>
-                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.08l3.66 2.82c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-                          </svg>
-                        </div>
+                    {/* DIRECT GOOGLE LOGIN */}
+                    <div className="flex flex-col items-center justify-center text-center space-y-5 select-none pt-2">
+                      <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-md border border-slate-200 shrink-0">
+                        <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                          <path d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.08H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.92l3.66-2.82z" fill="#FBBC05"/>
+                          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.08l3.66 2.82c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+                        </svg>
+                      </div>
 
-                        <div className="space-y-1.5 max-w-[280px]">
-                          <h4 className="font-sans font-bold text-white text-[14px] tracking-tight">
-                            Masuk dengan Google
-                          </h4>
-                          <p className="text-[10.5px] text-slate-400 font-medium leading-relaxed font-sans">
-                            Hubungkan akun Google Anda secara langsung. <span className="text-[#10b981] font-semibold">Khusus HP / Mobile</span>: Gunakan tombol <strong>"Metode Pengalihan (Redirect)"</strong> agar bypass pop-up yang diblokir otomatis.
-                          </p>
-                        </div>
+                      <div className="space-y-1.5 max-w-[280px]">
+                        <h4 className="font-sans font-bold text-white text-[14px] tracking-tight">
+                          Masuk dengan Google
+                        </h4>
+                        <p className="text-[10.5px] text-slate-400 font-medium leading-relaxed font-sans">
+                          Hubungkan akun Google Anda secara langsung. <span className="text-[#10b981] font-semibold">Khusus HP / Mobile</span>: Gunakan tombol <strong>"Metode Pengalihan (Redirect)"</strong> agar bypass pop-up yang diblokir otomatis.
+                        </p>
+                      </div>
 
-                        {/* Collapsible Helper Guide for Firebase Setup & Domains */}
+                      {/* Collapsible Helper Guide for Firebase Setup & Domains */}
                         <div className="w-full max-w-[270px] border border-slate-800 rounded-xl bg-[#0b0d10] text-left select-none overflow-hidden">
                           <button
                             type="button"
@@ -1954,282 +1891,8 @@ export default function App() {
                           </button>
                         </div>
                       </div>
-                    )}
 
-                    {/* METHOD 2: EMAIL & PASSWORD */}
-                    {authMethod === "email" && (
-                      <div className="space-y-3 pt-1 text-left">
-                        <div className="space-y-1">
-                          <label className="block text-[9.5px] font-bold text-slate-400 uppercase tracking-wider pl-0.5 font-sans">
-                            Alamat Email
-                          </label>
-                          <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
-                            <input
-                              type="email"
-                              value={loginEmail}
-                              onChange={(e) => setLoginEmail(e.target.value)}
-                              placeholder="maria_user@example.com"
-                              className="w-full bg-[#12151b] border border-slate-805 focus:border-emerald-500 rounded-xl pl-9 pr-3 py-2 text-white text-[12px] focus:outline-hidden transition-all placeholder-slate-650 font-medium"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="block text-[9.5px] font-bold text-slate-400 uppercase tracking-wider pl-0.5 font-sans">
-                            Password
-                          </label>
-                          <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
-                            <input
-                              type="password"
-                              value={loginPassword}
-                              onChange={(e) => setLoginPassword(e.target.value)}
-                              placeholder="••••••••"
-                              className="w-full bg-[#12151b] border border-slate-805 focus:border-emerald-500 rounded-xl pl-9 pr-3 py-2 text-white text-[12px] focus:outline-hidden transition-all placeholder-slate-650 font-medium"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Submit Button */}
-                        <div className="pt-2 flex flex-col gap-2">
-                          <button
-                            type="button"
-                            disabled={isAuthenticating}
-                            onClick={async () => {
-                              if (!loginEmail.trim() || !loginPassword) {
-                                setAuthLocalError("Email dan password wajib diisi!");
-                                return;
-                              }
-                              if (loginPassword.length < 6) {
-                                setAuthLocalError("Password minimal harus terdiri dari 6 karakter.");
-                                return;
-                              }
-                              setAuthLocalError(null);
-                              setIsAuthenticating(true);
-                              try {
-                                if (isSignUpMode) {
-                                  // Live signup
-                                  await createUserWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
-                                  handleAddSystemNotification("Pendaftaran Berhasil", "Akun baru Anda berhasil didaftarkan di cluster Maria AI.", "success");
-                                } else {
-                                  // Live login
-                                  await signInWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
-                                  handleAddSystemNotification("Berhasil Masuk", "Selamat datang kembali! Sesi pendaftaran disinkronkan.", "success");
-                                }
-                                setIsProfileOpen(false);
-                                setShowColorSelector(false);
-                              } catch (err: any) {
-                                console.error(err);
-                                let niceMessage = err.message || String(err);
-                                if (err.code === "auth/email-already-in-use") {
-                                  niceMessage = "Email ini sudah digunakan seseorang. Silakan mendaftar dengan email lain atau tekan Masuk.";
-                                } else if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
-                                  niceMessage = "Email atau password tidak valid atau tidak cocok. Periksa kembali.";
-                                } else if (err.code === "auth/operation-not-allowed") {
-                                  niceMessage = "Metode Email & Password belum diaktifkan di Firebase Console. Gunakan metode 'Koneksi Cepat (Anon)' di atas agar bypass.";
-                                }
-                                setAuthLocalError(niceMessage);
-                              } finally {
-                                setIsAuthenticating(false);
-                              }
-                            }}
-                            className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 font-bold py-2 rounded-xl text-white text-xs select-none shadow-md transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60"
-                          >
-                            <LogIn className="w-3.5 h-3.5" />
-                            <span>{isSignUpMode ? "Daftar Akun Baru" : "Masuk ke Akun"}</span>
-                          </button>
-
-                          {/* Toggle Mode */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsSignUpMode(!isSignUpMode);
-                              setAuthLocalError(null);
-                            }}
-                            className="text-center text-[10.5px] text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer transition-colors"
-                          >
-                            {isSignUpMode ? "Sudah punya akun? Masuk langsung" : "Belum punya akun? Buat baru"}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* METHOD 3: ANONYMOUS GUEST CLOUD */}
-                    {authMethod === "anon" && (
-                      <div className="flex flex-col items-center justify-center text-center space-y-4 pt-1 select-none">
-                        <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shadow-lg shrink-0">
-                          <User className="w-6 h-6 border-none" />
-                        </div>
-
-                        <div className="space-y-1.5 max-w-[280px]">
-                          <h4 className="font-sans font-bold text-white text-[14px] tracking-tight">
-                            Masuk Cepat Secara Anonim
-                          </h4>
-                          <p className="text-[10.5px] text-slate-400 font-medium leading-relaxed font-sans">
-                            Hubungkan instan tanpa email atau password. Percakapan Anda tersimpan aman di database Cloud Firebase pribadi.
-                          </p>
-                        </div>
-
-                        <button
-                          type="button"
-                          disabled={isAuthenticating}
-                          onClick={async () => {
-                            setAuthLocalError(null);
-                            setIsAuthenticating(true);
-                            try {
-                              const result = await signInAnonymously(auth);
-                              const user = result.user;
-                              
-                              const finalDisplayName = "Pengguna Maria";
-                              const finalUsername = "@user_" + user.uid.substring(0, 5).toLowerCase();
-                              
-                              setProfileDisplayName(finalDisplayName);
-                              setProfileUsername(finalUsername);
-                              setIsLoggedIn(true);
-
-                              setIsProfileOpen(false);
-                              setShowColorSelector(false);
-
-                              handleAddSystemNotification(
-                                "Masuk Anonim Sukses",
-                                `Masuk sebagai ${finalDisplayName} menggunakan database Firebase Cloud pribadi Anda!`,
-                                "success"
-                              );
-                            } catch (err: any) {
-                              console.error(err);
-                              let niceMessage = err.message || String(err);
-                              if (err.code === "auth/operation-not-allowed") {
-                                niceMessage = "Masuk Anonim belum diaktifkan di Firebase Console > Authentication > Sign-in method. Silakan aktifkan terlebih dahulu di Firebase Control Panel Anda.";
-                              }
-                              setAuthLocalError(niceMessage);
-                            } finally {
-                              setIsAuthenticating(false);
-                            }
-                          }}
-                          className="w-full bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold py-2 rounded-xl text-xs select-none shadow-md transition-all active:scale-95 cursor-pointer max-w-[240px] mt-1.5 disabled:opacity-60"
-                        >
-                          Mulai Koneksi Cepat
-                        </button>
-                      </div>
-                    )}
-
-                    {/* METHOD 4: CUSTOM FIREBASE CONFIGURATION */}
-                    {authMethod === "firebase" && (
-                      <div className="space-y-3 pt-1 text-left">
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between pl-0.5">
-                            <label className="block text-[9.5px] font-bold text-slate-400 uppercase tracking-wider font-sans">
-                              Konfigurasi Firebase JSON (SDK)
-                            </label>
-                            <span className="text-[8.5px] text-emerald-400 font-semibold uppercase">LocalStorage</span>
-                          </div>
-                          
-                          <p className="text-[9.5px] text-slate-400 font-medium leading-relaxed mb-2 font-sans text-justify">
-                            Salin JSON konfigurasi web app dari <strong>Firebase Console &gt; Project Settings</strong> untuk mengatasi ketidakcocokan kredensial / API Key:
-                          </p>
-
-                          <textarea
-                            value={customFirebaseJson}
-                            onChange={(e) => setCustomFirebaseJson(e.target.value)}
-                            placeholder={`{
-  "apiKey": "AIzaSy...",
-  "authDomain": "...",
-  "projectId": "...",
-  "storageBucket": "...",
-  "messagingSenderId": "...",
-  "appId": "..."
-}`}
-                            rows={8}
-                            className="w-full bg-[#12151b] border border-slate-805/60 focus:border-emerald-500 rounded-xl px-3 py-2 text-white text-[10.5px] focus:outline-hidden transition-all font-mono placeholder-slate-700 leading-normal"
-                          />
-                        </div>
-
-                        {/* Custom Buttons */}
-                        <div className="pt-1 flex flex-col gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              try {
-                                setAuthLocalError(null);
-                                const trimmed = customFirebaseJson.trim();
-                                if (!trimmed) {
-                                  throw new Error("Konfigurasi JSON tidak boleh kosong!");
-                                }
-                                const parsed = JSON.parse(trimmed);
-                                if (!parsed.apiKey || !parsed.projectId) {
-                                  throw new Error("Format tidak valid! Minimal harus memiliki 'apiKey' dan 'projectId'.");
-                                }
-                                
-                                localStorage.setItem("maria_custom_firebase_config", JSON.stringify(parsed));
-                                setIsCustomFirebaseSaved(true);
-                                
-                                handleAddSystemNotification(
-                                  "Konfigurasi Tersimpan",
-                                  "Firebase SDK telah diatur menggunakan kredensial kustom Anda. Memuat ulang halaman...",
-                                  "success"
-                                );
-                                
-                                setTimeout(() => {
-                                  window.location.reload();
-                                }, 1500);
-                              } catch (err: any) {
-                                setAuthLocalError("Gagal menyimpan JSON: " + (err.message || String(err)) + "\n\nPastikan format JSON Anda menggunakan tanda petik ganda (\") untuk kunci dan nilai.");
-                              }
-                            }}
-                            className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 font-extrabold py-2 px-4 rounded-xl text-white text-xs select-none shadow-md transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
-                          >
-                            <RefreshCw className="w-3.5 h-3.5 animate-[spin_4s_linear_infinite]" />
-                            <span>Simpan & Muat Ulang Aplikasi</span>
-                          </button>
-
-                          {isCustomFirebaseSaved ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setAuthLocalError(null);
-                                localStorage.removeItem("maria_custom_firebase_config");
-                                setIsCustomFirebaseSaved(false);
-                                handleAddSystemNotification(
-                                  "Reset Berhasil",
-                                  "Kembali menggunakan konfigurasi default bawaan. Memuat ulang halaman...",
-                                  "info"
-                                );
-                                setTimeout(() => {
-                                  window.location.reload();
-                                }, 1500);
-                              }}
-                              className="w-[#100%] bg-rose-950/20 hover:bg-rose-900/30 text-rose-350 border border-rose-900/30 font-semibold py-2 rounded-lg text-[10px] cursor-pointer transition-all"
-                            >
-                              ⚠️ Ganti Kembali ke Konfigurasi Default Bawaan (Reset)
-                            </button>
-                          ) : (
-                            <div className="text-center text-[9px] text-slate-500 font-medium font-sans">
-                              Menggunakan konfigurasi sistem bawaan.
-                            </div>
-                          )}
-
-                          {/* Beautiful Step-by-Step Indonesian Guide for project settings extraction */}
-                          <div className="mt-3 p-3 bg-slate-905/60 border border-slate-800/80 rounded-xl space-y-2 text-[10px] text-slate-350 leading-relaxed">
-                            <div className="flex items-center gap-1.5 font-bold text-white text-[10.5px]">
-                              <Info className="w-3.5 h-3.5 text-emerald-400" />
-                              <span>Cara Mengambil JSON Firebase Anda:</span>
-                            </div>
-                            <ol className="list-decimal list-inside space-y-1 text-slate-400 pl-0.5 font-medium">
-                              <li>Buka <a href="https://console.firebase.google.com" target="_blank" rel="noreferrer" className="text-emerald-400 hover:underline font-bold">Firebase Console</a> di tab baru komputer Anda.</li>
-                              <li>Pilih proyek baru Anda: <code className="text-white bg-slate-900 px-1 py-0.5 rounded font-mono text-[9px]">gen-lang-client-0860887544</code>.</li>
-                              <li>Klik ikon roda gigi <strong className="text-slate-300">⚙️ Project Settings</strong> di menu kiri atas.</li>
-                              <li>Pada tab <strong className="text-slate-350">General (Umum)</strong>, scroll terus ke bawah sampai bagian <strong className="text-slate-350">Your Apps (Aplikasi Anda)</strong>.</li>
-                              <li>Di bagian Web Apps, pilih opsi radio <strong className="text-emerald-400 font-semibold">"Config" (Konfigurasi)</strong>.</li>
-                              <li>Salin / copy JSON objek <code className="text-white text-[8.5px] font-mono select-all">{"{ apiKey: ..., appId: ... }"}</code> di dalam deklarasi <code className="text-emerald-500">firebaseConfig</code>.</li>
-                              <li>Tempelkan (Paste) ke kolom teks di atas dan klik <strong className="text-white font-sans">"Simpan & Muat Ulang"</strong>!</li>
-                            </ol>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Offline option */}
+                      {/* Offline option */}
                     <div className="pt-3 border-t border-slate-800/40 flex justify-center gap-4 text-[10.5px] font-semibold text-slate-400">
                       <button
                         type="button"
