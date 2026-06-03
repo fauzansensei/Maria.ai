@@ -1681,19 +1681,69 @@ export default function App() {
                     </div>
 
                     {authLocalError && (
-                      <div className="p-3 bg-rose-950/20 border border-rose-905/40 rounded-xl text-[10.5px] text-rose-300 flex flex-col gap-2 items-start text-left leading-relaxed">
+                      <div className="p-3 bg-rose-950/20 border border-rose-900/40 rounded-xl text-[10.5px] text-rose-300 flex flex-col gap-2 items-start text-left leading-relaxed">
                         <div className="flex gap-2 items-start">
                           <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-400" />
                           <span>{authLocalError}</span>
                         </div>
                         
+                        {(authLocalError.toLowerCase().includes("pop-up") || 
+                          authLocalError.toLowerCase().includes("popup")) && (
+                          <div className="mt-1.5 pt-2 border-t border-rose-900/40 w-full space-y-2 text-[10px] text-slate-350">
+                            <p className="font-extrabold text-amber-400 flex items-center gap-1 text-[10.5px]">
+                              💡 Solusi Cepat Pop-up Diblokir:
+                            </p>
+                            <p>
+                              Platform editor preview membatasi pop-up browser secara default demi keamanan. Anda punya 3 solusi instan:
+                            </p>
+                            <div className="grid grid-cols-1 gap-2 mt-2 w-full">
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  setAuthLocalError(null);
+                                  setIsAuthenticating(true);
+                                  try {
+                                    await signInWithRedirect(auth, googleProvider);
+                                  } catch (err: any) {
+                                    console.error(err);
+                                    setAuthLocalError("Gagal Mengalihkan: " + (err.message || String(err)));
+                                    setIsAuthenticating(false);
+                                  }
+                                }}
+                                className="w-full bg-slate-900 hover:bg-slate-850 border border-emerald-500/30 hover:border-emerald-500/60 text-emerald-400 font-extrabold py-2 px-3 rounded-lg transition-all text-center cursor-pointer text-[10px] font-sans"
+                              >
+                                🔄 Jalankan Metode Pengalihan (Redirect)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  window.open(window.location.href, "_blank");
+                                }}
+                                className="w-full bg-emerald-500 hover:bg-emerald-600 border border-emerald-600 text-slate-950 font-extrabold py-2 px-3 rounded-lg transition-all text-center cursor-pointer text-[10px] font-sans"
+                              >
+                                💻 Buka Aplikasi Di Tab Baru
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAuthMethod("anon");
+                                  setAuthLocalError(null);
+                                }}
+                                className="w-full bg-slate-900 hover:bg-slate-850 border border-slate-700/50 text-slate-300 font-bold py-1.5 px-3 rounded-lg transition-all text-center cursor-pointer text-[9.5px] font-sans"
+                              >
+                                ⚡️ Lewati Login & Gunakan Koneksi Cepat (Anon)
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
                         {(authLocalError.toLowerCase().includes("api-key-not-valid") || 
                           authLocalError.toLowerCase().includes("invalid-api-key") || 
                           authLocalError.toLowerCase().includes("unauthorized") ||
                           authLocalError.toLowerCase().includes("key-not-valid") ||
                           authLocalError.toLowerCase().includes("kunci api") ||
                           authLocalError.toLowerCase().includes("kredensial")) && (
-                          <div className="mt-1.5 pt-2 border-t border-rose-900/40 w-full space-y-2 text-[10px] text-rose-205">
+                          <div className="mt-1.5 pt-2 border-t border-rose-900/40 w-full space-y-2 text-[10px] text-rose-200">
                             <p className="font-extrabold text-rose-400 flex items-center gap-1">
                               💡 Solusi Masalah API Key / Firebase Baru:
                             </p>
