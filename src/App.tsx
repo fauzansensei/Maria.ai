@@ -1665,9 +1665,37 @@ export default function App() {
                     </div>
 
                     {authLocalError && (
-                      <div className="p-3 bg-rose-950/20 border border-rose-905/40 rounded-xl text-[10px] text-rose-350 flex gap-2 items-start text-left">
-                        <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                        <span>{authLocalError}</span>
+                      <div className="p-3 bg-rose-950/20 border border-rose-905/40 rounded-xl text-[10.5px] text-rose-300 flex flex-col gap-2 items-start text-left leading-relaxed">
+                        <div className="flex gap-2 items-start">
+                          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-400" />
+                          <span>{authLocalError}</span>
+                        </div>
+                        
+                        {(authLocalError.toLowerCase().includes("api-key-not-valid") || 
+                          authLocalError.toLowerCase().includes("invalid-api-key") || 
+                          authLocalError.toLowerCase().includes("unauthorized") ||
+                          authLocalError.toLowerCase().includes("key-not-valid") ||
+                          authLocalError.toLowerCase().includes("kunci api") ||
+                          authLocalError.toLowerCase().includes("kredensial")) && (
+                          <div className="mt-1.5 pt-2 border-t border-rose-900/40 w-full space-y-2 text-[10px] text-rose-205">
+                            <p className="font-extrabold text-rose-400 flex items-center gap-1">
+                              💡 Solusi Masalah API Key / Firebase Baru:
+                            </p>
+                            <p>
+                              Anda telah mengganti atau menyetel ulang kredensial Firebase Anda, namun situs ini secara default masih mencoba memuat konfigurasi default lama.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAuthMethod("firebase");
+                                setAuthLocalError(null);
+                              }}
+                              className="mt-1 w-full bg-rose-900/40 hover:bg-rose-900/60 border border-rose-700/65 text-white font-extrabold py-2 px-3 rounded-lg hover:scale-[1.01] active:scale-95 transition-all text-center cursor-pointer font-sans"
+                            >
+                              ⚙️ Klik di Sini Untuk Mengatur Firebase Kustom Anda
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -2105,15 +2133,32 @@ export default function App() {
                                   window.location.reload();
                                 }, 1500);
                               }}
-                              className="w-[#100%] bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-1.5 rounded-lg text-[10px] cursor-pointer transition-colors"
+                              className="w-[#100%] bg-rose-950/20 hover:bg-rose-900/30 text-rose-350 border border-rose-900/30 font-semibold py-2 rounded-lg text-[10px] cursor-pointer transition-all"
                             >
-                              Reset ke Konfigurasi Bawaan (Default)
+                              ⚠️ Ganti Kembali ke Konfigurasi Default Bawaan (Reset)
                             </button>
                           ) : (
                             <div className="text-center text-[9px] text-slate-500 font-medium font-sans">
                               Menggunakan konfigurasi sistem bawaan.
                             </div>
                           )}
+
+                          {/* Beautiful Step-by-Step Indonesian Guide for project settings extraction */}
+                          <div className="mt-3 p-3 bg-slate-905/60 border border-slate-800/80 rounded-xl space-y-2 text-[10px] text-slate-350 leading-relaxed">
+                            <div className="flex items-center gap-1.5 font-bold text-white text-[10.5px]">
+                              <Info className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>Cara Mengambil JSON Firebase Anda:</span>
+                            </div>
+                            <ol className="list-decimal list-inside space-y-1 text-slate-400 pl-0.5 font-medium">
+                              <li>Buka <a href="https://console.firebase.google.com" target="_blank" rel="noreferrer" className="text-emerald-400 hover:underline font-bold">Firebase Console</a> di tab baru komputer Anda.</li>
+                              <li>Pilih proyek baru Anda: <code className="text-white bg-slate-900 px-1 py-0.5 rounded font-mono text-[9px]">gen-lang-client-0860887544</code>.</li>
+                              <li>Klik ikon roda gigi <strong className="text-slate-300">⚙️ Project Settings</strong> di menu kiri atas.</li>
+                              <li>Pada tab <strong className="text-slate-350">General (Umum)</strong>, scroll terus ke bawah sampai bagian <strong className="text-slate-350">Your Apps (Aplikasi Anda)</strong>.</li>
+                              <li>Di bagian Web Apps, pilih opsi radio <strong className="text-emerald-400 font-semibold">"Config" (Konfigurasi)</strong>.</li>
+                              <li>Salin / copy JSON objek <code className="text-white text-[8.5px] font-mono select-all">{"{ apiKey: ..., appId: ... }"}</code> di dalam deklarasi <code className="text-emerald-500">firebaseConfig</code>.</li>
+                              <li>Tempelkan (Paste) ke kolom teks di atas dan klik <strong className="text-white font-sans">"Simpan & Muat Ulang"</strong>!</li>
+                            </ol>
+                          </div>
                         </div>
                       </div>
                     )}
