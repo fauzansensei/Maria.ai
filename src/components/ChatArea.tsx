@@ -58,6 +58,7 @@ interface ChatAreaProps {
   onToggleBookmark?: (message: Message) => void;
   bookmarkedMessages?: Message[];
   isLoggedIn?: boolean;
+  profileDisplayNameProp?: string;
   onOpenLogin?: () => void;
   pendingPrompt?: string | null;
   onClearPendingPrompt?: () => void;
@@ -548,6 +549,7 @@ export default function ChatArea({
   onToggleBookmark,
   bookmarkedMessages = [],
   isLoggedIn = false,
+  profileDisplayNameProp,
   onOpenLogin,
   pendingPrompt,
   onClearPendingPrompt,
@@ -800,7 +802,7 @@ export default function ChatArea({
     setTimeout(() => setIsCopiedId(null), 1500);
   };
 
-  const greetingName = settings.username || "Pengguna";
+  const greetingName = isLoggedIn ? (profileDisplayNameProp || settings.username || "User") : "User";
 
   // Resolve active theme style
   const themeStyle = THEME_OPTIONS.find(t => t.value === settings.theme) || THEME_OPTIONS[0];

@@ -51,6 +51,7 @@ interface SidebarProps {
   useInitialsAvatarProp?: boolean;
   profileAvatarBgProp?: string;
   profileUsernameHandleProp?: string;
+  profileDisplayNameProp?: string;
   isLoggedIn?: boolean;
   isPlus?: boolean;
   onUpgradeSuccess?: () => void;
@@ -151,6 +152,7 @@ export default function Sidebar({
   useInitialsAvatarProp,
   profileAvatarBgProp,
   profileUsernameHandleProp,
+  profileDisplayNameProp,
   isLoggedIn = false,
   isPlus = false,
   onUpgradeSuccess
@@ -189,8 +191,8 @@ export default function Sidebar({
 
   // Load avatar and user properties precisely matching Settings / Props / Firebase
   const userAvatar = profileAvatarProp !== undefined ? profileAvatarProp : (auth.currentUser?.photoURL || "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150&h=150&fit=crop&q=80");
-  const userDisplayName = isLoggedIn ? (settings.username || auth.currentUser?.displayName || "Pengguna") : "user";
-  const userEmail = isLoggedIn ? (auth.currentUser?.email || "basitfauzan42@gmail.com") : "user@example.com";
+  const userDisplayName = isLoggedIn ? (profileDisplayNameProp || settings.username || auth.currentUser?.displayName || "User") : "User";
+  const userEmail = isLoggedIn ? (auth.currentUser?.email || "user@example.com") : "user@example.com";
 
   const shouldShowInitialsAvatar = isLoggedIn 
     ? (useInitialsAvatarProp !== undefined ? useInitialsAvatarProp : !auth.currentUser?.photoURL)
@@ -199,7 +201,7 @@ export default function Sidebar({
     ? (profileAvatarBgProp !== undefined ? profileAvatarBgProp : "bg-[#064e3b]")
     : "bg-slate-600";
   const userHandle = isLoggedIn 
-    ? (profileUsernameHandleProp !== undefined ? profileUsernameHandleProp : ("@" + (auth.currentUser?.email ? auth.currentUser.email.split("@")[0] : "basitfauzan42")))
+    ? (profileUsernameHandleProp !== undefined ? profileUsernameHandleProp : ("@" + (auth.currentUser?.email ? auth.currentUser.email.split("@")[0] : "user")))
     : "@user";
 
   const getInitials = (name: string) => {

@@ -142,8 +142,8 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false); // Controls responsive drawer tracker
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [profileDisplayName, setProfileDisplayName] = useState("basit fauzan");
-  const [profileUsername, setProfileUsername] = useState("@basitfauzan42");
+  const [profileDisplayName, setProfileDisplayName] = useState("User");
+  const [profileUsername, setProfileUsername] = useState("@user");
   const [profileAvatarBg, setProfileAvatarBg] = useState("bg-[#064e3b]"); // premium deep green bg
   const [showColorSelector, setShowColorSelector] = useState(false);
   const [profileUseInitials, setProfileUseInitials] = useState(true);
@@ -167,7 +167,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    setProfileDisplayName(settings.username || "basit fauzan");
+    setProfileDisplayName(settings.username || "User");
   }, [settings.username]);
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
@@ -306,9 +306,9 @@ export default function App() {
       .then((result) => {
         if (result && result.user) {
           const user = result.user;
-          const finalDisplayName = user.displayName || "Fauzan";
-          const finalUsername = "@" + (user.email?.split("@")[0] || "basitfauzan42");
-          const finalEmail = user.email || "basitfauzan42@gmail.com";
+          const finalDisplayName = user.displayName || "User";
+          const finalUsername = "@" + (user.email?.split("@")[0] || "user");
+          const finalEmail = user.email || "user@example.com";
           
           setProfileDisplayName(finalDisplayName);
           setProfileUsername(finalUsername);
@@ -368,12 +368,17 @@ export default function App() {
             }
           } else {
             // New user registration - initialize user doc
+            const initialDisplayName = user.displayName || "User";
+            const initialUsername = "@" + (user.email?.split("@")[0] || "user");
             setDoc(userRef, {
-              displayName: user.displayName || "basit fauzan",
-              username: "@" + (user.email?.split("@")[0] || "basitfauzan42"),
-              email: user.email || "basitfauzan42@gmail.com",
+              displayName: initialDisplayName,
+              username: initialUsername,
+              email: user.email || "user@example.com",
               avatarUrl: user.photoURL || "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150&h=150&fit=crop&q=80",
-              settings: DEFAULT_SETTINGS,
+              settings: {
+                ...DEFAULT_SETTINGS,
+                username: initialDisplayName
+              },
               bookmarks: [],
               savedChats: [],
               myPrompts: []
@@ -408,6 +413,8 @@ export default function App() {
       } else {
         setIsLoggedIn(false);
         setSettings(DEFAULT_SETTINGS);
+        setProfileDisplayName("User");
+        setProfileUsername("@user");
         setBookmarkedMessages([]);
         setSavedChats([]);
         setThreads([]);
@@ -631,7 +638,10 @@ export default function App() {
         },
         body: JSON.stringify({
           messages: postMessages,
-          settings,
+          settings: {
+            ...settings,
+            username: isLoggedIn ? (profileDisplayName || settings.username || "User") : "User"
+          },
         }),
       });
 
@@ -760,7 +770,10 @@ export default function App() {
         },
         body: JSON.stringify({
           messages: precedingMessages,
-          settings,
+          settings: {
+            ...settings,
+            username: isLoggedIn ? (profileDisplayName || settings.username || "User") : "User"
+          },
         }),
       });
 
@@ -902,7 +915,10 @@ export default function App() {
         },
         body: JSON.stringify({
           messages: nextMessages,
-          settings,
+          settings: {
+            ...settings,
+            username: isLoggedIn ? (profileDisplayName || settings.username || "User") : "User"
+          },
         }),
       });
 
@@ -1260,6 +1276,7 @@ export default function App() {
           useInitialsAvatarProp={profileUseInitials}
           profileAvatarBgProp={profileAvatarBg}
           profileUsernameHandleProp={profileUsername}
+          profileDisplayNameProp={profileDisplayName}
           isLoggedIn={isLoggedIn}
           isPlus={isPlus}
           onUpgradeSuccess={() => {
@@ -1293,6 +1310,7 @@ export default function App() {
               onToggleBookmark={handleToggleBookmark}
               bookmarkedMessages={bookmarkedMessages}
               isLoggedIn={isLoggedIn}
+              profileDisplayNameProp={profileDisplayName}
               onOpenLogin={() => setIsProfileOpen(true)}
               pendingPrompt={pendingPrompt}
               onClearPendingPrompt={() => setPendingPrompt(null)}
@@ -1573,6 +1591,20 @@ export default function App() {
                         </div>
                       </div>
 
+                      {/* Alamat Email */}
+                      <div className="space-y-1">
+                        <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider pl-1 font-sans">
+                          Alamat Email
+                        </label>
+                        <input
+                          type="text"
+                          readOnly
+                          disabled
+                          value={auth.currentUser?.email || "user@example.com"}
+                          className="w-full bg-[#12151b] border border-slate-800 rounded-xl px-3.5 py-2.5 text-slate-400 text-[12.5px] cursor-not-allowed font-medium font-sans select-all"
+                        />
+                      </div>
+
                       {/* Note about group chats */}
                       <p className="text-[10.5px] text-slate-300 font-medium leading-normal pl-0.5 pt-0.5 select-none font-sans">
                         Profil Anda membantu orang mengenali Anda di obrolan grup.
@@ -1812,9 +1844,9 @@ export default function App() {
                                 const result = await signInWithPopup(auth, googleProvider);
                                 const user = result.user;
                                 
-                                const finalDisplayName = user.displayName || "Fauzan";
-                                const finalUsername = "@" + (user.email?.split("@")[0] || "basitfauzan42");
-                                const finalEmail = user.email || "basitfauzan42@gmail.com";
+                                const finalDisplayName = user.displayName || "User";
+                                const finalUsername = "@" + (user.email?.split("@")[0] || "user");
+                                const finalEmail = user.email || "user@example.com";
                                 
                                 setProfileDisplayName(finalDisplayName);
                                 setProfileUsername(finalUsername);
@@ -2058,7 +2090,7 @@ export default function App() {
                   {/* Body Content */}
                   <div className="space-y-3">
                     <p className="text-[11px] font-medium text-emerald-300">
-                      Halo Kak {settings.username || "Basit"},
+                      Halo Kak {isLoggedIn ? (profileDisplayName || settings.username || "User") : "User"},
                     </p>
                     
                     <div className="p-4 bg-slate-900 border border-slate-800/40 rounded-xl text-[11px] text-zinc-200 select-text leading-relaxed">

@@ -8,7 +8,7 @@ export const DEFAULT_WIDGETS = [
 ];
 
 export const DEFAULT_SETTINGS: UserSettings = {
-  username: "Basit",
+  username: "User",
   tone: "Professional",
   languageStyle: "Baku",
   customPrompt: "",
