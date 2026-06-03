@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Message, UserSettings, AppNotification, ChatThread } from "./types";
+import { Message, UserSettings, AppNotification, ChatThread, AppTheme } from "./types";
 import { DEFAULT_SETTINGS, THEME_OPTIONS } from "./constants";
 import type { DiscoveryAgent } from "./components/DiscoverArea";
 import { 
@@ -190,10 +190,72 @@ export default function App() {
   const [bookmarkedMessages, setBookmarkedMessages] = useState<Message[]>([]);
   const [isPlus, setIsPlus] = useState(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("maria_is_plus") === "true";
+      const active = localStorage.getItem("maria_is_plus") === "true";
+      const expiryStr = localStorage.getItem("maria_plus_expiry_date");
+      if (active && expiryStr) {
+        if (new Date() > new Date(expiryStr)) {
+          localStorage.setItem("maria_is_plus", "false");
+          return false;
+        }
+      }
+      return active;
     }
     return false;
   });
+
+  // Active check for subscription expiry
+  useEffect(() => {
+    const checkExpiry = () => {
+      if (typeof window === "undefined") return;
+      const plusActive = localStorage.getItem("maria_is_plus") === "true";
+      if (!plusActive) return;
+
+      const expiryStr = localStorage.getItem("maria_plus_expiry_date");
+      if (!expiryStr) return; // Lifetime or none
+
+      const expiryDate = new Date(expiryStr);
+      const now = new Date();
+
+      if (now > expiryDate) {
+        // Revoke active subscription features automatically
+        setIsPlus(false);
+        localStorage.setItem("maria_is_plus", "false");
+
+        // Reset theme to classic-blue if customized subscription colors were used
+        if (settings.theme === "cosmic-purple" || settings.theme === "minimal-dark") {
+          const updatedSettings = {
+            ...settings,
+            theme: "classic-blue" as AppTheme
+          };
+          setSettings(updatedSettings);
+          if (isLoggedIn && auth.currentUser) {
+            const userRef = doc(db, "users", auth.currentUser.uid);
+            updateDoc(userRef, {
+              settings: updatedSettings,
+              isPlus: false
+            }).catch(() => {});
+          }
+        } else {
+          if (isLoggedIn && auth.currentUser) {
+            const userRef = doc(db, "users", auth.currentUser.uid);
+            updateDoc(userRef, {
+              isPlus: false
+            }).catch(() => {});
+          }
+        }
+
+        handleAddSystemNotification(
+          "Paket Berakhir ⚠️",
+          "Masa aktif paket Premium Plus Anda telah berakhir. Fitur Plus dinonaktifkan.",
+          "reminder"
+        );
+      }
+    };
+
+    checkExpiry();
+    const timer = setInterval(checkExpiry, 5000); // Check every 5 seconds
+    return () => clearInterval(timer);
+  }, [isPlus, settings, isLoggedIn]);
 
   const handleToggleBookmark = async (msg: Message) => {
     let nextBookmarks: Message[] = [];
@@ -365,6 +427,23 @@ export default function App() {
             if (data.avatarUrl) {
               setProfileAvatarUrl(data.avatarUrl);
               setProfileUseInitials(false);
+            }
+            
+            // Sync subscription data from Firestore
+            if (data.isPlus !== undefined) {
+              let active = data.isPlus === true;
+              if (active && data.plusExpiryDate) {
+                if (new Date() > new Date(data.plusExpiryDate)) {
+                  active = false;
+                  // Auto-expire in database
+                  updateDoc(userRef, { isPlus: false }).catch(() => {});
+                }
+              }
+              setIsPlus(active);
+              localStorage.setItem("maria_is_plus", active ? "true" : "false");
+              if (data.plusPlan) localStorage.setItem("maria_plus_plan", data.plusPlan);
+              if (data.plusPurchaseDate) localStorage.setItem("maria_plus_purchase_date", data.plusPurchaseDate);
+              if (data.plusExpiryDate) localStorage.setItem("maria_plus_expiry_date", data.plusExpiryDate);
             }
           } else {
             // New user registration - initialize user doc
@@ -1279,12 +1358,37 @@ export default function App() {
           profileDisplayNameProp={profileDisplayName}
           isLoggedIn={isLoggedIn}
           isPlus={isPlus}
-          onUpgradeSuccess={() => {
+          onUpgradeSuccess={(planType) => {
             setIsPlus(true);
+            const now = new Date();
+            const purchaseStr = now.toISOString();
+            
+            const expiry = new Date();
+            if (planType === "monthly") {
+              expiry.setMonth(expiry.getMonth() + 1); // 1 month from now
+            } else {
+              expiry.setFullYear(expiry.getFullYear() + 1); // 1 year from now
+            }
+            const expiryStr = expiry.toISOString();
+
             try {
               localStorage.setItem("maria_is_plus", "true");
+              localStorage.setItem("maria_plus_plan", planType);
+              localStorage.setItem("maria_plus_purchase_date", purchaseStr);
+              localStorage.setItem("maria_plus_expiry_date", expiryStr);
             } catch (e) {
               console.error(e);
+            }
+
+            // Sync with Firestore if logged in
+            if (isLoggedIn && auth.currentUser) {
+              const userRef = doc(db, "users", auth.currentUser.uid);
+              updateDoc(userRef, {
+                isPlus: true,
+                plusPlan: planType,
+                plusPurchaseDate: purchaseStr,
+                plusExpiryDate: expiryStr
+              }).catch(err => handleFirestoreError(err, OperationType.UPDATE, `users/${auth.currentUser?.uid}`));
             }
           }}
         />
@@ -1381,6 +1485,8 @@ export default function App() {
                   onAddSystemNotification={handleAddSystemNotification}
                   onSimulateEmail={handleSimulateEmail}
                   onSimulatePush={handleSimulatePush}
+                  isPlus={isPlus}
+                  setIsPlus={setIsPlus}
                 />
               </React.Suspense>
             </div>

@@ -54,7 +54,7 @@ interface SidebarProps {
   profileDisplayNameProp?: string;
   isLoggedIn?: boolean;
   isPlus?: boolean;
-  onUpgradeSuccess?: () => void;
+  onUpgradeSuccess?: (planType: "monthly" | "yearly") => void;
 }
 
 // Preset Mock Chats matching Screenshot list exactly & loaded dynamically
@@ -225,7 +225,7 @@ export default function Sidebar({
       setUpgradeSuccess(false);
       setShowUpgradeModal(false);
       if (onUpgradeSuccess) {
-        onUpgradeSuccess();
+        onUpgradeSuccess(upgradePlan);
       }
       alert("Selamat! Anda kini telah resmi terdaftar sebagai Anggota MARIA Plus ✨ Nikmati prioritas respon cerdas tak terbatas.");
     }, 1500);

@@ -50,6 +50,8 @@ interface SettingsDashboardProps {
   onAddSystemNotification?: (title: string, body: string, type: "info" | "success" | "reminder" | "message") => void;
   onSimulateEmail?: (subject: string, body: string, category: string) => void;
   onSimulatePush?: (title: string, body: string) => void;
+  isPlus?: boolean;
+  setIsPlus?: (val: boolean) => void;
 }
 
 type MenuTab = "umum" | "notifikasi" | "personalisasi" | "aplikasi" | "tagihan" | "kontrol-data";
@@ -62,19 +64,51 @@ export default function SettingsDashboard({
   onClose,
   onAddSystemNotification,
   onSimulateEmail,
-  onSimulatePush
+  onSimulatePush,
+  isPlus = false,
+  setIsPlus
 }: SettingsDashboardProps) {
   const [activeTab, setActiveTab] = useState<MenuTab>("umum");
 
   // Load and synchronize states with memory defaults
   const [appearance, setAppearance] = useState("Gelap");
   const [contrast, setContrast] = useState("Sistem");
-  const [accentColor, setAccentColor] = useState("Biru");
+  const [accentColor, setAccentColor] = useState(() => {
+    if (settings.theme === "emerald-green") return "Hijau";
+    if (settings.theme === "cosmic-purple") return "Ungu";
+    if (settings.theme === "minimal-dark") return "Hitam";
+    return "Biru";
+  });
   const [language, setLanguage] = useState("Deteksi otomatis");
   const [dictationEnabled, setDictationEnabled] = useState(true);
   const [spokenLanguage, setSpokenLanguage] = useState("Deteksi otomatis");
   const [voiceVoice, setVoiceVoice] = useState("Maria");
   const [voiceStreamSplit, setVoiceStreamSplit] = useState(false);
+
+  // Subscription States
+  const [subPlan, setSubPlan] = useState<"monthly" | "yearly" | "none">(() => {
+    if (typeof window !== "undefined") {
+      const active = localStorage.getItem("maria_is_plus") === "true";
+      if (!active) return "none";
+      const plan = localStorage.getItem("maria_plus_plan") as "monthly" | "yearly";
+      return plan || "monthly";
+    }
+    return "none";
+  });
+
+  const [subPurchaseDate, setSubPurchaseDate] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("maria_plus_purchase_date") || "";
+    }
+    return "";
+  });
+
+  const [subExpiryDate, setSubExpiryDate] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("maria_plus_expiry_date") || "";
+    }
+    return "";
+  });
 
   // Smart Notification System states
   const [remindersNotif, setRemindersNotif] = useState<string[]>(["In-App", "Push"]);
@@ -176,6 +210,37 @@ export default function SettingsDashboard({
       setActiveEngineName("Synthesizer Chime");
     }
   }, [voiceVoice]);
+
+  // Synchronize internal subscription details when isPlus state varies
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const active = localStorage.getItem("maria_is_plus") === "true";
+      if (active) {
+        setSubPlan((localStorage.getItem("maria_plus_plan") as "monthly" | "yearly") || "monthly");
+        setSubPurchaseDate(localStorage.getItem("maria_plus_purchase_date") || new Date().toISOString());
+        setSubExpiryDate(localStorage.getItem("maria_plus_expiry_date") || new Date(Date.now() + 30*24*60*60*1000).toISOString());
+      } else {
+        setSubPlan("none");
+        setSubPurchaseDate("");
+        setSubExpiryDate("");
+      }
+    }
+  }, [isPlus]);
+
+  const formatIndonesianDate = (isoString?: string) => {
+    if (!isoString) return "-";
+    try {
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return "-";
+      const months = [
+        "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+        "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+      ];
+      return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()} (${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} WIB)`;
+    } catch (e) {
+      return isoString;
+    }
+  };
 
   // Dynamic feedback
   const [saveBannerText, setSaveBannerText] = useState<string | null>(null);
@@ -1061,7 +1126,21 @@ export default function SettingsDashboard({
                           <button
                             key={opt.name}
                             type="button"
-                            onClick={() => handleDropdownSelect("maria_accent_color", opt.name, setAccentColor)}
+                            onClick={() => {
+                              if ((opt.badge === "PLUS" || opt.badge === "PRO") && !isPlus) {
+                                if (onAddSystemNotification) {
+                                  onAddSystemNotification(
+                                    "Akses Terbatas 🔒",
+                                    `Opsi aksen warna "${opt.name}" membutuhkan keanggotaan MARIA Plus ✨ Silakan upgrade paket Anda di Sidebar!`,
+                                    "reminder"
+                                  );
+                                } else {
+                                  alert(`Opsi aksen warna "${opt.name}" membutuhkan keanggotaan MARIA Plus ✨`);
+                                }
+                                return;
+                              }
+                              handleDropdownSelect("maria_accent_color", opt.name, setAccentColor);
+                            }}
                             className="w-full px-3 py-2 text-left hover:bg-[#2e2e30] flex items-center justify-between transition-colors cursor-pointer"
                           >
                             <div className="flex items-center gap-2">
@@ -1882,7 +1961,7 @@ export default function SettingsDashboard({
               </p>
               
               <div className="flex items-center gap-4 bg-zinc-900/40 p-3 rounded-xl border border-zinc-850 max-w-sm">
-                <div className="w-16 h-16 bg-zinc-300 rounded-lg flex items-center justify-center font-bold text-zinc-900 text-[9px] text-center shrink-0">
+                <div className="w-16 h-16 bg-[#242426] border border-zinc-800 rounded-lg flex items-center justify-center font-bold text-zinc-400 text-[9px] text-center shrink-0">
                   QR Code
                 </div>
                 <div className="text-[10px] text-zinc-450 leading-normal select-text">
@@ -1895,50 +1974,188 @@ export default function SettingsDashboard({
 
         {/* ===================== TAB: TAGIHAN ===================== */}
         {activeTab === "tagihan" && (
-          <div className="space-y-4.5 text-xs animate-in fade-in duration-200">
+          <div className="space-y-4 text-xs animate-in fade-in duration-200">
             <div>
               <h3 className="text-zinc-150 font-bold text-sm tracking-tight pt-1">Langganan & Billing</h3>
-              <p className="text-[10.5px] text-zinc-450 mt-0.5">Kelola lisensi keanggotaan premium, rincian kuota kredit pencarian, serta sisa token harian.</p>
+              <p className="text-[10.5px] text-zinc-450 mt-0.5">Kelola lisensi keanggotaan premium, masa aktif paket, rincian pembayaran, serta pengontrol masa kedaluwarsa fitur.</p>
             </div>
 
             {/* CARD 1: STATUS KEANGGOTAAN */}
             <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-4 shadow-xs">
-              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
-                💎 Status Keanggotaan Aktif
+              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30 flex items-center justify-between">
+                <span>💎 Status Keanggotaan</span>
+                <span className={`text-[8px] font-black tracking-widest px-1.5 py-0.5 rounded-sm uppercase ${
+                  isPlus 
+                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25" 
+                    : "bg-zinc-800 text-zinc-500 border border-zinc-700"
+                }`}>
+                  {isPlus ? "ACTIVE" : "INACTIVE"}
+                </span>
               </div>
               
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Paket Aktif Saat Ini</span>
-                  <span className={`text-base font-extrabold ${getAccentTextClass()} mt-1 block flex items-center gap-1.5`}>
-                    Maria AI Premium Plus
-                    <span className={`text-[8.5px] font-black tracking-widest px-1.5 py-0.5 rounded uppercase ${getBadgeClass()}`}>
-                      ACTIVE
-                    </span>
+                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Paket Aktif Saat Ini</span>
+                  <span className={`text-base font-extrabold ${isPlus ? getAccentTextClass() : "text-zinc-400"} mt-0.5 block flex items-center gap-1.5`}>
+                    {isPlus 
+                      ? `Maria AI Premium Plus (${subPlan === "yearly" ? "Tahunan" : "Bulanan"}) ✨` 
+                      : "Maria AI Free (Gratis)"}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  disabled
-                  className="px-3.5 py-2 bg-[#242426] text-zinc-600 border border-zinc-850 text-[10.5px] rounded-xl font-bold cursor-not-allowed"
-                >
-                  Teraktivasi
-                </button>
+                <div className="shrink-0">
+                  {isPlus ? (
+                    <span className="px-3.5 py-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-[10px] rounded-xl font-bold">
+                      Terbuka Akses Plus
+                    </span>
+                  ) : (
+                    <span className="px-3.5 py-1.5 bg-zinc-800 text-zinc-500 border border-zinc-750 text-[10px] rounded-xl font-bold">
+                      Akses Terbatas
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Divider Inside Card */}
               <div className="h-[1px] bg-zinc-800/30" />
 
               {/* Grid Statistics Info */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-[#212123]/60 p-3 rounded-xl border border-zinc-850">
-                  <span className="text-[9px] text-zinc-500 font-bold block uppercase tracking-wider">Kuota Token Tersisa</span>
-                  <span className="block text-xs font-bold text-zinc-200 mt-1 select-text">Tak Terbatas (PRO)</span>
+              <div className="grid grid-cols-2 gap-3 pb-1">
+                <div className="bg-[#212123]/60 p-3 rounded-xl border border-zinc-850 space-y-1">
+                  <span className="text-[9px] text-zinc-500 font-bold block uppercase tracking-wider">Tipe Paket</span>
+                  <span className="block text-xs font-bold text-zinc-200">
+                    {isPlus ? (subPlan === "yearly" ? "Premium Plus (Tahunan)" : "Premium Plus (Bulanan)") : "Free Tier (Paket Gratis)"}
+                  </span>
                 </div>
-                <div className="bg-[#212123]/60 p-3 rounded-xl border border-zinc-850">
-                  <span className="text-[9px] text-zinc-500 font-bold block uppercase tracking-wider">Masa Berlaku Lisensi</span>
-                  <span className="block text-xs font-bold text-zinc-200 mt-1 select-text">Selamanya (Aktif)</span>
+                <div className="bg-[#212123]/60 p-3 rounded-xl border border-zinc-850 space-y-1">
+                  <span className="text-[9px] text-zinc-500 font-bold block uppercase tracking-wider">Metode Pembayaran</span>
+                  <span className="block text-xs font-bold text-zinc-200">
+                    {isPlus ? "Auto-Debit Terverifikasi" : "-"}
+                  </span>
                 </div>
+                <div className="bg-[#212123]/60 p-3 rounded-xl border border-zinc-850 space-y-1">
+                  <span className="text-[9px] text-zinc-500 font-bold block uppercase tracking-wider">Tanggal Pembelian</span>
+                  <span className="block text-[11px] font-bold text-zinc-200 leading-normal">
+                    {isPlus && subPurchaseDate ? formatIndonesianDate(subPurchaseDate) : "-"}
+                  </span>
+                </div>
+                <div className="bg-[#212123]/60 p-3 rounded-xl border border-zinc-850 space-y-1">
+                  <span className="text-[9px] text-zinc-500 font-bold block uppercase tracking-wider">Masa Berlaku Paket</span>
+                  <span className={`block text-[11px] font-bold leading-normal ${isPlus ? "text-emerald-400" : "text-zinc-500"}`}>
+                    {isPlus && subExpiryDate ? formatIndonesianDate(subExpiryDate) : "Selesai / Kedaluwarsa"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* CARD 2: DYNAMIC SIMULATION PANEL */}
+            <div className="bg-[#1c1c1e] border border-orange-500/20 rounded-2xl p-4 space-y-3.5 shadow-sm">
+              <div className="text-[9.5px] font-bold text-orange-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30 flex items-center gap-1.5">
+                <span>🛠️ Panel Simulasi Masa Aktif (Rasionalisasi Pengujian)</span>
+              </div>
+              <p className="text-[10px] text-zinc-450 leading-relaxed">
+                Gunakan alat simulasi di bawah ini untuk menguji fungsionalitas waktu nyata. Anda dapat memicu masa aktif paket bulanan, tahunan, atau secara instan kedaluwarsa untuk memastikan seluruh fitur Maria Plus otomatis dicabut kembali.
+              </p>
+
+              <div className="flex flex-wrap gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const now = new Date();
+                    const expiry = new Date();
+                    expiry.setDate(now.getDate() + 30); // 30 days
+                    
+                    if (typeof window !== "undefined") {
+                      localStorage.setItem("maria_is_plus", "true");
+                      localStorage.setItem("maria_plus_plan", "monthly");
+                      localStorage.setItem("maria_plus_purchase_date", now.toISOString());
+                      localStorage.setItem("maria_plus_expiry_date", expiry.toISOString());
+                    }
+                    
+                    setSubPlan("monthly");
+                    setSubPurchaseDate(now.toISOString());
+                    setSubExpiryDate(expiry.toISOString());
+                    if (setIsPlus) setIsPlus(true);
+
+                    if (onAddSystemNotification) {
+                      onAddSystemNotification(
+                        "Simulasi Sukses ✨",
+                        "Masa aktif paket bulanan (30 hari) berhasil disimulasi dan diaktifkan.",
+                        "success"
+                      );
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-zinc-850 hover:bg-zinc-800 text-zinc-250 border border-zinc-800 text-[10px] rounded-lg font-bold cursor-pointer transition-all flex-1 min-w-[120px]"
+                >
+                  Set Bulanan (30 Hari)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const now = new Date();
+                    const expiry = new Date();
+                    expiry.setDate(now.getDate() + 365); // 365 days
+                    
+                    if (typeof window !== "undefined") {
+                      localStorage.setItem("maria_is_plus", "true");
+                      localStorage.setItem("maria_plus_plan", "yearly");
+                      localStorage.setItem("maria_plus_purchase_date", now.toISOString());
+                      localStorage.setItem("maria_plus_expiry_date", expiry.toISOString());
+                    }
+                    
+                    setSubPlan("yearly");
+                    setSubPurchaseDate(now.toISOString());
+                    setSubExpiryDate(expiry.toISOString());
+                    if (setIsPlus) setIsPlus(true);
+
+                    if (onAddSystemNotification) {
+                      onAddSystemNotification(
+                        "Simulasi Sukses ✨",
+                        "Masa aktif paket tahunan (365 hari) berhasil disimulasi dan diaktifkan.",
+                        "success"
+                      );
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-zinc-850 hover:bg-zinc-800 text-zinc-250 border border-zinc-800 text-[10px] rounded-lg font-bold cursor-pointer transition-all flex-1 min-w-[120px]"
+                >
+                  Set Tahunan (365 Hari)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const now = new Date();
+                    const purchase = new Date();
+                    purchase.setDate(now.getDate() - 32);
+                    const expiry = new Date();
+                    expiry.setDate(now.getDate() - 2); 
+                    
+                    if (typeof window !== "undefined") {
+                      localStorage.setItem("maria_is_plus", "true"); 
+                      localStorage.setItem("maria_plus_plan", "monthly");
+                      localStorage.setItem("maria_plus_purchase_date", purchase.toISOString());
+                      localStorage.setItem("maria_plus_expiry_date", expiry.toISOString());
+                    }
+                    
+                    setSubPlan("monthly");
+                    setSubPurchaseDate(purchase.toISOString());
+                    setSubExpiryDate(expiry.toISOString());
+                    if (setIsPlus) setIsPlus(true); 
+                    
+                    setTimeout(() => {
+                      if (onAddSystemNotification) {
+                        onAddSystemNotification(
+                          "Memicu Kedaluwarsa",
+                          "Waktu kedaluwarsa diatur ke masa lampau. Lisensi akan otomatis ditolak.",
+                          "info"
+                        );
+                      }
+                    }, 200);
+                  }}
+                  className="px-3 py-1.5 bg-rose-950/25 hover:bg-rose-950/40 text-rose-300 border border-rose-500/20 text-[10px] rounded-lg font-bold cursor-pointer transition-all flex-1 min-w-[120px]"
+                >
+                  Simulasikan Kedaluwarsa ⚠️
+                </button>
               </div>
             </div>
           </div>
