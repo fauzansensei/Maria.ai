@@ -925,279 +925,346 @@ export default function SettingsDashboard({
         
         {/* ===================== TAB: UMUM ===================== */}
         {activeTab === "umum" && (
-          <div className="space-y-4 text-xs">
-            <h3 className="text-zinc-100 font-bold text-sm tracking-tight pt-1">Umum</h3>
-            
-            {/* Divider line */}
-            <div className="h-[1px] bg-[#2c2c2c] my-1" />
-
-            {/* Row Option: Penampilan */}
-            <div className="flex items-center justify-between py-1 border-b border-[#202020]">
-              <span className="text-zinc-100 font-medium">Penampilan</span>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setActiveDropdownId(activeDropdownId === "umum-appearance" ? null : "umum-appearance")}
-                  aria-label="Pilih Penampilan Aplikasi"
-                  className="bg-[#212121] hover:bg-[#2b2b2b] text-zinc-200 border border-[#2e2e2e]/60 text-[11px] font-medium rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-1.5 cursor-pointer w-28 text-left"
-                >
-                  <span>{appearance}</span>
-                  <ChevronDown className="w-3 h-3 text-zinc-500" />
-                </button>
-                {activeDropdownId === "umum-appearance" && (
-                  <div className="absolute right-0 top-9 bg-[#212121] border border-[#2d2d2d] shadow-2xl rounded-xl py-1 z-50 text-[11px] w-28 text-zinc-300">
-                    {["Sistem", "Gelap", "Terang"].map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => handleDropdownSelect("maria_appearance", opt, setAppearance)}
-                        className="w-full px-3 py-1.8 text-left hover:bg-[#2e2e2e] flex items-center justify-between transition-colors cursor-pointer"
-                      >
-                        <span>{opt}</span>
-                        {appearance === opt && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()}`} />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+          <div className="space-y-4.5 text-xs animate-in fade-in duration-200">
+            <div>
+              <h3 className="text-zinc-150 font-bold text-sm tracking-tight pt-1">Pengaturan Umum</h3>
+              <p className="text-[10.5px] text-zinc-450 mt-0.5">Sesuaikan tampilan antarmuka, bahasa obrolan, dan fungsi respon suara Maria AI harian Anda.</p>
             </div>
 
-            {/* Row Option: Kontras */}
-            <div className="flex items-center justify-between py-1 border-b border-[#202020]">
-              <span className="text-zinc-100 font-medium">Kontras</span>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setActiveDropdownId(activeDropdownId === "umum-contrast" ? null : "umum-contrast")}
-                  aria-label="Pilih Kontras Aplikasi"
-                  className="bg-[#212121] hover:bg-[#2b2b2b] text-zinc-200 border border-[#2e2e2e]/60 text-[11px] font-medium rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-1.5 cursor-pointer w-28 text-left"
-                >
-                  <span>{contrast}</span>
-                  <ChevronDown className="w-3 h-3 text-zinc-500" />
-                </button>
-                {activeDropdownId === "umum-contrast" && (
-                  <div className="absolute right-0 top-9 bg-[#212121] border border-[#2d2d2d] shadow-2xl rounded-xl py-1 z-50 text-[11px] w-28 text-zinc-300">
-                    {["Sistem", "Gelap", "Terang"].map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => handleDropdownSelect("maria_contrast", opt, setContrast)}
-                        className="w-full px-3 py-1.8 text-left hover:bg-[#2e2e2e] flex items-center justify-between transition-colors cursor-pointer"
-                      >
-                        <span>{opt}</span>
-                        {contrast === opt && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()}`} />}
-                      </button>
-                    ))}
-                  </div>
-                )}
+            {/* CARD 1: TAMPILAN & LOKALISASI */}
+            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-3.5 shadow-xs">
+              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
+                🎨 Tampilan & Tema Sistem
               </div>
-            </div>
 
-            {/* Row Option: Warna aksen */}
-            <div className="flex items-center justify-between py-1 border-b border-[#202020]">
-              <span className="text-zinc-100 font-medium">Warna aksen</span>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setActiveDropdownId(activeDropdownId === "umum-accent" ? null : "umum-accent")}
-                  aria-label="Pilih Warna Aksen Aplikasi"
-                  className="bg-[#212121] hover:bg-[#2b2b2b] text-zinc-200 border border-[#2e2e2e]/60 text-[11px] font-medium rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-1.5 cursor-pointer w-28 text-left"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                      accentColor === "Biru" ? "bg-blue-500" :
-                      accentColor === "Hijau" ? "bg-emerald-500" :
-                      accentColor === "Kuning" ? "bg-amber-400" :
-                      accentColor === "Merah jambu" ? "bg-rose-500" :
-                      accentColor === "Oranye" ? "bg-orange-500" :
-                      accentColor === "Ungu" ? "bg-violet-500" :
-                      accentColor === "Hitam" ? "bg-zinc-200" : "bg-neutral-500"
-                    }`} />
-                    <span>{accentColor}</span>
-                  </div>
-                  <ChevronDown className="w-3 h-3 text-zinc-500" />
-                </button>
-                {activeDropdownId === "umum-accent" && (
-                  <div className="absolute right-0 top-9 bg-[#212121] border border-[#2d2d2d] shadow-2xl rounded-xl py-1 z-55 text-[11px] w-48 text-zinc-300">
-                    {[
-                      { name: "Default", color: "bg-neutral-500" },
-                      { name: "Biru", color: "bg-blue-500" },
-                      { name: "Hijau", color: "bg-emerald-500" },
-                      { name: "Kuning", color: "bg-amber-400" },
-                      { name: "Merah jambu", color: "bg-rose-500" },
-                      { name: "Oranye", color: "bg-orange-500" },
-                      { name: "Ungu", color: "bg-violet-500", badge: "PLUS" },
-                      { name: "Hitam", color: "bg-zinc-200", badge: "PRO" },
-                    ].map((opt) => (
-                      <button
-                        key={opt.name}
-                        type="button"
-                        onClick={() => handleDropdownSelect("maria_accent_color", opt.name, setAccentColor)}
-                        className="w-full px-3 py-1.8 text-left hover:bg-[#2e2e2e] flex items-center justify-between transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${opt.color}`} />
-                          <span>{opt.name}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          {opt.badge && (
-                            <span className="text-[7.5px] font-bold px-1 py-[1.5px] scale-90 bg-zinc-800 text-zinc-400 border border-zinc-700 rounded rounded-xs">
-                              {opt.badge}
-                            </span>
-                          )}
-                          {accentColor === opt.name && <Check className={`w-3 h-3 ${getAccentTextClass()}`} />}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Row Option: Bahasa */}
-            <div className="flex items-center justify-between py-1 border-b border-[#202020]">
-              <span className="text-zinc-100 font-medium">Bahasa</span>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setActiveDropdownId(activeDropdownId === "umum-lang" ? null : "umum-lang")}
-                  aria-label="Pilih Bahasa Aplikasi"
-                  className="bg-[#212121] hover:bg-[#2b2b2b] text-zinc-200 border border-[#2e2e2e]/60 text-[11px] font-medium rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-1.5 cursor-pointer w-40 text-left"
-                >
-                  <span className="truncate">{language}</span>
-                  <ChevronDown className="w-3 h-3 text-zinc-500" />
-                </button>
-                {activeDropdownId === "umum-lang" && (
-                  <div className="absolute right-0 top-9 bg-[#212121] border border-[#2d2d2d] shadow-2xl rounded-xl py-1 z-55 text-[11px] w-40 text-zinc-300">
-                    {["Deteksi otomatis", "Bahasa Indonesia", "English", "日本語"].map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => handleDropdownSelect("maria_language", opt, setLanguage)}
-                        className="w-full px-3 py-1.8 text-left hover:bg-[#2e2e2e] flex items-center justify-between transition-colors cursor-pointer"
-                      >
-                        <span>{opt}</span>
-                        {language === opt && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()}`} />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Row Option: Aktifkan Dikte */}
-            <div className="flex items-start justify-between py-1 border-b border-[#202020] gap-4">
-              <div className="flex-1 space-y-0.5">
-                <div className="text-zinc-100 font-medium">Aktifkan Dikte</div>
-                <div className="text-[10px] text-zinc-450 leading-relaxed">Gunakan dikte di kolom obrolan.</div>
-              </div>
-              <div 
-                onClick={() => handleToggleValue("maria_dictation", dictationEnabled, setDictationEnabled)}
-                className={`w-9 h-5 rounded-full p-[2.5px] cursor-pointer transition-colors shrink-0 self-center ${dictationEnabled ? getAccentBgClass() : 'bg-[#3a3a3a]'}`}
-              >
-                <div className={`w-3.5 h-3.5 bg-white rounded-full shadow-xs transition-transform transform ${dictationEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
-              </div>
-            </div>
-
-            {/* Row Option: Bahasa Lisan */}
-            <div className="flex items-start justify-between py-1 border-b border-[#202020] gap-4">
-              <div className="flex-1 space-y-0.5">
-                <div className="text-zinc-100 font-medium">Bahasa lisan</div>
-                <div className="text-[10px] text-zinc-450 leading-relaxed">Untuk hasil terbaik, pilih bahasa yang Anda kuasai. Jika tidak tercantum, mungkin bahasa tersebut tetap didukung melalui deteksi otomatis.</div>
-              </div>
-              <div className="relative shrink-0 self-center">
-                <button
-                  type="button"
-                  onClick={() => setActiveDropdownId(activeDropdownId === "umum-spoken-lang" ? null : "umum-spoken-lang")}
-                  aria-label="Pilih Bahasa Lisan"
-                  className="bg-[#212121] hover:bg-[#2b2b2b] text-zinc-200 border border-[#2e2e2e]/60 text-[11px] font-medium rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-1.5 cursor-pointer w-36 text-left"
-                >
-                  <span className="truncate">{spokenLanguage}</span>
-                  <ChevronDown className="w-3 h-3 text-zinc-500" />
-                </button>
-                {activeDropdownId === "umum-spoken-lang" && (
-                  <div className="absolute right-0 top-9 bg-[#212121] border border-[#2d2d2d] shadow-2xl rounded-xl py-1 z-55 text-[11px] w-40 text-zinc-300">
-                    {["Deteksi otomatis", "Bahasa Indonesia", "English", "日本語"].map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => handleDropdownSelect("maria_spoken_lang", opt, setSpokenLanguage)}
-                        className="w-full px-3 py-1.8 text-left hover:bg-[#2e2e2e] flex items-center justify-between transition-colors cursor-pointer"
-                      >
-                        <span className="truncate">{opt}</span>
-                        {spokenLanguage === opt && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()}`} />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Row Option: Suara (Audio) */}
-            <div className="flex items-start justify-between py-2 border-b border-[#202020] gap-4">
-              <div className="flex flex-col">
-                <span className="text-zinc-100 font-medium">Suara</span>
-                {activeEngineName && (
-                  <span className="text-[10px] text-zinc-500 truncate max-w-[150px] font-mono mt-0.5" title={activeEngineName}>
-                    {activeEngineName}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2 self-center">
-                <button
-                  type="button"
-                  onClick={playVoiceChime}
-                  disabled={isPlayingAudio}
-                  className="px-3 py-1.5 bg-[#212121] hover:bg-[#2b2b2b] rounded-lg border border-[#2e2e2e]/60 text-zinc-200 text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer active:scale-95 duration-100 disabled:opacity-40"
-                >
-                  <Play className="w-3 h-3 fill-white text-white shrink-0" />
-                  <span>{isPlayingAudio ? "Memutar..." : "Putar"}</span>
-                </button>
+              {/* Row Option: Penampilan */}
+              <div className="flex items-center justify-between py-0.5">
+                <div className="space-y-0.5">
+                  <span className="text-zinc-100 font-medium text-[11.5px] block">Mode Penampilan</span>
+                  <span className="text-[10px] text-zinc-500 block leading-normal">Sesuaikan tema visual sistem utama.</span>
+                </div>
                 <div className="relative">
                   <button
                     type="button"
-                    onClick={() => setActiveDropdownId(activeDropdownId === "umum-voice" ? null : "umum-voice")}
-                    className="bg-[#212121] hover:bg-[#2b2b2b] text-zinc-200 border border-[#2e2e2e]/60 text-[11px] font-medium rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-1.5 cursor-pointer w-36 text-left"
+                    onClick={() => setActiveDropdownId(activeDropdownId === "umum-appearance" ? null : "umum-appearance")}
+                    aria-label="Pilih Penampilan Aplikasi"
+                    className="bg-[#242426] hover:bg-[#2b2b2d] text-zinc-200 border border-zinc-800 text-[11px] font-semibold rounded-xl px-3 py-2 flex items-center justify-between gap-2 cursor-pointer w-28 text-left transition-all"
                   >
-                    <span className="truncate">{(VOICE_OPTIONS.find(v => v.value === voiceVoice) || VOICE_OPTIONS[0]).label}</span>
-                    <ChevronDown className="w-3 h-3 text-zinc-500 shrink-0" />
+                    <span>{appearance}</span>
+                    <ChevronDown className="w-3 h-3 text-zinc-450 shrink-0" />
                   </button>
-                  {activeDropdownId === "umum-voice" && (
-                    <div className="absolute right-0 top-9 bg-[#212121] border border-[#2d2d2d] shadow-2xl rounded-xl py-1 z-55 text-[11.5px] w-56 text-zinc-300 max-h-72 overflow-y-auto">
-                      <div className="px-3 py-1.5 text-[9.5px] text-zinc-500 font-bold uppercase tracking-wider border-b border-[#2d2d2d]/40 mb-1">
-                        🗣️ Karakter Suara
+                  {activeDropdownId === "umum-appearance" && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
+                      <div className="absolute right-0 top-10 bg-[#212123] border border-zinc-800 shadow-2xl rounded-xl py-1 z-50 text-[11px] w-28 text-zinc-300 divide-y divide-zinc-800/20">
+                        {["Sistem", "Gelap", "Terang"].map((opt) => (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() => handleDropdownSelect("maria_appearance", opt, setAppearance)}
+                            className="w-full px-3 py-2 text-left hover:bg-zinc-800 flex items-center justify-between transition-colors cursor-pointer"
+                          >
+                            <span>{opt}</span>
+                            {appearance === opt && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()}`} />}
+                          </button>
+                        ))}
                       </div>
-                      {VOICE_OPTIONS.map((opt) => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => handleDropdownSelect("maria_voice", opt.value, setVoiceVoice)}
-                          className="w-full px-3 py-2 text-left hover:bg-[#2e2e2e] flex flex-col justify-start transition-colors cursor-pointer group"
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <span className="font-semibold text-zinc-100 group-hover:text-white">{opt.label}</span>
-                            {voiceVoice === opt.value && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()}`} />}
-                          </div>
-                          <span className="text-[9.5px] text-zinc-500 mt-0.5">{opt.desc}</span>
-                        </button>
-                      ))}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Divider Inside Card */}
+              <div className="h-[1px] bg-zinc-800/30" />
+
+              {/* Row Option: Kontras */}
+              <div className="flex items-center justify-between py-0.5">
+                <div className="space-y-0.5">
+                  <span className="text-zinc-100 font-medium text-[11.5px] block">Kontras Layar</span>
+                  <span className="text-[10px] text-zinc-500 block leading-normal">Ubah tingkat kontras teks dan aset gambar.</span>
+                </div>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setActiveDropdownId(activeDropdownId === "umum-contrast" ? null : "umum-contrast")}
+                    aria-label="Pilih Kontras Aplikasi"
+                    className="bg-[#242426] hover:bg-[#2b2b2d] text-zinc-200 border border-zinc-800 text-[11px] font-semibold rounded-xl px-3 py-2 flex items-center justify-between gap-2 cursor-pointer w-28 text-left transition-all"
+                  >
+                    <span>{contrast}</span>
+                    <ChevronDown className="w-3 h-3 text-zinc-450 shrink-0" />
+                  </button>
+                  {activeDropdownId === "umum-contrast" && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
+                      <div className="absolute right-0 top-10 bg-[#212123] border border-zinc-800 shadow-2xl rounded-xl py-1 z-50 text-[11px] w-28 text-zinc-300 divide-y divide-zinc-800/20">
+                        {["Sistem", "Gelap", "Terang"].map((opt) => (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() => handleDropdownSelect("maria_contrast", opt, setContrast)}
+                            className="w-full px-3 py-2 text-left hover:bg-zinc-800 flex items-center justify-between transition-colors cursor-pointer"
+                          >
+                            <span>{opt}</span>
+                            {contrast === opt && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()}`} />}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Divider Inside Card */}
+              <div className="h-[1px] bg-zinc-800/30" />
+
+              {/* Row Option: Warna aksen */}
+              <div className="flex items-center justify-between py-0.5">
+                <div className="space-y-0.5">
+                  <span className="text-zinc-100 font-medium text-[11.5px] block">Warna Aksen Obrolan</span>
+                  <span className="text-[10px] text-zinc-500 block leading-normal">Sesuaikan warna tombol, balon, dan indikator utama.</span>
+                </div>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setActiveDropdownId(activeDropdownId === "umum-accent" ? null : "umum-accent")}
+                    aria-label="Pilih Warna Aksen Aplikasi"
+                    className="bg-[#242426] hover:bg-[#2b2b2d] text-zinc-200 border border-zinc-800 text-[11px] font-semibold rounded-xl px-3 py-2 flex items-center justify-between gap-2 cursor-pointer w-28 text-left transition-all"
+                  >
+                    <div className="flex items-center gap-1.5 truncate">
+                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                        accentColor === "Biru" ? "bg-blue-500" :
+                        accentColor === "Hijau" ? "bg-emerald-500" :
+                        accentColor === "Kuning" ? "bg-amber-400" :
+                        accentColor === "Merah jambu" ? "bg-rose-500" :
+                        accentColor === "Oranye" ? "bg-orange-500" :
+                        accentColor === "Ungu" ? "bg-violet-500" :
+                        accentColor === "Hitam" ? "bg-zinc-200" : "bg-neutral-500"
+                      }`} />
+                      <span className="truncate">{accentColor}</span>
                     </div>
+                    <ChevronDown className="w-3 h-3 text-zinc-450 shrink-0" />
+                  </button>
+                  {activeDropdownId === "umum-accent" && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
+                      <div className="absolute right-0 top-10 bg-[#212123] border border-zinc-800 shadow-2xl rounded-xl py-1 z-55 text-[11px] w-48 text-zinc-300 divide-y divide-zinc-850/30">
+                        {[
+                          { name: "Default", color: "bg-neutral-500" },
+                          { name: "Biru", color: "bg-blue-500" },
+                          { name: "Hijau", color: "bg-emerald-500" },
+                          { name: "Kuning", color: "bg-amber-400" },
+                          { name: "Merah jambu", color: "bg-rose-500" },
+                          { name: "Oranye", color: "bg-orange-500" },
+                          { name: "Ungu", color: "bg-violet-500", badge: "PLUS" },
+                          { name: "Hitam", color: "bg-zinc-200", badge: "PRO" },
+                        ].map((opt) => (
+                          <button
+                            key={opt.name}
+                            type="button"
+                            onClick={() => handleDropdownSelect("maria_accent_color", opt.name, setAccentColor)}
+                            className="w-full px-3 py-2 text-left hover:bg-[#2e2e30] flex items-center justify-between transition-colors cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className={`w-2 h-2 rounded-full ${opt.color}`} />
+                              <span>{opt.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              {opt.badge && (
+                                <span className="text-[7px] font-bold px-1 py-[1px] bg-zinc-800 text-zinc-400 border border-zinc-700 rounded-sm">
+                                  {opt.badge}
+                                </span>
+                              )}
+                              {accentColor === opt.name && <Check className={`w-3 h-3 ${getAccentTextClass()}`} />}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Divider Inside Card */}
+              <div className="h-[1px] bg-zinc-800/30" />
+
+              {/* Row Option: Bahasa */}
+              <div className="flex items-center justify-between py-0.5">
+                <div className="space-y-0.5">
+                  <span className="text-zinc-100 font-medium text-[11.5px] block">Bahasa Aplikasi</span>
+                  <span className="text-[10px] text-zinc-500 block leading-normal">Atur preferensi bahasa antarmuka sistem.</span>
+                </div>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setActiveDropdownId(activeDropdownId === "umum-lang" ? null : "umum-lang")}
+                    aria-label="Pilih Bahasa Aplikasi"
+                    className="bg-[#242426] hover:bg-[#2b2b2d] text-zinc-200 border border-zinc-800 text-[11px] font-semibold rounded-xl px-3 py-2 flex items-center justify-between gap-2 cursor-pointer w-40 text-left transition-all"
+                  >
+                    <span className="truncate">{language}</span>
+                    <ChevronDown className="w-3 h-3 text-zinc-450 shrink-0" />
+                  </button>
+                  {activeDropdownId === "umum-lang" && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
+                      <div className="absolute right-0 top-10 bg-[#212123] border border-zinc-800 shadow-2xl rounded-xl py-1 z-55 text-[11px] w-40 text-zinc-300 divide-y divide-zinc-800/20">
+                        {["Deteksi otomatis", "Bahasa Indonesia", "English", "日本語"].map((opt) => (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() => handleDropdownSelect("maria_language", opt, setLanguage)}
+                            className="w-full px-3 py-2 text-left hover:bg-[#2e2e30] flex items-center justify-between transition-colors cursor-pointer"
+                          >
+                            <span>{opt}</span>
+                            {language === opt && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()}`} />}
+                          </button>
+                        ))}
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Row Option: Suara Terpisah */}
-            <div className="flex items-start justify-between py-1 border-b border-[#202020] gap-4">
-              <div className="flex-1 space-y-0.5">
-                <div className="text-zinc-100 font-medium">Suara Terpisah</div>
-                <div className="text-[10px] text-zinc-450 leading-relaxed">Simpan Suara Maria dalam layar penuh terpisah, tanpa transkrip dan visual secara real time.</div>
+            {/* CARD 2: PENGGUNAAN MASUKAN SUARA */}
+            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-3.5 shadow-xs">
+              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
+                🎙️ Transkripsi & Masukan Obrolan
               </div>
-              <div 
-                onClick={() => handleToggleValue("maria_stream_split", voiceStreamSplit, setVoiceStreamSplit)}
-                className={`w-9 h-5 rounded-full p-[2.5px] cursor-pointer transition-colors shrink-0 self-center ${voiceStreamSplit ? getAccentBgClass() : 'bg-[#3a3a3a]'}`}
-              >
-                <div className={`w-3.5 h-3.5 bg-white rounded-full shadow-xs transition-transform transform ${voiceStreamSplit ? 'translate-x-4' : 'translate-x-0'}`} />
+
+              {/* Row Option: Aktifkan Dikte */}
+              <div className="flex items-start justify-between py-1 gap-4">
+                <div className="flex-1 space-y-0.5">
+                  <span className="text-zinc-100 font-medium text-[11.5px] block">Aktifkan Dikte Mikrofon</span>
+                  <span className="text-[10px] text-zinc-550 leading-relaxed block">Klik ikon mikrofon di form input pesan untuk langsung mendikte suara menjadi teks tanpa mengetik.</span>
+                </div>
+                <div 
+                  onClick={() => handleToggleValue("maria_dictation", dictationEnabled, setDictationEnabled)}
+                  className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${dictationEnabled ? getAccentBgClass() : 'bg-[#323235]'}`}
+                >
+                  <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${dictationEnabled ? 'translate-x-[16px]' : 'translate-x-0'}`} />
+                </div>
+              </div>
+
+              {/* Divider Inside Card */}
+              <div className="h-[1px] bg-zinc-800/30" />
+
+              {/* Row Option: Bahasa Lisan */}
+              <div className="flex items-start justify-between py-1 gap-4">
+                <div className="flex-1 space-y-0.5">
+                  <span className="text-zinc-100 font-medium text-[11.5px] block">Bahasa Dikte Lisan</span>
+                  <span className="text-[10px] text-zinc-550 leading-relaxed block">Pilih bahasa asal pengucapan Anda untuk akurasi konversi teks suara yang maksimal.</span>
+                </div>
+                <div className="relative shrink-0 self-center">
+                  <button
+                    type="button"
+                    onClick={() => setActiveDropdownId(activeDropdownId === "umum-spoken-lang" ? null : "umum-spoken-lang")}
+                    aria-label="Pilih Bahasa Lisan"
+                    className="bg-[#242426] hover:bg-[#2b2b2d] text-zinc-200 border border-zinc-800 text-[11px] font-semibold rounded-xl px-3 py-2 flex items-center justify-between gap-2 cursor-pointer w-36 text-left transition-all"
+                  >
+                    <span className="truncate">{spokenLanguage}</span>
+                    <ChevronDown className="w-3 h-3 text-zinc-450 shrink-0" />
+                  </button>
+                  {activeDropdownId === "umum-spoken-lang" && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
+                      <div className="absolute right-0 top-10 bg-[#212123] border border-zinc-800 shadow-2xl rounded-xl py-1 z-55 text-[11px] w-40 text-zinc-300 divide-y divide-zinc-800/20">
+                        {["Deteksi otomatis", "Bahasa Indonesia", "English", "日本語"].map((opt) => (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() => handleDropdownSelect("maria_spoken_lang", opt, setSpokenLanguage)}
+                            className="w-full px-3 py-2 text-left hover:bg-[#2e2e30] flex items-center justify-between transition-colors cursor-pointer"
+                          >
+                            <span className="truncate">{opt}</span>
+                            {spokenLanguage === opt && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()}`} />}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* CARD 3: SINTESIS SUARA & KELUARAN */}
+            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-3.5 shadow-xs">
+              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
+                🔊 Audio / Sintesis Suara Maria
+              </div>
+
+              {/* Row Option: Suara (Audio) */}
+              <div className="flex items-start justify-between py-1 gap-4">
+                <div className="flex-1 space-y-0.5">
+                  <span className="text-zinc-100 font-medium text-[11.5px] block">Karakter Model Suara</span>
+                  <span className="text-[10px] text-zinc-550 leading-relaxed block">Pilih tipe suara dan frekuensi asisten Maria yang akan diputar otomatis pada setiap akhir balon obrolan.</span>
+                  {activeEngineName && (
+                    <span className="inline-block text-[9px] bg-zinc-800/60 text-zinc-450 border border-zinc-700/45 px-2 py-0.5 rounded-full font-mono mt-1" title={activeEngineName}>
+                      En: {activeEngineName}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 self-center shrink-0">
+                  <button
+                    type="button"
+                    onClick={playVoiceChime}
+                    disabled={isPlayingAudio}
+                    className="px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 rounded-xl text-[11px] font-bold flex items-center gap-1.5 cursor-pointer active:scale-95 duration-100 disabled:opacity-40"
+                  >
+                    <Play className="w-3 h-3 fill-white text-white shrink-0" />
+                    <span>{isPlayingAudio ? "Memutar..." : "Putar"}</span>
+                  </button>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setActiveDropdownId(activeDropdownId === "umum-voice" ? null : "umum-voice")}
+                      className="bg-[#242426] hover:bg-[#2b2b2d] text-zinc-200 border border-zinc-800 text-[11px] font-semibold rounded-xl px-3 py-2 flex items-center justify-between gap-1.5 cursor-pointer w-36 text-left transition-all"
+                    >
+                      <span className="truncate">{(VOICE_OPTIONS.find(v => v.value === voiceVoice) || VOICE_OPTIONS[0]).label}</span>
+                      <ChevronDown className="w-3 h-3 text-zinc-450 shrink-0" />
+                    </button>
+                    {activeDropdownId === "umum-voice" && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
+                        <div className="absolute right-0 top-10 bg-[#212123] border border-zinc-800 shadow-2xl rounded-xl py-1 z-55 text-[11.5px] w-56 text-zinc-300 max-h-72 overflow-y-auto divide-y divide-zinc-850">
+                          <div className="px-3 py-1.5 text-[9px] text-zinc-450 font-bold uppercase tracking-wider bg-zinc-900/30">
+                            🗣️ Karakter Suara Premium
+                          </div>
+                          {VOICE_OPTIONS.map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => handleDropdownSelect("maria_voice", opt.value, setVoiceVoice)}
+                              className="w-full px-3 py-2.5 text-left hover:bg-zinc-800 flex flex-col justify-start transition-colors cursor-pointer group"
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <span className="font-bold text-zinc-200 group-hover:text-white">{opt.label}</span>
+                                {voiceVoice === opt.value && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()}`} />}
+                              </div>
+                              <span className="text-[9.5px] text-zinc-500 mt-0.5 leading-normal">{opt.desc}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Divider Inside Card */}
+              <div className="h-[1px] bg-zinc-800/30" />
+
+              {/* Row Option: Suara Terpisah */}
+              <div className="flex items-start justify-between py-1 gap-4">
+                <div className="flex-1 space-y-0.5">
+                  <span className="text-zinc-100 font-medium text-[11.5px] block">Simpan Suara Streaming Terpisah</span>
+                  <span className="text-[10px] text-zinc-550 leading-relaxed block">Mematikan rendering teks/transkrip real-time di layar utama untuk mempercepat loading sinkronisasi gelombang frekuensi audio secara murni.</span>
+                </div>
+                <div 
+                  onClick={() => handleToggleValue("maria_stream_split", voiceStreamSplit, setVoiceStreamSplit)}
+                  className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${voiceStreamSplit ? getAccentBgClass() : 'bg-[#323235]'}`}
+                >
+                  <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${voiceStreamSplit ? 'translate-x-[16px]' : 'translate-x-0'}`} />
+                </div>
               </div>
             </div>
 
@@ -1206,131 +1273,143 @@ export default function SettingsDashboard({
 
         {/* ===================== TAB: NOTIFIKASI ===================== */}
         {activeTab === "notifikasi" && (
-          <div className="space-y-4 text-xs">
-            <h3 className="text-zinc-100 font-bold text-sm tracking-tight pt-1">Notifikasi Asisten Cerdas</h3>
-            <div className="h-[1px] bg-[#2c2c2c] my-1" />
+          <div className="space-y-4.5 text-xs animate-in fade-in duration-200">
+            <div>
+              <h3 className="text-zinc-150 font-bold text-sm tracking-tight pt-1">Saluran Notifikasi</h3>
+              <p className="text-[10.5px] text-zinc-450 mt-0.5">Kelola saluran penerimaan pesan otomatis, jadwal penting, serta tips asisten cerdas.</p>
+            </div>
 
-            {[
-              { id: "reminders", label: "Pengingat & Agenda", desc: "Dapatkan pengingat tugas harian, jadwal belajar, dan janji penting dari asisten Maria.", state: remindersNotif, setter: setRemindersNotif, key: "notif_reminders" },
-              { id: "updates", label: "Pembaruan & Sistem", desc: "Menerima informasi rilis fitur asisten baru, versi sistem, dan tips keamanan digital harian.", state: updatesNotif, setter: setUpdatesNotif, key: "notif_updates" },
-              { id: "suggestions", label: "Saran & Tips Cerdas", desc: "Dapatkan saran taktis harian dan analisis topik produktivitas cerdas berdasarkan riwayat obrolan Kakak.", state: suggestionsNotif, setter: setSuggestionsNotif, key: "notif_suggestions" }
-            ].map((item) => (
-              <div key={item.id} className="flex items-start justify-between py-2 border-b border-[#202020] gap-4">
-                <div className="flex-1 space-y-0.5">
-                  <span className="text-zinc-100 font-medium block">{item.label}</span>
-                  <span className="text-[10px] text-zinc-450 block leading-relaxed select-text">
-                    {item.desc}
-                  </span>
-                </div>
-                
-                {/* Selector for Delivery Options */}
-                <div className="relative shrink-0 self-center">
-                  <button
-                    type="button"
-                    onClick={() => setActiveDropdownId(activeDropdownId === `notif-${item.id}` ? null : `notif-${item.id}`)}
-                    className="bg-[#212121] hover:bg-[#2b2b2b] text-zinc-200 border border-[#2e2e2e]/60 text-[11px] font-medium rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-1.5 cursor-pointer w-36 text-left"
-                  >
-                    <span className="truncate">
-                      {item.state.length === 0 ? "Mati" : item.state.map(s => {
-                        if (s === "In-App") return "Dalam Aplikasi";
-                        if (s === "Push") return "Push Browser";
-                        return s;
-                      }).join(", ")}
-                    </span>
-                    <ChevronDown className="w-3 h-3 text-zinc-500" />
-                  </button>
-
-                  {/* Dropdown with options */}
-                  {activeDropdownId === `notif-${item.id}` && (
-                    <>
-                      <div className="fixed inset-0 z-40 cursor-default" onClick={() => setActiveDropdownId(null)} />
-                      <div className="absolute right-0 top-9 bg-[#212121] border border-[#2d2d2d] shadow-2xl rounded-xl py-1.5 z-50 text-[11px] w-44 text-zinc-200 divide-y divide-zinc-800/40">
-                        
-                        {/* Selector choice: In-App */}
-                        <div 
-                          className="px-3.5 py-2 hover:bg-[#2e2e2e] flex items-center justify-between cursor-pointer transition-colors"
-                          onClick={() => toggleNotificationChoice(item.key, "In-App", item.state, item.setter)}
-                        >
-                          <span className="flex items-center gap-1.5">
-                            <Bell className="w-3 h-3 text-blue-450" />
-                            Dalam Aplikasi
-                          </span>
-                          <div className={`w-8 h-4.5 rounded-full p-[2px] transition-colors shrink-0 ${item.state.includes("In-App") ? getAccentBgClass() : 'bg-zinc-700'}`}>
-                            <div className={`w-3 h-3 bg-white rounded-full shadow-md transition-transform transform ${item.state.includes("In-App") ? 'translate-x-3.5' : 'translate-x-0'}`} />
-                          </div>
-                        </div>
-
-                        {/* Selector choice: Email */}
-                        <div 
-                          className="px-3.5 py-2 hover:bg-[#2e2e2e] flex items-center justify-between cursor-pointer transition-colors"
-                          onClick={() => toggleNotificationChoice(item.key, "Email", item.state, item.setter)}
-                        >
-                          <span className="flex items-center gap-1.5">
-                            <Mail className="w-3 h-3 text-emerald-450" />
-                            Email
-                          </span>
-                          <div className={`w-8 h-4.5 rounded-full p-[2px] transition-colors shrink-0 ${item.state.includes("Email") ? getAccentBgClass() : 'bg-zinc-700'}`}>
-                            <div className={`w-3 h-3 bg-white rounded-full shadow-md transition-transform transform ${item.state.includes("Email") ? 'translate-x-3.5' : 'translate-x-0'}`} />
-                          </div>
-                        </div>
-
-                        {/* Selector choice: Push */}
-                        <div 
-                          className="px-3.5 py-2 hover:bg-[#2e2e2e] flex items-center justify-between cursor-pointer transition-colors"
-                          onClick={() => toggleNotificationChoice(item.key, "Push", item.state, item.setter)}
-                        >
-                          <span className="flex items-center gap-1.5">
-                            <Sparkles className="w-3 h-3 text-amber-450" />
-                            Push Browser
-                          </span>
-                          <div className={`w-8 h-4.5 rounded-full p-[2px] transition-colors shrink-0 ${item.state.includes("Push") ? getAccentBgClass() : 'bg-zinc-700'}`}>
-                            <div className={`w-3 h-3 bg-white rounded-full shadow-md transition-transform transform ${item.state.includes("Push") ? 'translate-x-3.5' : 'translate-x-0'}`} />
-                          </div>
-                        </div>
-                        
-                      </div>
-                    </>
-                  )}
-                </div>
+            {/* CARD 1: KONFIGURASI NOTIFIKASI */}
+            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-4 shadow-xs">
+              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
+                🔔 Preferensi Pengiriman Notifikasi
               </div>
-            ))}
 
-            {/* Smart Notification Simulation Center */}
-            <div className="mt-5 bg-[#171717]/80 border border-[#2d2d2d]/80 rounded-xl p-3.5 space-y-2.5">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse shrink-0" />
-                <span className="font-bold text-[11px] text-zinc-200">Uji Sistem Notifikasi Maria</span>
+              {[
+                { id: "reminders", label: "Pengingat & Agenda", desc: "Dapatkan pengingat tugas harian, jadwal belajar, dan janji penting dari asisten Maria.", state: remindersNotif, setter: setRemindersNotif, key: "notif_reminders" },
+                { id: "updates", label: "Pembaruan & Sistem", desc: "Menerima informasi rilis fitur asisten baru, versi sistem, dan tips keamanan digital harian.", state: updatesNotif, setter: setUpdatesNotif, key: "notif_updates" },
+                { id: "suggestions", label: "Saran & Tips Cerdas", desc: "Dapatkan saran taktis harian dan analisis topik produktivitas cerdas berdasarkan riwayat obrolan Kakak.", state: suggestionsNotif, setter: setSuggestionsNotif, key: "notif_suggestions" }
+              ].map((item, index) => (
+                <div key={item.id} className="space-y-3">
+                  {index > 0 && <div className="h-[1px] bg-zinc-800/30 my-1" />}
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 space-y-0.5">
+                      <span className="text-zinc-100 font-semibold text-[11.5px] block">{item.label}</span>
+                      <span className="text-[10px] text-zinc-450 block leading-relaxed select-text">
+                        {item.desc}
+                      </span>
+                    </div>
+                    
+                    {/* Selector for Delivery Options */}
+                    <div className="relative shrink-0 self-center">
+                      <button
+                        type="button"
+                        onClick={() => setActiveDropdownId(activeDropdownId === `notif-${item.id}` ? null : `notif-${item.id}`)}
+                        className="bg-[#242426] hover:bg-[#2b2b2d] text-zinc-200 border border-zinc-800 text-[11px] font-bold rounded-xl px-3 py-2 flex items-center justify-between gap-1.5 cursor-pointer w-36 text-left transition-all"
+                      >
+                        <span className="truncate">
+                          {item.state.length === 0 ? "Mati" : item.state.map(s => {
+                            if (s === "In-App") return "Dalam Aplikasi";
+                            if (s === "Push") return "Push Browser";
+                            return s;
+                          }).join(", ")}
+                        </span>
+                        <ChevronDown className="w-3 h-3 text-zinc-500 shrink-0" />
+                      </button>
+
+                      {/* Dropdown with options */}
+                      {activeDropdownId === `notif-${item.id}` && (
+                        <>
+                          <div className="fixed inset-0 z-40 cursor-default" onClick={() => setActiveDropdownId(null)} />
+                          <div className="absolute right-0 top-10 bg-[#212123] border border-zinc-850 shadow-2xl rounded-xl py-1.5 z-50 text-[11px] w-48 text-zinc-200 divide-y divide-zinc-800/35">
+                            
+                            {/* Selector choice: In-App */}
+                            <div 
+                              className="px-3.5 py-2.5 hover:bg-zinc-800 flex items-center justify-between cursor-pointer transition-colors"
+                              onClick={() => toggleNotificationChoice(item.key, "In-App", item.state, item.setter)}
+                            >
+                              <span className="flex items-center gap-1.5">
+                                <Bell className="w-3 h-3 text-blue-400 shrink-0" />
+                                Dalam Aplikasi
+                              </span>
+                              <div className={`w-8 h-4.5 rounded-full p-[2px] transition-colors shrink-0 ${item.state.includes("In-App") ? getAccentBgClass() : 'bg-zinc-700'}`}>
+                                <div className={`w-3 h-3 bg-white rounded-full shadow-xs transition-transform transform ${item.state.includes("In-App") ? 'translate-x-3.5' : 'translate-x-0'}`} />
+                              </div>
+                            </div>
+
+                            {/* Selector choice: Email */}
+                            <div 
+                              className="px-3.5 py-2.5 hover:bg-zinc-800 flex items-center justify-between cursor-pointer transition-colors"
+                              onClick={() => toggleNotificationChoice(item.key, "Email", item.state, item.setter)}
+                            >
+                              <span className="flex items-center gap-1.5">
+                                <Mail className="w-3 h-3 text-emerald-400 shrink-0" />
+                                Email
+                              </span>
+                              <div className={`w-8 h-4.5 rounded-full p-[2px] transition-colors shrink-0 ${item.state.includes("Email") ? getAccentBgClass() : 'bg-zinc-700'}`}>
+                                <div className={`w-3 h-3 bg-white rounded-full shadow-xs transition-transform transform ${item.state.includes("Email") ? 'translate-x-3.5' : 'translate-x-0'}`} />
+                              </div>
+                            </div>
+
+                            {/* Selector choice: Push */}
+                            <div 
+                              className="px-3.5 py-2.5 hover:bg-zinc-800 flex items-center justify-between cursor-pointer transition-colors"
+                              onClick={() => toggleNotificationChoice(item.key, "Push", item.state, item.setter)}
+                            >
+                              <span className="flex items-center gap-1.5">
+                                <Sparkles className="w-3 h-3 text-orange-400 shrink-0" />
+                                Push Browser
+                              </span>
+                              <div className={`w-8 h-4.5 rounded-full p-[2px] transition-colors shrink-0 ${item.state.includes("Push") ? getAccentBgClass() : 'bg-zinc-700'}`}>
+                                <div className={`w-3 h-3 bg-white rounded-full shadow-xs transition-transform transform ${item.state.includes("Push") ? 'translate-x-[14px]' : 'translate-x-0'}`} />
+                              </div>
+                            </div>
+                            
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* CARD 2: PUSAT SIMULASI NOTIFIKASI */}
+            <div className="bg-[#1c1c1e] border border-zinc-800/85 rounded-2xl p-4 space-y-3 shadow-xs">
+              <div className="flex items-center gap-2 pb-1 border-b border-zinc-800/30">
+                <Sparkles className="w-4 h-4 text-orange-400 animate-pulse shrink-0" />
+                <span className="font-bold text-[10px] uppercase tracking-wider text-zinc-100">Uji Coba Pengiriman Notifikasi</span>
               </div>
-              <p className="text-[10px] text-zinc-450 leading-normal select-text">
-                Gunakan panel simulasi di bawah untuk mengirim sampel notifikasi Maria. Notifikasi akan dikirimkan ke saluran pengiriman (Aplikasi, Email, Push) yang saat ini aktif:
+              <p className="text-[10px] text-zinc-450 leading-relaxed select-text">
+                Kirim sampel simulasi notifikasi Maria AI ke sistem perangkat Anda secara real-time untuk memverifikasi fungsionalitas saluran aktif:
               </p>
               
-              <div className="grid grid-cols-3 gap-2 pt-1">
+              <div className="grid grid-cols-3 gap-2.5 pt-1">
                 <button
                   type="button"
                   onClick={() => triggerSimulation("reminders")}
-                  className="bg-blue-600/10 hover:bg-blue-500/20 active:scale-95 text-blue-450 border border-blue-500/30 rounded-lg p-2 text-[10px] font-bold cursor-pointer transition-all flex flex-col justify-center items-center gap-1.5"
+                  className="bg-blue-600/10 hover:bg-blue-500/20 active:scale-95 text-blue-450 border border-blue-500/30 rounded-xl p-2.5 text-[10px] font-bold cursor-pointer transition-all flex flex-col justify-center items-center gap-2"
                 >
-                  <Bell className="w-3.5 h-3.5" />
-                  <span>Kirim Pengingat</span>
+                  <Bell className="w-4 h-4" />
+                  <span>Sampel Agenda</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => triggerSimulation("updates")}
-                  className="bg-emerald-600/10 hover:bg-emerald-500/20 active:scale-95 text-emerald-400 border border-emerald-500/30 rounded-lg p-2 text-[10px] font-bold cursor-pointer transition-all flex flex-col justify-center items-center gap-1.5"
+                  className="bg-emerald-600/10 hover:bg-emerald-500/20 active:scale-95 text-emerald-450 border border-emerald-500/30 rounded-xl p-2.5 text-[10px] font-bold cursor-pointer transition-all flex flex-col justify-center items-center gap-2"
                 >
-                  <Mail className="w-3.5 h-3.5" />
-                  <span>Kirim Pembaruan</span>
+                  <Mail className="w-4 h-4" />
+                  <span>Sampel Fitur</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => triggerSimulation("suggestions")}
-                  className="bg-amber-600/10 hover:bg-amber-500/20 active:scale-95 text-amber-400 border border-amber-500/30 rounded-lg p-2 text-[10px] font-bold cursor-pointer transition-all flex flex-col justify-center items-center gap-1.5"
+                  className="bg-orange-600/10 hover:bg-orange-500/20 active:scale-95 text-orange-450 border border-orange-500/30 rounded-xl p-2.5 text-[10px] font-bold cursor-pointer transition-all flex flex-col justify-center items-center gap-2"
                 >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Kirim Saran</span>
+                  <Sparkles className="w-4 h-4" />
+                  <span>Sampel Saran</span>
                 </button>
               </div>
             </div>
@@ -1339,181 +1418,211 @@ export default function SettingsDashboard({
 
         {/* ===================== TAB: PERSONALISASI ===================== */}
         {activeTab === "personalisasi" && (
-          <div className="space-y-4 text-xs">
-            <h3 className="text-zinc-100 font-bold text-sm tracking-tight pt-1">Personalisasi</h3>
-            <div className="h-[1px] bg-[#2c2c2c] my-1" />
-
-            {/* Gaya dan nada dasar (Exact options card list in Screenshot 5!) */}
-            <div className="flex items-start justify-between py-1 border-b border-[#202020] gap-4">
-              <div className="flex-1 space-y-0.5">
-                <span className="text-zinc-100 font-medium block">Gaya dan nada dasar</span>
-                <span className="text-[10px] text-zinc-450 block leading-relaxed">Atur gaya dan nada bicara Maria ketika merespons Anda. Ini tidak memengaruhi kemampuan Maria.</span>
-              </div>
-              <div className="relative shrink-0 self-center">
-                <button
-                  type="button"
-                  onClick={() => setActiveDropdownId(activeDropdownId === "pers-style" ? null : "pers-style")}
-                  className="bg-[#212121] hover:bg-[#2b2b2b] text-zinc-200 border border-[#2e2e2e]/60 text-[11px] font-semibold rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-1.5 cursor-pointer w-28 text-left"
-                >
-                  <span>{
-                    basicToneStyle === "Professional" ? "Profesional" :
-                    basicToneStyle === "Warm" ? "Ramah" :
-                    basicToneStyle === "Creative" ? "Nyentrik" :
-                    basicToneStyle === "Technical" ? "Efisien" :
-                    basicToneStyle === "Minimalist" ? "Sinis" : "Default"
-                  }</span>
-                  <ChevronDown className="w-3 h-3 text-zinc-500" />
-                </button>
-                {activeDropdownId === "pers-style" && (
-                  <>
-                    <div className="fixed inset-0 z-40 cursor-default" onClick={() => setActiveDropdownId(null)} />
-                    <div className="absolute right-0 top-9 bg-[#212121] border border-[#2d2d2d] shadow-2xl rounded-xl py-1 z-55 text-[11px] w-52 text-zinc-200">
-                      {[
-                        { key: "Default", tone: "Professional" as MariaTone, desc: "Gaya dan nada bawaan" },
-                        { key: "Profesional", tone: "Professional" as MariaTone, desc: "Rapi dan presisi" },
-                        { key: "Ramah", tone: "Warm" as MariaTone, desc: "Hangat dan akrab" },
-                        { key: "Jujur", tone: "Warm" as MariaTone, desc: "Terus terang dan memberi semangat" },
-                        { key: "Nyentrik", tone: "Creative" as MariaTone, desc: "Menyenangkan dan imajinatif" },
-                        { key: "Efisien", tone: "Technical" as MariaTone, desc: "Singkat dan lugas" },
-                        { key: "Sinis", tone: "Minimalist" as MariaTone, desc: "Kritis dan sarkastis" },
-                      ].map((opt) => {
-                        const isMatchCurrent = basicToneStyle === opt.tone;
-                        return (
-                          <button
-                            key={opt.key}
-                            type="button"
-                            onClick={() => handleToneSelect(opt.tone)}
-                            className="w-full px-4 py-2 text-left hover:bg-[#2e2e2e] flex flex-col transition-colors cursor-pointer border-b border-zinc-800/40 last:border-0"
-                          >
-                            <div className="flex items-center justify-between w-full">
-                              <span className="font-semibold text-zinc-100">{opt.key}</span>
-                              {isMatchCurrent && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()} shrink-0`} />}
-                            </div>
-                            <span className="text-[10px] text-zinc-450 mt-0.5">{opt.desc}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-              </div>
+          <div className="space-y-4.5 text-xs animate-in fade-in duration-200">
+            <div>
+              <h3 className="text-zinc-150 font-bold text-sm tracking-tight pt-1">Personalisasi Asisten</h3>
+              <p className="text-[10.5px] text-zinc-450 mt-0.5">Konstruksikan kepribadian, gaya penuturan respons, informasi pengguna, serta manajemen penyimpanan ingatan jangka panjang.</p>
             </div>
 
-            {/* Karakteristik Nested list options */}
-            <div className="space-y-2 border-b border-[#202020] pb-3">
-              <span className="text-zinc-100 font-medium block">Karakteristik</span>
-              <span className="text-[10px] text-zinc-450 block leading-relaxed -mt-1">Pilih penyesuaian tambahan selain gaya dan nada dasar Anda.</span>
-              
-              <div className="grid grid-cols-2 gap-3 pt-2">
+            {/* CARD 1: KEPRIBADIAN & CARA BICARA */}
+            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-4 shadow-xs">
+              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
+                🎭 Kepribadian & Gaya Berbicara
+              </div>
+
+              {/* Row Option: Gaya dan nada dasar */}
+              <div className="flex items-center justify-between py-0.5">
+                <div className="space-y-0.5 max-w-[200px]">
+                  <span className="text-zinc-100 font-medium text-[11.5px] block">Gaya & Nada Dasar</span>
+                  <span className="text-[10px] text-zinc-550 block leading-normal">Ubah pendekatan emosi dan nada tutur dasar Maria.</span>
+                </div>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setActiveDropdownId(activeDropdownId === "pers-style" ? null : "pers-style")}
+                    className="bg-[#242426] hover:bg-[#2b2b2d] text-zinc-200 border border-zinc-800 text-[11px] font-bold rounded-xl px-3 py-2 flex items-center justify-between gap-1.5 cursor-pointer w-28 text-left transition-all"
+                  >
+                    <span>{
+                      basicToneStyle === "Professional" ? "Profesional" :
+                      basicToneStyle === "Warm" ? "Ramah" :
+                      basicToneStyle === "Creative" ? "Nyentrik" :
+                      basicToneStyle === "Technical" ? "Efisien" :
+                      basicToneStyle === "Minimalist" ? "Sinis" : "Default"
+                    }</span>
+                    <ChevronDown className="w-3 h-3 text-zinc-500 shrink-0" />
+                  </button>
+                  {activeDropdownId === "pers-style" && (
+                    <>
+                      <div className="fixed inset-0 z-40 cursor-default" onClick={() => setActiveDropdownId(null)} />
+                      <div className="absolute right-0 top-10 bg-[#212123] border border-zinc-855 shadow-2xl rounded-xl py-1 z-55 text-[11px] w-52 text-zinc-200 divide-y divide-zinc-850/40">
+                        {[
+                          { key: "Default", tone: "Professional" as MariaTone, desc: "Gaya dan nada bawaan" },
+                          { key: "Profesional", tone: "Professional" as MariaTone, desc: "Rapi dan presisi" },
+                          { key: "Ramah", tone: "Warm" as MariaTone, desc: "Hangat dan akrab" },
+                          { key: "Jujur", tone: "Warm" as MariaTone, desc: "Terus terang dan memberi semangat" },
+                          { key: "Nyentrik", tone: "Creative" as MariaTone, desc: "Menyenangkan dan imajinatif" },
+                          { key: "Efisien", tone: "Technical" as MariaTone, desc: "Singkat dan lugas" },
+                          { key: "Sinis", tone: "Minimalist" as MariaTone, desc: "Kritis dan sarkastis" },
+                        ].map((opt) => {
+                          const isMatchCurrent = basicToneStyle === opt.tone;
+                          return (
+                            <button
+                              key={opt.key}
+                              type="button"
+                              onClick={() => handleToneSelect(opt.tone)}
+                              className="w-full px-3.5 py-2 hover:bg-[#2e2e30] flex flex-col items-start text-left cursor-pointer transition-colors"
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <span className="font-bold text-zinc-200">{opt.key}</span>
+                                {isMatchCurrent && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()} shrink-0`} />}
+                              </div>
+                              <span className="text-[9px] text-zinc-500 mt-0.5 leading-normal">{opt.desc}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Divider Inside Card */}
+              <div className="h-[1px] bg-zinc-800/30" />
+
+              {/* Characteristic Grid */}
+              <div className="space-y-2">
+                <span className="text-zinc-200 font-semibold text-[11.5px] block">Parameter Karakteristik</span>
+                <span className="text-[10px] text-zinc-500 block leading-normal -mt-1.5">Penyesuaian frekuensi elemen verbal model asisten Maria.</span>
                 
-                {/* Characteristic Warm */}
-                <div className="flex items-center justify-between p-2 rounded-lg bg-[#212121]/50 border border-zinc-800">
-                  <span className="text-zinc-300">Hangat</span>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setActiveDropdownId(activeDropdownId === "char-warm" ? null : "char-warm")}
-                      className="bg-[#212121] hover:bg-[#2b2b2b] text-[10px] px-2 py-1 rounded border border-zinc-800 flex items-center gap-1 cursor-pointer text-zinc-100"
-                    >
-                      <span>{charWarm}</span>
-                      <ChevronDown className="w-2.5 h-2.5 text-zinc-500" />
-                    </button>
-                    {activeDropdownId === "char-warm" && (
-                      <div className="absolute right-0 top-7 bg-[#212121] border border-zinc-800 rounded shadow-2xl py-1 z-55 text-[10px] w-24">
-                        {["Default", "Rendah", "Tinggi"].map(x => (
-                          <button key={x} onClick={() => handleDropdownSelect("char_warm", x, setCharWarm)} className="w-full text-left px-2 py-1 hover:bg-[#2e2e2e]">{x}</button>
-                        ))}
-                      </div>
-                    )}
+                <div className="grid grid-cols-2 gap-2.5 pt-1">
+                  
+                  {/* Characteristic Warm */}
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#212123]/60 border border-zinc-850">
+                    <span className="text-zinc-300 font-medium text-[10.5px]">Hangat</span>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setActiveDropdownId(activeDropdownId === "char-warm" ? null : "char-warm")}
+                        className="bg-[#2a2a2d] hover:bg-[#323235] text-[10px] px-2.5 py-1 rounded-lg border border-zinc-800 flex items-center gap-1 cursor-pointer text-zinc-200 font-bold transition-all"
+                      >
+                        <span>{charWarm}</span>
+                        <ChevronDown className="w-2.5 h-2.5 text-zinc-500" />
+                      </button>
+                      {activeDropdownId === "char-warm" && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
+                          <div className="absolute right-0 top-7 bg-[#212123] border border-zinc-800 rounded-xl shadow-2xl py-1 z-55 text-[10px] w-24">
+                            {["Default", "Rendah", "Tinggi"].map(x => (
+                              <button key={x} onClick={() => handleDropdownSelect("char_warm", x, setCharWarm)} className="w-full text-left px-2.5 py-1 hover:bg-zinc-800 text-zinc-200 block">{x}</button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {/* Characteristic Enthusiastic */}
-                <div className="flex items-center justify-between p-2 rounded-lg bg-[#212121]/50 border border-zinc-800">
-                  <span className="text-zinc-300">Antusias</span>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setActiveDropdownId(activeDropdownId === "char-enth" ? null : "char-enth")}
-                      className="bg-[#212121] hover:bg-[#2b2b2b] text-[10px] px-2 py-1 rounded border border-zinc-800 flex items-center gap-1 cursor-pointer text-zinc-100"
-                    >
-                      <span>{charEnthusiastic}</span>
-                      <ChevronDown className="w-2.5 h-2.5 text-zinc-500" />
-                    </button>
-                    {activeDropdownId === "char-enth" && (
-                      <div className="absolute right-0 top-7 bg-[#212121] border border-zinc-800 rounded shadow-2xl py-1 z-55 text-[10px] w-24">
-                        {["Default", "Rendah", "Tinggi"].map(x => (
-                          <button key={x} onClick={() => handleDropdownSelect("char_enthusiastic", x, setCharEnthusiastic)} className="w-full text-left px-2 py-1 hover:bg-[#2e2e2e]">{x}</button>
-                        ))}
-                      </div>
-                    )}
+                  {/* Characteristic Enthusiastic */}
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#212123]/60 border border-zinc-850">
+                    <span className="text-zinc-300 font-medium text-[10.5px]">Antusias</span>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setActiveDropdownId(activeDropdownId === "char-enth" ? null : "char-enth")}
+                        className="bg-[#2a2a2d] hover:bg-[#323235] text-[10px] px-2.5 py-1 rounded-lg border border-zinc-800 flex items-center gap-1 cursor-pointer text-zinc-200 font-bold transition-all"
+                      >
+                        <span>{charEnthusiastic}</span>
+                        <ChevronDown className="w-2.5 h-2.5 text-zinc-500" />
+                      </button>
+                      {activeDropdownId === "char-enth" && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
+                          <div className="absolute right-0 top-7 bg-[#212123] border border-zinc-800 rounded-xl shadow-2xl py-1 z-55 text-[10px] w-24">
+                            {["Default", "Rendah", "Tinggi"].map(x => (
+                              <button key={x} onClick={() => handleDropdownSelect("char_enthusiastic", x, setCharEnthusiastic)} className="w-full text-left px-2.5 py-1 hover:bg-zinc-800 text-zinc-200 block">{x}</button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {/* Characteristic Title & Lists */}
-                <div className="flex items-center justify-between p-2 rounded-lg bg-[#212121]/50 border border-zinc-800">
-                  <span className="text-zinc-300">Judul & Daftar</span>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setActiveDropdownId(activeDropdownId === "char-list" ? null : "char-list")}
-                      className="bg-[#212121] hover:bg-[#2b2b2b] text-[10px] px-2 py-1 rounded border border-zinc-800 flex items-center gap-1 cursor-pointer text-zinc-100"
-                    >
-                      <span>{charList}</span>
-                      <ChevronDown className="w-2.5 h-2.5 text-zinc-500" />
-                    </button>
-                    {activeDropdownId === "char-list" && (
-                      <div className="absolute right-0 top-7 bg-[#212121] border border-zinc-800 rounded shadow-2xl py-1 z-55 text-[10px] w-24">
-                        {["Default", "Sering", "Jarang"].map(x => (
-                          <button key={x} onClick={() => handleDropdownSelect("char_list", x, setCharList)} className="w-full text-left px-2 py-1 hover:bg-[#2e2e2e]">{x}</button>
-                        ))}
-                      </div>
-                    )}
+                  {/* Characteristic Title & Lists */}
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#212123]/60 border border-zinc-850">
+                    <span className="text-zinc-300 font-medium text-[10.5px]">Daftar Tulisan</span>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setActiveDropdownId(activeDropdownId === "char-list" ? null : "char-list")}
+                        className="bg-[#2a2a2d] hover:bg-[#323235] text-[10px] px-2.5 py-1 rounded-lg border border-zinc-800 flex items-center gap-1 cursor-pointer text-zinc-200 font-bold transition-all"
+                      >
+                        <span>{charList}</span>
+                        <ChevronDown className="w-2.5 h-2.5 text-zinc-500" />
+                      </button>
+                      {activeDropdownId === "char-list" && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
+                          <div className="absolute right-0 top-7 bg-[#212123] border border-zinc-800 rounded-xl shadow-2xl py-1 z-55 text-[10px] w-24">
+                            {["Default", "Sering", "Jarang"].map(x => (
+                              <button key={x} onClick={() => handleDropdownSelect("char_list", x, setCharList)} className="w-full text-left px-2.5 py-1 hover:bg-zinc-800 text-zinc-200 block">{x}</button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {/* Characteristic Emoji */}
-                <div className="flex items-center justify-between p-2 rounded-lg bg-[#212121]/50 border border-zinc-800">
-                  <span className="text-zinc-300">Emoji</span>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setActiveDropdownId(activeDropdownId === "char-emoji" ? null : "char-emoji")}
-                      className="bg-[#212121] hover:bg-[#2b2b2b] text-[10px] px-2 py-1 rounded border border-zinc-800 flex items-center gap-1 cursor-pointer text-zinc-100"
-                    >
-                      <span>{charEmoji}</span>
-                      <ChevronDown className="w-2.5 h-2.5 text-zinc-500" />
-                    </button>
-                    {activeDropdownId === "char-emoji" && (
-                      <div className="absolute right-0 top-7 bg-[#212121] border border-zinc-800 rounded shadow-2xl py-1 z-55 text-[10px] w-24">
-                        {["Default", "Sering", "Jarang"].map(x => (
-                          <button key={x} onClick={() => handleDropdownSelect("char_emoji", x, setCharEmoji)} className="w-full text-left px-2 py-1 hover:bg-[#2e2e2e]">{x}</button>
-                        ))}
-                      </div>
-                    )}
+                  {/* Characteristic Emoji */}
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#212123]/60 border border-zinc-850">
+                    <span className="text-zinc-300 font-medium text-[10.5px]">Emoji</span>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setActiveDropdownId(activeDropdownId === "char-emoji" ? null : "char-emoji")}
+                        className="bg-[#2a2a2d] hover:bg-[#323235] text-[10px] px-2.5 py-1 rounded-lg border border-zinc-800 flex items-center gap-1 cursor-pointer text-zinc-200 font-bold transition-all"
+                      >
+                        <span>{charEmoji}</span>
+                        <ChevronDown className="w-2.5 h-2.5 text-zinc-500" />
+                      </button>
+                      {activeDropdownId === "char-emoji" && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
+                          <div className="absolute right-0 top-7 bg-[#212123] border border-zinc-800 rounded-xl shadow-2xl py-1 z-55 text-[10px] w-24">
+                            {["Default", "Sering", "Jarang"].map(x => (
+                              <button key={x} onClick={() => handleDropdownSelect("char_emoji", x, setCharEmoji)} className="w-full text-left px-2.5 py-1 hover:bg-zinc-800 text-zinc-200 block">{x}</button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
 
+                </div>
+              </div>
+
+              {/* Divider Inside Card */}
+              <div className="h-[1px] bg-zinc-800/30" />
+
+              {/* Jawaban cepat */}
+              <div className="flex items-start justify-between py-0.5 gap-4">
+                <div className="flex-1 space-y-0.5">
+                  <span className="text-zinc-100 font-semibold text-[11.5px] block">Aktivasi Jawaban Cepat</span>
+                  <span className="text-[10px] text-zinc-550 leading-relaxed block">Melewati filter memori pelacakan profil untuk respon kueri pengetahuan umum yang instan dalam satu baris.</span>
+                </div>
+                <div 
+                  onClick={() => handleToggleValue("char_quick", quickAnswers, setQuickAnswers)}
+                  className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${quickAnswers ? getAccentBgClass() : 'bg-[#323235]'}`}
+                >
+                  <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${quickAnswers ? 'translate-x-[16px]' : 'translate-x-0'}`} />
+                </div>
               </div>
             </div>
 
-            {/* Jawaban cepat */}
-            <div className="flex items-start justify-between py-1 border-b border-[#202020] gap-4">
-              <div className="flex-1 space-y-0.5">
-                <div className="text-zinc-100 font-medium">Jawaban cepat</div>
-                <div className="text-[10px] text-zinc-440 leading-relaxed text-zinc-450">Maria terkadang dapat menggunakan pengetahuan umumnya untuk memberikan jawaban yang cepat dan mendalam. Jawaban ini tidak dipersonalisasi dan tidak menggunakan memori Anda.</div>
+            {/* CARD 2: INSTRUKSI KHUSUS */}
+            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-2.5 shadow-xs">
+              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
+                ✏️ Instruksi Tambahan & System Prompt
               </div>
-              <div 
-                onClick={() => handleToggleValue("char_quick", quickAnswers, setQuickAnswers)}
-                className={`w-9 h-5 rounded-full p-[2.5px] cursor-pointer transition-colors shrink-0 self-center ${quickAnswers ? getAccentBgClass() : 'bg-[#3a3a3a]'}`}
-              >
-                <div className={`w-3.5 h-3.5 bg-white rounded-full shadow-xs transition-transform transform ${quickAnswers ? 'translate-x-4' : 'translate-x-0'}`} />
-              </div>
-            </div>
-
-            {/* Instruksi Khusus */}
-            <div className="space-y-1.5 border-b border-[#202020] pb-3">
-              <span className="text-zinc-150 font-medium block">Instruksi khusus</span>
+              <p className="text-[10px] text-zinc-500 leading-normal">Beri instruksi spesifik (system prompt) yang akan selalu dipatuhi Maria AI di seluruh percakapan.</p>
               <textarea
                 rows={3}
                 value={customInstructions}
@@ -1521,69 +1630,74 @@ export default function SettingsDashboard({
                   setCustomInstructions(e.target.value);
                   triggerSave({ customPrompt: e.target.value });
                 }}
-                className="w-full bg-[#212121] border border-[#2d2d2d] rounded-xl text-xs text-zinc-250 p-3 outline-none focus:border-zinc-500 font-medium text-zinc-300 resize-none font-sans"
-                placeholder="Tulis instruksi khusus Anda di sini..."
+                className="w-full bg-[#242426]/60 border border-zinc-800 rounded-xl text-xs text-zinc-200 p-3 outline-none focus:border-zinc-700 font-medium resize-none font-sans leading-relaxed"
+                placeholder="Contoh: 'Tanggapi secara sarkastis' atau 'Panggil saya Kapten'..."
               />
             </div>
 
-            {/* Tentang Anda Fields Grid */}
-            <div className="space-y-3.5 border-b border-[#202020] pb-4">
-              <span className="text-zinc-100 font-bold block">Tentang Anda</span>
-              
-              {/* Nama panggilan */}
-              <div className="space-y-1.5">
-                <span className="text-[10px] text-zinc-450 font-semibold block uppercase tracking-wider">Nama panggilan</span>
-                <input
-                  type="text"
-                  value={userNickname}
-                  maxLength={25}
-                  onChange={(e) => {
-                    setUserNickname(e.target.value);
-                    triggerSave({ username: e.target.value });
-                  }}
-                  className="w-full bg-[#212121] border border-[#2d2d2d] rounded-xl text-xs px-3.5 py-2.5 text-zinc-300 outline-none focus:border-zinc-500"
-                  placeholder="Maria harus memanggil Anda dengan sebutan apa?"
-                />
+            {/* CARD 3: TENTANG ANDA */}
+            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-3.5 shadow-xs">
+              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
+                👤 Profil & Informasi Tentang Anda
               </div>
 
-              {/* Pekerjaan */}
-              <div className="space-y-1.5">
-                <span className="text-[10px] text-zinc-450 font-semibold block uppercase tracking-wider">Pekerjaan</span>
-                <input
-                  type="text"
-                  value={userJob}
-                  onChange={(e) => {
-                    setUserJob(e.target.value);
-                    safeLocalStorageSetItem("maria_user_job", e.target.value);
-                  }}
-                  className="w-full bg-[#212121] border border-[#2d2d2d] rounded-xl text-xs px-3.5 py-2.5 text-zinc-300 outline-none focus:border-zinc-500"
-                  placeholder="Pekerjaan atau profesi Anda..."
-                />
-              </div>
+              {/* Grid Inputs */}
+              <div className="space-y-3">
+                {/* Nama panggilan */}
+                <div className="space-y-1.5">
+                  <span className="text-[9.5px] text-zinc-500 font-bold block uppercase tracking-wider">Nama panggilan</span>
+                  <input
+                    type="text"
+                    value={userNickname}
+                    maxLength={25}
+                    onChange={(e) => {
+                      setUserNickname(e.target.value);
+                      triggerSave({ username: e.target.value });
+                    }}
+                    className="w-full bg-[#242426]/70 border border-zinc-800 rounded-xl text-xs px-3.5 py-2.5 text-zinc-200 outline-none focus:border-zinc-700 transition-colors"
+                    placeholder="Nama yang akan dipanggil oleh Maria..."
+                  />
+                </div>
 
-              {/* Selengkapnya tentang Anda */}
-              <div className="space-y-1.5">
-                <span className="text-[10px] text-zinc-450 font-semibold block uppercase tracking-wider">Selengkapnya tentang Anda</span>
-                <input
-                  type="text"
-                  value={userBio}
-                  onChange={(e) => {
-                    setUserBio(e.target.value);
-                    safeLocalStorageSetItem("maria_user_bio", e.target.value);
-                  }}
-                  className="w-full bg-[#212121] border border-[#2d2d2d] rounded-xl text-xs px-3.5 py-2.5 text-zinc-300 outline-none focus:border-zinc-500"
-                  placeholder="Minat, nilai, atau preferensi yang perlu diingat"
-                />
+                {/* Pekerjaan */}
+                <div className="space-y-1.5">
+                  <span className="text-[9.5px] text-zinc-500 font-bold block uppercase tracking-wider">Pekerjaan / Profesi</span>
+                  <input
+                    type="text"
+                    value={userJob}
+                    onChange={(e) => {
+                      setUserJob(e.target.value);
+                      safeLocalStorageSetItem("maria_user_job", e.target.value);
+                    }}
+                    className="w-full bg-[#242426]/70 border border-zinc-800 rounded-xl text-xs px-3.5 py-2.5 text-zinc-200 outline-none focus:border-zinc-700 transition-colors"
+                    placeholder="Contoh: Pembuat Konten, Mahasiswa Teknik..."
+                  />
+                </div>
+
+                {/* Selengkapnya tentang Anda */}
+                <div className="space-y-1.5">
+                  <span className="text-[9.5px] text-zinc-500 font-bold block uppercase tracking-wider">Konteks Tambahan (Minat / Bio)</span>
+                  <input
+                    type="text"
+                    value={userBio}
+                    onChange={(e) => {
+                      setUserBio(e.target.value);
+                      safeLocalStorageSetItem("maria_user_bio", e.target.value);
+                    }}
+                    className="w-full bg-[#242426]/70 border border-zinc-800 rounded-xl text-xs px-3.5 py-2.5 text-zinc-200 outline-none focus:border-zinc-700 transition-colors"
+                    placeholder="Maria akan mengingat konteks ini untuk mempersonalisasi respon..."
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Memori block */}
-            <div className="space-y-2.5 border-b border-[#202020] pb-4">
-              <div className="flex items-center justify-between">
-                <span className="text-zinc-100 font-bold block">Memori</span>
+            {/* CARD 4: MEMORI */}
+            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-4.5 shadow-xs">
+              <div className="flex items-center justify-between pb-1 border-b border-zinc-800/30">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">🧠 Penyimpanan Ingatan / Memori</span>
                 <button
                   type="button"
-                  className="px-2.5 py-1 text-[10px] font-bold border border-[#2e2e2e] hover:bg-zinc-800 text-zinc-300 rounded-lg hover:text-white cursor-pointer transition-colors"
+                  className="px-3 py-1.5 text-[10.5px] font-bold bg-[#242426] hover:bg-zinc-800 text-zinc-300 border border-zinc-800 rounded-lg hover:text-white cursor-pointer transition-colors"
                 >
                   Kelola
                 </button>
@@ -1592,117 +1706,135 @@ export default function SettingsDashboard({
               {/* Rujuk memori tersimpan */}
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 space-y-0.5">
-                  <div className="text-zinc-100 font-medium text-[11px]">Rujuk memori tersimpan</div>
-                  <div className="text-[10px] text-zinc-450 leading-relaxed">Izinkan Maria menyimpan dan menggunakan memori saat merespons.</div>
+                  <span className="text-zinc-100 font-medium text-[11.5px] block">Rujuk Memori Kustom Hari Ini</span>
+                  <span className="text-[10px] text-zinc-550 leading-relaxed block">Izinkan Maria menganalisis preferensi yang pernah dicantumkan pada percakapan masa lalu (misal: bahasa pemrograman favorit).</span>
                 </div>
                 <div 
                   onClick={() => handleToggleValue("mem_save", memSave, setMemSave)}
-                  className={`w-9 h-5 rounded-full p-[2.5px] cursor-pointer transition-colors shrink-0 self-center ${memSave ? getAccentBgClass() : 'bg-[#3a3a3a]'}`}
+                  className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${memSave ? getAccentBgClass() : 'bg-[#323235]'}`}
                 >
-                  <div className={`w-3.5 h-3.5 bg-white rounded-full shadow-xs transition-transform transform ${memSave ? 'translate-x-4' : 'translate-x-0'}`} />
+                  <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${memSave ? 'translate-x-[16px]' : 'translate-x-0'}`} />
                 </div>
               </div>
 
+              {/* Divider Inside Card */}
+              <div className="h-[1px] bg-zinc-800/30" />
+
               {/* Rujuk riwayat obrolan */}
-              <div className="flex items-start justify-between gap-4 pt-1.5">
+              <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 space-y-0.5">
-                  <div className="text-zinc-100 font-medium text-[11px]">Rujuk riwayat obrolan</div>
-                  <div className="text-[10px] text-zinc-450 leading-relaxed">Izinkan Maria merujuk ke percakapan terkini saat merespons.</div>
+                  <span className="text-zinc-100 font-medium text-[11.5px] block">Rujuk Riwayat Obrolan Terkini</span>
+                  <span className="text-[10px] text-zinc-550 leading-relaxed block">Izinkan asisten merujuk ke pesan-pesan sebelumnya di thread aktif guna melestarikan konteks obrolan.</span>
                 </div>
                 <div 
                   onClick={() => handleToggleValue("mem_ref", memRef, setMemRef)}
-                  className={`w-9 h-5 rounded-full p-[2.5px] cursor-pointer transition-colors shrink-0 self-center ${memRef ? getAccentBgClass() : 'bg-[#3a3a3a]'}`}
+                  className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${memRef ? getAccentBgClass() : 'bg-[#323235]'}`}
                 >
-                  <div className={`w-3.5 h-3.5 bg-white rounded-full shadow-xs transition-transform transform ${memRef ? 'translate-x-4' : 'translate-x-0'}`} />
+                  <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${memRef ? 'translate-x-[16px]' : 'translate-x-0'}`} />
                 </div>
               </div>
 
-              <div className="text-[10px] text-zinc-500 leading-normal mt-1 block">
-                Maria dapat menggunakan Memori untuk mempersonalisasi kueri ke penyedia pencarian, seperti Bing. <span className="underline cursor-pointer">Pelajari selengkapnya</span>
+              <div className="text-[10px] text-zinc-500 leading-normal pt-1 border-t border-zinc-800/20">
+                Asisten juga akan menyederhanakan kueri pencarian Web (seperti Bing Search Grounding) jika memori diizinkan aktif. <span className="underline cursor-pointer hover:text-zinc-400">Pelajari selengkapnya</span>
               </div>
             </div>
 
-            {/* Lanjutan Colllapsible list block */}
-            <div className="space-y-3">
+            {/* CARD 5: LANJUTAN COLLAPSIBLE */}
+            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-3.5 shadow-xs">
               <button 
                 type="button"
                 onClick={() => setIsAdvancedExpanded(!isAdvancedExpanded)}
-                className="w-full flex items-center justify-between text-zinc-100 font-bold hover:text-white cursor-pointer py-1 text-xs"
+                className="w-full flex items-center justify-between text-zinc-100 font-bold hover:text-white cursor-pointer py-0.5"
               >
-                <span>Lanjutan</span>
-                {isAdvancedExpanded ? <ChevronUp className="w-4 h-4 text-zinc-500" /> : <ChevronDown className="w-4 h-4 text-zinc-500" />}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">⚙️ Preferensi Koneksi Lanjutan</span>
+                  <span className="text-[7.5px] font-bold bg-[#29292c] text-zinc-400 px-1.5 py-[1.5px] border border-zinc-800 rounded-sm">ADVANCED</span>
+                </div>
+                {isAdvancedExpanded ? <ChevronUp className="w-4 h-4 text-zinc-500 shrink-0" /> : <ChevronDown className="w-4 h-4 text-zinc-500 shrink-0" />}
               </button>
 
               {isAdvancedExpanded && (
-                <div className="space-y-4 pt-1 pl-1">
+                <div className="pt-2 space-y-3.5 border-t border-zinc-800/30 animate-in slide-in-from-top duration-200">
                   
                   {/* Pencarian web */}
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 space-y-0.5">
-                      <div className="text-zinc-200 font-medium text-[11px]">Pencarian web</div>
-                      <div className="text-[10px] text-zinc-450 leading-normal">Izinkan Maria mencari di web secara otomatis untuk jawaban.</div>
+                      <span className="text-zinc-200 font-medium text-[11px] block">Pencarian Web Otomatis</span>
+                      <span className="text-[10px] text-zinc-500 leading-normal block">Menganalisis hasil mesin pencari web secara dinamis jika diperlukan informasi aktual.</span>
                     </div>
                     <div 
                       onClick={() => handleToggleValue("adv_web", advWeb, setAdvWeb)}
-                      className={`w-9 h-5 rounded-full p-[2.5px] cursor-pointer transition-colors shrink-0 self-center ${advWeb ? getAccentBgClass() : 'bg-[#3a3a3a]'}`}
+                      className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${advWeb ? getAccentBgClass() : 'bg-[#323235]'}`}
                     >
-                      <div className={`w-3.5 h-3.5 bg-white rounded-full shadow-xs transition-transform transform ${advWeb ? 'translate-x-4' : 'translate-x-0'}`} />
+                      <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${advWeb ? 'translate-x-[16px]' : 'translate-x-0'}`} />
                     </div>
                   </div>
+
+                  {/* Divider Inside Card */}
+                  <div className="h-[1px] bg-zinc-800/20" />
 
                   {/* Kanvas */}
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 space-y-0.5">
-                      <div className="text-zinc-200 font-medium text-[11px]">Kanvas</div>
-                      <div className="text-[10px] text-zinc-450 leading-normal">Berkolaborasi dengan Maria di teks dan kode.</div>
+                      <span className="text-zinc-200 font-medium text-[11px] block">Sesi Kanvas Interaktif</span>
+                      <span className="text-[10px] text-zinc-500 leading-normal block">Mengaktifkan side panel Maria Canvas untuk berkolaborasi menyunting teks/kode bersama-sama.</span>
                     </div>
                     <div 
                       onClick={() => handleToggleValue("adv_canvas", advCanvas, setAdvCanvas)}
-                      className={`w-9 h-5 rounded-full p-[2.5px] cursor-pointer transition-colors shrink-0 self-center ${advCanvas ? getAccentBgClass() : 'bg-[#3a3a3a]'}`}
+                      className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${advCanvas ? getAccentBgClass() : 'bg-[#323235]'}`}
                     >
-                      <div className={`w-3.5 h-3.5 bg-white rounded-full shadow-xs transition-transform transform ${advCanvas ? 'translate-x-4' : 'translate-x-0'}`} />
+                      <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${advCanvas ? 'translate-x-[16px]' : 'translate-x-0'}`} />
                     </div>
                   </div>
+
+                  {/* Divider Inside Card */}
+                  <div className="h-[1px] bg-zinc-800/20" />
 
                   {/* Suara Maria AI */}
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 space-y-0.5">
-                      <div className="text-zinc-200 font-medium text-[11px]">Suara Maria AI</div>
-                      <div className="text-[10px] text-zinc-450 leading-normal">Aktifkan Suara di Maria AI.</div>
+                      <span className="text-zinc-200 font-medium text-[11px] block">Koneksi Maria Voice Chat</span>
+                      <span className="text-[10px] text-zinc-500 leading-normal block">Izinkan inisiasi transfer gelombang asisten suara Maria via WebSocket.</span>
                     </div>
                     <div 
                       onClick={() => handleToggleValue("adv_voice_chat", advVoiceChat, setAdvVoiceChat)}
-                      className={`w-9 h-5 rounded-full p-[2.5px] cursor-pointer transition-colors shrink-0 self-center ${advVoiceChat ? getAccentBgClass() : 'bg-[#3a3a3a]'}`}
+                      className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${advVoiceChat ? getAccentBgClass() : 'bg-[#323235]'}`}
                     >
-                      <div className={`w-3.5 h-3.5 bg-white rounded-full shadow-xs transition-transform transform ${advVoiceChat ? 'translate-x-4' : 'translate-x-0'}`} />
+                      <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${advVoiceChat ? 'translate-x-[16px]' : 'translate-x-0'}`} />
                     </div>
                   </div>
+
+                  {/* Divider Inside Card */}
+                  <div className="h-[1px] bg-zinc-800/20" />
 
                   {/* Suara tingkat lanjut */}
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 space-y-0.5">
-                      <div className="text-zinc-200 font-medium text-[11px]">Suara tingkat lanjut</div>
-                      <div className="text-[10px] text-zinc-450 leading-normal">Lakukan percakapan lebih natural dalam Suara.</div>
+                      <span className="text-zinc-200 font-medium text-[11px] block">Suara Tingkat Lanjut</span>
+                      <span className="text-[10px] text-zinc-500 leading-normal block">Mengaktifkan asisten suara hibrida yang berinteraksi tanpa jeda tunggu (real-time voice).</span>
                     </div>
                     <div 
                       onClick={() => handleToggleValue("adv_smart_voice", advSmartVoice, setAdvSmartVoice)}
-                      className={`w-9 h-5 rounded-full p-[2.5px] cursor-pointer transition-colors shrink-0 self-center ${advSmartVoice ? getAccentBgClass() : 'bg-[#3a3a3a]'}`}
+                      className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${advSmartVoice ? getAccentBgClass() : 'bg-[#323235]'}`}
                     >
-                      <div className={`w-3.5 h-3.5 bg-white rounded-full shadow-xs transition-transform transform ${advSmartVoice ? 'translate-x-4' : 'translate-x-0'}`} />
+                      <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${advSmartVoice ? 'translate-x-[16px]' : 'translate-x-0'}`} />
                     </div>
                   </div>
+
+                  {/* Divider Inside Card */}
+                  <div className="h-[1px] bg-zinc-800/20" />
 
                   {/* Pencarian konektor */}
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 space-y-0.5">
-                      <div className="text-zinc-200 font-medium text-[11px]">Pencarian konektor</div>
-                      <div className="text-[10px] text-zinc-450 leading-normal">Izinkan Maria mencari sumber terhubung untuk jawaban.</div>
+                      <span className="text-zinc-200 font-medium text-[11px] block">Pencarian Konektor Eksternal</span>
+                      <span className="text-[10px] text-zinc-500 leading-normal block">Mengakses basis data pihak ketiga yang dikoneksikan ke dalam akun asisten Anda.</span>
                     </div>
                     <div 
                       onClick={() => handleToggleValue("adv_connector", advConnector, setAdvConnector)}
-                      className={`w-9 h-5 rounded-full p-[2.5px] cursor-pointer transition-colors shrink-0 self-center ${advConnector ? getAccentBgClass() : 'bg-[#3a3a3a]'}`}
+                      className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${advConnector ? getAccentBgClass() : 'bg-[#323235]'}`}
                     >
-                      <div className={`w-3.5 h-3.5 bg-white rounded-full shadow-xs transition-transform transform ${advConnector ? 'translate-x-4' : 'translate-x-0'}`} />
+                      <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${advConnector ? 'translate-x-[16px]' : 'translate-x-0'}`} />
                     </div>
                   </div>
 
@@ -1715,35 +1847,46 @@ export default function SettingsDashboard({
 
         {/* ===================== TAB: APLIKASI ===================== */}
         {activeTab === "aplikasi" && (
-          <div className="space-y-4 text-xs">
-            <h3 className="text-zinc-100 font-bold text-sm tracking-tight pt-1">Aplikasi</h3>
-            <div className="h-[1px] bg-[#2c2c2c] my-1" />
+          <div className="space-y-4.5 text-xs animate-in fade-in duration-200">
+            <div>
+              <h3 className="text-zinc-150 font-bold text-sm tracking-tight pt-1">Ekstensi & Sambungan Luar</h3>
+              <p className="text-[10.5px] text-zinc-450 mt-0.5">Sinkronkan asisten cerdas Maria AI ke aplikasi penyimpanan dokumen awan serta rujukan seluler.</p>
+            </div>
 
-            <div className="p-4 bg-[#212121]/50 border border-zinc-800 rounded-2xl space-y-4">
+            {/* CARD 1: SAMBUNGAN AKUN */}
+            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-3.5 shadow-xs">
+              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
+                ☁️ Integrasi Cloud Storage
+              </div>
+              <p className="text-[10px] text-zinc-450 leading-relaxed select-text">
+                Koneksikan Maria AI dengan lancar ke penyimpanan Cloud personal Anda untuk sinkronisasi dokumen kerja secara otomatis.
+              </p>
               <div>
-                <span className="text-zinc-100 font-semibold block text-[13px]">Sambungan Akun</span>
-                <p className="text-[10.5px] text-zinc-450 leading-relaxed mt-0.5">Koneksikan Maria AI dengan lancar ke penyimpanan Cloud atau akun asisten eksternal Anda untuk sinkronisasi dokumen.</p>
                 <button
                   type="button"
-                  className="mt-3 px-3 py-1.8 bg-zinc-800 hover:bg-zinc-750 text-zinc-200 text-[10.5px] rounded-lg cursor-pointer font-bold inline-flex items-center gap-1.5 transition-colors"
+                  className="px-3.5 py-2 bg-[#242426] hover:bg-zinc-800 text-zinc-200 text-[10.5px] border border-zinc-800 rounded-xl cursor-pointer font-bold inline-flex items-center gap-1.5 transition-colors"
                 >
                   <span>Sambung Google Drive</span>
-                  <ExternalLink className="w-3 h-3 text-zinc-400" />
+                  <ExternalLink className="w-3.5 h-3.5 text-zinc-500" />
                 </button>
               </div>
+            </div>
 
-              <div className="h-[1px] bg-zinc-800" />
-
-              <div>
-                <span className="text-zinc-100 font-semibold block text-[13px]">Gunakan Aplikasi Seluler</span>
-                <p className="text-[10.5px] text-zinc-450 leading-relaxed mt-0.5">Pindai kode QR untuk langsung mengunduh aplikasi Maria di smartphone Anda dengan fitur respons suara real-time hibrida.</p>
-                <div className="mt-3 flex items-center gap-4 bg-zinc-900/60 p-2.5 rounded-xl border border-zinc-850 max-w-[280px]">
-                  <div className="w-14 h-14 bg-zinc-350 rounded-lg flex items-center justify-center font-bold text-zinc-900 text-xs text-center shrink-0">
-                    [ QR Code ]
-                  </div>
-                  <div className="text-[9.5px] text-zinc-400 leading-normal">
-                    Pindai layar Anda dengan kamera HP untuk mengunduh versi khusus APK Android / iOS secara mandiri.
-                  </div>
+            {/* CARD 2: FITUR SELULER */}
+            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-3 shadow-xs">
+              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
+                📱 Aplikasi Seluler Android / iOS
+              </div>
+              <p className="text-[10px] text-zinc-450 leading-relaxed select-text">
+                Pindai kode QR untuk langsung mengunduh aplikasi Maria di smartphone Anda dengan fitur respon suara real-time hibrida tanpa delay.
+              </p>
+              
+              <div className="flex items-center gap-4 bg-zinc-900/40 p-3 rounded-xl border border-zinc-850 max-w-sm">
+                <div className="w-16 h-16 bg-zinc-300 rounded-lg flex items-center justify-center font-bold text-zinc-900 text-[9px] text-center shrink-0">
+                  QR Code
+                </div>
+                <div className="text-[10px] text-zinc-450 leading-normal select-text">
+                  Arahkan kamera HP ke kode di samping untuk mengunduh versi khusus APK Android / iOS secara hibrid.
                 </div>
               </div>
             </div>
@@ -1752,15 +1895,22 @@ export default function SettingsDashboard({
 
         {/* ===================== TAB: TAGIHAN ===================== */}
         {activeTab === "tagihan" && (
-          <div className="space-y-4 text-xs">
-            <h3 className="text-zinc-100 font-bold text-sm tracking-tight pt-1">Tagihan</h3>
-            <div className="h-[1px] bg-[#2c2c2c] my-1" />
+          <div className="space-y-4.5 text-xs animate-in fade-in duration-200">
+            <div>
+              <h3 className="text-zinc-150 font-bold text-sm tracking-tight pt-1">Langganan & Billing</h3>
+              <p className="text-[10.5px] text-zinc-450 mt-0.5">Kelola lisensi keanggotaan premium, rincian kuota kredit pencarian, serta sisa token harian.</p>
+            </div>
 
-            <div className="bg-[#212121]/50 border border-zinc-800 rounded-2xl p-4 space-y-4">
-              <div className="flex items-center justify-between">
+            {/* CARD 1: STATUS KEANGGOTAAN */}
+            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-4 shadow-xs">
+              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
+                💎 Status Keanggotaan Aktif
+              </div>
+              
+              <div className="flex items-center justify-between gap-4">
                 <div>
-                  <span className="text-[10px] text-zinc-450 font-bold uppercase tracking-wider block">Paket Aktif Saat Ini</span>
-                  <span className={`text-base font-extrabold ${getAccentTextClass()} mt-0.5 block flex items-center gap-1.5`}>
+                  <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Paket Aktif Saat Ini</span>
+                  <span className={`text-base font-extrabold ${getAccentTextClass()} mt-1 block flex items-center gap-1.5`}>
                     Maria AI Premium Plus
                     <span className={`text-[8.5px] font-black tracking-widest px-1.5 py-0.5 rounded uppercase ${getBadgeClass()}`}>
                       ACTIVE
@@ -1770,22 +1920,24 @@ export default function SettingsDashboard({
                 <button
                   type="button"
                   disabled
-                  className="px-3.5 py-1.8 bg-[#2d2d2d] text-zinc-450 border border-zinc-700 text-[10.5px] rounded-lg font-bold"
+                  className="px-3.5 py-2 bg-[#242426] text-zinc-600 border border-zinc-850 text-[10.5px] rounded-xl font-bold cursor-not-allowed"
                 >
-                  Sudah Upgrade
+                  Teraktivasi
                 </button>
               </div>
 
-              <div className="h-[1px] bg-zinc-800" />
+              {/* Divider Inside Card */}
+              <div className="h-[1px] bg-zinc-800/30" />
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-zinc-900/40 p-3 rounded-xl border border-zinc-850">
-                  <span className="text-[9px] text-zinc-500 font-bold block uppercase">Batas Token Tersisa</span>
-                  <span className="block text-sm font-semibold text-zinc-200 mt-1">Tak Terbatas (PRO)</span>
+              {/* Grid Statistics Info */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-[#212123]/60 p-3 rounded-xl border border-zinc-850">
+                  <span className="text-[9px] text-zinc-500 font-bold block uppercase tracking-wider">Kuota Token Tersisa</span>
+                  <span className="block text-xs font-bold text-zinc-200 mt-1 select-text">Tak Terbatas (PRO)</span>
                 </div>
-                <div className="bg-zinc-900/40 p-3 rounded-xl border border-zinc-850">
-                  <span className="text-[9px] text-zinc-500 font-bold block uppercase">Masa Berlaku Kuota</span>
-                  <span className="block text-sm font-semibold text-zinc-200 mt-1">Selamanya (Aktif)</span>
+                <div className="bg-[#212123]/60 p-3 rounded-xl border border-zinc-850">
+                  <span className="text-[9px] text-zinc-500 font-bold block uppercase tracking-wider">Masa Berlaku Lisensi</span>
+                  <span className="block text-xs font-bold text-zinc-200 mt-1 select-text">Selamanya (Aktif)</span>
                 </div>
               </div>
             </div>
@@ -1794,64 +1946,85 @@ export default function SettingsDashboard({
 
         {/* ===================== TAB: KONTROL DATA ===================== */}
         {activeTab === "kontrol-data" && (
-          <div className="space-y-4 text-xs">
-            <h3 className="text-zinc-100 font-bold text-sm tracking-tight pt-1">Kontrol data</h3>
-            <div className="h-[1px] bg-[#2c2c2c] my-1" />
+          <div className="space-y-4.5 text-xs animate-in fade-in duration-200">
+            <div>
+              <h3 className="text-zinc-150 font-bold text-sm tracking-tight pt-1">Keamanan & Kontrol Data</h3>
+              <p className="text-[10.5px] text-zinc-450 mt-0.5">Kelola privasi obrolan, ekspor seluruh database asisten, serta kontrol riwayat lokal perangkat.</p>
+            </div>
 
-            <div className="space-y-4">
+            {/* CARD 1: PRIVASI & PELATIHAN */}
+            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-4 shadow-xs">
+              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
+                🔒 Privasi Model & Pelatihan AI
+              </div>
               
-              {/* Riwayat & Pelatihan */}
-              <div className="flex items-start justify-between py-1 border-b border-[#202020] gap-4">
+              <div className="flex items-start justify-between gap-4 py-0.5">
                 <div className="flex-1 space-y-0.5">
-                  <div className="text-zinc-100 font-medium">Riwayat & Pelatihan</div>
-                  <div className="text-[10px] text-zinc-450 leading-relaxed">Simpan obrolan baru di perangkat ini dan izinkan untuk meningkatkan kemampuan model asisten Maria secara anonim.</div>
+                  <span className="text-zinc-100 font-medium text-[11.5px] block">Riwayat & Penyempurnaan Otomatis</span>
+                  <span className="text-[10px] text-zinc-550 leading-relaxed block">Simpan transkrip obrolan baru di penyimpanan lokal dan izinkan evaluasi anonim untuk kecerdasan Maria harian.</span>
                 </div>
-                <div className={`w-9 h-5 rounded-full p-[2.5px] cursor-pointer shrink-0 self-center ${getAccentBgClass()}`}>
-                  <div className="w-3.5 h-3.5 bg-white rounded-full shadow-xs translate-x-4" />
+                <div className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer shrink-0 self-center ${getAccentBgClass()}`}>
+                  <div className="w-[17px] h-[17px] bg-white rounded-full shadow-md translate-x-[16px]" />
                 </div>
               </div>
+            </div>
 
-              {/* Tautan Bersama */}
-              <div className="flex items-center justify-between py-1 border-b border-[#202020]">
+            {/* CARD 2: PENGELOLAAN DATA */}
+            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-4 shadow-xs">
+              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
+                📁 Ekspor & Manajemen File Publik
+              </div>
+
+              {/* Tautan Bersama Row */}
+              <div className="flex items-center justify-between gap-4 py-0.5">
                 <div className="space-y-0.5">
-                  <div className="text-zinc-100 font-medium">Tautan Bersama</div>
-                  <div className="text-[10px] text-zinc-450">Kelola tautan publik percakapan yang pernah Anda bagikan.</div>
+                  <span className="text-zinc-100 font-medium text-[11.5px] block">Kelola Tautan Bersama</span>
+                  <span className="text-[10px] text-zinc-550 block">Audit semua tautan publik percakapan yang pernah Anda bagikan secara terbuka.</span>
                 </div>
                 <button
                   type="button"
-                  className="px-3 py-1.5 bg-[#212121] hover:bg-[#2b2b2b] text-[10.5px] font-semibold rounded-lg border border-zinc-800 text-zinc-300 hover:text-white cursor-pointer"
+                  className="px-3 py-1.5 bg-[#242426] hover:bg-zinc-800 text-[10.5px] font-bold rounded-lg border border-zinc-800 text-zinc-300 hover:text-white cursor-pointer transition-colors"
                 >
                   Kelola
                 </button>
               </div>
 
-              {/* Ekspor data */}
-              <div className="flex items-center justify-between py-1 border-b border-[#202020]">
+              {/* Divider Inside Card */}
+              <div className="h-[1px] bg-zinc-800/30" />
+
+              {/* Ekspor data row */}
+              <div className="flex items-center justify-between gap-4 py-0.5">
                 <div className="space-y-0.5">
-                  <div className="text-zinc-100 font-medium">Ekspor data</div>
-                  <div className="text-[10px] text-zinc-450">Kirim salinan seluruh data obrolan dalam format JSON terkompresi.</div>
+                  <span className="text-zinc-100 font-medium text-[11.5px] block">Ekspor Seluruh Database Lokal</span>
+                  <span className="text-[10px] text-zinc-550 block">Menerima salinan arsip transkrip percakapan terenkripsi dalam format JSON.</span>
                 </div>
                 <button
                   type="button"
-                  className="px-3 py-1.5 bg-[#212121] hover:bg-[#2b2b2b] text-[10.5px] font-semibold rounded-lg border border-zinc-800 text-zinc-300 hover:text-white cursor-pointer"
+                  className="px-3 py-1.5 bg-[#242426] hover:bg-zinc-800 text-[10.5px] font-bold rounded-lg border border-zinc-800 text-zinc-300 hover:text-white cursor-pointer transition-colors"
                 >
                   Ekspor
                 </button>
               </div>
+            </div>
 
-              {/* Hapus riwayat obrolan */}
-              <div className="flex items-center justify-between py-1.5 border-b border-[#202020]">
+            {/* CARD 3: BERSIHKAN DATA */}
+            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-4 shadow-xs">
+              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
+                ⚠️ Zona Berbahaya
+              </div>
+              
+              <div className="flex items-center justify-between gap-4 py-0.5">
                 <div className="space-y-0.5">
-                  <div className="text-zinc-100 font-medium">Bersihkan Obrolan</div>
-                  <div className="text-[10px] text-zinc-450">Hapus habis semua data percakapan aktif dari database lokal perangkat ini.</div>
+                  <span className="text-zinc-100 font-medium text-[11.5px] block leading-normal">Hapus Bersih Riwayat Obrolan</span>
+                  <span className="text-[10px] text-zinc-550 block leading-normal">Tindakan ini tidak dapat dibatalkan. Seluruh histori Maria AI di perangkat ini akan lenyap total.</span>
                 </div>
                 <button
                   type="button"
                   onClick={onClearHistory}
                   disabled={messageCount === 0}
-                  className={`px-3 py-1.5 text-[10.5px] font-bold rounded-lg border flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  className={`px-3 py-1.5 text-[10.5px] font-bold rounded-lg border flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 ${
                     messageCount === 0
-                      ? "bg-[#212121] border-[#2c2c2c] text-zinc-650 opacity-40 cursor-not-allowed"
+                      ? "bg-[#212123] border-zinc-850 text-zinc-600 opacity-40 cursor-not-allowed"
                       : "bg-rose-950/20 border-rose-900/60 text-rose-400 hover:bg-rose-900/20"
                   }`}
                 >
@@ -1859,9 +2032,6 @@ export default function SettingsDashboard({
                   <span>Hapus Semua</span>
                 </button>
               </div>
-
-
-
             </div>
           </div>
         )}
