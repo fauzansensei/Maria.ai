@@ -63,6 +63,9 @@ interface ChatAreaProps {
   pendingPrompt?: string | null;
   onClearPendingPrompt?: () => void;
   isPlus?: boolean;
+  speakMessage?: (text: string) => void;
+  isPlayingAudio?: boolean;
+  stopSpeech?: () => void;
 }
 
 // Config lists for resolving color schema & icons for requested external web apps
@@ -554,6 +557,9 @@ export default function ChatArea({
   pendingPrompt,
   onClearPendingPrompt,
   isPlus = false,
+  speakMessage,
+  isPlayingAudio,
+  stopSpeech,
 }: ChatAreaProps) {
   const [inputText, setInputText] = useState("");
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
@@ -1167,6 +1173,39 @@ export default function ChatArea({
                             >
                               <Bookmark className="w-2.5 h-2.5" />
                               <span>{bookmarkedMessages?.some(b => b.id === m.id) ? "Disimpan" : "Tandai"}</span>
+                            </button>
+                          </div>
+                        )}
+
+                        {isAi && speakMessage && settings?.voiceEnabled && (
+                          <div className="flex items-center gap-1 border-l border-slate-300 pl-2 text-slate-400">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isPlayingAudio && stopSpeech) {
+                                  stopSpeech();
+                                } else if (speakMessage) {
+                                  speakMessage(m.content);
+                                }
+                              }}
+                              className={`transition-all cursor-pointer px-1.5 py-0.5 rounded flex items-center gap-1 text-[9px] ${
+                                isPlayingAudio 
+                                  ? "text-sky-500 bg-sky-500/10 border border-sky-500/15 font-bold animate-pulse" 
+                                  : "hover:text-sky-600 hover:bg-sky-500/5 text-slate-450"
+                              }`}
+                              title={isPlayingAudio ? "Berhenti memutar suara" : "Dengarkan suara Maria"}
+                            >
+                              {isPlayingAudio ? (
+                                <>
+                                  <VolumeX className="w-2.5 h-2.5" />
+                                  <span>Berhenti</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Volume2 className="w-2.5 h-2.5" />
+                                  <span>Dengarkan</span>
+                                </>
+                              )}
                             </button>
                           </div>
                         )}

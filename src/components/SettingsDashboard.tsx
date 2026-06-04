@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { UserSettings, MariaTone, LanguageStyle, AppTheme } from "../types";
 import { THEME_OPTIONS } from "../constants";
 import { safeLocalStorageSetItem } from "../utils";
+import { PRESET_VOICES, PRESET_MODELS } from "../services/elevenLabsService";
 import { 
   Settings, 
   Bell, 
@@ -84,6 +85,12 @@ export default function SettingsDashboard({
   const [spokenLanguage, setSpokenLanguage] = useState("Deteksi otomatis");
   const [voiceVoice, setVoiceVoice] = useState("Maria");
   const [voiceStreamSplit, setVoiceStreamSplit] = useState(false);
+
+  const [elevenlabsApiKey, setElevenlabsApiKey] = useState(settings.elevenlabsApiKey || "");
+  const [elevenlabsVoiceId, setElevenlabsVoiceId] = useState(settings.elevenlabsVoiceId || "EXAVITQu4vr4xnSDxMaL");
+  const [elevenlabsVoiceModel, setElevenlabsVoiceModel] = useState(settings.elevenlabsVoiceModel || "eleven_flash_v2_5");
+  const [elevenlabsCustomVoiceId, setElevenlabsCustomVoiceId] = useState(settings.elevenlabsCustomVoiceId || "");
+  const [voiceEnabled, setVoiceEnabled] = useState(settings.voiceEnabled || false);
 
   // Subscription States
   const [subPlan, setSubPlan] = useState<"monthly" | "yearly" | "none">(() => {
@@ -305,7 +312,12 @@ export default function SettingsDashboard({
         soundEnabled: updates.notifications?.soundEnabled !== undefined ? updates.notifications.soundEnabled : (settings.notifications?.soundEnabled !== false),
         statusUpdates: settings.notifications?.statusUpdates ?? true,
         remindersEnabled: settings.notifications?.remindersEnabled ?? true,
-      }
+      },
+      elevenlabsApiKey: updates.elevenlabsApiKey !== undefined ? updates.elevenlabsApiKey : elevenlabsApiKey,
+      elevenlabsVoiceId: updates.elevenlabsVoiceId !== undefined ? updates.elevenlabsVoiceId : elevenlabsVoiceId,
+      elevenlabsVoiceModel: updates.elevenlabsVoiceModel !== undefined ? updates.elevenlabsVoiceModel : elevenlabsVoiceModel,
+      elevenlabsCustomVoiceId: updates.elevenlabsCustomVoiceId !== undefined ? updates.elevenlabsCustomVoiceId : elevenlabsCustomVoiceId,
+      voiceEnabled: updates.voiceEnabled !== undefined ? updates.voiceEnabled : voiceEnabled,
     };
     
     // Auto-update theme mapping based on accent color
@@ -1350,6 +1362,170 @@ export default function SettingsDashboard({
                   <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${voiceStreamSplit ? 'translate-x-[16px]' : 'translate-x-0'}`} />
                 </div>
               </div>
+            </div>
+
+            {/* CARD 4: ELEVENLABS HIGH-FIDELITY AI VOICE ENGINE */}
+            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-4 shadow-xs text-xs">
+              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30 flex items-center justify-between">
+                <span>🎙️ ElevenLabs AI Voice Engine</span>
+                <span className="text-[9px] text-[#38bdf8] bg-[#38bdf8]/10 px-2 py-0.5 rounded-full font-sans font-bold">HQ Audio</span>
+              </div>
+
+              {/* Toggle Switch */}
+              <div className="flex items-start justify-between py-1 gap-4">
+                <div className="flex-1 space-y-0.5">
+                  <span className="text-zinc-100 font-medium text-[11.5px] block">Aktifkan Suara ElevenLabs AI</span>
+                  <span className="text-[10px] text-zinc-550 leading-relaxed block">Rendering suara super realistis dan emosional menggunakan ElevenLabs API. Setiap balasan asisten akan otomatis disuarakan murni.</span>
+                </div>
+                <div 
+                  onClick={() => {
+                    const next = !voiceEnabled;
+                    setVoiceEnabled(next);
+                    triggerSave({ voiceEnabled: next });
+                  }}
+                  className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${voiceEnabled ? getAccentBgClass() : 'bg-[#323235]'}`}
+                >
+                  <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${voiceEnabled ? 'translate-x-[16px]' : 'translate-x-0'}`} />
+                </div>
+              </div>
+
+              {voiceEnabled && (
+                <div className="space-y-4 pt-2.5 border-t border-zinc-800/40 animate-fade-in text-left">
+                  {/* API Key Input */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold text-zinc-450 uppercase tracking-widest pl-0.5">
+                      ElevenLabs API Key
+                    </label>
+                    <input
+                      type="password"
+                      value={elevenlabsApiKey}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setElevenlabsApiKey(val);
+                        triggerSave({ elevenlabsApiKey: val });
+                      }}
+                      placeholder="Masukkan Kunci API ElevenLabs Anda (xi-api-key...)"
+                      className="w-full bg-[#121214] border border-zinc-800 focus:border-sky-500 rounded-xl px-3.5 py-2.5 text-zinc-200 text-[11.5px] focus:outline-none transition-all placeholder-zinc-650"
+                    />
+                    <p className="text-[9.5px] text-zinc-500 leading-normal pl-0.5">
+                      Kunci API disimpan dengan aman di penyimpanan lokal Anda dan disinkronkan ke Firestore.
+                    </p>
+                  </div>
+
+                  {/* Predefined Voice Characters dropdown */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold text-zinc-450 uppercase tracking-widest pl-0.5">
+                        Karakter Suara ElevenLabs
+                      </label>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setActiveDropdownId(activeDropdownId === "el-voice" ? null : "el-voice")}
+                          className="bg-[#242426] hover:bg-[#2b2b2d] text-zinc-200 border border-zinc-800 text-[11px] font-semibold rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-1.5 cursor-pointer w-full text-left transition-all"
+                        >
+                          <span className="truncate">
+                            {PRESET_VOICES.find(v => v.id === elevenlabsVoiceId)?.name || "Maria AI (Bella)"}
+                          </span>
+                          <ChevronDown className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                        </button>
+                        {activeDropdownId === "el-voice" && (
+                          <>
+                            <div className="fixed inset-0 z-40 cursor-default" onClick={() => setActiveDropdownId(null)} />
+                            <div className="absolute left-0 right-0 top-11 bg-[#212123] border border-zinc-800 shadow-2xl rounded-xl py-1 z-50 text-[11px] text-zinc-300 max-h-56 overflow-y-auto divide-y divide-zinc-850">
+                              {PRESET_VOICES.map((v) => (
+                                <button
+                                  key={v.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setElevenlabsVoiceId(v.id);
+                                    triggerSave({ elevenlabsVoiceId: v.id });
+                                    setActiveDropdownId(null);
+                                  }}
+                                  className="w-full px-3 py-2.5 text-left hover:bg-zinc-800 flex flex-col justify-start transition-colors cursor-pointer group"
+                                >
+                                  <div className="flex items-center justify-between w-full">
+                                    <span className="font-bold text-zinc-200 group-hover:text-white">{v.name}</span>
+                                    {elevenlabsVoiceId === v.id && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()}`} />}
+                                  </div>
+                                  <span className="text-[9px] text-zinc-500 mt-0.5 leading-normal">{v.description}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Predefined Voice Models dropdown */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold text-zinc-450 uppercase tracking-widest pl-0.5">
+                        Model Suara (Voice Model)
+                      </label>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setActiveDropdownId(activeDropdownId === "el-model" ? null : "el-model")}
+                          className="bg-[#242426] hover:bg-[#2b2b2d] text-zinc-200 border border-zinc-800 text-[11px] font-semibold rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-1.5 cursor-pointer w-full text-left transition-all"
+                        >
+                          <span className="truncate">
+                            {PRESET_MODELS.find(m => m.id === elevenlabsVoiceModel)?.name || "Eleven Flash v2.5"}
+                          </span>
+                          <ChevronDown className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                        </button>
+                        {activeDropdownId === "el-model" && (
+                          <>
+                            <div className="fixed inset-0 z-40 cursor-default" onClick={() => setActiveDropdownId(null)} />
+                            <div className="absolute left-0 right-0 top-11 bg-[#212123] border border-zinc-800 shadow-2xl rounded-xl py-1 z-50 text-[11px] text-zinc-300 max-h-56 overflow-y-auto divide-y divide-zinc-850">
+                              {PRESET_MODELS.map((m) => (
+                                <button
+                                  key={m.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setElevenlabsVoiceModel(m.id);
+                                    triggerSave({ elevenlabsVoiceModel: m.id });
+                                    setActiveDropdownId(null);
+                                  }}
+                                  className="w-full px-3 py-2.5 text-left hover:bg-zinc-800 flex flex-col justify-start transition-colors cursor-pointer group"
+                                >
+                                  <div className="flex items-center justify-between w-full">
+                                    <span className="font-bold text-zinc-200 group-hover:text-white">{m.name}</span>
+                                    {elevenlabsVoiceModel === m.id && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()}`} />}
+                                  </div>
+                                  <span className="text-[9px] text-zinc-500 mt-0.5 leading-normal">{m.description}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Optional Custom Voice ID Input */}
+                  {elevenlabsVoiceId === "custom" && (
+                    <div className="space-y-1.5 animate-fade-in text-left">
+                      <label className="block text-[10px] font-bold text-zinc-450 uppercase tracking-widest pl-0.5">
+                        Kustom ElevenLabs Voice ID
+                      </label>
+                      <input
+                        type="text"
+                        value={elevenlabsCustomVoiceId}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setElevenlabsCustomVoiceId(val);
+                          triggerSave({ elevenlabsCustomVoiceId: val });
+                        }}
+                        placeholder="contoh: EXAVITQu4vr4xnSDxMaL"
+                        className="w-full bg-[#121214] border border-zinc-800 focus:border-sky-500 rounded-xl px-3.5 py-2.5 text-zinc-200 text-[11.5px] focus:outline-none transition-all placeholder-zinc-650 font-mono"
+                      />
+                      <p className="text-[9.5px] text-zinc-500 leading-normal pl-0.5">
+                        Masukkan ID suara ElevenLabs kustom Anda yang telah dilatih atau dikloning di situs ElevenLabs.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
           </div>

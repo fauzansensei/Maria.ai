@@ -19,6 +19,11 @@ export const DEFAULT_SETTINGS: UserSettings = {
     statusUpdates: true,
     remindersEnabled: true,
   },
+  elevenlabsApiKey: "",
+  elevenlabsVoiceId: "EXAVITQu4vr4xnSDxMaL",
+  elevenlabsVoiceModel: "eleven_flash_v2_5",
+  elevenlabsCustomVoiceId: "",
+  voiceEnabled: false,
 };
 
 export const PROMPT_STARTERS: PromptStarter[] = [

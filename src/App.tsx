@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Message, UserSettings, AppNotification, ChatThread, AppTheme } from "./types";
 import { DEFAULT_SETTINGS, THEME_OPTIONS } from "./constants";
+import { generateSpeech, playAudioBlob, stopSpeech } from "./services/elevenLabsService";
 
 import type { DiscoveryAgent } from "./components/DiscoverArea";
 import { 
@@ -277,6 +278,32 @@ export default function App() {
     }, 1500);
   };
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+
+  const speakMessage = (text: string) => {
+    const keyToUse = settings?.elevenlabsApiKey?.trim() || "";
+    if (!settings?.voiceEnabled || !keyToUse || !text) return;
+    
+    stopSpeech();
+    setIsPlayingAudio(true);
+    
+    const voiceId = settings?.elevenlabsVoiceId === "custom" 
+      ? settings?.elevenlabsCustomVoiceId 
+      : settings?.elevenlabsVoiceId;
+
+    generateSpeech(text, keyToUse, voiceId, settings?.elevenlabsVoiceModel)
+      .then(playAudioBlob)
+      .then(() => setIsPlayingAudio(false))
+      .catch((err) => {
+        console.error("Gagal memutar audio dari ElevenLabs:", err);
+        setIsPlayingAudio(false);
+        handleAddSystemNotification(
+          "Gangguan Suara",
+          "Gagal memutar suara dari ElevenLabs. Periksa kecocokan API Key atau koneksi Anda.",
+          "info"
+        );
+      });
+  };
 
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -966,6 +993,9 @@ export default function App() {
           setMessages((prev) => [...prev, assistantMsg]);
         }
         
+        // Render speak output if configured
+        speakMessage(assistantMsg.content);
+
         // Notify user about incoming answer
         handleAddSystemNotification(
           "Respons Baru dari Maria", 
@@ -1097,6 +1127,9 @@ export default function App() {
         } else {
           setMessages((prev) => [...prev, assistantMsg]);
         }
+
+        // Render speak output if configured
+        speakMessage(assistantMsg.content);
 
         handleAddSystemNotification(
           "Respons Baru dari Maria",
@@ -1242,6 +1275,9 @@ export default function App() {
         } else {
           setMessages((prev) => [...prev, assistantMsg]);
         }
+
+        // Render speak output if configured
+        speakMessage(assistantMsg.content);
 
         handleAddSystemNotification(
           "Pesan Diperbarui",
@@ -1638,6 +1674,9 @@ export default function App() {
               pendingPrompt={pendingPrompt}
               onClearPendingPrompt={() => setPendingPrompt(null)}
               isPlus={isPlus}
+              speakMessage={speakMessage}
+              isPlayingAudio={isPlayingAudio}
+              stopSpeech={stopSpeech}
             />
           )}
 

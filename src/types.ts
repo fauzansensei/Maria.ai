@@ -23,6 +23,11 @@ export interface UserSettings {
   theme: AppTheme;
   widgets: WidgetLayout[];
   notifications: NotificationPreferences;
+  elevenlabsApiKey?: string;
+  elevenlabsVoiceId?: string;
+  elevenlabsVoiceModel?: string;
+  elevenlabsCustomVoiceId?: string;
+  voiceEnabled?: boolean;
 }
 
 export interface Message {
