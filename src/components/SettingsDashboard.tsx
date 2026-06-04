@@ -363,6 +363,11 @@ export default function SettingsDashboard({
   const playFallbackChime = (isAnime: boolean) => {
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (audioCtx.state === "suspended") {
+        audioCtx.close();
+        setIsPlayingAudio(false);
+        return;
+      }
       if (isAnime) {
         const osc1 = audioCtx.createOscillator();
         const osc2 = audioCtx.createOscillator();

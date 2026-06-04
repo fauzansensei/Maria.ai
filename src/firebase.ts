@@ -10,8 +10,20 @@ function getActiveFirebaseConfig() {
       const saved = window.localStorage.getItem('maria_custom_firebase_config');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed && parsed.projectId && parsed.apiKey) {
+        if (
+          parsed &&
+          parsed.projectId &&
+          parsed.projectId.trim() !== "" &&
+          parsed.projectId !== "PROJECT_ID" &&
+          parsed.apiKey &&
+          parsed.apiKey.trim() !== "" &&
+          parsed.apiKey !== "SALIN_API_KEY_ANDA_DI_SINI" &&
+          !parsed.apiKey.includes("SALIN_")
+        ) {
           return parsed;
+        } else {
+          // Clean up invalid placeholder or corrupted configuration
+          window.localStorage.removeItem('maria_custom_firebase_config');
         }
       }
     }
