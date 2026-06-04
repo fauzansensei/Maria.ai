@@ -247,7 +247,7 @@ export default function LibraryArea({
     <div className="w-full h-full flex flex-col bg-[#0b0c0f] text-slate-200 select-none overflow-hidden border-l border-[#1e2025]">
       
       {/* Header Bar */}
-      <div className="px-6 py-4 border-b border-[#1c1d24] bg-[#0b0c0f]/90 backdrop-blur-md flex items-center justify-between z-10 shrink-0">
+      <div className="px-6 py-4 border-b border-[#1c1d24] bg-[#0b0c0f] flex items-center justify-between z-10 shrink-0">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -521,7 +521,7 @@ export default function LibraryArea({
               >
                 <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
                   <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
                     {editingPromptId ? "Ubah Formula Prompt Anda" : "Buat Formula Prompt Baru"}
                   </h4>
                   <button
@@ -596,7 +596,7 @@ export default function LibraryArea({
             {myPrompts.length === 0 ? (
               <div className="py-20 text-center space-y-3 mx-auto max-w-sm">
                 <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-500">
-                  <Sparkles className="w-5 h-5 animate-pulse" />
+                  <Sparkles className="w-5 h-5" />
                 </div>
                 <div className="space-y-1">
                   <h4 className="text-xs font-bold text-white">Belum Ada Formula Prompt</h4>

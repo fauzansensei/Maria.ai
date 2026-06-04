@@ -823,16 +823,16 @@ export default function ChatArea({
       <div className="flex-1 flex flex-col h-full bg-white relative overflow-hidden">
         
         {/* Dynamic Theme Banner Header */}
-        <div className="sticky top-0 z-30 w-full flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-xs shrink-0">
+        <div className="sticky top-0 z-30 w-full flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-200 bg-white shadow-xs shrink-0">
           <div className="flex items-center gap-3">
 
             <div className="relative">
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-display font-bold shadow-sm select-none bg-gradient-to-tr ${themeStyle.bgGradient}`}>
-                <svg className="w-5 h-5 text-white animate-pulse-slow" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg className="w-5 h-5 text-white" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M16 6C16 10.5 14.5 13.5 11.5 15C8.5 16.5 6 16.5 6 16.5C6 16.5 8.5 16.5 11.5 18C14.5 19.5 16 22.5 16 27C16 22.5 17.5 19.5 20.5 18C23.5 16.5 26 16.5 26 16.5C26 16.5 23.5 16.5 20.5 15C17.5 13.5 16 10.5 16 6Z" fill="currentColor"/>
                 </svg>
               </div>
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-white animate-pulse"></span>
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-white"></span>
             </div>
 
             <div>
@@ -842,7 +842,7 @@ export default function ChatArea({
                 </h1>
                 {isPlus ? (
                   <span className="text-[9px] px-1.5 py-0.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold rounded uppercase tracking-wider flex items-center gap-1 shadow-xs">
-                    <Sparkles className="w-2.5 h-2.5 animate-pulse-slow font-bold" /> Plus
+                    <Sparkles className="w-2.5 h-2.5 font-bold" /> Plus
                   </span>
                 ) : (
                   <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 text-slate-800 font-bold rounded uppercase tracking-wider border border-slate-200">

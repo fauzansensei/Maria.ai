@@ -2314,7 +2314,7 @@ export default function App() {
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             {/* Blurred Backdrop */}
             <div 
-              className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity animate-fade-in"
+              className="fixed inset-0 bg-black/80 backdrop-blur-xs transition-opacity animate-fade-in"
               onClick={() => setSimulatedEmail(null)}
             />
             

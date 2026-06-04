@@ -2439,7 +2439,7 @@ export default function SettingsDashboard({
       {/* Persistent Save Status Notification Banner */}
       {saveBannerText && (
         <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-xl backdrop-blur-xs text-[10.5px] font-semibold text-white shadow-xl flex items-center gap-1.5 animate-fade-in z-50 ${getAccentBgClass()}`}>
-          <Info className="w-3.5 h-3.5 shrink-0 animate-bounce" />
+          <Info className="w-3.5 h-3.5 shrink-0" />
           <span>{saveBannerText}</span>
         </div>
       )}

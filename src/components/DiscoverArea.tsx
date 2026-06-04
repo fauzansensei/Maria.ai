@@ -191,7 +191,7 @@ export default function DiscoverArea({
   return (
     <div className="w-full h-full flex flex-col bg-[#0b0c0f] text-slate-200 select-none overflow-hidden border-l border-[#1e2025]">
       {/* Header Sticky Bar */}
-      <div className="px-6 py-4 border-b border-[#1c1d24] bg-[#0b0c0f]/90 backdrop-blur-md flex items-center justify-between z-10 shrink-0">
+      <div className="px-6 py-4 border-b border-[#1c1d24] bg-[#0b0c0f] flex items-center justify-between z-10 shrink-0">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -203,7 +203,7 @@ export default function DiscoverArea({
           </button>
           <div>
             <h1 className="text-sm font-bold text-white flex items-center gap-2 font-display">
-              <Compass className="w-4 h-4 text-emerald-400 animate-spin-slow" />
+              <Compass className="w-4 h-4 text-emerald-400" />
               Eksplorasi Discover Hub
             </h1>
             <p className="text-[10px] text-slate-400">
@@ -225,10 +225,10 @@ export default function DiscoverArea({
         {/* Banner Hero */}
         <div className={`relative p-6 rounded-2xl bg-gradient-to-r ${currentTheme.bgGradient} overflow-hidden shadow-2xl`}>
           {/* Backdrop spark */}
-          <div className="absolute top-[-50px] right-[-50px] w-48 h-48 bg-white/10 rounded-full blur-3xl animate-pulse-slow" />
+          <div className="absolute top-[-50px] right-[-50px] w-48 h-48 bg-white/10 rounded-full blur-3xl" />
           <div className="relative z-10 space-y-2">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-950/40 text-[9px] font-bold text-white uppercase tracking-wider">
-              <Sparkles className="w-3 h-3 text-amber-300 animate-pulse" />
+              <Sparkles className="w-3 h-3 text-amber-300" />
               Sistem Agen Maria AI Berakar
             </span>
             <h2 className="text-lg sm:text-xl font-display font-black text-white leading-tight">
@@ -332,7 +332,7 @@ export default function DiscoverArea({
         <div className="space-y-4">
           <div className="space-y-0.5 border-b border-[#1c1d24] pb-3">
             <h3 className="text-xs font-bold text-white flex items-center gap-2">
-              <Flame className="w-4 h-4 text-amber-500 animate-pulse" />
+              <Flame className="w-4 h-4 text-amber-500" />
               Galeri Prompt Populer Kunci Sukses
             </h3>
             <p className="text-[10px] text-slate-400">Salin dan pakai formula teks perintah siap pakai di bawah ini secara instan.</p>

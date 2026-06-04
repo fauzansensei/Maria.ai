@@ -212,7 +212,7 @@ export default function WidgetsList({
         return (
           <div key={widget.id} className="p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-3">
             <div className="flex items-center gap-2 text-slate-700 font-sans border-b border-slate-100 pb-2">
-              <Cpu className="w-4 h-4 text-emerald-600 animate-pulse" />
+              <Cpu className="w-4 h-4 text-emerald-600" />
               <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
                 Kinerja Layanan Maria AI
               </h4>

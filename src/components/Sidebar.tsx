@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
 import { 
   MessageSquare, 
   BookOpen, 
@@ -259,7 +258,7 @@ export default function Sidebar({
           <div className="flex items-center gap-2.5">
             {/* Glowing Star Logo */}
             <div className={`w-8 h-8 rounded-xl bg-gradient-to-tr ${currentTheme.bgGradient} flex items-center justify-center shadow-[0_0_15px_rgba(59,130,246,0.35)]`}>
-              <svg className="w-5 h-5 text-white animate-pulse-slow" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg className="w-5 h-5 text-white" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M16 6C16 10.5 14.5 13.5 11.5 15C8.5 16.5 6 16.5 6 16.5C6 16.5 8.5 16.5 11.5 18C14.5 19.5 16 22.5 16 27C16 22.5 17.5 19.5 20.5 18C23.5 16.5 26 16.5 26 16.5C26 16.5 23.5 16.5 20.5 15C17.5 13.5 16 10.5 16 6Z" fill="currentColor"/>
               </svg>
             </div>
@@ -589,7 +588,7 @@ export default function Sidebar({
               /* Promo Plus Card exactly like Screenshot 1 */
               <div className="p-4 rounded-xl bg-[#15171d] border border-slate-800/80 hover:border-slate-800 transition-colors shadow-inner flex flex-col gap-2.5">
                 <div className="flex items-start gap-2.5">
-                  <div className="p-1 rounded-md bg-blue-500/10 mt-0.5 shrink-0 animate-pulse-slow">
+                  <div className="p-1 rounded-md bg-blue-500/10 mt-0.5 shrink-0">
                     <Sparkles className="w-4 h-4 text-blue-400 font-bold" />
                   </div>
                   <div>
@@ -684,23 +683,16 @@ export default function Sidebar({
       </div>
 
       {/* RENDER PREMIUM ANMATED MODAL: PROMOTIONAL PRICING SUITE */}
-      <AnimatePresence>
-        {showUpgradeModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowUpgradeModal(false)}
-              className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm"
-            />
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            onClick={() => setShowUpgradeModal(false)}
+            className="absolute inset-0 bg-slate-950/85 backdrop-blur-xs animate-fade-in"
+          />
 
-            <motion.div
-              initial={{ scale: 0.95, y: 15, opacity: 0 }}
-              animate={{ scale: 1, y: 0, opacity: 1 }}
-              exit={{ scale: 0.95, y: 15, opacity: 0 }}
-              className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl p-6 shadow-2xl relative z-10 overflow-hidden select-none font-sans text-slate-300"
-            >
+          <div
+            className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl p-6 shadow-2xl relative z-10 overflow-hidden select-none font-sans text-slate-300 animate-fade-in"
+          >
               {/* Absolut Star spark backgrounds decoration */}
               <div className="absolute top-[-30px] right-[-35px] w-32 h-32 bg-blue-500/10 rounded-full blur-2xl" />
               <div className="absolute bottom-[-10px] left-[-20px] w-24 h-24 bg-purple-500/10 rounded-full blur-xl" />
@@ -929,10 +921,9 @@ export default function Sidebar({
                   </span>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         )}
-      </AnimatePresence>
     </>
   );
 }
