@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Message, UserSettings, AppNotification, ChatThread, AppTheme } from "./types";
 import { DEFAULT_SETTINGS, THEME_OPTIONS } from "./constants";
-import { generateSpeech, playAudioBlob } from "./services/elevenLabsService";
+
 import type { DiscoveryAgent } from "./components/DiscoverArea";
 import { 
   auth, 
@@ -277,28 +277,7 @@ export default function App() {
     }, 1500);
   };
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
-  const [elevenlabsApiKey, setElevenlabsApiKey] = useState<string>(() => {
-    return localStorage.getItem("elevenlabs_api_key") || (import.meta as any).env?.VITE_ELEVENLABS_API_KEY || "";
-  });
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
-  const speakMessage = (text: string) => {
-    const keyToUse = elevenlabsApiKey.trim() || (import.meta as any).env?.VITE_ELEVENLABS_API_KEY || "";
-    if (!keyToUse || !text) return;
-    setIsPlayingAudio(true);
-    generateSpeech(text, keyToUse)
-      .then(playAudioBlob)
-      .then(() => setIsPlayingAudio(false))
-      .catch((err) => {
-        console.error("Gagal memutar audio dari ElevenLabs:", err);
-        setIsPlayingAudio(false);
-        handleAddSystemNotification(
-          "Gangguan Suara",
-          "Gagal memutar suara dari ElevenLabs. Cek kecocokan API Key Anda.",
-          "info"
-        );
-      });
-  };
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [threads, setThreads] = useState<ChatThread[]>([]);
@@ -987,9 +966,6 @@ export default function App() {
           setMessages((prev) => [...prev, assistantMsg]);
         }
         
-        // Speak message using ElevenLabs Text-to-Speech
-        speakMessage(assistantMsg.content);
-
         // Notify user about incoming answer
         handleAddSystemNotification(
           "Respons Baru dari Maria", 
@@ -1121,9 +1097,6 @@ export default function App() {
         } else {
           setMessages((prev) => [...prev, assistantMsg]);
         }
-
-        // Speak message using ElevenLabs Text-to-Speech
-        speakMessage(assistantMsg.content);
 
         handleAddSystemNotification(
           "Respons Baru dari Maria",
@@ -1269,9 +1242,6 @@ export default function App() {
         } else {
           setMessages((prev) => [...prev, assistantMsg]);
         }
-
-        // Speak message using ElevenLabs Text-to-Speech
-        speakMessage(assistantMsg.content);
 
         handleAddSystemNotification(
           "Pesan Diperbarui",
@@ -1960,25 +1930,6 @@ export default function App() {
                         />
                       </div>
 
-                      {/* Kunci API ElevenLabs (Text-to-Speech) */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between items-center pr-1">
-                          <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider pl-1 font-sans">
-                            ElevenLabs API Key
-                          </label>
-                          <span className="text-[9.5px] font-sans font-medium text-slate-400 italic">
-                            Untuk Suara Maria AI
-                          </span>
-                        </div>
-                        <input
-                          type="password"
-                          value={elevenlabsApiKey}
-                          onChange={(e) => setElevenlabsApiKey(e.target.value)}
-                          placeholder="xi-api-key..."
-                          className="w-full bg-[#12151b] border border-slate-800 focus:border-emerald-500 rounded-xl px-3.5 py-2.5 text-white text-[12.5px] focus:outline-hidden transition-all placeholder-slate-600 font-mono"
-                        />
-                      </div>
-
                       {/* Note about group chats */}
                       <p className="text-[10.5px] text-slate-300 font-medium leading-normal pl-0.5 pt-0.5 select-none font-sans">
                         Profil Anda membantu orang mengenali Anda di obrolan grup.
@@ -2027,13 +1978,6 @@ export default function App() {
                           username: finalDisplayName
                         };
                         setSettings(updatedSettings);
-
-                        // Save ElevenLabs API Key in localStorage
-                        if (elevenlabsApiKey.trim()) {
-                          localStorage.setItem("elevenlabs_api_key", elevenlabsApiKey.trim());
-                        } else {
-                          localStorage.removeItem("elevenlabs_api_key");
-                        }
 
                         if (isLoggedIn && auth.currentUser) {
                           const userRef = doc(db, "users", auth.currentUser.uid);
@@ -2085,13 +2029,13 @@ export default function App() {
                       </p>
                     </div>
 
-                    {/* Button exactly like Image 3 */}
-                    <div className="w-full flex flex-col gap-3.5 items-center justify-center pt-2">
+                    {/* Google Login choices with clean responsive design */}
+                    <div className="w-full flex flex-col gap-3 items-center justify-center pt-2">
                       <button
                         type="button"
                         disabled={isAuthenticating}
                         onClick={handleGoogleSignInDirect}
-                        className="w-full max-w-[280px] h-11 flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-[13px] font-sans font-medium border border-[#cbd5e1] hover:border-[#94a3b8] rounded-lg transition-all shadow-md active:scale-975 cursor-pointer disabled:opacity-50"
+                        className="w-full max-w-[280px] h-11 flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-[13px] font-sans font-semibold border border-[#cbd5e1] hover:border-[#94a3b8] rounded-xl transition-all shadow-md active:scale-975 cursor-pointer disabled:opacity-50"
                       >
                         <div className="w-[18px] h-[18px] select-none shrink-0 flex items-center justify-center">
                           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-[18px] h-[18px]">
@@ -2101,10 +2045,16 @@ export default function App() {
                             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.08l3.66 2.82c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
                           </svg>
                         </div>
-                        <span>Sign in with Google</span>
+                        <span>Login dengan Google Pop-up</span>
                       </button>
 
-                      {/* Redirect alternative exactly as backup strategy */}
+                      <div className="flex items-center gap-2 w-full max-w-[280px]">
+                        <span className="h-px bg-slate-800 flex-1"></span>
+                        <span className="text-[10px] text-slate-500 font-sans uppercase font-bold tracking-wider">Atau</span>
+                        <span className="h-px bg-slate-800 flex-1"></span>
+                      </div>
+
+                      {/* Redirect Method - Highly visible and stylized for absolute popup block bypass */}
                       <button
                         type="button"
                         disabled={isAuthenticating}
@@ -2123,9 +2073,14 @@ export default function App() {
                             setIsAuthenticating(false);
                           }
                         }}
-                        className="w-full max-w-[280px] flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-755 text-emerald-400 border border-emerald-500/20 hover:border-emerald-500/40 font-bold py-2.5 px-4 rounded-xl transition-all shadow-md active:scale-975 cursor-pointer disabled:opacity-50 text-[11px]"
+                        className="w-full max-w-[280px] h-11 flex items-center justify-center gap-3 bg-slate-900 hover:bg-slate-850 text-emerald-400 font-sans font-semibold border border-emerald-500/20 hover:border-emerald-500/40 rounded-xl transition-all shadow-md active:scale-975 cursor-pointer disabled:opacity-50 text-[13px]"
                       >
-                        <span>Metode Pengalihan (Redirect)</span>
+                        <div className="w-5 h-5 flex items-center justify-center text-emerald-400">
+                          <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                          </svg>
+                        </div>
+                        <span>Login dengan Pengalihan (Redirect)</span>
                       </button>
                     </div>
 
@@ -2223,13 +2178,14 @@ export default function App() {
                         <p>
                           💡 Anda berada dalam viewport frame editor preview. Jalankan di Tab Baru agar Google Sign-In bebas hambatan:
                         </p>
-                        <button
-                          type="button"
-                          onClick={() => { window.open(window.location.href, "_blank"); }}
-                          className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-1.5 px-3 rounded-lg text-[9px] uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1"
+                        <a
+                          href={window.location.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full bg-emerald-500 hover:bg-emerald-605 text-slate-950 font-bold py-2 px-3 rounded-lg text-[9px] uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1 text-center decoration-none"
                         >
                           🚀 Buka Aplikasi di Tab Baru
-                        </button>
+                        </a>
                       </div>
                     )}
 
