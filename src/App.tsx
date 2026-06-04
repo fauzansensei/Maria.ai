@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Message, UserSettings, AppNotification, ChatThread, AppTheme } from "./types";
 import { DEFAULT_SETTINGS, THEME_OPTIONS } from "./constants";
+import { generateSpeech, playAudioBlob } from "./services/elevenLabsService";
 import type { DiscoveryAgent } from "./components/DiscoverArea";
 import { 
   auth, 
@@ -276,6 +277,29 @@ export default function App() {
     }, 1500);
   };
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
+  const [elevenlabsApiKey, setElevenlabsApiKey] = useState<string>(() => {
+    return localStorage.getItem("elevenlabs_api_key") || (import.meta as any).env?.VITE_ELEVENLABS_API_KEY || "";
+  });
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+
+  const speakMessage = (text: string) => {
+    const keyToUse = elevenlabsApiKey.trim() || (import.meta as any).env?.VITE_ELEVENLABS_API_KEY || "";
+    if (!keyToUse || !text) return;
+    setIsPlayingAudio(true);
+    generateSpeech(text, keyToUse)
+      .then(playAudioBlob)
+      .then(() => setIsPlayingAudio(false))
+      .catch((err) => {
+        console.error("Gagal memutar audio dari ElevenLabs:", err);
+        setIsPlayingAudio(false);
+        handleAddSystemNotification(
+          "Gangguan Suara",
+          "Gagal memutar suara dari ElevenLabs. Cek kecocokan API Key Anda.",
+          "info"
+        );
+      });
+  };
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string>("");
@@ -963,6 +987,9 @@ export default function App() {
           setMessages((prev) => [...prev, assistantMsg]);
         }
         
+        // Speak message using ElevenLabs Text-to-Speech
+        speakMessage(assistantMsg.content);
+
         // Notify user about incoming answer
         handleAddSystemNotification(
           "Respons Baru dari Maria", 
@@ -1094,6 +1121,9 @@ export default function App() {
         } else {
           setMessages((prev) => [...prev, assistantMsg]);
         }
+
+        // Speak message using ElevenLabs Text-to-Speech
+        speakMessage(assistantMsg.content);
 
         handleAddSystemNotification(
           "Respons Baru dari Maria",
@@ -1239,6 +1269,9 @@ export default function App() {
         } else {
           setMessages((prev) => [...prev, assistantMsg]);
         }
+
+        // Speak message using ElevenLabs Text-to-Speech
+        speakMessage(assistantMsg.content);
 
         handleAddSystemNotification(
           "Pesan Diperbarui",
@@ -1927,6 +1960,25 @@ export default function App() {
                         />
                       </div>
 
+                      {/* Kunci API ElevenLabs (Text-to-Speech) */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center pr-1">
+                          <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider pl-1 font-sans">
+                            ElevenLabs API Key
+                          </label>
+                          <span className="text-[9.5px] font-sans font-medium text-slate-400 italic">
+                            Untuk Suara Maria AI
+                          </span>
+                        </div>
+                        <input
+                          type="password"
+                          value={elevenlabsApiKey}
+                          onChange={(e) => setElevenlabsApiKey(e.target.value)}
+                          placeholder="xi-api-key..."
+                          className="w-full bg-[#12151b] border border-slate-800 focus:border-emerald-500 rounded-xl px-3.5 py-2.5 text-white text-[12.5px] focus:outline-hidden transition-all placeholder-slate-600 font-mono"
+                        />
+                      </div>
+
                       {/* Note about group chats */}
                       <p className="text-[10.5px] text-slate-300 font-medium leading-normal pl-0.5 pt-0.5 select-none font-sans">
                         Profil Anda membantu orang mengenali Anda di obrolan grup.
@@ -1975,6 +2027,13 @@ export default function App() {
                           username: finalDisplayName
                         };
                         setSettings(updatedSettings);
+
+                        // Save ElevenLabs API Key in localStorage
+                        if (elevenlabsApiKey.trim()) {
+                          localStorage.setItem("elevenlabs_api_key", elevenlabsApiKey.trim());
+                        } else {
+                          localStorage.removeItem("elevenlabs_api_key");
+                        }
 
                         if (isLoggedIn && auth.currentUser) {
                           const userRef = doc(db, "users", auth.currentUser.uid);
