@@ -1544,7 +1544,7 @@ export default function App() {
   const activeColorTheme = THEME_OPTIONS.find(t => t.value === settings.theme) || THEME_OPTIONS[0];
 
   return (
-    <div className="h-screen w-screen flex flex-col font-sans overflow-hidden bg-slate-50 text-slate-700 select-none">
+    <div className="h-[100dvh] w-screen flex flex-col font-sans overflow-hidden bg-slate-50 text-slate-700 select-none">
       
       {/* Main Layout Container */}
       <div className="flex-grow flex overflow-hidden relative">
