@@ -2047,53 +2047,89 @@ export default function App() {
                 </>
               ) : (
                 <>
-                  <div className="p-5 flex flex-col space-y-4.5 w-full items-center text-center">
+                  <div className="p-5 flex flex-col space-y-4 w-full items-center text-center">
                     
-                    {/* Official colored Google Icon as in image tab / screenshot */}
-                    <div className="w-13 h-13 rounded-2xl bg-white flex items-center justify-center shadow-lg border border-slate-200 shrink-0 select-none mt-2">
-                      <svg className="w-7.5 h-7.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                        <path d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.08H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.92l3.66-2.82z" fill="#FBBC05"/>
-                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.08l3.66 2.82c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-                      </svg>
-                    </div>
-
                     <div className="space-y-1.5 max-w-[280px] select-none">
                       <h4 className="font-sans font-extrabold text-white text-[14.5px] tracking-tight">
-                        Login Resmi Google Account
+                        {isSignUpMode ? "Buat Akun Maria AI" : "Masuk ke Maria AI"}
                       </h4>
-                      <p className="text-[11.5px] text-slate-400 font-medium leading-relaxed font-sans">
-                        Otorisasikan sesi obrolan Anda penuh dengan integrasi Firestore Cloud Database Google.
+                      <p className="text-[11px] text-slate-400 font-medium leading-relaxed font-sans">
+                        {isSignUpMode 
+                          ? "Daftarkan email Anda untuk menyimpan riwayat obrolan dan preferensi asisten."
+                          : "Gunakan kredensial akun Anda atau asuransikan sesi dengan metode pengalihan."
+                        }
                       </p>
                     </div>
 
-                    {/* Google Login choices with clean responsive design */}
-                    <div className="w-full flex flex-col gap-3 items-center justify-center pt-2">
-                      <button
-                        type="button"
-                        disabled={isAuthenticating}
-                        onClick={handleGoogleSignInDirect}
-                        className="w-full max-w-[280px] h-11 flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-[13px] font-sans font-semibold border border-[#cbd5e1] hover:border-[#94a3b8] rounded-xl transition-all shadow-md active:scale-975 cursor-pointer disabled:opacity-50"
-                      >
-                        <div className="w-[18px] h-[18px] select-none shrink-0 flex items-center justify-center">
-                          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-[18px] h-[18px]">
-                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                            <path d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.08H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.92l3.66-2.82z" fill="#FBBC05"/>
-                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.08l3.66 2.82c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-                          </svg>
-                        </div>
-                        <span>Login dengan Google Pop-up</span>
-                      </button>
-
-                      <div className="flex items-center gap-2 w-full max-w-[280px]">
-                        <span className="h-px bg-slate-800 flex-1"></span>
-                        <span className="text-[10px] text-slate-500 font-sans uppercase font-bold tracking-wider">Atau</span>
-                        <span className="h-px bg-slate-800 flex-1"></span>
+                    {/* Email / Password Form (Popup-free desktop safe method) */}
+                    <form onSubmit={handleEmailAuthSubmit} className="w-full max-w-[280px] space-y-3 text-left pt-1">
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1 pl-0.5">
+                          Alamat Email
+                        </label>
+                        <input
+                          type="email"
+                          required
+                          placeholder="nama@email.com"
+                          value={loginEmail}
+                          onChange={(e) => setLoginEmail(e.target.value)}
+                          className="w-full h-9 px-3 bg-slate-950/60 border border-slate-800 rounded-xl text-[12px] text-white focus:outline-none focus:border-emerald-500/50 transition-colors placeholder-slate-650"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1 pl-0.5">
+                          Kata Sandi
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          placeholder="Minimal 6 karakter"
+                          value={loginPassword}
+                          onChange={(e) => setLoginPassword(e.target.value)}
+                          className="w-full h-9 px-3 bg-slate-950/60 border border-slate-800 rounded-xl text-[12px] text-white focus:outline-none focus:border-emerald-500/50 transition-colors placeholder-slate-650"
+                        />
                       </div>
 
-                      {/* Redirect Method - Highly visible and stylized for absolute popup block bypass */}
+                      <button
+                        type="submit"
+                        disabled={isAuthenticating}
+                        className="w-full h-9.5 mt-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-[11.5px] font-sans font-bold rounded-xl transition-all shadow-md active:scale-975 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                      >
+                        {isAuthenticating ? (
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        ) : isSignUpMode ? (
+                          <span>Daftarkan Akun</span>
+                        ) : (
+                          <span>Masuk Akun</span>
+                        )}
+                      </button>
+
+                      <div className="text-center pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsSignUpMode(!isSignUpMode);
+                            setAuthLocalError(null);
+                          }}
+                          className="text-[11px] text-emerald-400 hover:text-emerald-300 font-sans font-semibold transition-colors cursor-pointer"
+                        >
+                          {isSignUpMode ? "Sudah punya akun? Masuk di sini" : "Belum punya akun? Daftar gratis"}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* Divider split */}
+                    <div className="flex items-center gap-2 w-full max-w-[280px]">
+                      <span className="h-px bg-slate-800 flex-1"></span>
+                      <span className="text-[9px] text-slate-500 font-sans uppercase font-bold tracking-wider">Atau</span>
+                      <span className="h-px bg-slate-800 flex-1"></span>
+                    </div>
+
+                    {/* Leftovers (Google Redirect + Guest fallback without any popups) */}
+                    <div className="w-full flex flex-col gap-2.5 items-center justify-center">
+                      
+                      {/* Redirect Mode - Absolute popup block bypass */}
                       <button
                         type="button"
                         disabled={isAuthenticating}
@@ -2112,22 +2148,35 @@ export default function App() {
                             setIsAuthenticating(false);
                           }
                         }}
-                        className="w-full max-w-[280px] h-11 flex items-center justify-center gap-3 bg-slate-900 hover:bg-slate-850 text-emerald-400 font-sans font-semibold border border-emerald-500/20 hover:border-emerald-500/40 rounded-xl transition-all shadow-md active:scale-975 cursor-pointer disabled:opacity-50 text-[13px]"
+                        className="w-full max-w-[280px] h-9.5 flex items-center justify-center gap-2.5 bg-slate-900 hover:bg-slate-850 text-white font-sans font-semibold border border-slate-800 hover:border-slate-700 rounded-xl transition-all shadow-md active:scale-975 cursor-pointer disabled:opacity-50 text-[11.5px]"
                       >
-                        <div className="w-5 h-5 flex items-center justify-center text-emerald-400">
-                          <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                        <div className="w-4 h-4 flex items-center justify-center select-none shrink-0">
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                            <path d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.08H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.92l3.66-2.82z" fill="#FBBC05"/>
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.08l3.66 2.82c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
                           </svg>
                         </div>
-                        <span>Login dengan Pengalihan (Redirect)</span>
+                        <span>Hubungkan Google Account</span>
+                      </button>
+
+                      {/* Guest Sign-in */}
+                      <button
+                        type="button"
+                        disabled={isAuthenticating}
+                        onClick={handleAnonymousAuthSubmit}
+                        className="w-full max-w-[280px] h-9 border border-dashed border-slate-800 bg-[#0d0f13]/25 hover:bg-slate-800/30 text-slate-400 font-sans font-medium hover:text-white rounded-xl transition-all active:scale-975 cursor-pointer disabled:opacity-50 text-[11px]"
+                      >
+                        👤 Coba Tanpa Akun (Guest Account)
                       </button>
                     </div>
 
                     {/* Loader */}
                     {isAuthenticating && (
-                      <div className="text-[10.5px] text-emerald-400 font-bold py-1 select-none flex items-center justify-center gap-2 animate-pulse mt-1">
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        <span>Menghubungkan ke Google Auth...</span>
+                      <div className="text-[10px] text-emerald-400 font-bold py-1 select-none flex items-center justify-center gap-1.5 animate-pulse mt-0.5">
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                        <span>Menghubungkan akun Anda...</span>
                       </div>
                     )}
 

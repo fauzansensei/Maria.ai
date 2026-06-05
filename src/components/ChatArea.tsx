@@ -130,6 +130,7 @@ function getAppSpecs(name: string) {
 function LinkOpenerCard({ 
   name, 
   url, 
+  key,
   messageId, 
   messageTimestamp 
 }: { 
@@ -140,7 +141,6 @@ function LinkOpenerCard({
   messageTimestamp?: string;
 }) {
   const specs = getAppSpecs(name);
-  const [openStatus, setOpenStatus] = useState<string>(""); // "", "opening", "opened", "blocked"
   
   // Format user-friendly displayed URL hostname
   let displayUrl = url;
@@ -155,53 +155,6 @@ function LinkOpenerCard({
 
   // Ensure absolute protocol link target
   const targetHref = url.trim().startsWith("http") ? url.trim() : `https://${url.trim()}`;
-
-  useEffect(() => {
-    if (!targetHref) return;
-
-    // Determine age of message if available to only open fresh newly generated ones
-    let isRecent = true;
-    if (messageTimestamp) {
-      const msgTime = new Date(messageTimestamp).getTime();
-      const diffMs = Date.now() - msgTime;
-      // If the message is older than 20 seconds, we treat it as history and don't automatically trigger pop-up
-      if (diffMs > 20000) {
-        isRecent = false;
-      }
-    }
-
-    if (!isRecent) return;
-
-    // Check if loaded in this session to prevent duplicate popups during re-renders
-    const lockKey = `auto_opened_${messageId || ""}_${targetHref}`;
-    if ((window as any)[lockKey]) {
-      return;
-    }
-
-    // Set lock
-    (window as any)[lockKey] = true;
-    setOpenStatus("opening");
-
-    // Micro-delay to let the browser frame render completely and ensure browser focuses smoothly
-    const timer = setTimeout(() => {
-      try {
-        const newWindow = window.open(targetHref, "_blank");
-        if (newWindow) {
-          setOpenStatus("opened");
-          newWindow.focus();
-        } else {
-          // If browser pop-up blocker took action
-          setOpenStatus("blocked");
-          console.warn("Pop-up blocked automatically redirecting link. User needs to tap launch.");
-        }
-      } catch (err) {
-        setOpenStatus("blocked");
-        console.error(err);
-      }
-    }, 600);
-
-    return () => clearTimeout(timer);
-  }, [targetHref, messageId, messageTimestamp]);
 
   return (
     <div className={`my-3.5 relative overflow-hidden rounded-xl border p-4 shadow-2xs transition-all duration-200 hover:shadow-xs ${specs.colorClass} flex flex-col gap-3 select-none animate-fade-in`}>
@@ -238,33 +191,6 @@ function LinkOpenerCard({
           </a>
         </div>
       </div>
-
-      {/* Auto-open status messaging indicator */}
-      {openStatus && (
-        <div className="pt-2 border-t border-slate-150/50 flex items-center justify-between text-[10px] font-medium text-slate-500">
-          <div className="flex items-center gap-1.5">
-            {openStatus === "opening" && (
-              <>
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-                <span className="font-semibold text-blue-600">Membuka otomatis di tab baru...</span>
-              </>
-            )}
-            {openStatus === "opened" && (
-              <>
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                <span className="font-semibold text-green-700">Berhasil dibuka secara otomatis!</span>
-              </>
-            )}
-            {openStatus === "blocked" && (
-              <>
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                <span className="font-semibold text-amber-600">Pop-up diblokir browser. Silakan klik tombol Luncurkan.</span>
-              </>
-            )}
-          </div>
-          <span className="text-[9px] font-mono text-slate-400 uppercase">Pengarah Cepat</span>
-        </div>
-      )}
     </div>
   );
 }
