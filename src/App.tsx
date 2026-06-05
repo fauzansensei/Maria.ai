@@ -763,7 +763,9 @@ export default function App() {
           timestamp: msgData.timestamp,
           isError: msgData.isError || false,
           isEdited: msgData.isEdited || false,
-          feedback: msgData.feedback || null
+          feedback: msgData.feedback || null,
+          image: msgData.image || undefined,
+          audio: msgData.audio || undefined
         });
       });
       loadedMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -946,7 +948,9 @@ export default function App() {
         timestamp: userMsg.timestamp,
         isError: false,
         isEdited: false,
-        feedback: null
+        feedback: null,
+        ...(userMsg.image ? { image: userMsg.image } : {}),
+        ...(userMsg.audio ? { audio: userMsg.audio } : {})
       }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${currentThreadId}/messages/${userMsg.id}`));
     } else {
       setMessages(postMessages);
@@ -1229,7 +1233,9 @@ export default function App() {
         timestamp: updatedUserMsg.timestamp,
         isError: false,
         isEdited: true,
-        feedback: null
+        feedback: null,
+        ...(updatedUserMsg.image ? { image: updatedUserMsg.image } : {}),
+        ...(updatedUserMsg.audio ? { audio: updatedUserMsg.audio } : {})
       }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${updatedUserMsg.id}`));
     } else {
       setMessages(nextMessages);

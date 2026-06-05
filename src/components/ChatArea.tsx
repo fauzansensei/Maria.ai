@@ -130,7 +130,6 @@ function getAppSpecs(name: string) {
 function LinkOpenerCard({ 
   name, 
   url, 
-  key,
   messageId, 
   messageTimestamp 
 }: { 
