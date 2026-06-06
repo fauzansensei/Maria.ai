@@ -8,6 +8,55 @@
     <!-- Suppress benign local development websocket connection warnings -->
     <script>
       (function() {
+        // Safeguard against browser extensions (AdBlock, Youtube enhancers, Google Translate) overriding the DOM
+        // which causes React's parent-child Node reconciliation to crash (Failed to execute 'removeChild' / 'insertBefore' errors)
+        if (typeof Node !== 'undefined' && Node.prototype) {
+          const originalRemoveChild = Node.prototype.removeChild;
+          Node.prototype.removeChild = function(child) {
+            if (child && child.parentNode !== this) {
+              if (child.parentNode) {
+                try {
+                  return originalRemoveChild.call(child.parentNode, child);
+                } catch (e) {
+                  console.warn('Caught and bypassed failing parentNode removeChild from browser extension.', e);
+                }
+              }
+              return child;
+            }
+            try {
+              return originalRemoveChild.call(this, child);
+            } catch (e) {
+              console.warn('Bypassed error during removeChild:', e);
+              return child;
+            }
+          };
+
+          const originalInsertBefore = Node.prototype.insertBefore;
+          Node.prototype.insertBefore = function(newNode, referenceNode) {
+            if (referenceNode && referenceNode.parentNode !== this) {
+              if (referenceNode.parentNode) {
+                try {
+                  return originalInsertBefore.call(referenceNode.parentNode, newNode, referenceNode);
+                } catch (e) {
+                  console.warn('Caught and bypassed failing parentNode insertBefore from browser extension.', e);
+                }
+              }
+              try {
+                return originalInsertBefore.call(this, newNode, null);
+              } catch (e) {
+                console.warn('Bypassed fallback insertBefore:', e);
+                return newNode;
+              }
+            }
+            try {
+              return originalInsertBefore.call(this, newNode, referenceNode);
+            } catch (e) {
+              console.warn('Bypassed error during insertBefore:', e);
+              return newNode;
+            }
+          };
+        }
+
         // Handle unhandled rejections globally
         window.addEventListener('unhandledrejection', function(event) {
           if (event && event.reason) {
