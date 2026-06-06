@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { UserSettings, MariaTone, LanguageStyle, AppTheme } from "../types";
-import { THEME_OPTIONS } from "../constants";
 import { safeLocalStorageSetItem } from "../utils";
 import { PRESET_VOICES, PRESET_MODELS } from "../services/elevenLabsService";
 import { 
@@ -14,33 +13,15 @@ import {
   Play, 
   Check, 
   ChevronDown, 
-  ChevronUp, 
   Info,
-  ExternalLink,
   Volume2,
   Trash2,
   Mail,
-  Sparkles
+  Sparkles,
+  User,
+  Shield,
+  Palette
 } from "lucide-react";
-
-interface VoiceOption {
-  value: string;
-  label: string;
-  category: "anime" | "non-anime";
-  desc: string;
-}
-
-export const VOICE_OPTIONS: VoiceOption[] = [
-  { value: "Maria", label: "Maria 🎀", category: "anime", desc: "Signature (Karakter Maria)" },
-  { value: "Sarah", label: "Sarah 🍃", category: "anime", desc: "Karakter Sarah" },
-  { value: "Jack", label: "Jack (Jeck) 🎙️", category: "non-anime", desc: "Karakter Jack" }
-];
-
-export const daftarSuara = {
-  Jack: "/audio/NoteJack_Speech_1780061685696.mp3",
-  Maria: "/audio/NoteMaria_Speech_1780061670457.mp3",
-  Sarah: "/audio/NoteSarah_Speech_1780062141697.mp3"
-};
 
 interface SettingsDashboardProps {
   settings: UserSettings;
@@ -55,7 +36,7 @@ interface SettingsDashboardProps {
   setIsPlus?: (val: boolean) => void;
 }
 
-type MenuTab = "umum" | "notifikasi" | "personalisasi" | "aplikasi" | "tagihan" | "kontrol-data";
+type MenuTab = "profile" | "appearance" | "behavior" | "notifications" | "billing" | "privacy";
 
 export default function SettingsDashboard({
   settings,
@@ -69,823 +50,96 @@ export default function SettingsDashboard({
   isPlus = false,
   setIsPlus
 }: SettingsDashboardProps) {
-  const [activeTab, setActiveTab] = useState<MenuTab>("umum");
+  const [activeTab, setActiveTab] = useState<MenuTab>("profile");
 
-  // Load and synchronize states with memory defaults
-  const [appearance, setAppearance] = useState("Gelap");
-  const [contrast, setContrast] = useState("Sistem");
-  const [accentColor, setAccentColor] = useState(() => {
+  // Local state mirroring
+  const [username, setUsername] = useState(settings.username || "Pengguna");
+  const [accentColor, setAccentColor] = useState<string>(() => {
     if (settings.theme === "emerald-green") return "Hijau";
     if (settings.theme === "cosmic-purple") return "Ungu";
     if (settings.theme === "minimal-dark") return "Hitam";
     return "Biru";
   });
-  const [language, setLanguage] = useState("Deteksi otomatis");
-  const [dictationEnabled, setDictationEnabled] = useState(true);
-  const [spokenLanguage, setSpokenLanguage] = useState("Deteksi otomatis");
-  const [voiceVoice, setVoiceVoice] = useState("Maria");
-  const [voiceStreamSplit, setVoiceStreamSplit] = useState(false);
-
+  const [langStyle, setLangStyle] = useState<LanguageStyle>(settings.languageStyle || "Baku");
+  const [toneStyle, setToneStyle] = useState<MariaTone>(settings.tone || "Professional");
+  const [customInstructions, setCustomInstructions] = useState(settings.customPrompt || "");
+  
+  // Voice preferences
+  const [voiceEnabled, setVoiceEnabled] = useState(settings.voiceEnabled || false);
   const [elevenlabsApiKey, setElevenlabsApiKey] = useState(settings.elevenlabsApiKey || "");
   const [elevenlabsVoiceId, setElevenlabsVoiceId] = useState(settings.elevenlabsVoiceId || "EXAVITQu4vr4xnSDxMaL");
   const [elevenlabsVoiceModel, setElevenlabsVoiceModel] = useState(settings.elevenlabsVoiceModel || "eleven_flash_v2_5");
-  const [elevenlabsCustomVoiceId, setElevenlabsCustomVoiceId] = useState(settings.elevenlabsCustomVoiceId || "");
-  const [voiceEnabled, setVoiceEnabled] = useState(settings.voiceEnabled || false);
 
-  // Subscription States
-  const [subPlan, setSubPlan] = useState<"monthly" | "yearly" | "none">(() => {
-    if (typeof window !== "undefined") {
-      const active = localStorage.getItem("maria_is_plus") === "true";
-      if (!active) return "none";
-      const plan = localStorage.getItem("maria_plus_plan") as "monthly" | "yearly";
-      return plan || "monthly";
-    }
-    return "none";
-  });
-
-  const [subPurchaseDate, setSubPurchaseDate] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("maria_plus_purchase_date") || "";
-    }
-    return "";
-  });
-
-  const [subExpiryDate, setSubExpiryDate] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("maria_plus_expiry_date") || "";
-    }
-    return "";
-  });
-
-  // Smart Notification System states
-  const [remindersNotif, setRemindersNotif] = useState<string[]>(["In-App", "Push"]);
-  const [updatesNotif, setUpdatesNotif] = useState<string[]>(["In-App", "Email"]);
-  const [suggestionsNotif, setSuggestionsNotif] = useState<string[]>(["In-App"]);
-
-  // Personalization & Tone Characteristics
-  const [basicToneStyle, setBasicToneStyle] = useState<MariaTone>(settings.tone || "Professional");
-  const [charWarm, setCharWarm] = useState("Default");
-  const [charEnthusiastic, setCharEnthusiastic] = useState("Default");
-  const [charList, setCharList] = useState("Default");
-  const [charEmoji, setCharEmoji] = useState("Default");
-  const [quickAnswers, setQuickAnswers] = useState(true);
-  const [customInstructions, setCustomInstructions] = useState(settings.customPrompt || "");
-  const [userNickname, setUserNickname] = useState(settings.username || "Pengguna");
-  const [userJob, setUserJob] = useState("Designer Interior");
-  const [userBio, setUserBio] = useState("Minat, nilai, atau preferensi yang perlu diingat");
-  const [memSave, setMemSave] = useState(true);
-  const [memRef, setMemRef] = useState(true);
-
-  // Advanced collapsible customization triggers
-  const [isAdvancedExpanded, setIsAdvancedExpanded] = useState(true);
-  const [advWeb, setAdvWeb] = useState(true);
-  const [advCanvas, setAdvCanvas] = useState(true);
-  const [advVoiceChat, setAdvVoiceChat] = useState(true);
-  const [advSmartVoice, setAdvSmartVoice] = useState(true);
-  const [advConnector, setAdvConnector] = useState(true);
-
-  // Controls for interactive drop downs
-  const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
-
-  // Sound play triggered audio synthesis
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
-
-  // Safe voice synthesis active browser engine tracker
-  const [activeEngineName, setActiveEngineName] = useState<string>("");
-
-  const currentAudioRef = React.useRef<HTMLAudioElement | null>(null);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current = null;
-      }
-    };
-  }, []);
-
-  const putarSuaraKarakter = (namaKarakter: string) => {
-    const fileAudio = daftarSuara[namaKarakter as keyof typeof daftarSuara];
-
-    if (fileAudio) {
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current.currentTime = 0;
-      }
-
-      setIsPlayingAudio(true);
-      const audio = new Audio(fileAudio);
-      currentAudioRef.current = audio;
-
-      audio.onended = () => {
-        setIsPlayingAudio(false);
-      };
-
-      audio.onerror = () => {
-        setIsPlayingAudio(false);
-      };
-
-      audio.play().catch(error => {
-        setIsPlayingAudio(false);
-        console.log("Audio gagal berputar otomatis karena aturan browser:", error);
-      });
-    } else {
-      console.log("Karakter suara tidak ditemukan!");
-    }
-  };
-
-  useEffect(() => {
-    if ("speechSynthesis" in window) {
-      const updateEngine = () => {
-        const voices = window.speechSynthesis.getVoices();
-        const selectedVoiceObj = VOICE_OPTIONS.find(v => v.value === voiceVoice) || VOICE_OPTIONS[0];
-        const selectedVoice = selectBrowserVoice(selectedVoiceObj.value, voices);
-        if (selectedVoice) {
-          setActiveEngineName(`${selectedVoice.name} (${selectedVoice.lang})`);
-        } else {
-          setActiveEngineName("Synthesizer Chime");
-        }
-      };
-
-      updateEngine();
-      window.speechSynthesis.onvoiceschanged = updateEngine;
-      return () => {
-        window.speechSynthesis.onvoiceschanged = null;
-      };
-    } else {
-      setActiveEngineName("Synthesizer Chime");
-    }
-  }, [voiceVoice]);
-
-  // Synchronize internal subscription details when isPlus state varies
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const active = localStorage.getItem("maria_is_plus") === "true";
-      if (active) {
-        setSubPlan((localStorage.getItem("maria_plus_plan") as "monthly" | "yearly") || "monthly");
-        setSubPurchaseDate(localStorage.getItem("maria_plus_purchase_date") || new Date().toISOString());
-        setSubExpiryDate(localStorage.getItem("maria_plus_expiry_date") || new Date(Date.now() + 30*24*60*60*1000).toISOString());
-      } else {
-        setSubPlan("none");
-        setSubPurchaseDate("");
-        setSubExpiryDate("");
-      }
-    }
-  }, [isPlus]);
-
-  const formatIndonesianDate = (isoString?: string) => {
-    if (!isoString) return "-";
-    try {
-      const d = new Date(isoString);
-      if (isNaN(d.getTime())) return "-";
-      const months = [
-        "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-        "Juli", "Agustus", "September", "Oktober", "November", "Desember"
-      ];
-      return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()} (${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} WIB)`;
-    } catch (e) {
-      return isoString;
-    }
-  };
-
-  // Dynamic feedback
   const [saveBannerText, setSaveBannerText] = useState<string | null>(null);
+  const [isConfirmingClear, setIsConfirmingClear] = useState(false);
 
-  // Dynamic accent helper styling rules to align with current active chat theme state
-  const getAccentBgClass = (isHover: boolean = false) => {
-    if (accentColor === "Hijau") return isHover ? "bg-emerald-600 hover:bg-emerald-700" : "bg-emerald-500";
-    if (accentColor === "Ungu") return isHover ? "bg-purple-600 hover:bg-purple-700" : "bg-purple-500";
-    if (accentColor === "Hitam") return isHover ? "bg-zinc-200 hover:bg-zinc-300 text-black" : "bg-zinc-100 text-black";
-    if (accentColor === "Kuning") return isHover ? "bg-amber-500 hover:bg-amber-600" : "bg-amber-400";
-    if (accentColor === "Merah jambu") return isHover ? "bg-rose-600 hover:bg-rose-700" : "bg-rose-500";
-    if (accentColor === "Oranye") return isHover ? "bg-orange-500 hover:bg-orange-650" : "bg-orange-500";
-    return isHover ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-500"; // Biru
-  };
+  // Synchronization feedback helper
+  const triggerSave = (updates: Partial<UserSettings> & { accentVal?: string }) => {
+    let targetTheme = settings.theme;
+    const currentAccent = updates.accentVal || accentColor;
+    if (currentAccent === "Hijau") targetTheme = "emerald-green";
+    else if (currentAccent === "Ungu") targetTheme = "cosmic-purple";
+    else if (currentAccent === "Hitam") targetTheme = "minimal-dark";
+    else if (currentAccent === "Biru") targetTheme = "classic-blue";
 
-  const getAccentTextClass = () => {
-    if (accentColor === "Hijau") return "text-emerald-400";
-    if (accentColor === "Ungu") return "text-purple-400";
-    if (accentColor === "Hitam") return "text-zinc-300";
-    if (accentColor === "Kuning") return "text-amber-450";
-    if (accentColor === "Merah jambu") return "text-rose-400";
-    if (accentColor === "Oranye") return "text-orange-400";
-    return "text-blue-400"; // Biru
-  };
-
-  const getAccentBorderClass = () => {
-    if (accentColor === "Hijau") return "border-emerald-500/20";
-    if (accentColor === "Ungu") return "border-purple-500/20";
-    if (accentColor === "Hitam") return "border-zinc-750";
-    if (accentColor === "Kuning") return "border-amber-400/20";
-    if (accentColor === "Merah jambu") return "border-rose-500/20";
-    if (accentColor === "Oranye") return "border-orange-500/20";
-    return "border-blue-500/20"; // Biru
-  };
-
-  const getBadgeClass = () => {
-    if (accentColor === "Hijau") return "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20";
-    if (accentColor === "Ungu") return "bg-purple-500/15 text-purple-400 border border-purple-500/20";
-    if (accentColor === "Hitam") return "bg-zinc-500/15 text-zinc-300 border border-zinc-700";
-    if (accentColor === "Kuning") return "bg-amber-400/15 text-amber-500 border border-amber-400/20";
-    if (accentColor === "Merah jambu") return "bg-rose-500/15 text-rose-400 border border-rose-500/20";
-    if (accentColor === "Oranye") return "bg-orange-500/15 text-orange-450 border border-orange-500/20";
-    return "bg-blue-500/15 text-blue-400 border border-blue-500/20"; // Biru
-  };
-
-  // Propagate all modified states instantly back to parent and triggers autosave
-  const triggerSave = (updates: Partial<UserSettings> & { 
-    appearanceVal?: string, 
-    accentVal?: string,
-    dictationVal?: boolean,
-    langStyle?: LanguageStyle
-  }) => {
-    // Compile full updated configurations
     const updatedSettings: UserSettings = {
-      username: updates.username !== undefined ? updates.username : userNickname,
-      tone: updates.tone !== undefined ? updates.tone : basicToneStyle,
-      languageStyle: updates.langStyle !== undefined ? updates.langStyle : (settings.languageStyle || "Baku"),
+      username: updates.username !== undefined ? updates.username : username,
+      tone: updates.tone !== undefined ? updates.tone : toneStyle,
+      languageStyle: updates.languageStyle !== undefined ? updates.languageStyle : langStyle,
       customPrompt: updates.customPrompt !== undefined ? updates.customPrompt : customInstructions,
-      theme: updates.theme !== undefined ? updates.theme : settings.theme,
+      theme: targetTheme,
       widgets: settings.widgets,
       notifications: {
-        soundEnabled: updates.notifications?.soundEnabled !== undefined ? updates.notifications.soundEnabled : (settings.notifications?.soundEnabled !== false),
+        soundEnabled: settings.notifications?.soundEnabled ?? true,
         statusUpdates: settings.notifications?.statusUpdates ?? true,
         remindersEnabled: settings.notifications?.remindersEnabled ?? true,
       },
       elevenlabsApiKey: updates.elevenlabsApiKey !== undefined ? updates.elevenlabsApiKey : elevenlabsApiKey,
       elevenlabsVoiceId: updates.elevenlabsVoiceId !== undefined ? updates.elevenlabsVoiceId : elevenlabsVoiceId,
       elevenlabsVoiceModel: updates.elevenlabsVoiceModel !== undefined ? updates.elevenlabsVoiceModel : elevenlabsVoiceModel,
-      elevenlabsCustomVoiceId: updates.elevenlabsCustomVoiceId !== undefined ? updates.elevenlabsCustomVoiceId : elevenlabsCustomVoiceId,
       voiceEnabled: updates.voiceEnabled !== undefined ? updates.voiceEnabled : voiceEnabled,
     };
-    
-    // Auto-update theme mapping based on accent color
-    const targetAccent = updates.accentVal || accentColor;
-    if (targetAccent === "Hijau") {
-      updatedSettings.theme = "emerald-green";
-    } else if (targetAccent === "Ungu") {
-      updatedSettings.theme = "cosmic-purple";
-    } else if (targetAccent === "Hitam") {
-      updatedSettings.theme = "minimal-dark";
-    } else {
-      updatedSettings.theme = "classic-blue";
-    }
 
     onSaveSettings(updatedSettings);
 
-    // Flash saving notification
-    setSaveBannerText("Sistem menyinkronkan data...");
-    setTimeout(() => setSaveBannerText(null), 1200);
+    setSaveBannerText("Pengaturan tersimpan & disinkronkan");
+    const t = setTimeout(() => setSaveBannerText(null), 1500);
+    return () => clearTimeout(t);
   };
 
-  const handleToggleValue = (key: string, current: boolean, setter: (v: boolean) => void) => {
-    const next = !current;
-    setter(next);
-    safeLocalStorageSetItem(key, String(next));
-    
-    // If it's a critical app configuration, save it
-    if (key === "maria_dictation") {
-      triggerSave({ dictationVal: next });
-    }
+  const getAccentTextClass = () => {
+    if (accentColor === "Hijau") return "text-emerald-400";
+    if (accentColor === "Ungu") return "text-purple-400";
+    if (accentColor === "Hitam") return "text-zinc-400";
+    return "text-blue-400";
   };
 
-  const handleDropdownSelect = (dropdownKey: string, value: string, setter: (v: string) => void) => {
-    setter(value);
-    safeLocalStorageSetItem(dropdownKey, value);
-    setActiveDropdownId(null);
-
-    if (dropdownKey === "maria_accent_color") {
-      triggerSave({ accentVal: value });
-    }
-
-    if (dropdownKey === "maria_voice") {
-      putarSuaraKarakter(value);
-    }
+  const getAccentBgClass = () => {
+    if (accentColor === "Hijau") return "bg-emerald-500 hover:bg-emerald-600";
+    if (accentColor === "Ungu") return "bg-purple-500 hover:bg-purple-600";
+    if (accentColor === "Hitam") return "bg-zinc-650 hover:bg-zinc-700";
+    return "bg-blue-600 hover:bg-blue-700";
   };
 
-  // Safe tone update triggers
-  const handleToneSelect = (selectedTone: MariaTone) => {
-    setBasicToneStyle(selectedTone);
-    setActiveDropdownId(null);
-    triggerSave({ tone: selectedTone });
+  const getAccentBorderClass = () => {
+    if (accentColor === "Hijau") return "border-emerald-500/20";
+    if (accentColor === "Ungu") return "border-purple-500/20";
+    if (accentColor === "Hitam") return "border-zinc-800";
+    return "border-blue-500/20";
   };
 
-  // Dialogues and voice settings for each premium character
-  const playFallbackChime = (isAnime: boolean) => {
-    try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      if (audioCtx.state === "suspended") {
-        audioCtx.close();
-        setIsPlayingAudio(false);
-        return;
-      }
-      if (isAnime) {
-        const osc1 = audioCtx.createOscillator();
-        const osc2 = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-
-        osc1.type = "sine";
-        osc1.frequency.setValueAtTime(880.00, audioCtx.currentTime); 
-        osc1.frequency.exponentialRampToValueAtTime(1318.51, audioCtx.currentTime + 0.12); 
-
-        osc2.type = "sine";
-        osc2.frequency.setValueAtTime(1046.50, audioCtx.currentTime); 
-        osc2.frequency.exponentialRampToValueAtTime(1567.98, audioCtx.currentTime + 0.15); 
-
-        gainNode.gain.setValueAtTime(0.35, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
-
-        osc1.connect(gainNode);
-        osc2.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-
-        osc1.start();
-        osc2.start();
-
-        setTimeout(() => {
-          osc1.stop();
-          osc2.stop();
-          setIsPlayingAudio(false);
-        }, 650);
-      } else {
-        const osc1 = audioCtx.createOscillator();
-        const osc2 = audioCtx.createOscillator();
-        const osc3 = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-
-        osc1.type = "sine";
-        osc1.frequency.setValueAtTime(523.25, audioCtx.currentTime); 
-        osc1.frequency.exponentialRampToValueAtTime(783.99, audioCtx.currentTime + 0.12); 
-
-        osc2.type = "triangle";
-        osc2.frequency.setValueAtTime(659.25, audioCtx.currentTime); 
-        osc2.frequency.exponentialRampToValueAtTime(880.00, audioCtx.currentTime + 0.15); 
-
-        osc3.type = "sine";
-        osc3.frequency.setValueAtTime(261.63, audioCtx.currentTime); 
-        osc3.frequency.exponentialRampToValueAtTime(523.25, audioCtx.currentTime + 0.2);
-
-        gainNode.gain.setValueAtTime(0.45, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.9);
-
-        osc1.connect(gainNode);
-        osc2.connect(gainNode);
-        osc3.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-
-        osc1.start();
-        osc2.start();
-        osc3.start();
-        
-        setTimeout(() => {
-          osc1.stop();
-          osc2.stop();
-          osc3.stop();
-          setIsPlayingAudio(false);
-        }, 950);
-      }
-    } catch (e) {
-      console.warn("Fallback chime error:", e);
-      setIsPlayingAudio(false);
-    }
-  };
-
-  // Helper matching client browser voices dynamically to provide varied audio outputs
-  const selectBrowserVoice = (voiceKey: string, voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null => {
-    if (!voices || voices.length === 0) return null;
-
-    // Filter by Indonesian language first
-    const idVoices = voices.filter(v => {
-      const l = v.lang.toLowerCase();
-      return l.startsWith("id") || l.startsWith("in");
-    });
-    const jaVoices = voices.filter(v => v.lang.toLowerCase().startsWith("ja"));
-    const enVoices = voices.filter(v => v.lang.toLowerCase().startsWith("en"));
-
-    const femaleKeywords = [
-      "female", "gadis", "damayanti", "samantha", "zira", "hazel", "moira", "karen", "siri", 
-      "susan", "lisa", "sara", "mei", "kyoko", "yuri", "ayumi", "tessa", "veena", "jessica", 
-      "sri", "indri", "kristina", "gigi", "sin-ji", "wanita", "perempuan"
-    ];
-    const maleKeywords = [
-      "male", "pria", "lanang", "andika", "bagus", "david", "george", "ravi", "richard", "mark", 
-      "ichiro", "takashi", "honda", "microsoft david", "google male", "bagas", "indonesia male"
-    ];
-
-    const isFemale = (v: SpeechSynthesisVoice) => {
-      const name = v.name.toLowerCase();
-      return femaleKeywords.some(kw => name.includes(kw)) || (!maleKeywords.some(kw => name.includes(kw)) && (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Android")));
-    };
-
-    const isMale = (v: SpeechSynthesisVoice) => {
-      const name = v.name.toLowerCase();
-      return maleKeywords.some(kw => name.includes(kw)) || name.includes("david") || name.includes("andika") || name.includes("bagas");
-    };
-
-    const idFemales = idVoices.filter(isFemale);
-    const idMales = idVoices.filter(isMale);
-    const idNeutrals = idVoices.filter(v => !isFemale(v) && !isMale(v));
-
-    const enFemales = enVoices.filter(isFemale);
-    const enMales = enVoices.filter(isMale);
-    const enNeutrals = enVoices.filter(v => !isFemale(v) && !isMale(v));
-
-    const jaFemales = jaVoices.filter(isFemale);
-
-    const isAnime = ["Maria", "Aiko", "Haruka", "Sora"].includes(voiceKey);
-
-    if (isAnime) {
-      if (voiceKey === "Sora") {
-        // Sora is a energetic boy character, look for jaMale or idMale
-        const jaMales = jaVoices.filter(isMale);
-        return jaMales[0] || jaVoices[0] || idMales[0] || idNeutrals[0] || voices.find(v => isMale(v)) || voices[0];
-      }
-      // Girls characters (Maria, Aiko, Haruka)
-      if (voiceKey === "Maria") {
-        return jaFemales[0] || jaVoices[0] || idFemales[0] || idNeutrals[0] || enFemales[0] || voices[0];
-      }
-      if (voiceKey === "Aiko") {
-        return jaFemales[1] || jaFemales[0] || idFemales[1] || idFemales[0] || enFemales[0] || voices[0];
-      }
-      if (voiceKey === "Haruka") {
-        return jaFemales[2] || jaFemales[0] || idFemales[2] || idFemales[0] || enFemales[1] || voices[0];
-      }
-      return jaFemales[0] || idFemales[0] || voices[0];
-    } else {
-      const isMaleVoice = ["Spruce", "Cove"].includes(voiceKey);
-      const isFemaleVoice = ["Breeze", "Juniper"].includes(voiceKey);
-
-      if (isMaleVoice) {
-        if (voiceKey === "Spruce") {
-          return idMales[0] || idNeutrals[0] || enMales[0] || voices.find(v => isMale(v)) || voices[0];
-        }
-        if (voiceKey === "Cove") {
-          return idMales[1] || idMales[0] || enMales[1] || enMales[0] || voices.find(v => isMale(v)) || voices[0];
-        }
-        return idMales[0] || voices.find(v => isMale(v)) || voices[0];
-      } else if (isFemaleVoice) {
-        if (voiceKey === "Breeze") {
-          return idFemales[1] || idFemales[0] || enFemales[0] || idNeutrals[0] || voices[0];
-        }
-        if (voiceKey === "Juniper") {
-          return idFemales[2] || idFemales[0] || enFemales[1] || enFemales[0] || voices[0];
-        }
-        return idFemales[0] || voices[0];
-      } else {
-        // Ember (fast, short, dry)
-        return idNeutrals[0] || idMales[0] || enMales[0] || voices[0];
-      }
-    }
-  };
-
-  // Play synthesized bell chime preview or actual Speech Synthesis preview
-  const playVoiceChime = () => {
-    putarSuaraKarakter(voiceVoice);
-    return;
-
-    if (isPlayingAudio) return;
-    setIsPlayingAudio(true);
-
-    const selectedVoiceObj = VOICE_OPTIONS.find(v => v.value === voiceVoice) || VOICE_OPTIONS[0];
-    
-    if ("speechSynthesis" in window) {
-      try {
-        window.speechSynthesis.cancel();
-
-        const voices = window.speechSynthesis.getVoices();
-        const matchedVoice = selectBrowserVoice(selectedVoiceObj.value, voices);
-        const voiceLang = matchedVoice ? matchedVoice.lang.toLowerCase() : "id-id";
-        const isJapanese = voiceLang.startsWith("ja") || voiceLang.startsWith("jp");
-        const isEnglish = voiceLang.startsWith("en");
-
-        // Detect engine capabilities of matched voice
-        const matchedVoiceName = matchedVoice ? matchedVoice.name.toLowerCase() : "";
-        const actualVoiceIsMale = matchedVoiceName.includes("male") || matchedVoiceName.includes("bagas") || matchedVoiceName.includes("andika") || matchedVoiceName.includes("david") || matchedVoiceName.includes("pria");
-        const actualVoiceIsFemale = matchedVoiceName.includes("female") || matchedVoiceName.includes("gadis") || matchedVoiceName.includes("damayanti") || matchedVoiceName.includes("samantha") || matchedVoiceName.includes("zira") || matchedVoiceName.includes("wanita");
-
-        // Custom voice spoken samples
-        const getSampleDetails = (voiceKey: string) => {
-          switch (voiceKey) {
-            case "Maria": {
-              let pitchShift = 1.35;
-              // If browser loaded a male voice instead, pitch up significantly
-              if (actualVoiceIsMale) pitchShift = 1.50; 
-              if (isJapanese) {
-                return {
-                  text: "お疲れ様です！マリアです。私の新しい特別な声はいかがですか？ふふ、今日もよろしくお願いします！",
-                  pitch: pitchShift,
-                  rate: 1.05
-                };
-              } else if (isEnglish) {
-                return {
-                  text: "Hello! I am Maria, your sweet voice companion. How does my new premium voice sound? Let's have an amazing day!",
-                  pitch: pitchShift,
-                  rate: 1.05
-                };
-              } else {
-                return {
-                  text: "Halo kak! Aku Maria, asisten pribadimu. Semoga hari kakak menyenangkan dan penuh dengan kebahagiaan ya!",
-                  pitch: pitchShift,
-                  rate: 1.05
-                };
-              }
-            }
-            case "Aiko": {
-              let pitchShift = 1.55;
-              if (actualVoiceIsMale) pitchShift = 1.65;
-              if (isJapanese) {
-                return {
-                  text: "ヤッホー！愛子だよ！今日も元気一杯に頑張ろうね！エイエイオー！",
-                  pitch: pitchShift,
-                  rate: 1.2
-                };
-              } else if (isEnglish) {
-                return {
-                  text: "Yay, hello! I'm Aiko! Let's get super productive and complete all chores with big high energy today!",
-                  pitch: pitchShift,
-                  rate: 1.25
-                };
-              } else {
-                return {
-                  text: "Hai hai! Aku Aiko! Hari ini harus penuh semangat ya, jangan malas-malas! Semangat terus, Chiooo!",
-                  pitch: pitchShift,
-                  rate: 1.2
-                };
-              }
-            }
-            case "Haruka": {
-              let pitchShift = 1.10;
-              if (actualVoiceIsMale) pitchShift = 1.30;
-              if (isJapanese) {
-                return {
-                  text: "こんにちは、春香です。慌ただしい一日ですが、深呼吸をして心安らかに過ごしましょうね。",
-                  pitch: pitchShift,
-                  rate: 0.88
-                };
-              } else if (isEnglish) {
-                return {
-                  text: "Welcome. I am Haruka. Let's quiet the noise of the day and proceed with a peaceful and clear mind.",
-                  pitch: pitchShift,
-                  rate: 0.88
-                };
-              } else {
-                return {
-                  text: "Selamat pagi. Saya Haruka. Tarik napas dalam-dalam, mari kita lalui hari ini dengan damai, tenang, dan jernih.",
-                  pitch: pitchShift,
-                  rate: 0.88
-                };
-              }
-            }
-            case "Sora": {
-              let pitchShift = 0.90;
-              // If actual voice is female, pitch down a bit to sound tomboyish / boyish
-              if (actualVoiceIsFemale) pitchShift = 0.85; 
-              if (isJapanese) {
-                return {
-                  text: "よお！ソラだぜ！新しいアイデアがいっぱい詰まったこの広い世界を、一緒に駆け巡ろう！",
-                  pitch: pitchShift,
-                  rate: 1.22
-                };
-              } else if (isEnglish) {
-                return {
-                  text: "Yo! High-five! Sora in the house! The digital world is vast, let's explore cool boundaries together!",
-                  pitch: pitchShift,
-                  rate: 1.22
-                };
-              } else {
-                return {
-                  text: "Yoo! Aku Sora! Dunia ini luas, ayo kita jelajahi ide-ide baru dan taklukkan semua rintangan bersama!",
-                  pitch: pitchShift,
-                  rate: 1.22
-                };
-              }
-            }
-            case "Spruce": {
-              let pitchShift = 0.75; // Heavy deep male voice
-              if (actualVoiceIsFemale) pitchShift = 0.70; // Hard pitch down if browser only has female voice
-              if (isEnglish) {
-                return {
-                  text: "Hello, this is Spruce. Let's combine our patience and structured thinking to shape your dreams today.",
-                  pitch: pitchShift,
-                  rate: 0.92
-                };
-              } else {
-                return {
-                  text: "Halo, saya Spruce. Mari kita gabungkan kesabaran dan pemikiran terstruktur untuk merangkai ide luar biasa hari ini.",
-                  pitch: pitchShift,
-                  rate: 0.92
-                };
-              }
-            }
-            case "Breeze": {
-              let pitchShift = 1.05; // Warm soft female voice
-              if (actualVoiceIsMale) pitchShift = 1.25; // Pitch up if browser only has male voice
-              if (isEnglish) {
-                return {
-                  text: "Hi, I'm Breeze. I'm here to provide a warm and cheerful assistance to keep you motivated and relaxed.",
-                  pitch: pitchShift,
-                  rate: 1.0
-                };
-              } else {
-                return {
-                  text: "Hai, aku Breeze. Aku di sini untuk memberikan bantuan yang hangat dan bersahabat agar kakak tetap santai dan termotivasi.",
-                  pitch: pitchShift,
-                  rate: 1.0
-                };
-              }
-            }
-            case "Cove": {
-              let pitchShift = 0.65; // High depth professional male voice
-              if (actualVoiceIsFemale) pitchShift = 0.60; // Ultimate pitch down for deep authoritative effect
-              if (isEnglish) {
-                return {
-                  text: "Greetings. I am Cove. Displaying reliable data analysis and professional guidance for your high stability.",
-                  pitch: pitchShift,
-                  rate: 0.88
-                };
-              } else {
-                return {
-                  text: "Selamat datang kembali. Saya Cove. Menampilkan analisis data terpercaya untuk mendukung keputusan profesional Anda.",
-                  pitch: pitchShift,
-                  rate: 0.88
-                };
-              }
-            }
-            case "Ember": {
-              let pitchShift = 0.85; // Quick concise crisp voice
-              if (isEnglish) {
-                return {
-                  text: "Ember online. Command recognized. Executing immediately. Rapid and precise output delivered.",
-                  pitch: pitchShift,
-                  rate: 1.25
-                };
-              } else {
-                return {
-                  text: "Ember, aktif. Perintah Anda segera diproses. Cepat, tangkas, langsung tuntas tanpa basa-basi.",
-                  pitch: pitchShift,
-                  rate: 1.25
-                };
-              }
-            }
-            case "Juniper": {
-              let pitchShift = 1.20; // Smart, fast female voice
-              if (actualVoiceIsMale) pitchShift = 1.35;
-              if (isEnglish) {
-                return {
-                  text: "Hello, I'm Juniper! Ready to process deep research and streamline your intelligent creative flows!",
-                  pitch: pitchShift,
-                  rate: 1.12
-                };
-              } else {
-                return {
-                  text: "Halo, saya Juniper! Siap mengolah riset rumit dan mempermudah segala kebutuhan kerja cerdas Anda!",
-                  pitch: pitchShift,
-                  rate: 1.12
-                };
-              }
-            }
-            default:
-              return {
-                text: "Pengujian audio berjalan lancar. Suara Anda siap dikonfigurasi.",
-                pitch: 1.0,
-                rate: 1.0
-              };
-          }
-        };
-
-        const sample = getSampleDetails(selectedVoiceObj.value);
-        const utterance = new SpeechSynthesisUtterance(sample.text);
-        utterance.pitch = sample.pitch;
-        utterance.rate = sample.rate;
-        utterance.lang = voiceLang;
-
-        if (matchedVoice) {
-          utterance.voice = matchedVoice;
-        }
-
-        utterance.onend = () => {
-          setIsPlayingAudio(false);
-        };
-
-        utterance.onerror = (evt) => {
-          // If the synthesis was canceled/interrupted because the user clicked rapidly or changed values, do NOT trigger chime fallback
-          if (evt.error === "interrupted" || evt.error === "canceled") {
-            return;
-          }
-          console.warn("Speech synthesis error, falling back to chime synthesizer:", evt);
-          playFallbackChime(selectedVoiceObj.category === "anime");
-        };
-
-        window.speechSynthesis.speak(utterance);
-        
-        // Safety timeout in case speechSynthesis.onend is never fired by buggy browser runtimes
-        setTimeout(() => {
-          if (window.speechSynthesis.speaking) {
-            // Keep active if still running
-          } else {
-            setIsPlayingAudio(false);
-          }
-        }, 12000);
-
-        return;
-      } catch (err) {
-        console.warn("Speech synthesis init failed, playing chime fallback:", err);
-      }
-    }
-
-    // Speech synthesis is completely unavailable, play rich synthesizer chime
-    playFallbackChime(selectedVoiceObj.category === "anime");
-  };
-
-  // Helper function to render checklists for Notifications
-  const toggleNotificationChoice = (notifKey: string, type: "In-App" | "Email" | "Push", currentValues: string[], setter: (v: string[]) => void) => {
-    let next: string[];
-    if (currentValues.includes(type)) {
-      next = currentValues.filter(x => x !== type);
-    } else {
-      next = [...currentValues, type];
-    }
-    setter(next);
-    safeLocalStorageSetItem(notifKey, JSON.stringify(next));
-    
-    // Quick flash feedback
-    setSaveBannerText("Aturan notifikasi diperbarui");
-    setTimeout(() => setSaveBannerText(null), 1000);
-  };
-
+  // Notification simulation trigger helper
   const triggerSimulation = (type: "reminders" | "updates" | "suggestions") => {
-    let channels: string[] = [];
-    let name = "";
     if (type === "reminders") {
-      channels = remindersNotif;
-      name = "Pengingat & Agenda";
+      if (onSimulatePush) onSimulatePush("Maria Schedule Reminder 🎀", "Kakak, jadwal belajar coding jam 10 pagi ini sudah dekat ya! Jangan lupa dipersiapkan!");
+      if (onAddSystemNotification) onAddSystemNotification("Agenda Terjadwal", "Kelas coding interaktif dimulai 15 menit lagi.", "reminder");
     } else if (type === "updates") {
-      channels = updatesNotif;
-      name = "Pembaruan & Sistem";
+      if (onSimulateEmail) onSimulateEmail("Karakter Baru: Jack & Sarah 🍃", "Hai Kak! Sekarang asisten Maria dilengkapi karakter baru Jack yang gagah dan Sarah yang lembut.", "system");
+      if (onAddSystemNotification) onAddSystemNotification("Pembaruan Sistem", "Modul suara kini berjalan hemat memori harian.", "success");
     } else {
-      channels = suggestionsNotif;
-      name = "Saran & Rekomendasi Cerdas";
+      if (onSimulatePush) onSimulatePush("Analisis Produktivitas 📊", "Saran Maria: Kurangi multitasking dan fokus pada 3 tugas utama hari ini.");
+      if (onAddSystemNotification) onAddSystemNotification("Tips Cerdas Maria", "Saran taktis dibuat berdasarkan gaya obrolan terakhir Kakak.", "info");
     }
-
-    if (!channels || channels.length === 0) {
-      setSaveBannerText("⚠️ Aktifkan setidaknya satu saluran (Dalam Aplikasi, Email, Push) untuk simulasi ini!");
-      setTimeout(() => setSaveBannerText(null), 3500);
-      return;
-    }
-
-    let title = "";
-    let body = "";
-    let systemType: "info" | "success" | "reminder" | "message" = "info";
-
-    if (type === "reminders") {
-      const idx = Math.floor(Math.random() * 2);
-      title = idx === 0 ? "📅 Agenda Rutin Belajar" : "⏰ Batas Waktu Tugas Codex";
-      body = idx === 0 
-        ? `Kak ${settings.username || "Basit"}, sesi tinjauan metode Agile & Scrum akan dimulai dalam 15 menit. Siapkan catatanmu ya!` 
-        : "Tugas Codex 'Refactoring Navigation' dijadwalkan selesai hari ini pukul 17.00. Butuh bantuan Maria?";
-      systemType = "reminder";
-    } else if (type === "updates") {
-      const idx = Math.floor(Math.random() * 2);
-      title = idx === 0 ? "✨ Fitur Baru: Suara Anime Sora" : "🚀 Sintesis Suara Lebih Natural";
-      body = idx === 0
-        ? "Suara laki-laki berenergi 'Sora' kini aktif! Sempurna untuk obrolan santun dan bimbingan harian Anda."
-        : "Pembaruan Sistem v2.4: Waktu tunggu respons sintesis suara dikurangi sebesar 40% untuk kelancaran obrolan.";
-      systemType = "success";
-    } else {
-      const idx = Math.floor(Math.random() * 2);
-      title = idx === 0 ? "💡 Saran Cerdas Maria" : "🎯 Tips Produktivitas Hari Ini";
-      body = idx === 0
-        ? "Berdasarkan rujukan naskah horor Riko-mu, ayo tanyakan Maria cara membangun ketegangan adegan klimaks yang maksimal!"
-        : "Teknik Jeda 5 Menit: Matikan sejenak layar komputer untuk mengurai kelelahan mata setelah mengetik naskah.";
-      systemType = "message";
-    }
-
-    const activatedChannelsList: string[] = [];
-
-    if (channels.includes("In-App")) {
-      if (onAddSystemNotification) {
-        onAddSystemNotification(title, body, systemType);
-        activatedChannelsList.push("Dalam Aplikasi (Bell 🔔)");
-      }
-    }
-    
-    if (channels.includes("Email")) {
-      if (onSimulateEmail) {
-        onSimulateEmail(title, body, name);
-        activatedChannelsList.push("Email 📧");
-      }
-    }
-
-    if (channels.includes("Push")) {
-      if (onSimulatePush) {
-        onSimulatePush(title, body);
-        activatedChannelsList.push("Web Push 📱");
-      }
-    }
-
-    setSaveBannerText(`🔔 Simulasi Terkirim! Saluran aktif: ${activatedChannelsList.join(", ")}`);
-    setTimeout(() => setSaveBannerText(null), 3500);
   };
 
   return (
@@ -894,20 +148,19 @@ export default function SettingsDashboard({
       {/* Mobile Top Header (hidden on desktop) */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-900 shrink-0 md:hidden bg-[#0d0d0e]">
         <h2 className="text-[13px] font-bold text-zinc-200">
-          {activeTab === "umum" && "Profil & Umum"}
-          {activeTab === "notifikasi" && "Notifikasi"}
-          {activeTab === "personalisasi" && "Perilaku & Karakter"}
-          {activeTab === "aplikasi" && "Format Aplikasi"}
-          {activeTab === "tagihan" && "Paket Langganan"}
-          {activeTab === "kontrol-data" && "Kontrol Data"}
+          {activeTab === "profile" && "Profil"}
+          {activeTab === "appearance" && "Tampilan & Tema"}
+          {activeTab === "behavior" && "Perilaku Asisten"}
+          {activeTab === "notifications" && "Suara & Notifikasi"}
+          {activeTab === "billing" && "Langganan Plus"}
+          {activeTab === "privacy" && "Privasi & Data"}
         </h2>
         {onClose && (
           <button 
             type="button" 
             onClick={onClose} 
-            className="p-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-805 transition-colors cursor-pointer"
+            className="p-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors cursor-pointer"
             title="Tutup Pengaturan"
-            aria-label="Tutup Pengaturan"
           >
             <X className="w-4 h-4" />
           </button>
@@ -917,203 +170,93 @@ export default function SettingsDashboard({
       {/* Main Split Viewport */}
       <div className="flex flex-col md:flex-row flex-1 overflow-hidden h-full">
         {/* SIDEBAR FOR DESKTOP */}
-        <div className="hidden md:flex flex-col w-56 lg:w-64 bg-[#0d0d0e] border-r border-zinc-900 p-4 shrink-0 justify-between">
+        <div className="hidden md:flex flex-col w-56 lg:w-64 bg-[#0d0d0e] border-r border-zinc-950 p-4 shrink-0 justify-between">
           <div className="space-y-6">
             <div className="px-1 py-1">
-              <h1 className="text-[16px] font-extrabold text-white flex items-center gap-2">
-                <Settings className={`w-4.5 h-4.5 ${getAccentTextClass()}`} />
+              <h1 className="text-[15px] font-extrabold text-white flex items-center gap-2">
+                <Settings className={`w-4 h-4 ${getAccentTextClass()}`} />
                 <span>Pengaturan</span>
               </h1>
-              <p className="text-[9.5px] text-zinc-500 font-medium mt-0.5">Sesuaikan asisten Maria AI Anda</p>
+              <p className="text-[9px] text-zinc-500 font-medium mt-0.5">Ringan, efisien & personal</p>
             </div>
             
             <nav className="space-y-1">
-              {/* Tab ITEM: UMUM */}
-              <button
-                type="button"
-                onClick={() => { setActiveTab("umum"); setActiveDropdownId(null); }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all cursor-pointer border ${
-                  activeTab === "umum" 
-                    ? "bg-zinc-900 border-zinc-800 text-white" 
-                    : "text-zinc-400 border-transparent hover:text-zinc-200 hover:bg-zinc-950/70"
-                }`}
-              >
-                <Settings className={`w-3.5 h-3.5 ${activeTab === "umum" ? getAccentTextClass() : "text-zinc-400"}`} />
-                <span>Profil & Umum</span>
-              </button>
-
-              {/* Tab ITEM: NOTIFIKASI */}
-              <button
-                type="button"
-                onClick={() => { setActiveTab("notifikasi"); setActiveDropdownId(null); }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all cursor-pointer border ${
-                  activeTab === "notifikasi" 
-                    ? "bg-zinc-900 border-zinc-800 text-white" 
-                    : "text-zinc-400 border-transparent hover:text-zinc-200 hover:bg-zinc-950/70"
-                }`}
-              >
-                <Bell className={`w-3.5 h-3.5 ${activeTab === "notifikasi" ? getAccentTextClass() : "text-zinc-400"}`} />
-                <span>Notifikasi</span>
-              </button>
-
-              {/* Tab ITEM: PERSONALISASI */}
-              <button
-                type="button"
-                onClick={() => { setActiveTab("personalisasi"); setActiveDropdownId(null); }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all cursor-pointer border ${
-                  activeTab === "personalisasi" 
-                    ? "bg-zinc-900 border-zinc-800 text-white" 
-                    : "text-zinc-400 border-transparent hover:text-zinc-200 hover:bg-zinc-950/70"
-                }`}
-              >
-                <Sliders className={`w-3.5 h-3.5 ${activeTab === "personalisasi" ? getAccentTextClass() : "text-zinc-400"}`} />
-                <span>Perilaku & Karakter</span>
-              </button>
-
-              {/* Tab ITEM: APLIKASI */}
-              <button
-                type="button"
-                onClick={() => { setActiveTab("aplikasi"); setActiveDropdownId(null); }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all cursor-pointer border ${
-                  activeTab === "aplikasi" 
-                    ? "bg-zinc-900 border-zinc-800 text-white" 
-                    : "text-zinc-400 border-transparent hover:text-zinc-200 hover:bg-zinc-950/70"
-                }`}
-              >
-                <LayoutGrid className={`w-3.5 h-3.5 ${activeTab === "aplikasi" ? getAccentTextClass() : "text-zinc-400"}`} />
-                <span>Format Aplikasi</span>
-              </button>
-
-              {/* Tab ITEM: TAGIHAN */}
-              <button
-                type="button"
-                onClick={() => { setActiveTab("tagihan"); setActiveDropdownId(null); }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all cursor-pointer border ${
-                  activeTab === "tagihan" 
-                    ? "bg-zinc-900 border-zinc-800 text-white" 
-                    : "text-zinc-400 border-transparent hover:text-zinc-200 hover:bg-zinc-950/70"
-                }`}
-              >
-                <CreditCard className={`w-3.5 h-3.5 ${activeTab === "tagihan" ? getAccentTextClass() : "text-zinc-400"}`} />
-                <span>Paket Langganan</span>
-              </button>
-
-              {/* Tab ITEM: KONTROL DATA */}
-              <button
-                type="button"
-                onClick={() => { setActiveTab("kontrol-data"); setActiveDropdownId(null); }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all cursor-pointer border ${
-                  activeTab === "kontrol-data" 
-                    ? "bg-zinc-900 border-zinc-800 text-white" 
-                    : "text-zinc-400 border-transparent hover:text-zinc-200 hover:bg-zinc-950/70"
-                }`}
-              >
-                <Database className={`w-3.5 h-3.5 ${activeTab === "kontrol-data" ? getAccentTextClass() : "text-zinc-400"}`} />
-                <span>Kontrol Privasi</span>
-              </button>
+              {[
+                { id: "profile", label: "Profil", icon: User },
+                { id: "appearance", label: "Tampilan & Tema", icon: Palette },
+                { id: "behavior", label: "Perilaku Asisten", icon: Sliders },
+                { id: "notifications", label: "Suara & Notifikasi", icon: Bell },
+                { id: "billing", label: "Langganan Plus", icon: CreditCard },
+                { id: "privacy", label: "Data & Privasi", icon: Database },
+              ].map((tab) => {
+                const TabIcon = tab.id === "privacy" ? Database : tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id as MenuTab)}
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all cursor-pointer border ${
+                      activeTab === tab.id 
+                        ? "bg-zinc-900 border-zinc-800 text-white" 
+                        : "text-zinc-400 border-transparent hover:text-zinc-200 hover:bg-zinc-950/70"
+                    }`}
+                  >
+                    <TabIcon className={`w-3.5 h-3.5 ${activeTab === tab.id ? getAccentTextClass() : "text-zinc-400"}`} />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
             </nav>
           </div>
 
-          <div className="px-2 py-1 text-[8.5px] font-mono text-zinc-650 border-t border-zinc-900/50 pt-2.5 leading-normal">
-            SISTEM v2.5.4<br />
-            OBROLAN INTEGRASI CLOUD
+          <div className="px-2 py-1 text-[8.5px] font-mono text-zinc-600 border-t border-zinc-900/50 pt-2.5 leading-normal">
+            SISTEM v2.6.0<br />
+            OPTIMASI RUNTIME AKTIF
           </div>
         </div>
 
-        {/* MOBILE HORIZONTAL SCROLL NOTIFICATION BAR */}
-        <div className="flex md:hidden items-center gap-1.5 px-4 py-2 bg-[#0d0d0e] border-b border-zinc-900 overflow-x-auto no-scrollbar shrink-0">
-          <button
-            type="button"
-            onClick={() => { setActiveTab("umum"); setActiveDropdownId(null); }}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold leading-none cursor-pointer transition-all shrink-0 border ${
-              activeTab === "umum" 
-                ? "bg-zinc-900 border-zinc-800 text-white" 
-                : "text-zinc-400 border-transparent hover:bg-zinc-950"
-            }`}
-          >
-            <span>Umum</span>
-          </button>
-          
-          <button
-            type="button"
-            onClick={() => { setActiveTab("notifikasi"); setActiveDropdownId(null); }}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold leading-none cursor-pointer transition-all shrink-0 border ${
-              activeTab === "notifikasi" 
-                ? "bg-zinc-900 border-zinc-800 text-white" 
-                : "text-zinc-400 border-transparent hover:bg-zinc-950"
-            }`}
-          >
-            <span>Notifikasi</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => { setActiveTab("personalisasi"); setActiveDropdownId(null); }}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold leading-none cursor-pointer transition-all shrink-0 border ${
-              activeTab === "personalisasi" 
-                ? "bg-zinc-900 border-zinc-800 text-white" 
-                : "text-zinc-400 border-transparent hover:bg-zinc-150"
-            }`}
-          >
-            <span>Karakter</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => { setActiveTab("aplikasi"); setActiveDropdownId(null); }}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold leading-none cursor-pointer transition-all shrink-0 border ${
-              activeTab === "aplikasi" 
-                ? "bg-zinc-900 border-zinc-800 text-white" 
-                : "text-zinc-400 border-transparent hover:bg-zinc-950"
-            }`}
-          >
-            <span>Format</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => { setActiveTab("tagihan"); setActiveDropdownId(null); }}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold leading-none cursor-pointer transition-all shrink-0 border ${
-              activeTab === "tagihan" 
-                ? "bg-zinc-900 border-zinc-800 text-white" 
-                : "text-zinc-400 border-transparent hover:bg-zinc-950"
-            }`}
-          >
-            <span>Tagihan</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => { setActiveTab("kontrol-data"); setActiveDropdownId(null); }}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold leading-none cursor-pointer transition-all shrink-0 border ${
-              activeTab === "kontrol-data" 
-                ? "bg-zinc-900 border-zinc-800 text-white" 
-                : "text-zinc-400 border-transparent hover:bg-zinc-950"
-            }`}
-          >
-            <span>Data</span>
-          </button>
+        {/* MOBILE HORIZONTAL SCROLL BAR */}
+        <div className="flex md:hidden items-center gap-1.5 px-4 py-2 bg-[#0d0d0e] border-b border-zinc-950 overflow-x-auto no-scrollbar shrink-0">
+          {[
+            { id: "profile", label: "Profil" },
+            { id: "appearance", label: "Tampilan" },
+            { id: "behavior", label: "Perilaku" },
+            { id: "notifications", label: "Notifikasi" },
+            { id: "billing", label: "Tagihan" },
+            { id: "privacy", label: "Data" }
+          ].map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setActiveTab(item.id as MenuTab)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold leading-none cursor-pointer transition-all shrink-0 border ${
+                activeTab === item.id 
+                  ? "bg-zinc-900 border-zinc-800 text-white" 
+                  : "text-zinc-400 border-transparent hover:bg-zinc-950"
+              }`}
+            >
+              <span>{item.label}</span>
+            </button>
+          ))}
         </div>
 
         {/* CONTAINER FOR CONTENT PANEL */}
-        <div className="flex-1 flex flex-col h-full bg-[#131314] overflow-hidden">
+        <div className="flex-1 flex flex-col h-full bg-[#111112] overflow-hidden">
           {/* Top Panel bar shown on Desktop */}
-          <div className="hidden md:flex items-center justify-between px-6 py-4.5 border-b border-zinc-900 shrink-0 bg-[#131314]">
-            <h2 className="text-[12.5px] font-extrabold text-[#d4d4d8] tracking-widest uppercase">
-              {activeTab === "umum" && "Profil & Pengaturan Umum"}
-              {activeTab === "notifikasi" && "Pengaturan Notifikasi Pintar"}
-              {activeTab === "personalisasi" && "Perilaku & Karakter Asisten"}
-              {activeTab === "aplikasi" && "Pengaturan Format Aplikasi"}
-              {activeTab === "tagihan" && "Paket Langganan Maria Plus"}
-              {activeTab === "kontrol-data" && "Kerahasiaan & Kontrol Data"}
+          <div className="hidden md:flex items-center justify-between px-6 py-4 border-b border-zinc-950 shrink-0 bg-[#111112]">
+            <h2 className="text-[11.5px] font-extrabold text-zinc-400 tracking-wider uppercase">
+              {activeTab === "profile" && "Manajemen Profil Saya"}
+              {activeTab === "appearance" && "Kustomisasi Tema & Tampilan"}
+              {activeTab === "behavior" && "Perilaku & Gaya Berbicara Maria AI"}
+              {activeTab === "notifications" && "Integrasi Suara & Simulasi Notifikasi"}
+              {activeTab === "billing" && "Kelola Paket Maria Plus"}
+              {activeTab === "privacy" && "Kerahasiaan & Kontrol Database"}
             </h2>
             {onClose && (
               <button 
                 type="button" 
                 onClick={onClose} 
-                className="p-1 px-3 bg-zinc-900 hover:bg-zinc-850 rounded-xl border border-zinc-800 text-zinc-400 hover:text-white transition-all cursor-pointer text-[10.5px] font-bold"
-                title="Tutup Pengaturan"
-                aria-label="Tutup Pengaturan"
+                className="p-1 px-3 bg-zinc-900 hover:bg-zinc-850 rounded-xl border border-zinc-800/80 text-zinc-400 hover:text-white transition-all cursor-pointer text-[10px] font-bold"
               >
                 Tutup
               </button>
@@ -1121,1438 +264,366 @@ export default function SettingsDashboard({
           </div>
 
           {/* Scrolling Content viewport */}
-          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5 no-scrollbar pb-16">
-        
-        {/* ===================== TAB: UMUM ===================== */}
-        {activeTab === "umum" && (
-          <div className="space-y-4.5 text-xs animate-in fade-in duration-200">
-            <div>
-              <h3 className="text-zinc-150 font-bold text-sm tracking-tight pt-1">Pengaturan Umum</h3>
-              <p className="text-[10.5px] text-zinc-450 mt-0.5">Sesuaikan tampilan antarmuka, bahasa obrolan, dan fungsi respon suara Maria AI harian Anda.</p>
-            </div>
-
-            {/* CARD 1: TAMPILAN & LOKALISASI */}
-            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-3.5 shadow-xs">
-              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
-                🎨 Tampilan & Tema Sistem
-              </div>
-
-              {/* Row Option: Penampilan */}
-              <div className="flex items-center justify-between py-0.5">
-                <div className="space-y-0.5">
-                  <span className="text-zinc-100 font-medium text-[11.5px] block">Mode Penampilan</span>
-                  <span className="text-[10px] text-zinc-500 block leading-normal">Sesuaikan tema visual sistem utama.</span>
-                </div>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setActiveDropdownId(activeDropdownId === "umum-appearance" ? null : "umum-appearance")}
-                    aria-label="Pilih Penampilan Aplikasi"
-                    className="bg-[#242426] hover:bg-[#2b2b2d] text-zinc-200 border border-zinc-800 text-[11px] font-semibold rounded-xl px-3 py-2 flex items-center justify-between gap-2 cursor-pointer w-28 text-left transition-all"
-                  >
-                    <span>{appearance}</span>
-                    <ChevronDown className="w-3 h-3 text-zinc-450 shrink-0" />
-                  </button>
-                  {activeDropdownId === "umum-appearance" && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
-                      <div className="absolute right-0 top-10 bg-[#212123] border border-zinc-800 shadow-2xl rounded-xl py-1 z-50 text-[11px] w-28 text-zinc-300 divide-y divide-zinc-800/20">
-                        {["Sistem", "Gelap", "Terang"].map((opt) => (
-                          <button
-                            key={opt}
-                            type="button"
-                            onClick={() => handleDropdownSelect("maria_appearance", opt, setAppearance)}
-                            className="w-full px-3 py-2 text-left hover:bg-zinc-800 flex items-center justify-between transition-colors cursor-pointer"
-                          >
-                            <span>{opt}</span>
-                            {appearance === opt && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()}`} />}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Divider Inside Card */}
-              <div className="h-[1px] bg-zinc-800/30" />
-
-              {/* Row Option: Kontras */}
-              <div className="flex items-center justify-between py-0.5">
-                <div className="space-y-0.5">
-                  <span className="text-zinc-100 font-medium text-[11.5px] block">Kontras Layar</span>
-                  <span className="text-[10px] text-zinc-500 block leading-normal">Ubah tingkat kontras teks dan aset gambar.</span>
-                </div>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setActiveDropdownId(activeDropdownId === "umum-contrast" ? null : "umum-contrast")}
-                    aria-label="Pilih Kontras Aplikasi"
-                    className="bg-[#242426] hover:bg-[#2b2b2d] text-zinc-200 border border-zinc-800 text-[11px] font-semibold rounded-xl px-3 py-2 flex items-center justify-between gap-2 cursor-pointer w-28 text-left transition-all"
-                  >
-                    <span>{contrast}</span>
-                    <ChevronDown className="w-3 h-3 text-zinc-450 shrink-0" />
-                  </button>
-                  {activeDropdownId === "umum-contrast" && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
-                      <div className="absolute right-0 top-10 bg-[#212123] border border-zinc-800 shadow-2xl rounded-xl py-1 z-50 text-[11px] w-28 text-zinc-300 divide-y divide-zinc-800/20">
-                        {["Sistem", "Gelap", "Terang"].map((opt) => (
-                          <button
-                            key={opt}
-                            type="button"
-                            onClick={() => handleDropdownSelect("maria_contrast", opt, setContrast)}
-                            className="w-full px-3 py-2 text-left hover:bg-zinc-800 flex items-center justify-between transition-colors cursor-pointer"
-                          >
-                            <span>{opt}</span>
-                            {contrast === opt && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()}`} />}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Divider Inside Card */}
-              <div className="h-[1px] bg-zinc-800/30" />
-
-              {/* Row Option: Warna aksen */}
-              <div className="flex items-center justify-between py-0.5">
-                <div className="space-y-0.5">
-                  <span className="text-zinc-100 font-medium text-[11.5px] block">Warna Aksen Obrolan</span>
-                  <span className="text-[10px] text-zinc-500 block leading-normal">Sesuaikan warna tombol, balon, dan indikator utama.</span>
-                </div>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setActiveDropdownId(activeDropdownId === "umum-accent" ? null : "umum-accent")}
-                    aria-label="Pilih Warna Aksen Aplikasi"
-                    className="bg-[#242426] hover:bg-[#2b2b2d] text-zinc-200 border border-zinc-800 text-[11px] font-semibold rounded-xl px-3 py-2 flex items-center justify-between gap-2 cursor-pointer w-28 text-left transition-all"
-                  >
-                    <div className="flex items-center gap-1.5 truncate">
-                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                        accentColor === "Biru" ? "bg-blue-500" :
-                        accentColor === "Hijau" ? "bg-emerald-500" :
-                        accentColor === "Kuning" ? "bg-amber-400" :
-                        accentColor === "Merah jambu" ? "bg-rose-500" :
-                        accentColor === "Oranye" ? "bg-orange-500" :
-                        accentColor === "Ungu" ? "bg-violet-500" :
-                        accentColor === "Hitam" ? "bg-zinc-200" : "bg-neutral-500"
-                      }`} />
-                      <span className="truncate">{accentColor}</span>
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4.5 no-scrollbar pb-16">
+            
+            {/* 1. PROFILE SECTION */}
+            {activeTab === "profile" && (
+              <div className="space-y-4 max-w-xl transition-all duration-150">
+                <h3 className="text-sm font-semibold text-zinc-200">Profil Pengguna</h3>
+                <div className="bg-[#161617] rounded-2xl p-5 border border-zinc-900/60 shadow-xs space-y-4">
+                  <div className="flex items-center gap-5">
+                    <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-2xl shadow-md">
+                      👤
                     </div>
-                    <ChevronDown className="w-3 h-3 text-zinc-450 shrink-0" />
-                  </button>
-                  {activeDropdownId === "umum-accent" && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
-                      <div className="absolute right-0 top-10 bg-[#212123] border border-zinc-800 shadow-2xl rounded-xl py-1 z-55 text-[11px] w-48 text-zinc-300 divide-y divide-zinc-850/30">
-                        {[
-                          { name: "Default", color: "bg-neutral-500" },
-                          { name: "Biru", color: "bg-blue-500" },
-                          { name: "Hijau", color: "bg-emerald-500" },
-                          { name: "Kuning", color: "bg-amber-400" },
-                          { name: "Merah jambu", color: "bg-rose-500" },
-                          { name: "Oranye", color: "bg-orange-500" },
-                          { name: "Ungu", color: "bg-violet-500", badge: "PLUS" },
-                          { name: "Hitam", color: "bg-zinc-200", badge: "PRO" },
-                        ].map((opt) => (
-                          <button
-                            key={opt.name}
-                            type="button"
-                            onClick={() => {
-                              if ((opt.badge === "PLUS" || opt.badge === "PRO") && !isPlus) {
-                                if (onAddSystemNotification) {
-                                  onAddSystemNotification(
-                                    "Akses Terbatas 🔒",
-                                    `Opsi aksen warna "${opt.name}" membutuhkan keanggotaan MARIA Plus ✨ Silakan upgrade paket Anda di Sidebar!`,
-                                    "reminder"
-                                  );
-                                } else {
-                                  alert(`Opsi aksen warna "${opt.name}" membutuhkan keanggotaan MARIA Plus ✨`);
-                                }
-                                return;
-                              }
-                              handleDropdownSelect("maria_accent_color", opt.name, setAccentColor);
-                            }}
-                            className="w-full px-3 py-2 text-left hover:bg-[#2e2e30] flex items-center justify-between transition-colors cursor-pointer"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className={`w-2 h-2 rounded-full ${opt.color}`} />
-                              <span>{opt.name}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              {opt.badge && (
-                                <span className="text-[7px] font-bold px-1 py-[1px] bg-zinc-800 text-zinc-400 border border-zinc-700 rounded-sm">
-                                  {opt.badge}
-                                </span>
-                              )}
-                              {accentColor === opt.name && <Check className={`w-3 h-3 ${getAccentTextClass()}`} />}
-                            </div>
-                          </button>
-                        ))}
+                    <div className="space-y-1">
+                      <p className="text-base font-bold text-zinc-100">{username}</p>
+                      <p className="text-[10px] text-zinc-500">ID Anggota Aktif • Sesi Mandiri</p>
+                    </div>
+                  </div>
+
+                  <div className="h-[1.5px] bg-zinc-900/45 my-2" />
+
+                  <div className="space-y-2">
+                    <label className="block text-[9.5px] font-bold text-zinc-400 uppercase tracking-wide">
+                      Ubah Nama Panggilan
+                    </label>
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setUsername(val);
+                        triggerSave({ username: val });
+                      }}
+                      className="w-full bg-[#0d0d0e] border border-zinc-850 focus:border-zinc-650 rounded-lg px-3.5 py-2 text-zinc-200 text-[11px] outline-none transition-colors"
+                      placeholder="Masukkan nama Anda..."
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 2. APPEARANCE SECTION */}
+            {activeTab === "appearance" && (
+              <div className="space-y-4 max-w-xl duration-150">
+                <h3 className="text-sm font-semibold text-zinc-200 font-sans">Kustomisasi Tampilan</h3>
+                <div className="bg-[#161617] rounded-2xl p-4.5 border border-zinc-900/60 space-y-4">
+                  {/* Accent selection */}
+                  <div className="space-y-2.5">
+                    <label className="block text-[9.5px] font-bold text-zinc-400 uppercase tracking-wide">
+                      Gaya Warna Aksen & Tema
+                    </label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[
+                        { name: "Biru", color: "bg-blue-500" },
+                        { name: "Hijau", color: "bg-emerald-500" },
+                        { name: "Ungu", color: "bg-purple-500" },
+                        { name: "Hitam", color: "bg-zinc-450" }
+                      ].map((opt) => (
+                        <button
+                          key={opt.name}
+                          type="button"
+                          onClick={() => {
+                            setAccentColor(opt.name);
+                            triggerSave({ accentVal: opt.name });
+                          }}
+                          className={`p-2 rounded-xl flex items-center justify-center gap-1.5 text-[10.5px] font-semibold border transition-all cursor-pointer ${
+                            accentColor === opt.name 
+                              ? "bg-zinc-900 border-zinc-700 text-white" 
+                              : "bg-[#0d0d0e]/60 border-transparent text-zinc-400 hover:bg-zinc-900/50"
+                          }`}
+                        >
+                          <span className={`w-2.5 h-2.5 rounded-full ${opt.color} shrink-0`} />
+                          <span>{opt.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* App language style selector */}
+                  <div className="space-y-2 pt-2 border-t border-zinc-900/20">
+                    <label className="block text-[9.5px] font-bold text-zinc-400 uppercase tracking-wide">
+                      Gaya Bahasa & Sifat Dialog
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { value: "Baku", label: "Formal (Baku)" },
+                        { value: "Santai", label: "Santai (Luwes)" }
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => {
+                            setLangStyle(opt.value as LanguageStyle);
+                            triggerSave({ languageStyle: opt.value as LanguageStyle });
+                          }}
+                          className={`p-2 px-3 rounded-xl flex items-center justify-center gap-1.5 text-[10.5px] font-semibold border transition-all cursor-pointer ${
+                            langStyle === opt.value 
+                              ? "bg-zinc-900 border-zinc-750 text-white" 
+                              : "bg-[#0d0d0e]/60 border-transparent text-zinc-400 hover:bg-zinc-900/40"
+                          }`}
+                        >
+                          <span>{opt.label}</span>
+                          {langStyle === opt.value && <Check className="w-3 h-3 text-zinc-300" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 3. BEHAVIOR SECTION */}
+            {activeTab === "behavior" && (
+              <div className="space-y-4 max-w-xl duration-150 font-sans">
+                <h3 className="text-sm font-semibold text-zinc-200">Perilaku Maria AI</h3>
+                <div className="bg-[#161617] rounded-2xl p-4.5 border border-zinc-900/60 space-y-4">
+                  {/* Dialog Personality option */}
+                  <div className="space-y-2">
+                    <label className="block text-[9.5px] font-bold text-zinc-400 uppercase tracking-wide">
+                      Karakter Kepribadian Asisten
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {["Professional", "Warm", "Creative", "Technical", "Minimalist"].map((tone) => (
+                        <button
+                          key={tone}
+                          type="button"
+                          onClick={() => {
+                            setToneStyle(tone as MariaTone);
+                            triggerSave({ tone: tone as MariaTone });
+                          }}
+                          className={`p-2 rounded-xl text-[10.5px] font-semibold border transition-all cursor-pointer text-center ${
+                            toneStyle === tone 
+                              ? "bg-zinc-900 border-zinc-750 text-white" 
+                              : "bg-[#0d0d0e]/60 border-transparent text-zinc-400 hover:bg-zinc-900/40"
+                          }`}
+                        >
+                          {tone}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Custom System Prompt Instructions */}
+                  <div className="space-y-2 pt-2 border-t border-zinc-900/20">
+                    <label className="block text-[9.5px] font-bold text-zinc-400 uppercase tracking-wide">
+                      Petunjuk Kustom (Custom Instructions)
+                    </label>
+                    <textarea
+                      value={customInstructions}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCustomInstructions(val);
+                        triggerSave({ customPrompt: val });
+                      }}
+                      className="w-full h-32 p-3 rounded-xl border border-zinc-850 bg-[#0d0d0e] text-zinc-150 text-[11px] focus:border-zinc-700 outline-none resize-none leading-relaxed"
+                      placeholder="Contoh: Jawab selalu dengan ramah dan panggil aku Kakak, suka memakai emoji gemas..."
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 4. NOTIFICATIONS & VOICE */}
+            {activeTab === "notifications" && (
+              <div className="space-y-4 max-w-xl duration-150 font-sans">
+                <h3 className="text-sm font-semibold text-zinc-200">Suara & Notifikasi</h3>
+                <div className="bg-[#161617] rounded-2xl p-4.5 border border-zinc-900/60 space-y-4">
+                  
+                  {/* Voice toggle */}
+                  <div className="flex items-center justify-between pb-3 border-b border-zinc-900/35">
+                    <div className="space-y-0.5">
+                      <span className="text-zinc-100 font-medium text-[11.5px] block">Aktifkan Respon Suara AI</span>
+                      <span className="text-[10px] text-zinc-500 block leading-tight">Gunakan teks-ke-suara ElevenLabs harian.</span>
+                    </div>
+                    <div
+                      onClick={() => {
+                        const next = !voiceEnabled;
+                        setVoiceEnabled(next);
+                        triggerSave({ voiceEnabled: next });
+                      }}
+                      className={`w-9 h-5 rounded-full p-[2px] cursor-pointer transition-colors duration-200 ${voiceEnabled ? getAccentBgClass() : 'bg-[#323235]'}`}
+                    >
+                      <div className={`w-4 h-4 bg-white rounded-full shadow-md transition-transform duration-200 transform ${voiceEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                    </div>
+                  </div>
+
+                  {voiceEnabled && (
+                    <div className="space-y-3.5 pt-1 text-left animate-fade-in duration-150">
+                      <div className="space-y-1.5">
+                        <label className="block text-[9px] font-bold text-zinc-400 uppercase tracking-wider">
+                          Kunci API ElevenLabs
+                        </label>
+                        <input
+                          type="password"
+                          value={elevenlabsApiKey}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setElevenlabsApiKey(val);
+                            triggerSave({ elevenlabsApiKey: val });
+                          }}
+                          placeholder="Masukkan xi-api-key..."
+                          className="w-full bg-[#0d0d0e] border border-zinc-850 rounded-lg px-3 py-2 text-zinc-200 text-[11px] focus:border-zinc-700 outline-none"
+                        />
                       </div>
-                    </>
-                  )}
-                </div>
-              </div>
 
-              {/* Divider Inside Card */}
-              <div className="h-[1px] bg-zinc-800/30" />
-
-              {/* Row Option: Bahasa */}
-              <div className="flex items-center justify-between py-0.5">
-                <div className="space-y-0.5">
-                  <span className="text-zinc-100 font-medium text-[11.5px] block">Bahasa Aplikasi</span>
-                  <span className="text-[10px] text-zinc-500 block leading-normal">Atur preferensi bahasa antarmuka sistem.</span>
-                </div>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setActiveDropdownId(activeDropdownId === "umum-lang" ? null : "umum-lang")}
-                    aria-label="Pilih Bahasa Aplikasi"
-                    className="bg-[#242426] hover:bg-[#2b2b2d] text-zinc-200 border border-zinc-800 text-[11px] font-semibold rounded-xl px-3 py-2 flex items-center justify-between gap-2 cursor-pointer w-40 text-left transition-all"
-                  >
-                    <span className="truncate">{language}</span>
-                    <ChevronDown className="w-3 h-3 text-zinc-450 shrink-0" />
-                  </button>
-                  {activeDropdownId === "umum-lang" && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
-                      <div className="absolute right-0 top-10 bg-[#212123] border border-zinc-800 shadow-2xl rounded-xl py-1 z-55 text-[11px] w-40 text-zinc-300 divide-y divide-zinc-800/20">
-                        {["Deteksi otomatis", "Bahasa Indonesia", "English", "日本語"].map((opt) => (
-                          <button
-                            key={opt}
-                            type="button"
-                            onClick={() => handleDropdownSelect("maria_language", opt, setLanguage)}
-                            className="w-full px-3 py-2 text-left hover:bg-[#2e2e30] flex items-center justify-between transition-colors cursor-pointer"
-                          >
-                            <span>{opt}</span>
-                            {language === opt && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()}`} />}
-                          </button>
-                        ))}
+                      <div className="space-y-1.5">
+                        <label className="block text-[9px] font-bold text-zinc-400 uppercase tracking-wider">
+                          Karakis Suara Default
+                        </label>
+                        <select
+                          value={elevenlabsVoiceId}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setElevenlabsVoiceId(val);
+                            triggerSave({ elevenlabsVoiceId: val });
+                          }}
+                          className="w-full bg-[#0d0d0e] border border-zinc-850 rounded-lg p-2 text-zinc-200 text-[11px] outline-none"
+                        >
+                          {PRESET_VOICES.map(v => (
+                            <option key={v.id} value={v.id} className="bg-[#161617]">{v.name}</option>
+                          ))}
+                        </select>
                       </div>
-                    </>
+                    </div>
                   )}
+
+                  {/* Simulation notifications control section */}
+                  <div className="space-y-2 pt-2 border-t border-zinc-900/35">
+                    <label className="block text-[9.5px] font-bold text-zinc-400 uppercase tracking-wide">
+                      Simulasikan Notifikasi Sistem
+                    </label>
+                    <div className="grid grid-cols-3 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => triggerSimulation("reminders")}
+                        className="bg-blue-600/10 hover:bg-blue-500/15 border border-blue-500/15 rounded-xl p-2 text-[10px] font-semibold text-blue-400 flex flex-col items-center gap-1 cursor-pointer transition-all active:scale-98"
+                      >
+                        <Bell className="w-3.5 h-3.5" />
+                        <span>Agenda</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => triggerSimulation("updates")}
+                        className="bg-emerald-600/10 hover:bg-emerald-500/15 border border-emerald-500/15 rounded-xl p-2 text-[10px] font-semibold text-emerald-400 flex flex-col items-center gap-1 cursor-pointer transition-all active:scale-98"
+                      >
+                        <Mail className="w-3.5 h-3.5" />
+                        <span>Pembaruan</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => triggerSimulation("suggestions")}
+                        className="bg-orange-600/10 hover:bg-orange-500/15 border border-orange-500/15 rounded-xl p-2 text-[10px] font-semibold text-orange-400 flex flex-col items-center gap-1 cursor-pointer transition-all active:scale-98"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Saran</span>
+                      </button>
+                    </div>
+                  </div>
+
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* CARD 2: PENGGUNAAN MASUKAN SUARA */}
-            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-3.5 shadow-xs">
-              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
-                🎙️ Transkripsi & Masukan Obrolan
-              </div>
+            {/* 5. BILLING SECTION */}
+            {activeTab === "billing" && (
+              <div className="space-y-4 max-w-xl duration-150 font-sans">
+                <h3 className="text-sm font-semibold text-zinc-200">Paket Langganan</h3>
+                <div className="bg-[#161617] rounded-2xl p-5 border border-zinc-900/60 space-y-4 text-center">
+                  <div className="space-y-1">
+                    <p className={`text-lg font-black tracking-tight ${isPlus ? getAccentTextClass() : "text-zinc-400"}`}>
+                      {isPlus ? "👑 Spesifikasi Plus Aktif" : "Maria Standard"}
+                    </p>
+                    <p className="text-[10px] text-zinc-500">
+                      {isPlus ? "Akses premium tanpa batas ke model tercepat." : "Paket gratis dengan prioritas reguler."}
+                    </p>
+                  </div>
 
-              {/* Row Option: Aktifkan Dikte */}
-              <div className="flex items-start justify-between py-1 gap-4">
-                <div className="flex-1 space-y-0.5">
-                  <span className="text-zinc-100 font-medium text-[11.5px] block">Aktifkan Dikte Mikrofon</span>
-                  <span className="text-[10px] text-zinc-550 leading-relaxed block">Klik ikon mikrofon di form input pesan untuk langsung mendikte suara menjadi teks tanpa mengetik.</span>
-                </div>
-                <div 
-                  onClick={() => handleToggleValue("maria_dictation", dictationEnabled, setDictationEnabled)}
-                  className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${dictationEnabled ? getAccentBgClass() : 'bg-[#323235]'}`}
-                >
-                  <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${dictationEnabled ? 'translate-x-[16px]' : 'translate-x-0'}`} />
-                </div>
-              </div>
+                  <div className="h-[1.5px] bg-[#0d0d0e] my-1" />
 
-              {/* Divider Inside Card */}
-              <div className="h-[1px] bg-zinc-800/30" />
-
-              {/* Row Option: Bahasa Lisan */}
-              <div className="flex items-start justify-between py-1 gap-4">
-                <div className="flex-1 space-y-0.5">
-                  <span className="text-zinc-100 font-medium text-[11.5px] block">Bahasa Dikte Lisan</span>
-                  <span className="text-[10px] text-zinc-550 leading-relaxed block">Pilih bahasa asal pengucapan Anda untuk akurasi konversi teks suara yang maksimal.</span>
-                </div>
-                <div className="relative shrink-0 self-center">
-                  <button
-                    type="button"
-                    onClick={() => setActiveDropdownId(activeDropdownId === "umum-spoken-lang" ? null : "umum-spoken-lang")}
-                    aria-label="Pilih Bahasa Lisan"
-                    className="bg-[#242426] hover:bg-[#2b2b2d] text-zinc-200 border border-zinc-800 text-[11px] font-semibold rounded-xl px-3 py-2 flex items-center justify-between gap-2 cursor-pointer w-36 text-left transition-all"
-                  >
-                    <span className="truncate">{spokenLanguage}</span>
-                    <ChevronDown className="w-3 h-3 text-zinc-450 shrink-0" />
-                  </button>
-                  {activeDropdownId === "umum-spoken-lang" && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
-                      <div className="absolute right-0 top-10 bg-[#212123] border border-zinc-800 shadow-2xl rounded-xl py-1 z-55 text-[11px] w-40 text-zinc-300 divide-y divide-zinc-800/20">
-                        {["Deteksi otomatis", "Bahasa Indonesia", "English", "日本語"].map((opt) => (
-                          <button
-                            key={opt}
-                            type="button"
-                            onClick={() => handleDropdownSelect("maria_spoken_lang", opt, setSpokenLanguage)}
-                            className="w-full px-3 py-2 text-left hover:bg-[#2e2e30] flex items-center justify-between transition-colors cursor-pointer"
-                          >
-                            <span className="truncate">{opt}</span>
-                            {spokenLanguage === opt && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()}`} />}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* CARD 3: SINTESIS SUARA & KELUARAN */}
-            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-3.5 shadow-xs">
-              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
-                🔊 Audio / Sintesis Suara Maria
-              </div>
-
-              {/* Row Option: Suara (Audio) */}
-              <div className="flex items-start justify-between py-1 gap-4">
-                <div className="flex-1 space-y-0.5">
-                  <span className="text-zinc-100 font-medium text-[11.5px] block">Karakter Model Suara</span>
-                  <span className="text-[10px] text-zinc-550 leading-relaxed block">Pilih tipe suara dan frekuensi asisten Maria yang akan diputar otomatis pada setiap akhir balon obrolan.</span>
-                  {activeEngineName && (
-                    <span className="inline-block text-[9px] bg-zinc-800/60 text-zinc-450 border border-zinc-700/45 px-2 py-0.5 rounded-full font-mono mt-1" title={activeEngineName}>
-                      En: {activeEngineName}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 self-center shrink-0">
-                  <button
-                    type="button"
-                    onClick={playVoiceChime}
-                    disabled={isPlayingAudio}
-                    className="px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 rounded-xl text-[11px] font-bold flex items-center gap-1.5 cursor-pointer active:scale-95 duration-100 disabled:opacity-40"
-                  >
-                    <Play className="w-3 h-3 fill-white text-white shrink-0" />
-                    <span>{isPlayingAudio ? "Memutar..." : "Putar"}</span>
-                  </button>
-                  <div className="relative">
+                  <div className="flex gap-2 justify-center pt-1">
                     <button
                       type="button"
-                      onClick={() => setActiveDropdownId(activeDropdownId === "umum-voice" ? null : "umum-voice")}
-                      className="bg-[#242426] hover:bg-[#2b2b2d] text-zinc-200 border border-zinc-800 text-[11px] font-semibold rounded-xl px-3 py-2 flex items-center justify-between gap-1.5 cursor-pointer w-36 text-left transition-all"
+                      onClick={() => {
+                        if (setIsPlus) setIsPlus(true);
+                        localStorage.setItem("maria_is_plus", "true");
+                        localStorage.setItem("maria_plus_plan", "monthly");
+                        triggerSave({});
+                      }}
+                      className={`px-4 py-2 border rounded-xl text-[10.5px] font-bold cursor-pointer transition-all ${isPlus ? "bg-zinc-900 text-white border-zinc-700" : "bg-[#0d0d0e]/60 border-transparent text-zinc-450 hover:bg-zinc-900"}`}
                     >
-                      <span className="truncate">{(VOICE_OPTIONS.find(v => v.value === voiceVoice) || VOICE_OPTIONS[0]).label}</span>
-                      <ChevronDown className="w-3 h-3 text-zinc-450 shrink-0" />
+                      Aktifkan Maria Plus (Simulator)
                     </button>
-                    {activeDropdownId === "umum-voice" && (
-                      <>
-                        <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
-                        <div className="absolute right-0 top-10 bg-[#212123] border border-zinc-800 shadow-2xl rounded-xl py-1 z-55 text-[11.5px] w-56 text-zinc-300 max-h-72 overflow-y-auto divide-y divide-zinc-850">
-                          <div className="px-3 py-1.5 text-[9px] text-zinc-450 font-bold uppercase tracking-wider bg-zinc-900/30">
-                            🗣️ Karakter Suara Premium
-                          </div>
-                          {VOICE_OPTIONS.map((opt) => (
-                            <button
-                              key={opt.value}
-                              type="button"
-                              onClick={() => handleDropdownSelect("maria_voice", opt.value, setVoiceVoice)}
-                              className="w-full px-3 py-2.5 text-left hover:bg-zinc-800 flex flex-col justify-start transition-colors cursor-pointer group"
-                            >
-                              <div className="flex items-center justify-between w-full">
-                                <span className="font-bold text-zinc-200 group-hover:text-white">{opt.label}</span>
-                                {voiceVoice === opt.value && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()}`} />}
-                              </div>
-                              <span className="text-[9.5px] text-zinc-500 mt-0.5 leading-normal">{opt.desc}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (setIsPlus) setIsPlus(false);
+                        localStorage.setItem("maria_is_plus", "false");
+                        triggerSave({});
+                      }}
+                      className={`px-4 py-2 border rounded-xl text-[10.5px] font-semibold cursor-pointer transition-all ${!isPlus ? "bg-zinc-900 text-white border-zinc-700" : "bg-[#0d0d0e]/60 border-transparent text-zinc-450 hover:bg-zinc-900"}`}
+                    >
+                      Batal Langganan
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 6. PRIVACY & DATA */}
+            {activeTab === "privacy" && (
+              <div className="space-y-4 max-w-xl duration-150 font-sans">
+                <h3 className="text-sm font-semibold text-zinc-200 font-sans">Privasi & Bersihkan Data</h3>
+                <div className="bg-[#161617] rounded-2xl p-4.5 border border-zinc-900/60 space-y-4">
+                  <div className="space-y-1">
+                    <p className="text-zinc-200 font-medium text-[11.5px]">Penyimpanan Data Lokal & Awan</p>
+                    <p className="text-[10px] text-zinc-500 leading-normal">
+                      Sesi obrolan dan preferensi Kakak disinkronkan secara aman ke database cloud. Jumlah pesan saat ini: <span className="text-zinc-300 font-bold">{messageCount}</span> pesan.
+                    </p>
+                  </div>
+
+                  <div className="pt-3 border-t border-zinc-900/40 flex items-center justify-between">
+                    <div className="space-y-0.5 max-w-[280px]">
+                      <span className="text-zinc-200 font-semibold text-[11px] block">Hapus Semua Riwayat Obrolan</span>
+                      <span className="text-[9.5px] text-zinc-450 block leading-tight">Bersihkan semua thread chat dari Firestore.</span>
+                    </div>
+
+                    {!isConfirmingClear ? (
+                      <button
+                        type="button"
+                        onClick={() => setIsConfirmingClear(true)}
+                        className="px-3.5 py-1.5 bg-red-950/40 hover:bg-red-900/30 text-red-400 border border-red-500/15 rounded-xl text-[10.5px] font-bold cursor-pointer transition-colors"
+                      >
+                        Hapus Obrolan
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1.5 animate-fade-in duration-150">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onClearHistory();
+                            setIsConfirmingClear(false);
+                            if (onClose) onClose();
+                          }}
+                          className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[10px] font-extrabold cursor-pointer"
+                        >
+                          Ya, Hapus
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsConfirmingClear(false)}
+                          className="px-3 py-1.5 bg-zinc-900 text-zinc-400 rounded-lg text-[10px] font-semibold cursor-pointer"
+                        >
+                          Batal
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
               </div>
+            )}
 
-              {/* Divider Inside Card */}
-              <div className="h-[1px] bg-zinc-800/30" />
-
-              {/* Row Option: Suara Terpisah */}
-              <div className="flex items-start justify-between py-1 gap-4">
-                <div className="flex-1 space-y-0.5">
-                  <span className="text-zinc-100 font-medium text-[11.5px] block">Simpan Suara Streaming Terpisah</span>
-                  <span className="text-[10px] text-zinc-550 leading-relaxed block">Mematikan rendering teks/transkrip real-time di layar utama untuk mempercepat loading sinkronisasi gelombang frekuensi audio secara murni.</span>
-                </div>
-                <div 
-                  onClick={() => handleToggleValue("maria_stream_split", voiceStreamSplit, setVoiceStreamSplit)}
-                  className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${voiceStreamSplit ? getAccentBgClass() : 'bg-[#323235]'}`}
-                >
-                  <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${voiceStreamSplit ? 'translate-x-[16px]' : 'translate-x-0'}`} />
-                </div>
-              </div>
-            </div>
-
-            {/* CARD 4: ELEVENLABS HIGH-FIDELITY AI VOICE ENGINE */}
-            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-4 shadow-xs text-xs">
-              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30 flex items-center justify-between">
-                <span>🎙️ ElevenLabs AI Voice Engine</span>
-                <span className="text-[9px] text-[#38bdf8] bg-[#38bdf8]/10 px-2 py-0.5 rounded-full font-sans font-bold">HQ Audio</span>
-              </div>
-
-              {/* Toggle Switch */}
-              <div className="flex items-start justify-between py-1 gap-4">
-                <div className="flex-1 space-y-0.5">
-                  <span className="text-zinc-100 font-medium text-[11.5px] block">Aktifkan Suara ElevenLabs AI</span>
-                  <span className="text-[10px] text-zinc-550 leading-relaxed block">Rendering suara super realistis dan emosional menggunakan ElevenLabs API. Setiap balasan asisten akan otomatis disuarakan murni.</span>
-                </div>
-                <div 
-                  onClick={() => {
-                    const next = !voiceEnabled;
-                    setVoiceEnabled(next);
-                    triggerSave({ voiceEnabled: next });
-                  }}
-                  className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${voiceEnabled ? getAccentBgClass() : 'bg-[#323235]'}`}
-                >
-                  <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${voiceEnabled ? 'translate-x-[16px]' : 'translate-x-0'}`} />
-                </div>
-              </div>
-
-              {voiceEnabled && (
-                <div className="space-y-4 pt-2.5 border-t border-zinc-800/40 animate-fade-in text-left">
-                  {/* API Key Input */}
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold text-zinc-450 uppercase tracking-widest pl-0.5">
-                      ElevenLabs API Key
-                    </label>
-                    <input
-                      type="password"
-                      value={elevenlabsApiKey}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setElevenlabsApiKey(val);
-                        triggerSave({ elevenlabsApiKey: val });
-                      }}
-                      placeholder="Masukkan Kunci API ElevenLabs Anda (xi-api-key...)"
-                      className="w-full bg-[#121214] border border-zinc-800 focus:border-sky-500 rounded-xl px-3.5 py-2.5 text-zinc-200 text-[11.5px] focus:outline-none transition-all placeholder-zinc-650"
-                    />
-                    <p className="text-[9.5px] text-zinc-500 leading-normal pl-0.5">
-                      Kunci API disimpan dengan aman di penyimpanan lokal Anda dan disinkronkan ke Firestore.
-                    </p>
-                  </div>
-
-                  {/* Predefined Voice Characters dropdown */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                    <div className="space-y-1.5">
-                      <label className="block text-[10px] font-bold text-zinc-450 uppercase tracking-widest pl-0.5">
-                        Karakter Suara ElevenLabs
-                      </label>
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={() => setActiveDropdownId(activeDropdownId === "el-voice" ? null : "el-voice")}
-                          className="bg-[#242426] hover:bg-[#2b2b2d] text-zinc-200 border border-zinc-800 text-[11px] font-semibold rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-1.5 cursor-pointer w-full text-left transition-all"
-                        >
-                          <span className="truncate">
-                            {PRESET_VOICES.find(v => v.id === elevenlabsVoiceId)?.name || "Maria AI (Bella)"}
-                          </span>
-                          <ChevronDown className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                        </button>
-                        {activeDropdownId === "el-voice" && (
-                          <>
-                            <div className="fixed inset-0 z-40 cursor-default" onClick={() => setActiveDropdownId(null)} />
-                            <div className="absolute left-0 right-0 top-11 bg-[#212123] border border-zinc-800 shadow-2xl rounded-xl py-1 z-50 text-[11px] text-zinc-300 max-h-56 overflow-y-auto divide-y divide-zinc-850">
-                              {PRESET_VOICES.map((v) => (
-                                <button
-                                  key={v.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setElevenlabsVoiceId(v.id);
-                                    triggerSave({ elevenlabsVoiceId: v.id });
-                                    setActiveDropdownId(null);
-                                  }}
-                                  className="w-full px-3 py-2.5 text-left hover:bg-zinc-800 flex flex-col justify-start transition-colors cursor-pointer group"
-                                >
-                                  <div className="flex items-center justify-between w-full">
-                                    <span className="font-bold text-zinc-200 group-hover:text-white">{v.name}</span>
-                                    {elevenlabsVoiceId === v.id && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()}`} />}
-                                  </div>
-                                  <span className="text-[9px] text-zinc-500 mt-0.5 leading-normal">{v.description}</span>
-                                </button>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Predefined Voice Models dropdown */}
-                    <div className="space-y-1.5">
-                      <label className="block text-[10px] font-bold text-zinc-450 uppercase tracking-widest pl-0.5">
-                        Model Suara (Voice Model)
-                      </label>
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={() => setActiveDropdownId(activeDropdownId === "el-model" ? null : "el-model")}
-                          className="bg-[#242426] hover:bg-[#2b2b2d] text-zinc-200 border border-zinc-800 text-[11px] font-semibold rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-1.5 cursor-pointer w-full text-left transition-all"
-                        >
-                          <span className="truncate">
-                            {PRESET_MODELS.find(m => m.id === elevenlabsVoiceModel)?.name || "Eleven Flash v2.5"}
-                          </span>
-                          <ChevronDown className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                        </button>
-                        {activeDropdownId === "el-model" && (
-                          <>
-                            <div className="fixed inset-0 z-40 cursor-default" onClick={() => setActiveDropdownId(null)} />
-                            <div className="absolute left-0 right-0 top-11 bg-[#212123] border border-zinc-800 shadow-2xl rounded-xl py-1 z-50 text-[11px] text-zinc-300 max-h-56 overflow-y-auto divide-y divide-zinc-850">
-                              {PRESET_MODELS.map((m) => (
-                                <button
-                                  key={m.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setElevenlabsVoiceModel(m.id);
-                                    triggerSave({ elevenlabsVoiceModel: m.id });
-                                    setActiveDropdownId(null);
-                                  }}
-                                  className="w-full px-3 py-2.5 text-left hover:bg-zinc-800 flex flex-col justify-start transition-colors cursor-pointer group"
-                                >
-                                  <div className="flex items-center justify-between w-full">
-                                    <span className="font-bold text-zinc-200 group-hover:text-white">{m.name}</span>
-                                    {elevenlabsVoiceModel === m.id && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()}`} />}
-                                  </div>
-                                  <span className="text-[9px] text-zinc-500 mt-0.5 leading-normal">{m.description}</span>
-                                </button>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Optional Custom Voice ID Input */}
-                  {elevenlabsVoiceId === "custom" && (
-                    <div className="space-y-1.5 animate-fade-in text-left">
-                      <label className="block text-[10px] font-bold text-zinc-450 uppercase tracking-widest pl-0.5">
-                        Kustom ElevenLabs Voice ID
-                      </label>
-                      <input
-                        type="text"
-                        value={elevenlabsCustomVoiceId}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setElevenlabsCustomVoiceId(val);
-                          triggerSave({ elevenlabsCustomVoiceId: val });
-                        }}
-                        placeholder="contoh: EXAVITQu4vr4xnSDxMaL"
-                        className="w-full bg-[#121214] border border-zinc-800 focus:border-sky-500 rounded-xl px-3.5 py-2.5 text-zinc-200 text-[11.5px] focus:outline-none transition-all placeholder-zinc-650 font-mono"
-                      />
-                      <p className="text-[9.5px] text-zinc-500 leading-normal pl-0.5">
-                        Masukkan ID suara ElevenLabs kustom Anda yang telah dilatih atau dikloning di situs ElevenLabs.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-          </div>
-        )}
-
-        {/* ===================== TAB: NOTIFIKASI ===================== */}
-        {activeTab === "notifikasi" && (
-          <div className="space-y-4.5 text-xs animate-in fade-in duration-200">
-            <div>
-              <h3 className="text-zinc-150 font-bold text-sm tracking-tight pt-1">Saluran Notifikasi</h3>
-              <p className="text-[10.5px] text-zinc-450 mt-0.5">Kelola saluran penerimaan pesan otomatis, jadwal penting, serta tips asisten cerdas.</p>
-            </div>
-
-            {/* CARD 1: KONFIGURASI NOTIFIKASI */}
-            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-4 shadow-xs">
-              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
-                🔔 Preferensi Pengiriman Notifikasi
-              </div>
-
-              {[
-                { id: "reminders", label: "Pengingat & Agenda", desc: "Dapatkan pengingat tugas harian, jadwal belajar, dan janji penting dari asisten Maria.", state: remindersNotif, setter: setRemindersNotif, key: "notif_reminders" },
-                { id: "updates", label: "Pembaruan & Sistem", desc: "Menerima informasi rilis fitur asisten baru, versi sistem, dan tips keamanan digital harian.", state: updatesNotif, setter: setUpdatesNotif, key: "notif_updates" },
-                { id: "suggestions", label: "Saran & Tips Cerdas", desc: "Dapatkan saran taktis harian dan analisis topik produktivitas cerdas berdasarkan riwayat obrolan Kakak.", state: suggestionsNotif, setter: setSuggestionsNotif, key: "notif_suggestions" }
-              ].map((item, index) => (
-                <div key={item.id} className="space-y-3">
-                  {index > 0 && <div className="h-[1px] bg-zinc-800/30 my-1" />}
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 space-y-0.5">
-                      <span className="text-zinc-100 font-semibold text-[11.5px] block">{item.label}</span>
-                      <span className="text-[10px] text-zinc-450 block leading-relaxed select-text">
-                        {item.desc}
-                      </span>
-                    </div>
-                    
-                    {/* Selector for Delivery Options */}
-                    <div className="relative shrink-0 self-center">
-                      <button
-                        type="button"
-                        onClick={() => setActiveDropdownId(activeDropdownId === `notif-${item.id}` ? null : `notif-${item.id}`)}
-                        className="bg-[#242426] hover:bg-[#2b2b2d] text-zinc-200 border border-zinc-800 text-[11px] font-bold rounded-xl px-3 py-2 flex items-center justify-between gap-1.5 cursor-pointer w-36 text-left transition-all"
-                      >
-                        <span className="truncate">
-                          {item.state.length === 0 ? "Mati" : item.state.map(s => {
-                            if (s === "In-App") return "Dalam Aplikasi";
-                            if (s === "Push") return "Push Browser";
-                            return s;
-                          }).join(", ")}
-                        </span>
-                        <ChevronDown className="w-3 h-3 text-zinc-500 shrink-0" />
-                      </button>
-
-                      {/* Dropdown with options */}
-                      {activeDropdownId === `notif-${item.id}` && (
-                        <>
-                          <div className="fixed inset-0 z-40 cursor-default" onClick={() => setActiveDropdownId(null)} />
-                          <div className="absolute right-0 top-10 bg-[#212123] border border-zinc-850 shadow-2xl rounded-xl py-1.5 z-50 text-[11px] w-48 text-zinc-200 divide-y divide-zinc-800/35">
-                            
-                            {/* Selector choice: In-App */}
-                            <div 
-                              className="px-3.5 py-2.5 hover:bg-zinc-800 flex items-center justify-between cursor-pointer transition-colors"
-                              onClick={() => toggleNotificationChoice(item.key, "In-App", item.state, item.setter)}
-                            >
-                              <span className="flex items-center gap-1.5">
-                                <Bell className="w-3 h-3 text-blue-400 shrink-0" />
-                                Dalam Aplikasi
-                              </span>
-                              <div className={`w-8 h-4.5 rounded-full p-[2px] transition-colors shrink-0 ${item.state.includes("In-App") ? getAccentBgClass() : 'bg-zinc-700'}`}>
-                                <div className={`w-3 h-3 bg-white rounded-full shadow-xs transition-transform transform ${item.state.includes("In-App") ? 'translate-x-3.5' : 'translate-x-0'}`} />
-                              </div>
-                            </div>
-
-                            {/* Selector choice: Email */}
-                            <div 
-                              className="px-3.5 py-2.5 hover:bg-zinc-800 flex items-center justify-between cursor-pointer transition-colors"
-                              onClick={() => toggleNotificationChoice(item.key, "Email", item.state, item.setter)}
-                            >
-                              <span className="flex items-center gap-1.5">
-                                <Mail className="w-3 h-3 text-emerald-400 shrink-0" />
-                                Email
-                              </span>
-                              <div className={`w-8 h-4.5 rounded-full p-[2px] transition-colors shrink-0 ${item.state.includes("Email") ? getAccentBgClass() : 'bg-zinc-700'}`}>
-                                <div className={`w-3 h-3 bg-white rounded-full shadow-xs transition-transform transform ${item.state.includes("Email") ? 'translate-x-3.5' : 'translate-x-0'}`} />
-                              </div>
-                            </div>
-
-                            {/* Selector choice: Push */}
-                            <div 
-                              className="px-3.5 py-2.5 hover:bg-zinc-800 flex items-center justify-between cursor-pointer transition-colors"
-                              onClick={() => toggleNotificationChoice(item.key, "Push", item.state, item.setter)}
-                            >
-                              <span className="flex items-center gap-1.5">
-                                <Sparkles className="w-3 h-3 text-orange-400 shrink-0" />
-                                Push Browser
-                              </span>
-                              <div className={`w-8 h-4.5 rounded-full p-[2px] transition-colors shrink-0 ${item.state.includes("Push") ? getAccentBgClass() : 'bg-zinc-700'}`}>
-                                <div className={`w-3 h-3 bg-white rounded-full shadow-xs transition-transform transform ${item.state.includes("Push") ? 'translate-x-[14px]' : 'translate-x-0'}`} />
-                              </div>
-                            </div>
-                            
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* CARD 2: PUSAT SIMULASI NOTIFIKASI */}
-            <div className="bg-[#1c1c1e] border border-zinc-800/85 rounded-2xl p-4 space-y-3 shadow-xs">
-              <div className="flex items-center gap-2 pb-1 border-b border-zinc-800/30">
-                <Sparkles className="w-4 h-4 text-orange-400 animate-pulse shrink-0" />
-                <span className="font-bold text-[10px] uppercase tracking-wider text-zinc-100">Uji Coba Pengiriman Notifikasi</span>
-              </div>
-              <p className="text-[10px] text-zinc-450 leading-relaxed select-text">
-                Kirim sampel simulasi notifikasi Maria AI ke sistem perangkat Anda secara real-time untuk memverifikasi fungsionalitas saluran aktif:
-              </p>
-              
-              <div className="grid grid-cols-3 gap-2.5 pt-1">
-                <button
-                  type="button"
-                  onClick={() => triggerSimulation("reminders")}
-                  className="bg-blue-600/10 hover:bg-blue-500/20 active:scale-95 text-blue-450 border border-blue-500/30 rounded-xl p-2.5 text-[10px] font-bold cursor-pointer transition-all flex flex-col justify-center items-center gap-2"
-                >
-                  <Bell className="w-4 h-4" />
-                  <span>Sampel Agenda</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => triggerSimulation("updates")}
-                  className="bg-emerald-600/10 hover:bg-emerald-500/20 active:scale-95 text-emerald-450 border border-emerald-500/30 rounded-xl p-2.5 text-[10px] font-bold cursor-pointer transition-all flex flex-col justify-center items-center gap-2"
-                >
-                  <Mail className="w-4 h-4" />
-                  <span>Sampel Fitur</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => triggerSimulation("suggestions")}
-                  className="bg-orange-600/10 hover:bg-orange-500/20 active:scale-95 text-orange-450 border border-orange-500/30 rounded-xl p-2.5 text-[10px] font-bold cursor-pointer transition-all flex flex-col justify-center items-center gap-2"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Sampel Saran</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ===================== TAB: PERSONALISASI ===================== */}
-        {activeTab === "personalisasi" && (
-          <div className="space-y-4.5 text-xs animate-in fade-in duration-200">
-            <div>
-              <h3 className="text-zinc-150 font-bold text-sm tracking-tight pt-1">Personalisasi Asisten</h3>
-              <p className="text-[10.5px] text-zinc-450 mt-0.5">Konstruksikan kepribadian, gaya penuturan respons, informasi pengguna, serta manajemen penyimpanan ingatan jangka panjang.</p>
-            </div>
-
-            {/* CARD 1: KEPRIBADIAN & CARA BICARA */}
-            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-4 shadow-xs">
-              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
-                🎭 Kepribadian & Gaya Berbicara
-              </div>
-
-              {/* Row Option: Gaya dan nada dasar */}
-              <div className="flex items-center justify-between py-0.5">
-                <div className="space-y-0.5 max-w-[200px]">
-                  <span className="text-zinc-100 font-medium text-[11.5px] block">Gaya & Nada Dasar</span>
-                  <span className="text-[10px] text-zinc-550 block leading-normal">Ubah pendekatan emosi dan nada tutur dasar Maria.</span>
-                </div>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setActiveDropdownId(activeDropdownId === "pers-style" ? null : "pers-style")}
-                    className="bg-[#242426] hover:bg-[#2b2b2d] text-zinc-200 border border-zinc-800 text-[11px] font-bold rounded-xl px-3 py-2 flex items-center justify-between gap-1.5 cursor-pointer w-28 text-left transition-all"
-                  >
-                    <span>{
-                      basicToneStyle === "Professional" ? "Profesional" :
-                      basicToneStyle === "Warm" ? "Ramah" :
-                      basicToneStyle === "Creative" ? "Nyentrik" :
-                      basicToneStyle === "Technical" ? "Efisien" :
-                      basicToneStyle === "Minimalist" ? "Sinis" : "Default"
-                    }</span>
-                    <ChevronDown className="w-3 h-3 text-zinc-500 shrink-0" />
-                  </button>
-                  {activeDropdownId === "pers-style" && (
-                    <>
-                      <div className="fixed inset-0 z-40 cursor-default" onClick={() => setActiveDropdownId(null)} />
-                      <div className="absolute right-0 top-10 bg-[#212123] border border-zinc-855 shadow-2xl rounded-xl py-1 z-55 text-[11px] w-52 text-zinc-200 divide-y divide-zinc-850/40">
-                        {[
-                          { key: "Default", tone: "Professional" as MariaTone, desc: "Gaya dan nada bawaan" },
-                          { key: "Profesional", tone: "Professional" as MariaTone, desc: "Rapi dan presisi" },
-                          { key: "Ramah", tone: "Warm" as MariaTone, desc: "Hangat dan akrab" },
-                          { key: "Jujur", tone: "Warm" as MariaTone, desc: "Terus terang dan memberi semangat" },
-                          { key: "Nyentrik", tone: "Creative" as MariaTone, desc: "Menyenangkan dan imajinatif" },
-                          { key: "Efisien", tone: "Technical" as MariaTone, desc: "Singkat dan lugas" },
-                          { key: "Sinis", tone: "Minimalist" as MariaTone, desc: "Kritis dan sarkastis" },
-                        ].map((opt) => {
-                          const isMatchCurrent = basicToneStyle === opt.tone;
-                          return (
-                            <button
-                              key={opt.key}
-                              type="button"
-                              onClick={() => handleToneSelect(opt.tone)}
-                              className="w-full px-3.5 py-2 hover:bg-[#2e2e30] flex flex-col items-start text-left cursor-pointer transition-colors"
-                            >
-                              <div className="flex items-center justify-between w-full">
-                                <span className="font-bold text-zinc-200">{opt.key}</span>
-                                {isMatchCurrent && <Check className={`w-3.5 h-3.5 ${getAccentTextClass()} shrink-0`} />}
-                              </div>
-                              <span className="text-[9px] text-zinc-500 mt-0.5 leading-normal">{opt.desc}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Divider Inside Card */}
-              <div className="h-[1px] bg-zinc-800/30" />
-
-              {/* Characteristic Grid */}
-              <div className="space-y-2">
-                <span className="text-zinc-200 font-semibold text-[11.5px] block">Parameter Karakteristik</span>
-                <span className="text-[10px] text-zinc-500 block leading-normal -mt-1.5">Penyesuaian frekuensi elemen verbal model asisten Maria.</span>
-                
-                <div className="grid grid-cols-2 gap-2.5 pt-1">
-                  
-                  {/* Characteristic Warm */}
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#212123]/60 border border-zinc-850">
-                    <span className="text-zinc-300 font-medium text-[10.5px]">Hangat</span>
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setActiveDropdownId(activeDropdownId === "char-warm" ? null : "char-warm")}
-                        className="bg-[#2a2a2d] hover:bg-[#323235] text-[10px] px-2.5 py-1 rounded-lg border border-zinc-800 flex items-center gap-1 cursor-pointer text-zinc-200 font-bold transition-all"
-                      >
-                        <span>{charWarm}</span>
-                        <ChevronDown className="w-2.5 h-2.5 text-zinc-500" />
-                      </button>
-                      {activeDropdownId === "char-warm" && (
-                        <>
-                          <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
-                          <div className="absolute right-0 top-7 bg-[#212123] border border-zinc-800 rounded-xl shadow-2xl py-1 z-55 text-[10px] w-24">
-                            {["Default", "Rendah", "Tinggi"].map(x => (
-                              <button key={x} onClick={() => handleDropdownSelect("char_warm", x, setCharWarm)} className="w-full text-left px-2.5 py-1 hover:bg-zinc-800 text-zinc-200 block">{x}</button>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Characteristic Enthusiastic */}
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#212123]/60 border border-zinc-850">
-                    <span className="text-zinc-300 font-medium text-[10.5px]">Antusias</span>
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setActiveDropdownId(activeDropdownId === "char-enth" ? null : "char-enth")}
-                        className="bg-[#2a2a2d] hover:bg-[#323235] text-[10px] px-2.5 py-1 rounded-lg border border-zinc-800 flex items-center gap-1 cursor-pointer text-zinc-200 font-bold transition-all"
-                      >
-                        <span>{charEnthusiastic}</span>
-                        <ChevronDown className="w-2.5 h-2.5 text-zinc-500" />
-                      </button>
-                      {activeDropdownId === "char-enth" && (
-                        <>
-                          <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
-                          <div className="absolute right-0 top-7 bg-[#212123] border border-zinc-800 rounded-xl shadow-2xl py-1 z-55 text-[10px] w-24">
-                            {["Default", "Rendah", "Tinggi"].map(x => (
-                              <button key={x} onClick={() => handleDropdownSelect("char_enthusiastic", x, setCharEnthusiastic)} className="w-full text-left px-2.5 py-1 hover:bg-zinc-800 text-zinc-200 block">{x}</button>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Characteristic Title & Lists */}
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#212123]/60 border border-zinc-850">
-                    <span className="text-zinc-300 font-medium text-[10.5px]">Daftar Tulisan</span>
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setActiveDropdownId(activeDropdownId === "char-list" ? null : "char-list")}
-                        className="bg-[#2a2a2d] hover:bg-[#323235] text-[10px] px-2.5 py-1 rounded-lg border border-zinc-800 flex items-center gap-1 cursor-pointer text-zinc-200 font-bold transition-all"
-                      >
-                        <span>{charList}</span>
-                        <ChevronDown className="w-2.5 h-2.5 text-zinc-500" />
-                      </button>
-                      {activeDropdownId === "char-list" && (
-                        <>
-                          <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
-                          <div className="absolute right-0 top-7 bg-[#212123] border border-zinc-800 rounded-xl shadow-2xl py-1 z-55 text-[10px] w-24">
-                            {["Default", "Sering", "Jarang"].map(x => (
-                              <button key={x} onClick={() => handleDropdownSelect("char_list", x, setCharList)} className="w-full text-left px-2.5 py-1 hover:bg-zinc-800 text-zinc-200 block">{x}</button>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Characteristic Emoji */}
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#212123]/60 border border-zinc-850">
-                    <span className="text-zinc-300 font-medium text-[10.5px]">Emoji</span>
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setActiveDropdownId(activeDropdownId === "char-emoji" ? null : "char-emoji")}
-                        className="bg-[#2a2a2d] hover:bg-[#323235] text-[10px] px-2.5 py-1 rounded-lg border border-zinc-800 flex items-center gap-1 cursor-pointer text-zinc-200 font-bold transition-all"
-                      >
-                        <span>{charEmoji}</span>
-                        <ChevronDown className="w-2.5 h-2.5 text-zinc-500" />
-                      </button>
-                      {activeDropdownId === "char-emoji" && (
-                        <>
-                          <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
-                          <div className="absolute right-0 top-7 bg-[#212123] border border-zinc-800 rounded-xl shadow-2xl py-1 z-55 text-[10px] w-24">
-                            {["Default", "Sering", "Jarang"].map(x => (
-                              <button key={x} onClick={() => handleDropdownSelect("char_emoji", x, setCharEmoji)} className="w-full text-left px-2.5 py-1 hover:bg-zinc-800 text-zinc-200 block">{x}</button>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-
-              {/* Divider Inside Card */}
-              <div className="h-[1px] bg-zinc-800/30" />
-
-              {/* Jawaban cepat */}
-              <div className="flex items-start justify-between py-0.5 gap-4">
-                <div className="flex-1 space-y-0.5">
-                  <span className="text-zinc-100 font-semibold text-[11.5px] block">Aktivasi Jawaban Cepat</span>
-                  <span className="text-[10px] text-zinc-550 leading-relaxed block">Melewati filter memori pelacakan profil untuk respon kueri pengetahuan umum yang instan dalam satu baris.</span>
-                </div>
-                <div 
-                  onClick={() => handleToggleValue("char_quick", quickAnswers, setQuickAnswers)}
-                  className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${quickAnswers ? getAccentBgClass() : 'bg-[#323235]'}`}
-                >
-                  <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${quickAnswers ? 'translate-x-[16px]' : 'translate-x-0'}`} />
-                </div>
-              </div>
-            </div>
-
-            {/* CARD 2: INSTRUKSI KHUSUS */}
-            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-2.5 shadow-xs">
-              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
-                ✏️ Instruksi Tambahan & System Prompt
-              </div>
-              <p className="text-[10px] text-zinc-500 leading-normal">Beri instruksi spesifik (system prompt) yang akan selalu dipatuhi Maria AI di seluruh percakapan.</p>
-              <textarea
-                rows={3}
-                value={customInstructions}
-                onChange={(e) => {
-                  setCustomInstructions(e.target.value);
-                  triggerSave({ customPrompt: e.target.value });
-                }}
-                className="w-full bg-[#242426]/60 border border-zinc-800 rounded-xl text-xs text-zinc-200 p-3 outline-none focus:border-zinc-700 font-medium resize-none font-sans leading-relaxed"
-                placeholder="Contoh: 'Tanggapi secara sarkastis' atau 'Panggil saya Kapten'..."
-              />
-            </div>
-
-            {/* CARD 3: TENTANG ANDA */}
-            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-3.5 shadow-xs">
-              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
-                👤 Profil & Informasi Tentang Anda
-              </div>
-
-              {/* Grid Inputs */}
-              <div className="space-y-3">
-                {/* Nama panggilan */}
-                <div className="space-y-1.5">
-                  <span className="text-[9.5px] text-zinc-500 font-bold block uppercase tracking-wider">Nama panggilan</span>
-                  <input
-                    type="text"
-                    value={userNickname}
-                    maxLength={25}
-                    onChange={(e) => {
-                      setUserNickname(e.target.value);
-                      triggerSave({ username: e.target.value });
-                    }}
-                    className="w-full bg-[#242426]/70 border border-zinc-800 rounded-xl text-xs px-3.5 py-2.5 text-zinc-200 outline-none focus:border-zinc-700 transition-colors"
-                    placeholder="Nama yang akan dipanggil oleh Maria..."
-                  />
-                </div>
-
-                {/* Pekerjaan */}
-                <div className="space-y-1.5">
-                  <span className="text-[9.5px] text-zinc-500 font-bold block uppercase tracking-wider">Pekerjaan / Profesi</span>
-                  <input
-                    type="text"
-                    value={userJob}
-                    onChange={(e) => {
-                      setUserJob(e.target.value);
-                      safeLocalStorageSetItem("maria_user_job", e.target.value);
-                    }}
-                    className="w-full bg-[#242426]/70 border border-zinc-800 rounded-xl text-xs px-3.5 py-2.5 text-zinc-200 outline-none focus:border-zinc-700 transition-colors"
-                    placeholder="Contoh: Pembuat Konten, Mahasiswa Teknik..."
-                  />
-                </div>
-
-                {/* Selengkapnya tentang Anda */}
-                <div className="space-y-1.5">
-                  <span className="text-[9.5px] text-zinc-500 font-bold block uppercase tracking-wider">Konteks Tambahan (Minat / Bio)</span>
-                  <input
-                    type="text"
-                    value={userBio}
-                    onChange={(e) => {
-                      setUserBio(e.target.value);
-                      safeLocalStorageSetItem("maria_user_bio", e.target.value);
-                    }}
-                    className="w-full bg-[#242426]/70 border border-zinc-800 rounded-xl text-xs px-3.5 py-2.5 text-zinc-200 outline-none focus:border-zinc-700 transition-colors"
-                    placeholder="Maria akan mengingat konteks ini untuk mempersonalisasi respon..."
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* CARD 4: MEMORI */}
-            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-4.5 shadow-xs">
-              <div className="flex items-center justify-between pb-1 border-b border-zinc-800/30">
-                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">🧠 Penyimpanan Ingatan / Memori</span>
-                <button
-                  type="button"
-                  className="px-3 py-1.5 text-[10.5px] font-bold bg-[#242426] hover:bg-zinc-800 text-zinc-300 border border-zinc-800 rounded-lg hover:text-white cursor-pointer transition-colors"
-                >
-                  Kelola
-                </button>
-              </div>
-
-              {/* Rujuk memori tersimpan */}
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 space-y-0.5">
-                  <span className="text-zinc-100 font-medium text-[11.5px] block">Rujuk Memori Kustom Hari Ini</span>
-                  <span className="text-[10px] text-zinc-550 leading-relaxed block">Izinkan Maria menganalisis preferensi yang pernah dicantumkan pada percakapan masa lalu (misal: bahasa pemrograman favorit).</span>
-                </div>
-                <div 
-                  onClick={() => handleToggleValue("mem_save", memSave, setMemSave)}
-                  className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${memSave ? getAccentBgClass() : 'bg-[#323235]'}`}
-                >
-                  <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${memSave ? 'translate-x-[16px]' : 'translate-x-0'}`} />
-                </div>
-              </div>
-
-              {/* Divider Inside Card */}
-              <div className="h-[1px] bg-zinc-800/30" />
-
-              {/* Rujuk riwayat obrolan */}
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 space-y-0.5">
-                  <span className="text-zinc-100 font-medium text-[11.5px] block">Rujuk Riwayat Obrolan Terkini</span>
-                  <span className="text-[10px] text-zinc-550 leading-relaxed block">Izinkan asisten merujuk ke pesan-pesan sebelumnya di thread aktif guna melestarikan konteks obrolan.</span>
-                </div>
-                <div 
-                  onClick={() => handleToggleValue("mem_ref", memRef, setMemRef)}
-                  className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${memRef ? getAccentBgClass() : 'bg-[#323235]'}`}
-                >
-                  <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${memRef ? 'translate-x-[16px]' : 'translate-x-0'}`} />
-                </div>
-              </div>
-
-              <div className="text-[10px] text-zinc-500 leading-normal pt-1 border-t border-zinc-800/20">
-                Asisten juga akan menyederhanakan kueri pencarian Web (seperti Bing Search Grounding) jika memori diizinkan aktif. <span className="underline cursor-pointer hover:text-zinc-400">Pelajari selengkapnya</span>
-              </div>
-            </div>
-
-            {/* CARD 5: LANJUTAN COLLAPSIBLE */}
-            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-3.5 shadow-xs">
-              <button 
-                type="button"
-                onClick={() => setIsAdvancedExpanded(!isAdvancedExpanded)}
-                className="w-full flex items-center justify-between text-zinc-100 font-bold hover:text-white cursor-pointer py-0.5"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">⚙️ Preferensi Koneksi Lanjutan</span>
-                  <span className="text-[7.5px] font-bold bg-[#29292c] text-zinc-400 px-1.5 py-[1.5px] border border-zinc-800 rounded-sm">ADVANCED</span>
-                </div>
-                {isAdvancedExpanded ? <ChevronUp className="w-4 h-4 text-zinc-500 shrink-0" /> : <ChevronDown className="w-4 h-4 text-zinc-500 shrink-0" />}
-              </button>
-
-              {isAdvancedExpanded && (
-                <div className="pt-2 space-y-3.5 border-t border-zinc-800/30 animate-in slide-in-from-top duration-200">
-                  
-                  {/* Pencarian web */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 space-y-0.5">
-                      <span className="text-zinc-200 font-medium text-[11px] block">Pencarian Web Otomatis</span>
-                      <span className="text-[10px] text-zinc-500 leading-normal block">Menganalisis hasil mesin pencari web secara dinamis jika diperlukan informasi aktual.</span>
-                    </div>
-                    <div 
-                      onClick={() => handleToggleValue("adv_web", advWeb, setAdvWeb)}
-                      className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${advWeb ? getAccentBgClass() : 'bg-[#323235]'}`}
-                    >
-                      <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${advWeb ? 'translate-x-[16px]' : 'translate-x-0'}`} />
-                    </div>
-                  </div>
-
-                  {/* Divider Inside Card */}
-                  <div className="h-[1px] bg-zinc-800/20" />
-
-                  {/* Kanvas */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 space-y-0.5">
-                      <span className="text-zinc-200 font-medium text-[11px] block">Sesi Kanvas Interaktif</span>
-                      <span className="text-[10px] text-zinc-500 leading-normal block">Mengaktifkan side panel Maria Canvas untuk berkolaborasi menyunting teks/kode bersama-sama.</span>
-                    </div>
-                    <div 
-                      onClick={() => handleToggleValue("adv_canvas", advCanvas, setAdvCanvas)}
-                      className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${advCanvas ? getAccentBgClass() : 'bg-[#323235]'}`}
-                    >
-                      <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${advCanvas ? 'translate-x-[16px]' : 'translate-x-0'}`} />
-                    </div>
-                  </div>
-
-                  {/* Divider Inside Card */}
-                  <div className="h-[1px] bg-zinc-800/20" />
-
-                  {/* Suara Maria AI */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 space-y-0.5">
-                      <span className="text-zinc-200 font-medium text-[11px] block">Koneksi Maria Voice Chat</span>
-                      <span className="text-[10px] text-zinc-500 leading-normal block">Izinkan inisiasi transfer gelombang asisten suara Maria via WebSocket.</span>
-                    </div>
-                    <div 
-                      onClick={() => handleToggleValue("adv_voice_chat", advVoiceChat, setAdvVoiceChat)}
-                      className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${advVoiceChat ? getAccentBgClass() : 'bg-[#323235]'}`}
-                    >
-                      <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${advVoiceChat ? 'translate-x-[16px]' : 'translate-x-0'}`} />
-                    </div>
-                  </div>
-
-                  {/* Divider Inside Card */}
-                  <div className="h-[1px] bg-zinc-800/20" />
-
-                  {/* Suara tingkat lanjut */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 space-y-0.5">
-                      <span className="text-zinc-200 font-medium text-[11px] block">Suara Tingkat Lanjut</span>
-                      <span className="text-[10px] text-zinc-500 leading-normal block">Mengaktifkan asisten suara hibrida yang berinteraksi tanpa jeda tunggu (real-time voice).</span>
-                    </div>
-                    <div 
-                      onClick={() => handleToggleValue("adv_smart_voice", advSmartVoice, setAdvSmartVoice)}
-                      className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${advSmartVoice ? getAccentBgClass() : 'bg-[#323235]'}`}
-                    >
-                      <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${advSmartVoice ? 'translate-x-[16px]' : 'translate-x-0'}`} />
-                    </div>
-                  </div>
-
-                  {/* Divider Inside Card */}
-                  <div className="h-[1px] bg-zinc-800/20" />
-
-                  {/* Pencarian konektor */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 space-y-0.5">
-                      <span className="text-zinc-200 font-medium text-[11px] block">Pencarian Konektor Eksternal</span>
-                      <span className="text-[10px] text-zinc-500 leading-normal block">Mengakses basis data pihak ketiga yang dikoneksikan ke dalam akun asisten Anda.</span>
-                    </div>
-                    <div 
-                      onClick={() => handleToggleValue("adv_connector", advConnector, setAdvConnector)}
-                      className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer transition-colors duration-200 shrink-0 self-center ${advConnector ? getAccentBgClass() : 'bg-[#323235]'}`}
-                    >
-                      <div className={`w-[17px] h-[17px] bg-white rounded-full shadow-md transition-transform duration-200 transform ${advConnector ? 'translate-x-[16px]' : 'translate-x-0'}`} />
-                    </div>
-                  </div>
-
-                </div>
-              )}
-            </div>
-
-          </div>
-        )}
-
-        {/* ===================== TAB: APLIKASI ===================== */}
-        {activeTab === "aplikasi" && (
-          <div className="space-y-4.5 text-xs animate-in fade-in duration-200">
-            <div>
-              <h3 className="text-zinc-150 font-bold text-sm tracking-tight pt-1">Ekstensi & Sambungan Luar</h3>
-              <p className="text-[10.5px] text-zinc-450 mt-0.5">Sinkronkan asisten cerdas Maria AI ke aplikasi penyimpanan dokumen awan serta rujukan seluler.</p>
-            </div>
-
-            {/* CARD 1: SAMBUNGAN AKUN */}
-            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-3.5 shadow-xs">
-              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
-                ☁️ Integrasi Cloud Storage
-              </div>
-              <p className="text-[10px] text-zinc-450 leading-relaxed select-text">
-                Koneksikan Maria AI dengan lancar ke penyimpanan Cloud personal Anda untuk sinkronisasi dokumen kerja secara otomatis.
-              </p>
-              <div>
-                <button
-                  type="button"
-                  className="px-3.5 py-2 bg-[#242426] hover:bg-zinc-800 text-zinc-200 text-[10.5px] border border-zinc-800 rounded-xl cursor-pointer font-bold inline-flex items-center gap-1.5 transition-colors"
-                >
-                  <span>Sambung Google Drive</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-zinc-500" />
-                </button>
-              </div>
-            </div>
-
-            {/* CARD 2: FITUR SELULER */}
-            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-3 shadow-xs">
-              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
-                📱 Aplikasi Seluler Android / iOS
-              </div>
-              <p className="text-[10px] text-zinc-450 leading-relaxed select-text">
-                Pindai kode QR untuk langsung mengunduh aplikasi Maria di smartphone Anda dengan fitur respon suara real-time hibrida tanpa delay.
-              </p>
-              
-              <div className="flex items-center gap-4 bg-zinc-900/40 p-3 rounded-xl border border-zinc-850 max-w-sm">
-                <div className="w-16 h-16 bg-[#242426] border border-zinc-800 rounded-lg flex items-center justify-center font-bold text-zinc-400 text-[9px] text-center shrink-0">
-                  QR Code
-                </div>
-                <div className="text-[10px] text-zinc-450 leading-normal select-text">
-                  Arahkan kamera HP ke kode di samping untuk mengunduh versi khusus APK Android / iOS secara hibrid.
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ===================== TAB: TAGIHAN ===================== */}
-        {activeTab === "tagihan" && (
-          <div className="space-y-4 text-xs animate-in fade-in duration-200">
-            <div>
-              <h3 className="text-zinc-150 font-bold text-sm tracking-tight pt-1">Langganan & Billing</h3>
-              <p className="text-[10.5px] text-zinc-450 mt-0.5">Kelola lisensi keanggotaan premium, masa aktif paket, rincian pembayaran, serta pengontrol masa kedaluwarsa fitur.</p>
-            </div>
-
-            {/* CARD 1: STATUS KEANGGOTAAN */}
-            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-4 shadow-xs">
-              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30 flex items-center justify-between">
-                <span>💎 Status Keanggotaan</span>
-                <span className={`text-[8px] font-black tracking-widest px-1.5 py-0.5 rounded-sm uppercase ${
-                  isPlus 
-                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25" 
-                    : "bg-zinc-800 text-zinc-500 border border-zinc-700"
-                }`}>
-                  {isPlus ? "ACTIVE" : "INACTIVE"}
-                </span>
-              </div>
-              
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Paket Aktif Saat Ini</span>
-                  <span className={`text-base font-extrabold ${isPlus ? getAccentTextClass() : "text-zinc-400"} mt-0.5 block flex items-center gap-1.5`}>
-                    {isPlus 
-                      ? `Maria AI Premium Plus (${subPlan === "yearly" ? "Tahunan" : "Bulanan"}) ✨` 
-                      : "Maria AI Free (Gratis)"}
-                  </span>
-                </div>
-                <div className="shrink-0">
-                  {isPlus ? (
-                    <span className="px-3.5 py-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-[10px] rounded-xl font-bold">
-                      Terbuka Akses Plus
-                    </span>
-                  ) : (
-                    <span className="px-3.5 py-1.5 bg-zinc-800 text-zinc-500 border border-zinc-750 text-[10px] rounded-xl font-bold">
-                      Akses Terbatas
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Divider Inside Card */}
-              <div className="h-[1px] bg-zinc-800/30" />
-
-              {/* Grid Statistics Info */}
-              <div className="grid grid-cols-2 gap-3 pb-1">
-                <div className="bg-[#212123]/60 p-3 rounded-xl border border-zinc-850 space-y-1">
-                  <span className="text-[9px] text-zinc-500 font-bold block uppercase tracking-wider">Tipe Paket</span>
-                  <span className="block text-xs font-bold text-zinc-200">
-                    {isPlus ? (subPlan === "yearly" ? "Premium Plus (Tahunan)" : "Premium Plus (Bulanan)") : "Free Tier (Paket Gratis)"}
-                  </span>
-                </div>
-                <div className="bg-[#212123]/60 p-3 rounded-xl border border-zinc-850 space-y-1">
-                  <span className="text-[9px] text-zinc-500 font-bold block uppercase tracking-wider">Metode Pembayaran</span>
-                  <span className="block text-xs font-bold text-zinc-200">
-                    {isPlus ? "Auto-Debit Terverifikasi" : "-"}
-                  </span>
-                </div>
-                <div className="bg-[#212123]/60 p-3 rounded-xl border border-zinc-850 space-y-1">
-                  <span className="text-[9px] text-zinc-500 font-bold block uppercase tracking-wider">Tanggal Pembelian</span>
-                  <span className="block text-[11px] font-bold text-zinc-200 leading-normal">
-                    {isPlus && subPurchaseDate ? formatIndonesianDate(subPurchaseDate) : "-"}
-                  </span>
-                </div>
-                <div className="bg-[#212123]/60 p-3 rounded-xl border border-zinc-850 space-y-1">
-                  <span className="text-[9px] text-zinc-500 font-bold block uppercase tracking-wider">Masa Berlaku Paket</span>
-                  <span className={`block text-[11px] font-bold leading-normal ${isPlus ? "text-emerald-400" : "text-zinc-500"}`}>
-                    {isPlus && subExpiryDate ? formatIndonesianDate(subExpiryDate) : "Selesai / Kedaluwarsa"}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* CARD 2: DYNAMIC SIMULATION PANEL */}
-            <div className="bg-[#1c1c1e] border border-orange-500/20 rounded-2xl p-4 space-y-3.5 shadow-sm">
-              <div className="text-[9.5px] font-bold text-orange-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30 flex items-center gap-1.5">
-                <span>🛠️ Panel Simulasi Masa Aktif (Rasionalisasi Pengujian)</span>
-              </div>
-              <p className="text-[10px] text-zinc-450 leading-relaxed">
-                Gunakan alat simulasi di bawah ini untuk menguji fungsionalitas waktu nyata. Anda dapat memicu masa aktif paket bulanan, tahunan, atau secara instan kedaluwarsa untuk memastikan seluruh fitur Maria Plus otomatis dicabut kembali.
-              </p>
-
-              <div className="flex flex-wrap gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const now = new Date();
-                    const expiry = new Date();
-                    expiry.setDate(now.getDate() + 30); // 30 days
-                    
-                    if (typeof window !== "undefined") {
-                      localStorage.setItem("maria_is_plus", "true");
-                      localStorage.setItem("maria_plus_plan", "monthly");
-                      localStorage.setItem("maria_plus_purchase_date", now.toISOString());
-                      localStorage.setItem("maria_plus_expiry_date", expiry.toISOString());
-                    }
-                    
-                    setSubPlan("monthly");
-                    setSubPurchaseDate(now.toISOString());
-                    setSubExpiryDate(expiry.toISOString());
-                    if (setIsPlus) setIsPlus(true);
-
-                    if (onAddSystemNotification) {
-                      onAddSystemNotification(
-                        "Simulasi Sukses ✨",
-                        "Masa aktif paket bulanan (30 hari) berhasil disimulasi dan diaktifkan.",
-                        "success"
-                      );
-                    }
-                  }}
-                  className="px-3 py-1.5 bg-zinc-850 hover:bg-zinc-800 text-zinc-250 border border-zinc-800 text-[10px] rounded-lg font-bold cursor-pointer transition-all flex-1 min-w-[120px]"
-                >
-                  Set Bulanan (30 Hari)
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const now = new Date();
-                    const expiry = new Date();
-                    expiry.setDate(now.getDate() + 365); // 365 days
-                    
-                    if (typeof window !== "undefined") {
-                      localStorage.setItem("maria_is_plus", "true");
-                      localStorage.setItem("maria_plus_plan", "yearly");
-                      localStorage.setItem("maria_plus_purchase_date", now.toISOString());
-                      localStorage.setItem("maria_plus_expiry_date", expiry.toISOString());
-                    }
-                    
-                    setSubPlan("yearly");
-                    setSubPurchaseDate(now.toISOString());
-                    setSubExpiryDate(expiry.toISOString());
-                    if (setIsPlus) setIsPlus(true);
-
-                    if (onAddSystemNotification) {
-                      onAddSystemNotification(
-                        "Simulasi Sukses ✨",
-                        "Masa aktif paket tahunan (365 hari) berhasil disimulasi dan diaktifkan.",
-                        "success"
-                      );
-                    }
-                  }}
-                  className="px-3 py-1.5 bg-zinc-850 hover:bg-zinc-800 text-zinc-250 border border-zinc-800 text-[10px] rounded-lg font-bold cursor-pointer transition-all flex-1 min-w-[120px]"
-                >
-                  Set Tahunan (365 Hari)
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const now = new Date();
-                    const purchase = new Date();
-                    purchase.setDate(now.getDate() - 32);
-                    const expiry = new Date();
-                    expiry.setDate(now.getDate() - 2); 
-                    
-                    if (typeof window !== "undefined") {
-                      localStorage.setItem("maria_is_plus", "true"); 
-                      localStorage.setItem("maria_plus_plan", "monthly");
-                      localStorage.setItem("maria_plus_purchase_date", purchase.toISOString());
-                      localStorage.setItem("maria_plus_expiry_date", expiry.toISOString());
-                    }
-                    
-                    setSubPlan("monthly");
-                    setSubPurchaseDate(purchase.toISOString());
-                    setSubExpiryDate(expiry.toISOString());
-                    if (setIsPlus) setIsPlus(true); 
-                    
-                    setTimeout(() => {
-                      if (onAddSystemNotification) {
-                        onAddSystemNotification(
-                          "Memicu Kedaluwarsa",
-                          "Waktu kedaluwarsa diatur ke masa lampau. Lisensi akan otomatis ditolak.",
-                          "info"
-                        );
-                      }
-                    }, 200);
-                  }}
-                  className="px-3 py-1.5 bg-rose-950/25 hover:bg-rose-950/40 text-rose-300 border border-rose-500/20 text-[10px] rounded-lg font-bold cursor-pointer transition-all flex-1 min-w-[120px]"
-                >
-                  Simulasikan Kedaluwarsa ⚠️
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ===================== TAB: KONTROL DATA ===================== */}
-        {activeTab === "kontrol-data" && (
-          <div className="space-y-4.5 text-xs animate-in fade-in duration-200">
-            <div>
-              <h3 className="text-zinc-150 font-bold text-sm tracking-tight pt-1">Keamanan & Kontrol Data</h3>
-              <p className="text-[10.5px] text-zinc-450 mt-0.5">Kelola privasi obrolan, ekspor seluruh database asisten, serta kontrol riwayat lokal perangkat.</p>
-            </div>
-
-            {/* CARD 1: PRIVASI & PELATIHAN */}
-            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-4 shadow-xs">
-              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
-                🔒 Privasi Model & Pelatihan AI
-              </div>
-              
-              <div className="flex items-start justify-between gap-4 py-0.5">
-                <div className="flex-1 space-y-0.5">
-                  <span className="text-zinc-100 font-medium text-[11.5px] block">Riwayat & Penyempurnaan Otomatis</span>
-                  <span className="text-[10px] text-zinc-550 leading-relaxed block">Simpan transkrip obrolan baru di penyimpanan lokal dan izinkan evaluasi anonim untuk kecerdasan Maria harian.</span>
-                </div>
-                <div className={`w-[38px] h-[22px] rounded-full p-[2.5px] cursor-pointer shrink-0 self-center ${getAccentBgClass()}`}>
-                  <div className="w-[17px] h-[17px] bg-white rounded-full shadow-md translate-x-[16px]" />
-                </div>
-              </div>
-            </div>
-
-            {/* CARD 2: PENGELOLAAN DATA */}
-            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-4 shadow-xs">
-              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
-                📁 Ekspor & Manajemen File Publik
-              </div>
-
-              {/* Tautan Bersama Row */}
-              <div className="flex items-center justify-between gap-4 py-0.5">
-                <div className="space-y-0.5">
-                  <span className="text-zinc-100 font-medium text-[11.5px] block">Kelola Tautan Bersama</span>
-                  <span className="text-[10px] text-zinc-550 block">Audit semua tautan publik percakapan yang pernah Anda bagikan secara terbuka.</span>
-                </div>
-                <button
-                  type="button"
-                  className="px-3 py-1.5 bg-[#242426] hover:bg-zinc-800 text-[10.5px] font-bold rounded-lg border border-zinc-800 text-zinc-300 hover:text-white cursor-pointer transition-colors"
-                >
-                  Kelola
-                </button>
-              </div>
-
-              {/* Divider Inside Card */}
-              <div className="h-[1px] bg-zinc-800/30" />
-
-              {/* Ekspor data row */}
-              <div className="flex items-center justify-between gap-4 py-0.5">
-                <div className="space-y-0.5">
-                  <span className="text-zinc-100 font-medium text-[11.5px] block">Ekspor Seluruh Database Lokal</span>
-                  <span className="text-[10px] text-zinc-550 block">Menerima salinan arsip transkrip percakapan terenkripsi dalam format JSON.</span>
-                </div>
-                <button
-                  type="button"
-                  className="px-3 py-1.5 bg-[#242426] hover:bg-zinc-800 text-[10.5px] font-bold rounded-lg border border-zinc-800 text-zinc-300 hover:text-white cursor-pointer transition-colors"
-                >
-                  Ekspor
-                </button>
-              </div>
-            </div>
-
-            {/* CARD 3: BERSIHKAN DATA */}
-            <div className="bg-[#1c1c1e] border border-zinc-800/80 rounded-2xl p-4 space-y-4 shadow-xs">
-              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest pb-1 border-b border-zinc-800/30">
-                ⚠️ Zona Berbahaya
-              </div>
-              
-              <div className="flex items-center justify-between gap-4 py-0.5">
-                <div className="space-y-0.5">
-                  <span className="text-zinc-100 font-medium text-[11.5px] block leading-normal">Hapus Bersih Riwayat Obrolan</span>
-                  <span className="text-[10px] text-zinc-550 block leading-normal">Tindakan ini tidak dapat dibatalkan. Seluruh histori Maria AI di perangkat ini akan lenyap total.</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={onClearHistory}
-                  disabled={messageCount === 0}
-                  className={`px-3 py-1.5 text-[10.5px] font-bold rounded-lg border flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 ${
-                    messageCount === 0
-                      ? "bg-[#212123] border-zinc-850 text-zinc-600 opacity-40 cursor-not-allowed"
-                      : "bg-rose-950/20 border-rose-900/60 text-rose-400 hover:bg-rose-900/20"
-                  }`}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Hapus Semua</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-          {/* Closing of scrolling content area */}
+          {/* Closing of scrolling content Area */}
           </div>
         {/* Closing of container for content panel */}
         </div>
@@ -2561,8 +632,8 @@ export default function SettingsDashboard({
 
       {/* Persistent Save Status Notification Banner */}
       {saveBannerText && (
-        <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-xl backdrop-blur-xs text-[10.5px] font-semibold text-white shadow-xl flex items-center gap-1.5 animate-fade-in z-50 ${getAccentBgClass()}`}>
-          <Info className="w-3.5 h-3.5 shrink-0" />
+        <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-xl backdrop-blur-xs text-[10px] font-bold text-white shadow-xl flex items-center gap-1.5 animate-fade-in z-50 ${getAccentBgClass()}`}>
+          <Check className="w-3 h-3 text-white" />
           <span>{saveBannerText}</span>
         </div>
       )}
