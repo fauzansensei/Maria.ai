@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { UserSettings, MariaTone, LanguageStyle, AppTheme } from "../types";
 import { safeLocalStorageSetItem } from "../utils";
 import { PRESET_VOICES, PRESET_MODELS } from "../services/elevenLabsService";
+import { auth } from "../firebase";
 import { 
   Settings, 
   Bell, 
@@ -210,7 +211,7 @@ export default function SettingsDashboard({
           </div>
 
           <div className="px-2 py-1 text-[8.5px] font-mono text-zinc-600 border-t border-zinc-900/50 pt-2.5 leading-normal">
-            SISTEM v2.6.0<br />
+            SISTEM v1.0.0<br />
             OPTIMASI RUNTIME AKTIF
           </div>
         </div>
@@ -272,12 +273,24 @@ export default function SettingsDashboard({
                 <h3 className="text-sm font-semibold text-zinc-200">Profil Pengguna</h3>
                 <div className="bg-[#161617] rounded-2xl p-5 border border-zinc-900/60 shadow-xs space-y-4">
                   <div className="flex items-center gap-5">
-                    <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-2xl shadow-md">
-                      👤
-                    </div>
+                    {auth.currentUser?.photoURL ? (
+                      <img 
+                        src={auth.currentUser.photoURL} 
+                        alt={username} 
+                        referrerPolicy="no-referrer"
+                        className="w-16 h-16 rounded-xl object-cover shadow-md border border-zinc-800"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-xl font-bold uppercase text-white shadow-md">
+                        {username ? username.charAt(0) : "U"}
+                      </div>
+                    )}
                     <div className="space-y-1">
                       <p className="text-base font-bold text-zinc-100">{username}</p>
-                      <p className="text-[10px] text-zinc-500">ID Anggota Aktif • Sesi Mandiri</p>
+                      <p className="text-[10px] text-zinc-400 font-mono select-all">
+                        {auth.currentUser?.email || "basitfauzan42@gmail.com"}
+                      </p>
+                      <p className="text-[9px] text-[#a855f7] font-semibold">ID Anggota Aktif • Sesi Terhubung</p>
                     </div>
                   </div>
 
