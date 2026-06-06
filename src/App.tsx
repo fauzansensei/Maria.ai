@@ -586,26 +586,12 @@ export default function App() {
     setAuthLocalError(null);
     setIsAuthenticating(true);
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-      setProfileDisplayName(user.displayName || "User");
-      setProfileUsername("@" + (user.email?.split("@")[0] || "user"));
-      setIsLoggedIn(true);
-      setIsProfileOpen(false);
-      handleAddSystemNotification(
-        "Selamat Datang",
-        `Hai ${user.displayName || "User"}, Anda sukses masuk ke asisten pintar!`,
-        "success"
-      );
+      await signInWithRedirect(auth, googleProvider);
     } catch (err: any) {
       console.error(err);
       let message = err.message || String(err);
-      if (err.code === "auth/popup-blocked") {
-        message = "Pop-up diblokir. Silakan aktifkan popup untuk situs ini atau gunakan metode Redirect di bawah.";
-        setIsProfileOpen(true);
-      } else if (err.code === "auth/unauthorized-domain") {
+      if (err.code === "auth/unauthorized-domain") {
         message = `Gagal: Domain '${window.location.hostname}' belum diizinkan oleh Firebase Console Anda.`;
-        setIsProfileOpen(true);
       }
       
       const isApiKeyError = (err.message || "").toLowerCase().includes("api-key-not-valid") || 
@@ -622,7 +608,7 @@ export default function App() {
         return;
       }
       setAuthLocalError(message);
-    } finally {
+      setIsProfileOpen(true);
       setIsAuthenticating(false);
     }
   };
