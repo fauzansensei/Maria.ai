@@ -463,10 +463,15 @@ export default function AuxiliaryModals({
                     </div>
                   </form>
 
-                  <div className="flex items-center gap-2 w-full max-w-[280px]">
-                    <span className="h-px bg-slate-800 flex-1"></span>
-                    <span className="text-[9px] text-slate-500 font-sans uppercase font-bold tracking-wider">Atau</span>
-                    <span className="h-px bg-slate-800 flex-1"></span>
+                  <div className="flex flex-col items-center gap-1.5 w-full max-w-[280px]">
+                    <div className="flex items-center gap-2 w-full">
+                      <span className="h-px bg-slate-800 flex-1"></span>
+                      <span className="text-[9px] text-slate-500 font-sans uppercase font-bold tracking-wider">Atau</span>
+                      <span className="h-px bg-slate-800 flex-1"></span>
+                    </div>
+                    <p className="text-[9px] text-amber-500/90 font-sans text-center leading-normal">
+                      💡 Gunakan tombol Masuk Instan di bawah jika Google Sign-In diblokir browser Anda!
+                    </p>
                   </div>
 
                   <div className="w-full flex flex-col gap-2.5 items-center justify-center">
