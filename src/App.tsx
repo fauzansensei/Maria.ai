@@ -33,9 +33,9 @@ import {
   getDocs
 } from "firebase/firestore";
 
-// Lazy imports for primary main-screen components to optimize initial pageload chunk sizes and keep bundle size under 85kib
-const Sidebar = React.lazy(() => import("./components/Sidebar"));
-const ChatArea = React.lazy(() => import("./components/ChatArea"));
+// Statically import primary main-screen components to avoid double-flicker loading states, sequentially blocked network waterfalls, and LCP/CLS degradation
+import Sidebar from "./components/Sidebar";
+import ChatArea from "./components/ChatArea";
 const SettingsDashboard = React.lazy(() => import("./components/SettingsDashboard"));
 const DiscoverArea = React.lazy(() => import("./components/DiscoverArea"));
 const LibraryArea = React.lazy(() => import("./components/LibraryArea"));
