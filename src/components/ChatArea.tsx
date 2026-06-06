@@ -140,6 +140,7 @@ function LinkOpenerCard({
   messageTimestamp?: string;
 }) {
   const specs = getAppSpecs(name);
+  const [popupBlocked, setPopupBlocked] = useState(false);
   
   // Format user-friendly displayed URL hostname
   let displayUrl = url;
@@ -169,30 +170,18 @@ function LinkOpenerCard({
     if (ageSeconds < 15) {
       sessionStorage.setItem(sessionKey, "true");
       
-      // Attempt 1: Try window.open targetHref in new tab
-      const openedWindow = window.open(targetHref, "_blank");
-      
-      // Fallback if blocked (opens in current iframe view, guaranteeing it always launches successfully)
-      if (!openedWindow) {
-        try {
-          window.location.href = targetHref;
-        } catch (err) {
-          console.error("Auto redirection failed inside sandbox:", err);
+      // Attempt: Try window.open targetHref in new tab
+      try {
+        const openedWindow = window.open(targetHref, "_blank");
+        if (!openedWindow || openedWindow.closed || typeof openedWindow.closed === "undefined") {
+          setPopupBlocked(true);
         }
+      } catch (err) {
+        console.error("Auto redirection failed inside sandbox:", err);
+        setPopupBlocked(true);
       }
     }
   }, [messageId, messageTimestamp, targetHref, url]);
-
-  const handleLaunch = () => {
-    const openedWindow = window.open(targetHref, "_blank");
-    if (!openedWindow) {
-      try {
-        window.location.href = targetHref;
-      } catch (err) {
-        console.error("Manual launch redirection failed inside sandbox:", err);
-      }
-    }
-  };
 
   return (
     <div className={`my-3.5 relative overflow-hidden rounded-xl border p-4 shadow-2xs transition-all duration-200 hover:shadow-xs ${specs.colorClass} flex flex-col gap-3 select-none animate-fade-in`}>
@@ -218,16 +207,26 @@ function LinkOpenerCard({
         </div>
 
         <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-          <button
-            type="button"
-            onClick={handleLaunch}
+          <a
+            href={targetHref}
+            target="_blank"
+            rel="noopener noreferrer"
             className={`px-4 py-2 rounded-lg text-[11px] font-bold shadow-xs whitespace-nowrap transition-transform active:scale-95 duration-250 cursor-pointer flex items-center gap-1.5 shrink-0 ${specs.btnClass}`}
           >
             <span>Luncurkan Aplikasi</span>
             <ExternalLink className="w-3.5 h-3.5" />
-          </button>
+          </a>
         </div>
       </div>
+
+      {popupBlocked && (
+        <div className="mt-1 text-[11px] bg-amber-50/80 border border-amber-200 text-amber-900 rounded-lg p-2.5 flex items-start gap-1.5 animate-fade-in shadow-2xs">
+          <div className="font-bold text-amber-700 shrink-0 mt-0.5">⚠️ INFO HP:</div>
+          <p className="leading-relaxed font-sans">
+            Membuka otomatis terhalang oleh pemblokir pop-up browser HP Anda atau batasan sandbox. Silakan klik tombol <strong>Luncurkan Aplikasi</strong> di atas untuk langsung membukanya di tab baru secara aman!
+          </p>
+        </div>
+      )}
     </div>
   );
 }
