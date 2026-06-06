@@ -966,12 +966,18 @@ export default function ChatArea({
                           }`}
                         >
                           {m.isError ? (
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-1.5 text-red-700 font-semibold text-xs">
+                            <div className="space-y-2 col-span-full">
+                              <div className="flex items-center gap-1.5 text-red-750 font-semibold text-[12px]">
                                 <AlertTriangle className="w-4 h-4 text-red-500 animate-pulse" />
                                 {m.content.toLowerCase().includes("offline") || m.content.toLowerCase().includes("jaringan") || m.content.toLowerCase().includes("network")
                                   ? "Koneksi Jaringan Terputus / Kondisi Offline"
-                                  : "Konfigurasi Kunci API Belum Terpasang"
+                                  : (m.content.toLowerCase().includes("quota") || m.content.toLowerCase().includes("exhausted") || m.content.toLowerCase().includes("429") || m.content.toLowerCase().includes("rate limit") || m.content.toLowerCase().includes("limit exceeded"))
+                                  ? "Batas Kuota Pemakaian Terlampaui (Error 429)"
+                                  : m.content.toLowerCase().includes("overloaded") || m.content.toLowerCase().includes("overload") || m.content.toLowerCase().includes("503") || m.content.toLowerCase().includes("unavailable")
+                                  ? "Layanan Server AI Sedang Sangat Padat (Error 503)"
+                                  : (m.content.toLowerCase().includes("invalid-api-key") || m.content.toLowerCase().includes("api_key") || m.content.toLowerCase().includes("key not valid") || m.content.toLowerCase().includes("belum dikonfigurasi"))
+                                  ? "Konfigurasi Kunci API Belum Terpasang / Salah"
+                                  : "Kesalahan Sistem Asisten AI"
                                 }
                               </div>
                               <p className="text-xs text-red-650 leading-relaxed">
