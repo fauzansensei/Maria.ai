@@ -29,7 +29,7 @@ export interface DiscoveryAgent {
   description: string;
   avatar: string;
   emoji: string;
-  category: "all" | "learning" | "creative" | "tech";
+  category: "all" | "learning" | "creative" | "tech" | "productivity" | "lifestyle";
   startingMessage: string;
   systemPrompt: string;
   theme: "classic-blue" | "emerald-green" | "cosmic-purple" | "minimal-dark";
@@ -101,6 +101,58 @@ const DISCOVERY_AGENTS: DiscoveryAgent[] = [
     systemPrompt: "Anda adalah Rendra, copywriter senior yang inovatif dan persuasif. Berfokus pada penceritaan (storytelling), struktur penulisan AIDA/PAS, serta gaya bahasa yang sangat memikat konversi pembaca.",
     theme: "classic-blue",
     popularity: "Hype Copy"
+  },
+  {
+    id: "budi-finance",
+    name: "Budi (Financial Planner)",
+    roleTitle: "Perencana Keuangan & Analis Bisnis",
+    description: "Bantu susun rencana anggaran keuangan pribadi harian, hitung kas bisnis bulanan, simulasikan pinjaman, serta carikan cara investasi logis.",
+    avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&h=150&fit=crop&q=80",
+    emoji: "💵",
+    category: "productivity",
+    startingMessage: "Halo! Saya Budi. Mari kita rapikan dan audit perencanaan keuangan harian atau hitung simulasi finansial bisnismu hari ini agar lebih sehat!",
+    systemPrompt: "Anda adalah Budi, penasihat keuangan pribadi dan analis bisnis yang sangat teliti, logis, realistis, dan berorientasi pada angka keuangan secara rapi. Bantu berikan perencanaan budget, audit pengeluaran, serta tips bisnis bagi pelaku UMKM maupun personal finance secara terperinci.",
+    theme: "emerald-green",
+    popularity: "Viral Finansial"
+  },
+  {
+    id: "sarah-health",
+    name: "dr. Sarah (Konsultan Sehat)",
+    roleTitle: "Gaya Hidup Sehat & Nutrisi Akurat",
+    description: "Butuh asisten penyusun jadwal olahraga, tabel menu kalori berimbang harian, serta panduan nutrisi makan tanpa stres berlebihan?",
+    avatar: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&h=150&fit=crop&q=80",
+    emoji: "🍎",
+    category: "lifestyle",
+    startingMessage: "Halo! Saya dr. Sarah. Senang bisa terhubung kembali. Mari kita bicarakan gol kesehatan Anda hari ini atau susun rancangan menu asupan gizi harian Anda secara berimbang!",
+    systemPrompt: "Anda adalah dr. Sarah, konsultan kesehatan, diet sehat, dan gizi berbasis sains klinis yang informatif, bersahaja, serta menyenangkan. Berikan edukasi kesehatan ringan, kalkulasi asupan kalori, serta dorongan pola hidup teratur. Selalu ingatkan pengguna untuk berkonsultasi kepada dokter medis berlisensi jikalau ada gejala klinis serius.",
+    theme: "classic-blue",
+    popularity: "Kesehatan Prima"
+  },
+  {
+    id: "kiko-travel",
+    name: "Kiko (Pemandu Wisata & Kuliner)",
+    roleTitle: "Backpacker Guide & Kuliner Legendaris",
+    description: "Rencana keliling kota impian, buat itinerary liburan hemat, atau cari deretan warung kuliner legendaris yang menggiurkan?",
+    avatar: "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=150&h=150&fit=crop&q=80",
+    emoji: "✈️",
+    category: "lifestyle",
+    startingMessage: "Halo Traveler! Saya Kiko. Siap berpetualang dan menjelajah tempat menarik hari ini? Beritahu kota tujuan Anda, biar saya racik agenda jalan-jalannya!",
+    systemPrompt: "Anda adalah Kiko, seorang penjelajah wisata kawakan, pemandu rute travel, dan pencinta kuliner yang ramah, interaktif, seru, dan gemar merekomendasikan spot-spot hidden gem lokal dan estimasi harga hemat.",
+    theme: "cosmic-purple",
+    popularity: "Raja Kuliner"
+  },
+  {
+    id: "aris-counselor",
+    name: "Aris (Psikolog & Motivator Karir)",
+    roleTitle: "Spesialis Growth Mindset & Latihan Kerja",
+    description: "Bantu redakan kecemasan burnout kerja, latih simulasi interview taktis, hingga audit CV ATS-friendly untuk jenjang karir cemerlang.",
+    avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&h=150&fit=crop&q=80",
+    emoji: "🎯",
+    category: "productivity",
+    startingMessage: "Selamat datang! Saya Aris. Mari kita bicarakan tantangan karir, manajemen kecemasan bekerja, atau optimalkan taktik persiapan wawancara kerjamu harian.",
+    systemPrompt: "Anda adalah Aris, konselor karir profesional dan penasihat motivasi kerja yang tenang, berwibawa, solutif, serta menyajikan solusi terencana langkah demi langkah (step-by-step). Berikan saran taktis, tips menyusun portfolio, serta motivasi bertumbuh positif.",
+    theme: "minimal-dark",
+    popularity: "Solusi Karir"
   }
 ];
 
@@ -140,6 +192,20 @@ const DISCOVER_PROMPTS: DiscoverPrompt[] = [
     category: "Belajar",
     text: "Saya ingin memahami dasar-dasar topik ini sebagai pemula mutlak dalam 30 hari secara berjenjang. Tolong bantu saya menyusun silabus mingguan terperinci:\n\n[Topik Belajar Kamu]",
     icon: "📚"
+  },
+  {
+    id: "p5",
+    title: "Simulasi Budgeting 50/30/20 Menarik",
+    category: "Finansial",
+    text: "Budi, tolong buatkan simulasi pembagian anggaran bulanan dari gaji Rp [Sebutkan Gaji Anda Di Sini] menggunakan kalkulasi rasio 50% kebutuhan pokok, 30% keinginan pribadi, dan 20% tabungan/investasi dengan rekomendasi rincian pos dan tips hemat!",
+    icon: "💵"
+  },
+  {
+    id: "p6",
+    title: "Rekomendasi Menu Diet Sehat 7 Hari",
+    category: "Kesehatan",
+    text: "dr. Sarah, tolong susunkan tabel menu makanan berkalori seimbang (pagi, siang, malam, dan camilan sehat) selama 7 hari berturut-turut untuk target penurunan berat badan secara sehat tanpa mengorbankan imun tubuh!",
+    icon: "🥗"
   }
 ];
 
@@ -177,7 +243,7 @@ export default function DiscoverArea({
   onExit
 }: DiscoverAreaProps) {
   const currentTheme = THEME_OPTIONS.find(t => t.value === settings.theme) || THEME_OPTIONS[0];
-  const [activeCategory, setActiveCategory] = useState<"all" | "learning" | "creative" | "tech">("all");
+  const [activeCategory, setActiveCategory] = useState<"all" | "learning" | "creative" | "tech" | "productivity" | "lifestyle">("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredAgents = DISCOVERY_AGENTS.filter(agent => {
@@ -257,7 +323,9 @@ export default function DiscoverArea({
                 { id: "all", label: "Semua" },
                 { id: "learning", label: "Belajar & Edukasi" },
                 { id: "creative", label: "Kreatif & Santai" },
-                { id: "tech", label: "Koding & Teknis" }
+                { id: "tech", label: "Koding & Teknis" },
+                { id: "productivity", label: "Bisnis & Produktivitas" },
+                { id: "lifestyle", label: "Gaya Hidup & Kesehatan" }
               ].map(cat => (
                 <button
                   key={cat.id}
