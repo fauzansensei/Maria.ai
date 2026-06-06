@@ -225,55 +225,92 @@ function FormattedSubPart({ text, isAi = true }: { text: string; isAi?: boolean;
           );
         }
 
-        // Standard text formatting parsing (Inline bold text, quotes, bullet points)
+        // Standard text formatting parsing (Inline bold text, quotes, bullet points, and tables)
         const subLines = part.split("\n");
         interface Block {
-          type: 'paragraph' | 'ul' | 'ol' | 'blockquote' | 'h2' | 'h3' | 'h4';
+          type: 'paragraph' | 'ul' | 'ol' | 'blockquote' | 'h2' | 'h3' | 'h4' | 'table';
           items?: string[];
           text?: string;
+          tableRows?: Array<{ isHeaderDivider: boolean; cells: string[] }>;
         }
         
         const blocks: Block[] = [];
         let currentList: { type: 'ul' | 'ol'; items: string[] } | null = null;
         let currentQuote: { items: string[] } | null = null;
+        let currentTable: Array<{ isHeaderDivider: boolean; cells: string[] }> | null = null;
+
+        const flushList = () => {
+          if (currentList) {
+            blocks.push({ type: currentList.type, items: currentList.items });
+            currentList = null;
+          }
+        };
+        const flushQuote = () => {
+          if (currentQuote) {
+            blocks.push({ type: 'blockquote', text: currentQuote.items.join("\n") });
+            currentQuote = null;
+          }
+        };
+        const flushTable = () => {
+          if (currentTable) {
+            blocks.push({ type: 'table', tableRows: currentTable });
+            currentTable = null;
+          }
+        };
+        const flushAll = () => {
+          flushList();
+          flushQuote();
+          flushTable();
+        };
 
         for (let i = 0; i < subLines.length; i++) {
           const line = subLines[i];
           const trimmed = line.trim();
 
           if (trimmed === "") {
-            if (currentList) {
-              blocks.push({ type: currentList.type, items: currentList.items });
-              currentList = null;
-            }
-            if (currentQuote) {
-              blocks.push({ type: 'blockquote', text: currentQuote.items.join("\n") });
-              currentQuote = null;
-            }
+            flushAll();
             continue;
           }
 
+          // Table checking (lines starting with pipe "|")
+          if (trimmed.startsWith("|")) {
+            flushList();
+            flushQuote();
+
+            const isDivider = trimmed.replace(/[\s|:-]/g, '') === '' && trimmed.includes('-');
+            const rawCells = trimmed.split("|");
+            let cells = rawCells.map(c => c.trim());
+            if (trimmed.startsWith("|")) cells.shift();
+            if (trimmed.endsWith("|") && cells.length > 0) cells.pop();
+
+            if (!currentTable) {
+              currentTable = [];
+            }
+            currentTable.push({ isHeaderDivider: isDivider, cells });
+            continue;
+          }
+
+          // Headers
           if (trimmed.startsWith("### ")) {
-            if (currentList) { blocks.push({ type: currentList.type, items: currentList.items }); currentList = null; }
-            if (currentQuote) { blocks.push({ type: 'blockquote', text: currentQuote.items.join("\n") }); currentQuote = null; }
+            flushAll();
             blocks.push({ type: 'h4', text: trimmed.slice(4) });
             continue;
           }
           if (trimmed.startsWith("## ")) {
-            if (currentList) { blocks.push({ type: currentList.type, items: currentList.items }); currentList = null; }
-            if (currentQuote) { blocks.push({ type: 'blockquote', text: currentQuote.items.join("\n") }); currentQuote = null; }
+            flushAll();
             blocks.push({ type: 'h3', text: trimmed.slice(3) });
             continue;
           }
           if (trimmed.startsWith("# ")) {
-            if (currentList) { blocks.push({ type: currentList.type, items: currentList.items }); currentList = null; }
-            if (currentQuote) { blocks.push({ type: 'blockquote', text: currentQuote.items.join("\n") }); currentQuote = null; }
+            flushAll();
             blocks.push({ type: 'h2', text: trimmed.slice(2) });
             continue;
           }
 
+          // Blockquotes
           if (trimmed.startsWith("> ")) {
-            if (currentList) { blocks.push({ type: currentList.type, items: currentList.items }); currentList = null; }
+            flushList();
+            flushTable();
             const quoteContent = line.slice(line.indexOf(">") + 1).trim();
             if (currentQuote) {
               currentQuote.items.push(quoteContent);
@@ -283,53 +320,45 @@ function FormattedSubPart({ text, isAi = true }: { text: string; isAi?: boolean;
             continue;
           }
 
+          // Bullet lists
           const isBullet = trimmed.startsWith("* ") || trimmed.startsWith("- ") || trimmed.startsWith("• ");
           if (isBullet) {
-            if (currentQuote) { blocks.push({ type: 'blockquote', text: currentQuote.items.join("\n") }); currentQuote = null; }
+            flushQuote();
+            flushTable();
             const bulletContent = trimmed.slice(2).trim();
             if (currentList && currentList.type === 'ul') {
               currentList.items.push(bulletContent);
             } else {
-              if (currentList) { blocks.push({ type: currentList.type, items: currentList.items }); }
+              flushList();
               currentList = { type: 'ul', items: [bulletContent] };
             }
             continue;
           }
 
+          // Numbered lists
           const numberMatch = trimmed.match(/^(\d+)\.\s(.*)/);
           if (numberMatch) {
-            if (currentQuote) { blocks.push({ type: 'blockquote', text: currentQuote.items.join("\n") }); currentQuote = null; }
+            flushQuote();
+            flushTable();
             const numberContent = numberMatch[2].trim();
             if (currentList && currentList.type === 'ol') {
               currentList.items.push(numberContent);
             } else {
-              if (currentList) { blocks.push({ type: currentList.type, items: currentList.items }); }
+              flushList();
               currentList = { type: 'ol', items: [numberContent] };
             }
             continue;
           }
 
-          if (currentList) {
-            blocks.push({ type: currentList.type, items: currentList.items });
-            currentList = null;
-          }
-          if (currentQuote) {
-            blocks.push({ type: 'blockquote', text: currentQuote.items.join("\n") });
-            currentQuote = null;
-          }
-
+          // Regular paragraph
+          flushAll();
           blocks.push({ type: 'paragraph', text: line });
         }
 
-        if (currentList) {
-          blocks.push({ type: currentList.type, items: currentList.items });
-        }
-        if (currentQuote) {
-          blocks.push({ type: 'blockquote', text: currentQuote.items.join("\n") });
-        }
+        flushAll();
 
         return (
-          <div key={index} className="space-y-2">
+          <div key={index} className="space-y-2 select-text">
             {blocks.map((block, bIdx) => {
               if (block.type === 'ul') {
                 return (
@@ -381,8 +410,61 @@ function FormattedSubPart({ text, isAi = true }: { text: string; isAi?: boolean;
                   </h2>
                 );
               }
+              if (block.type === 'table' && block.tableRows) {
+                const activeRows = block.tableRows.filter(r => !r.isHeaderDivider);
+                if (activeRows.length === 0) return null;
+
+                const headerRow = activeRows[0];
+                const bodyRows = activeRows.slice(1);
+
+                return (
+                  <div key={bIdx} className="my-4 w-full overflow-x-auto rounded-xl border border-slate-200/85 bg-white/90 shadow-2xs max-w-full">
+                    <table className="min-w-full divide-y divide-slate-200 text-[12.5px] text-slate-700">
+                      <thead className="bg-slate-100/80">
+                        <tr>
+                          {headerRow.cells.map((cell, cellIdx) => (
+                            <th 
+                              key={cellIdx} 
+                              className="px-4 py-2.5 text-left font-display font-semibold text-slate-800 tracking-tight"
+                            >
+                              {parseInlineStyles(cell, isAi)}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-150">
+                        {bodyRows.length === 0 ? (
+                          <tr>
+                            <td colSpan={headerRow.cells.length} className="px-4 py-4 text-center text-slate-400 italic">
+                              Tidak ada data rincian.
+                            </td>
+                          </tr>
+                        ) : (
+                          bodyRows.map((row, rowIdx) => (
+                            <tr 
+                              key={rowIdx} 
+                              className={`transition-colors hover:bg-slate-50/50 ${
+                                rowIdx % 2 === 1 ? "bg-slate-50/30" : "bg-white"
+                              }`}
+                            >
+                              {Array.from({ length: headerRow.cells.length }).map((_, cellIdx) => {
+                                const cellVal = row.cells[cellIdx] || "";
+                                return (
+                                  <td key={cellIdx} className="px-4 py-2.5 align-middle leading-normal">
+                                    {parseInlineStyles(cellVal, isAi)}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              }
               return (
-                <p key={bIdx} className={`min-h-[1.25rem] text-[13px] leading-relaxed ${isAi ? "text-slate-700" : "text-white"}`}>
+                <p key={`p-${bIdx}`} className={`min-h-[1.25rem] text-[13px] leading-relaxed ${isAi ? "text-slate-700" : "text-white"}`}>
                   {parseInlineStyles(block.text || "", isAi)}
                 </p>
               );
@@ -435,28 +517,174 @@ function FormattedContent({
   );
 }
 
-// Sub-helper parsing bold/italic inline markdown inside FormattedContent
+// Sub-helper parsing bold/italic/links/bare URLs inline markdown inside FormattedContent
 function parseInlineStyles(text: string, isAi: boolean = true): React.ReactNode[] {
-  const parts = text.split(/(\*\*.*?\*\*|\`.*?\`)/g);
-  return parts.map((part, index) => {
-    // Bold markdown block
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return (
-        <strong key={index} className={`font-bold ${isAi ? "text-slate-900" : "text-white font-extrabold"}`}>
-          {part.slice(2, -2)}
-        </strong>
-      );
+  if (!text) return [];
+
+  let currentText = text;
+  const result: React.ReactNode[] = [];
+  let keyCount = 0;
+
+  const pushPart = (txt: string) => {
+    if (!txt) return;
+    result.push(<React.Fragment key={`text-${keyCount++}`}>{txt}</React.Fragment>);
+  };
+
+  while (currentText) {
+    // Find earliest occurrences of various formats
+    const boldMatch = currentText.match(/\*\*([\s\S]*?)\*\*/);
+    const italicMatch = currentText.match(/\*([\s\S]*?)\*/);
+    const codeMatch = currentText.match(/`([\s\S]*?)`/);
+    const linkMatch = currentText.match(/\[([^\]]*?)\]\(([^)]*?)\)/);
+    const bareUrlMatch = currentText.match(/(https?:\/\/[^\s()<>]+|www\.[^\s()<>]+)/);
+    const strikethroughMatch = currentText.match(/~~([\s\S]*?)~~/);
+
+    const candidates: Array<{ index: number; length: number; render: () => React.ReactNode }> = [];
+
+    if (boldMatch && boldMatch.index !== undefined) {
+      candidates.push({
+        index: boldMatch.index,
+        length: boldMatch[0].length,
+        render: () => (
+          <strong key={`bold-${keyCount++}`} className={`font-bold ${isAi ? "text-slate-900" : "text-white font-extrabold"}`}>
+            {boldMatch[1]}
+          </strong>
+        )
+      });
     }
-    // Code ticks
-    if (part.startsWith("`") && part.endsWith("`")) {
-      return (
-        <code key={index} className={`px-1.5 py-0.5 border rounded text-xs select-all font-mono ${isAi ? "bg-slate-100 border-slate-200 text-slate-800" : "bg-slate-950/20 border-slate-800 text-amber-200"}`}>
-          {part.slice(1, -1)}
-        </code>
-      );
+
+    if (strikethroughMatch && strikethroughMatch.index !== undefined) {
+      candidates.push({
+        index: strikethroughMatch.index,
+        length: strikethroughMatch[0].length,
+        render: () => (
+          <span key={`strike-${keyCount++}`} className="line-through opacity-80">
+            {strikethroughMatch[1]}
+          </span>
+        )
+      });
     }
-    return part;
-  });
+
+    if (italicMatch && italicMatch.index !== undefined) {
+      candidates.push({
+        index: italicMatch.index,
+        length: italicMatch[0].length,
+        render: () => (
+          <em key={`italic-${keyCount++}`} className="italic">
+            {italicMatch[1]}
+          </em>
+        )
+      });
+    }
+
+    if (codeMatch && codeMatch.index !== undefined) {
+      candidates.push({
+        index: codeMatch.index,
+        length: codeMatch[0].length,
+        render: () => (
+          <code key={`code-${keyCount++}`} className={`px-1.5 py-0.5 border rounded text-xs select-all font-mono ${isAi ? "bg-slate-150 border-slate-200 text-slate-800" : "bg-slate-950/25 border-white/10 text-amber-250 font-semibold"}`}>
+            {codeMatch[1]}
+          </code>
+        )
+      });
+    }
+
+    if (linkMatch && linkMatch.index !== undefined) {
+      candidates.push({
+        index: linkMatch.index,
+        length: linkMatch[0].length,
+        render: () => {
+          const label = linkMatch[1] || linkMatch[2];
+          let href = linkMatch[2].trim();
+          if (href.startsWith("www.")) {
+            href = "https://" + href;
+          }
+          return (
+            <a
+              key={`link-${keyCount++}`}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`underline font-bold transition-all decoration-2 hover:opacity-85 ${
+                isAi 
+                  ? "text-blue-650 hover:text-blue-800 decoration-blue-200" 
+                  : "text-amber-250 hover:text-white decoration-white/30"
+              }`}
+            >
+              {label}
+            </a>
+          );
+        }
+      });
+    }
+
+    if (bareUrlMatch && bareUrlMatch.index !== undefined) {
+      let isPartOfMarkdownLink = false;
+      if (linkMatch && linkMatch.index !== undefined) {
+        const urlPartStart = linkMatch.index + linkMatch[1].length + 3;
+        const urlPartEnd = urlPartStart + linkMatch[2].length;
+        if (bareUrlMatch.index >= urlPartStart && bareUrlMatch.index <= urlPartEnd) {
+          isPartOfMarkdownLink = true;
+        }
+      }
+
+      if (!isPartOfMarkdownLink) {
+        candidates.push({
+          index: bareUrlMatch.index,
+          length: bareUrlMatch[0].length,
+          render: () => {
+            let href = bareUrlMatch[1].trim();
+            if (href.startsWith("www.")) {
+              href = "https://" + href;
+            }
+            return (
+              <a
+                key={`bare-${keyCount++}`}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`underline font-bold transition-all decoration-2 hover:opacity-85 ${
+                  isAi 
+                    ? "text-blue-650 hover:text-blue-850 decoration-blue-200" 
+                    : "text-amber-250 hover:text-white decoration-white/30"
+                }`}
+              >
+                {bareUrlMatch[1]}
+              </a>
+            );
+          }
+        });
+      }
+    }
+
+    if (candidates.length === 0) {
+      pushPart(currentText);
+      break;
+    }
+
+    // Sort by index first (earliest match wins)
+    candidates.sort((a, b) => {
+      if (a.index !== b.index) {
+        return a.index - b.index;
+      }
+      return b.length - a.length;
+    });
+
+    const earliest = candidates[0];
+
+    // Push text before the match
+    if (earliest.index > 0) {
+      pushPart(currentText.slice(0, earliest.index));
+    }
+
+    // Push match render
+    result.push(earliest.render());
+
+    // Slice off processed text
+    currentText = currentText.slice(earliest.index + earliest.length);
+  }
+
+  return result;
 }
 
 export default function ChatArea({
