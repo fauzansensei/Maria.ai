@@ -1148,7 +1148,7 @@ export default function ChatArea({
 
               {/* Loader Wave panel */}
               {isLoading && (
-                <div className="flex flex-col items-start space-y-1.5 animate-pulse-slow">
+                <div className="flex flex-col items-start space-y-1.5">
                   <div className="flex items-center gap-1.5 text-[10px] text-slate-600 font-medium">
                     <span className="font-bold text-slate-650">Maria AI</span>
                     <span className="text-slate-400 font-extrabold">•</span>
@@ -1158,7 +1158,7 @@ export default function ChatArea({
                   </div>
                   <div className="flex items-start gap-2.5">
                     <div className={`w-8 h-8 rounded text-white font-display font-bold text-xs flex items-center justify-center ${themeStyle.primary.split(" ")[0]}`}>
-                      <svg className="w-4.5 h-4.5 text-white animate-pulse-slow" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <svg className="w-4.5 h-4.5 text-white animate-spin animate-duration-[2s]" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M16 6C16 10.5 14.5 13.5 11.5 15C8.5 16.5 6 16.5 6 16.5C6 16.5 8.5 16.5 11.5 18C14.5 19.5 16 22.5 16 27C16 22.5 17.5 19.5 20.5 18C23.5 16.5 26 16.5 26 16.5C26 16.5 23.5 16.5 20.5 15C17.5 13.5 16 10.5 16 6Z" fill="currentColor"/>
                       </svg>
                     </div>

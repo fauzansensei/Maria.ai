@@ -435,7 +435,7 @@ export default function App() {
     };
 
     checkExpiry();
-    const timer = setInterval(checkExpiry, 5000); // Check every 5 seconds
+    const timer = setInterval(checkExpiry, 30000); // Check every 30 seconds to optimize mobile CPU
     return () => clearInterval(timer);
   }, [isPlus, settings, isLoggedIn]);
 
@@ -1730,9 +1730,9 @@ export default function App() {
         {/* Universal Settings Modal (ChatGPT Centered Dark Dialog) */}
         {isSettingsOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Dark Backdrop overlay with subtle blur */}
+            {/* Dark Backdrop overlay */}
             <div 
-              className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-fade-in"
+              className="fixed inset-0 bg-black/80 transition-opacity animate-fade-in"
               onClick={() => setIsSettingsOpen(false)}
             />
             

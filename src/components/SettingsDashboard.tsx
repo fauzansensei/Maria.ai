@@ -632,7 +632,7 @@ export default function SettingsDashboard({
 
       {/* Persistent Save Status Notification Banner */}
       {saveBannerText && (
-        <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-xl backdrop-blur-xs text-[10px] font-bold text-white shadow-xl flex items-center gap-1.5 animate-fade-in z-50 ${getAccentBgClass()}`}>
+        <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-xl bg-slate-900/95 text-[10px] font-bold text-white shadow-xl flex items-center gap-1.5 animate-fade-in z-50 border border-slate-800 ${getAccentBgClass()}`}>
           <Check className="w-3 h-3 text-white" />
           <span>{saveBannerText}</span>
         </div>

@@ -5,6 +5,10 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    esbuild: {
+      drop: ['console', 'debugger'],
+      legalComments: 'none',
+    },
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
@@ -13,6 +17,8 @@ export default defineConfig(() => {
     },
     build: {
       cssMinify: true,
+      minify: 'esbuild',
+      reportCompressedSize: false,
       chunkSizeWarningLimit: 1200,
       rollupOptions: {
         output: {
