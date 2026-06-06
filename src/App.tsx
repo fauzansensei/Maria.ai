@@ -33,9 +33,9 @@ import {
   getDocs
 } from "firebase/firestore";
 
-// Static imports for primary main-screen components to avoid lazy-loading network handshakes and CLS
-import Sidebar from "./components/Sidebar";
-import ChatArea from "./components/ChatArea";
+// Lazy imports for primary main-screen components to optimize initial pageload chunk sizes and keep bundle size under 85kib
+const Sidebar = React.lazy(() => import("./components/Sidebar"));
+const ChatArea = React.lazy(() => import("./components/ChatArea"));
 const SettingsDashboard = React.lazy(() => import("./components/SettingsDashboard"));
 const DiscoverArea = React.lazy(() => import("./components/DiscoverArea"));
 const LibraryArea = React.lazy(() => import("./components/LibraryArea"));
@@ -1590,9 +1590,14 @@ export default function App() {
       
       {/* Main Layout Container */}
       <div className="flex-grow flex overflow-hidden relative">
-        
-        {/* Far Left Sidebar: Beautiful Dark Maria Sidebar Vibe */}
-        <Sidebar 
+        <React.Suspense fallback={
+          <div className="flex-grow flex flex-col items-center justify-center p-8 bg-[#0a0f18] text-slate-400">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500 mb-3" />
+            <p className="text-xs font-sans font-medium tracking-wide">Memuat Sistem Maria AI...</p>
+          </div>
+        }>
+          {/* Far Left Sidebar: Beautiful Dark Maria Sidebar Vibe */}
+          <Sidebar 
           settings={settings}
           messages={messages}
           onLoadChatHistory={(msgs) => setMessages(msgs)}
@@ -1720,6 +1725,7 @@ export default function App() {
             </React.Suspense>
           )}
         </main>
+      </React.Suspense>
 
         {/* Universal Settings Modal (ChatGPT Centered Dark Dialog) */}
         {isSettingsOpen && (
@@ -1762,7 +1768,7 @@ export default function App() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop Overlay */}
             <div 
-              className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-fade-in"
+              className="fixed inset-0 bg-black/75 transition-opacity animate-fade-in"
               onClick={() => {
                 setIsProfileOpen(false);
                 setShowColorSelector(false);
@@ -2295,7 +2301,7 @@ export default function App() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop Blur Overlay */}
             <div 
-              className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-fade-in"
+              className="fixed inset-0 bg-slate-950/80 transition-opacity animate-fade-in"
               onClick={() => setThreadToDeleteId(null)}
             />
             {/* Modal Card */}
@@ -2331,7 +2337,7 @@ export default function App() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop Blur Overlay */}
             <div 
-              className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-fade-in"
+              className="fixed inset-0 bg-slate-950/80 transition-opacity animate-fade-in"
               onClick={() => setIsClearingAllHistory(false)}
             />
             {/* Modal Card */}
@@ -2369,7 +2375,7 @@ export default function App() {
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             {/* Blurred Backdrop */}
             <div 
-              className="fixed inset-0 bg-black/80 backdrop-blur-xs transition-opacity animate-fade-in"
+              className="fixed inset-0 bg-black/90 transition-opacity animate-fade-in"
               onClick={() => setSimulatedEmail(null)}
             />
             

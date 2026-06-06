@@ -238,7 +238,7 @@ export default function Sidebar({
       {!isCollapsed && (
         <div 
           onClick={onToggleCollapse}
-          className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-xs transition-all duration-300 lg:hidden cursor-pointer"
+          className="fixed inset-0 z-40 bg-slate-950/80 transition-all duration-300 lg:hidden cursor-pointer"
         />
       )}
 
@@ -687,7 +687,7 @@ export default function Sidebar({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             onClick={() => setShowUpgradeModal(false)}
-            className="absolute inset-0 bg-slate-950/85 backdrop-blur-xs animate-fade-in"
+            className="absolute inset-0 bg-slate-950/90 animate-fade-in"
           />
 
           <div
