@@ -591,12 +591,35 @@ export default function App() {
     setAuthLocalError(null);
     setIsAuthenticating(true);
     try {
-      await signInWithRedirect(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      if (result && result.user) {
+        const user = result.user;
+        const finalDisplayName = user.displayName || "User";
+        const finalUsername = "@" + (user.email?.split("@")[0] || "user");
+        const finalEmail = user.email || "user@example.com";
+        
+        setProfileDisplayName(finalDisplayName);
+        setProfileUsername(finalUsername);
+        setIsLoggedIn(true);
+
+        setIsProfileOpen(false);
+        setShowColorSelector(false);
+
+        handleAddSystemNotification(
+          "Berhasil Masuk Akun",
+          `Selamat datang ${finalDisplayName} @ Maria AI (${finalEmail})!`,
+          "success"
+        );
+      }
     } catch (err: any) {
       console.error(err);
       let message = err.message || String(err);
       if (err.code === "auth/unauthorized-domain") {
         message = `Gagal: Domain '${window.location.hostname}' belum diizinkan oleh Firebase Console Anda.`;
+      } else if (err.code === "auth/popup-blocked") {
+        message = "Gagal: Pop-up diblokir oleh browser Anda. Silakan izinkan pop-up untuk situs ini agar pendaftaran/login stabil.";
+      } else if (err.code === "auth/popup-closed-by-user") {
+        message = "Login dibatalkan: Jendela dialog ditutup sebelum proses selesai.";
       }
       
       const isApiKeyError = (err.message || "").toLowerCase().includes("api-key-not-valid") || 
@@ -614,6 +637,8 @@ export default function App() {
       }
       setAuthLocalError(message);
       setIsProfileOpen(true);
+      setIsAuthenticating(false);
+    } finally {
       setIsAuthenticating(false);
     }
   };

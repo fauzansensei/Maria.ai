@@ -475,7 +475,7 @@ export default function AuxiliaryModals({
                   </div>
 
                   <div className="w-full flex flex-col gap-2.5 items-center justify-center">
-                    {/* Google Sign-In via Redirect (Bypasses popup blockers securely) */}
+                    {/* Google Sign-In via Popup (Solves Google Accounts frame protection rejection) */}
                     <button
                       type="button"
                       disabled={isAuthenticating}
@@ -483,14 +483,37 @@ export default function AuxiliaryModals({
                         setAuthLocalError(null);
                         setIsAuthenticating(true);
                         try {
-                          await signInWithRedirect(auth, googleProvider);
+                          const result = await signInWithPopup(auth, googleProvider);
+                          if (result && result.user) {
+                            const user = result.user;
+                            const finalDisplayName = user.displayName || "User";
+                            const finalUsername = "@" + (user.email?.split("@")[0] || "user");
+                            const finalEmail = user.email || "user@example.com";
+                            
+                            setProfileDisplayName(finalDisplayName);
+                            setProfileUsername(finalUsername);
+                            setIsLoggedIn(true);
+                            setIsProfileOpen(false);
+
+                            handleAddSystemNotification(
+                              "Berhasil Masuk Akun",
+                              `Selamat datang kembali ${finalDisplayName} @ Maria AI (${finalEmail})!`,
+                              "success"
+                            );
+                          }
                         } catch (err: any) {
-                          console.error(err);
+                          console.error("Popup sign in error:", err);
                           let message = err.message || String(err);
                           if (err.code === "auth/unauthorized-domain") {
                             message = `Gagal: Domain '${window.location.hostname}' belum diizinkan oleh Firebase Console Anda.`;
+                          } else if (err.code === "auth/popup-blocked") {
+                            message = "Gagal: Jendela pop-up login Google diblokir oleh browser. Harap perbolehkan pop-up browser atau buka platform di tab baru.";
+                          } else if (err.code === "auth/popup-closed-by-user") {
+                            message = "Login dibatalkan: Jendela verifikasi ditutup sebelum selesai.";
                           }
                           setAuthLocalError(message);
+                          setIsAuthenticating(false);
+                        } finally {
                           setIsAuthenticating(false);
                         }
                       }}
@@ -532,37 +555,20 @@ export default function AuxiliaryModals({
                       </div>
                       
                       {(authLocalError.toLowerCase().includes("pop-up") || 
-                        authLocalError.toLowerCase().includes("popup")) && (
-                        <div className="mt-1 pt-2 border-t border-rose-900/30 w-full space-y-2 text-[10px] text-slate-350">
+                        authLocalError.toLowerCase().includes("popup") ||
+                        authLocalError.toLowerCase().includes("jendela")) && (
+                        <div className="mt-1.5 pt-2 border-t border-rose-900/30 w-full space-y-2 text-[10px] text-slate-350 font-sans">
                           <p className="font-extrabold text-amber-400 flex items-center gap-1 text-[10.5px]">
-                            💡 Solusi Cepat Pop-up Diblokir:
+                            💡 Solusi Cepat Login Maria:
                           </p>
                           <p>
-                            Platform editor preview membatasi pop-up browser secara default demi keamanan.
+                            Browser seluler atau desktop Anda memblokir pop-up baru di dalam frame pratinjau AI Studio. Silakan ikuti langkah mudah ini:
                           </p>
-                          <div className="grid grid-cols-1 gap-2 mt-2 w-full font-bold">
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                setAuthLocalError(null);
-                                setIsAuthenticating(true);
-                                try {
-                                  await signInWithRedirect(auth, googleProvider);
-                                } catch (err: any) {
-                                  console.error(err);
-                                  let message = "Gagal mengalihkan: " + (err.message || String(err));
-                                  if (err.code === "auth/unauthorized-domain") {
-                                    message = "Domain '" + window.location.hostname + "' belum diotorisasi di Firebase Console.";
-                                  }
-                                  setAuthLocalError(message);
-                                  setIsAuthenticating(false);
-                                }
-                              }}
-                              className="w-full bg-slate-900 hover:bg-slate-850 border border-emerald-500/30 text-emerald-400 py-2 px-3 rounded-lg transition-all text-center cursor-pointer text-[10px]"
-                            >
-                              🔄 Jalankan Metode Pengalihan (Redirect)
-                            </button>
-                          </div>
+                          <ul className="list-disc list-inside space-y-1 text-slate-400">
+                            <li>Tekan tombol <b className="text-zinc-150">Open in New Tab</b> di pojok kanan atas layar panel AI Studio ini.</li>
+                            <li>Atau izinkan izin Pop-up pada ikon gembok / setelan bar alamat URL browser Anda.</li>
+                            <li>Gunakan alternatif pendaftaran instan melalui nama pengguna atau Guest Account jika Anda ingin mencoba cepat.</li>
+                          </ul>
                         </div>
                       )}
                     </div>
