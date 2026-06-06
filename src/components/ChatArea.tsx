@@ -155,6 +155,45 @@ function LinkOpenerCard({
   // Ensure absolute protocol link target
   const targetHref = url.trim().startsWith("http") ? url.trim() : `https://${url.trim()}`;
 
+  // Automatically trigger link opening if the message is brand new and hasn't been opened yet
+  useEffect(() => {
+    if (!messageId) return;
+    const sessionKey = `autolink_opened_${messageId}_${url}`;
+    const alreadyOpened = sessionStorage.getItem(sessionKey);
+    if (alreadyOpened) return;
+
+    // Check if the message is fresh (less than 15 seconds old)
+    const timestampMs = messageTimestamp ? new Date(messageTimestamp).getTime() : Date.now();
+    const ageSeconds = (Date.now() - timestampMs) / 1000;
+
+    if (ageSeconds < 15) {
+      sessionStorage.setItem(sessionKey, "true");
+      
+      // Attempt 1: Try window.open targetHref in new tab
+      const openedWindow = window.open(targetHref, "_blank");
+      
+      // Fallback if blocked (opens in current iframe view, guaranteeing it always launches successfully)
+      if (!openedWindow) {
+        try {
+          window.location.href = targetHref;
+        } catch (err) {
+          console.error("Auto redirection failed inside sandbox:", err);
+        }
+      }
+    }
+  }, [messageId, messageTimestamp, targetHref, url]);
+
+  const handleLaunch = () => {
+    const openedWindow = window.open(targetHref, "_blank");
+    if (!openedWindow) {
+      try {
+        window.location.href = targetHref;
+      } catch (err) {
+        console.error("Manual launch redirection failed inside sandbox:", err);
+      }
+    }
+  };
+
   return (
     <div className={`my-3.5 relative overflow-hidden rounded-xl border p-4 shadow-2xs transition-all duration-200 hover:shadow-xs ${specs.colorClass} flex flex-col gap-3 select-none animate-fade-in`}>
       {/* Visual background subtle effects */}
@@ -179,15 +218,14 @@ function LinkOpenerCard({
         </div>
 
         <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-          <a
-            href={targetHref}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={handleLaunch}
             className={`px-4 py-2 rounded-lg text-[11px] font-bold shadow-xs whitespace-nowrap transition-transform active:scale-95 duration-250 cursor-pointer flex items-center gap-1.5 shrink-0 ${specs.btnClass}`}
           >
             <span>Luncurkan Aplikasi</span>
             <ExternalLink className="w-3.5 h-3.5" />
-          </a>
+          </button>
         </div>
       </div>
     </div>
