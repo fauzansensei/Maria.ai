@@ -183,6 +183,40 @@ function LinkOpenerCard({
     }
   }, [messageId, messageTimestamp, targetHref, url]);
 
+  // Determine if this is a YouTube link and extract details for direct embedding
+  let ytEmbedUrl: string | null = null;
+  const isYoutube = url.toLowerCase().includes("youtube.com") || url.toLowerCase().includes("youtu.be");
+  if (isYoutube) {
+    try {
+      const cleanUrl = url.trim();
+      // Case 1: Search results
+      if (cleanUrl.includes("results?search_query=") || cleanUrl.includes("search_query=")) {
+        const queryParam = cleanUrl.split("search_query=")[1]?.split("&")[0];
+        if (queryParam) {
+          ytEmbedUrl = `https://www.youtube.com/embed?listType=search&list=${queryParam}`;
+        }
+      } 
+      // Case 2: watch?v=VIDEO_ID
+      else if (cleanUrl.includes("watch?v=")) {
+        const videoId = cleanUrl.split("watch?v=")[1]?.split("&")[0];
+        if (videoId) {
+          ytEmbedUrl = `https://www.youtube.com/embed/${videoId}`;
+        }
+      }
+      // Case 3: youtu.be/VIDEO_ID
+      else if (cleanUrl.includes("youtu.be/")) {
+        const urlParts = cleanUrl.split("youtu.be/");
+        const lastPart = urlParts[urlParts.length - 1];
+        const videoId = lastPart?.split("?")[0]?.split("&")[0];
+        if (videoId) {
+          ytEmbedUrl = `https://www.youtube.com/embed/${videoId}`;
+        }
+      }
+    } catch (e) {
+      console.error("Error parsing YouTube URL for embed:", e);
+    }
+  }
+
   return (
     <div className={`my-3.5 relative overflow-hidden rounded-xl border p-4 shadow-2xs transition-all duration-200 hover:shadow-xs ${specs.colorClass} flex flex-col gap-3 select-none animate-fade-in`}>
       {/* Visual background subtle effects */}
@@ -196,9 +230,11 @@ function LinkOpenerCard({
           </div>
           <div className="min-w-0">
             <h4 className="font-display font-medium text-slate-900 text-xs sm:text-[13px] tracking-tight flex items-center gap-1.5 leading-snug">
-              Buka {name}
+              {ytEmbedUrl ? "Pemutar Musik Maria (YouTube)" : `Buka ${name}`}
               <span className="inline-block w-1 h-1 rounded-full bg-slate-300"></span>
-              <span className="text-[10px] font-normal text-slate-400">Tautan Aplikasi Eksternal</span>
+              <span className="text-[10px] font-normal text-slate-400">
+                {ytEmbedUrl ? "Putar Langsung" : "Tautan Aplikasi"}
+              </span>
             </h4>
             <p className="text-[10px] font-mono text-slate-500 mt-0.5 truncate max-w-[200px] sm:max-w-[280px]">
               {displayUrl}
@@ -213,13 +249,26 @@ function LinkOpenerCard({
             rel="noopener noreferrer"
             className={`px-4 py-2 rounded-lg text-[11px] font-bold shadow-xs whitespace-nowrap transition-transform active:scale-95 duration-250 cursor-pointer flex items-center gap-1.5 shrink-0 ${specs.btnClass}`}
           >
-            <span>Luncurkan Aplikasi</span>
+            <span>{ytEmbedUrl ? "Buka di YouTube" : "Luncurkan Aplikasi"}</span>
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
         </div>
       </div>
 
-      {popupBlocked && (
+      {/* Direct YouTube Stream Embed Player */}
+      {ytEmbedUrl && (
+        <div className="mt-2 w-full rounded-xl overflow-hidden border border-slate-200/80 shadow-xs bg-black aspect-video relative">
+          <iframe 
+            src={ytEmbedUrl}
+            title="Maria Youtube Player"
+            className="absolute top-0 left-0 w-full h-full border-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+            allowFullScreen
+          />
+        </div>
+      )}
+
+      {popupBlocked && !ytEmbedUrl && (
         <div className="mt-1 text-[11px] bg-amber-50/80 border border-amber-200 text-amber-900 rounded-lg p-2.5 flex items-start gap-1.5 animate-fade-in shadow-2xs">
           <div className="font-bold text-amber-700 shrink-0 mt-0.5">⚠️ INFO HP:</div>
           <p className="leading-relaxed font-sans">
