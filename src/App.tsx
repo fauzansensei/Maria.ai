@@ -36,6 +36,7 @@ import {
 // Statically import primary main-screen components to avoid double-flicker loading states, sequentially blocked network waterfalls, and LCP/CLS degradation
 import Sidebar from "./components/Sidebar";
 import ChatArea from "./components/ChatArea";
+import CookiePolicyModal from "./components/CookiePolicyModal";
 const SettingsDashboard = React.lazy(() => import("./components/SettingsDashboard"));
 const DiscoverArea = React.lazy(() => import("./components/DiscoverArea"));
 const LibraryArea = React.lazy(() => import("./components/LibraryArea"));
@@ -325,6 +326,10 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false); // Controls responsive drawer tracker
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isCookieConsentVisible, setIsCookieConsentVisible] = useState<boolean>(() => {
+    return localStorage.getItem("maria_cookie_consent") !== "true";
+  });
+  const [isCookieModalOpenFromBanner, setIsCookieModalOpenFromBanner] = useState<boolean>(false);
   const [profileDisplayName, setProfileDisplayName] = useState("User");
   const [profileUsername, setProfileUsername] = useState("@user");
   const [profileAvatarBg, setProfileAvatarBg] = useState("bg-[#064e3b]"); // premium deep green bg
@@ -1805,6 +1810,69 @@ export default function App() {
           />
         </React.Suspense>
 
+        {/* Dynamic Cookie Consent Banner */}
+        {isCookieConsentVisible && (
+          <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-6 md:max-w-md bg-zinc-950/95 backdrop-blur-md border border-zinc-900/60 rounded-2xl p-4.5 z-45 shadow-2xl animate-fade-in text-left">
+            <div className="space-y-3">
+              <div className="flex items-start gap-2.5">
+                <span className="p-2 bg-zinc-900 rounded-xl text-xs shrink-0 select-none">🍪</span>
+                <div className="space-y-1">
+                  <h4 className="text-[11.5px] font-bold text-zinc-150 tracking-tight leading-tight">Persetujuan Cookies & Privasi</h4>
+                  <p className="text-[10px] text-zinc-400 leading-normal font-sans">
+                    Kami menggunakan cookies esensial untuk menyimpan sesi obrolan Anda dan meningkatkan keandalan navigasi di Maria AI. Kakak dapat membaca selengkapnya pada draf <button type="button" onClick={() => setIsCookieModalOpenFromBanner(true)} className="text-zinc-200 underline font-semibold hover:text-white cursor-pointer hover:underline">Kebijakan Cookies</button> kami.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-1 border-t border-zinc-900/40">
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.setItem("maria_cookie_consent_level", "essential");
+                    localStorage.setItem("maria_cookie_consent", "true");
+                    setIsCookieConsentVisible(false);
+                  }}
+                  className="px-3 py-1.5 hover:bg-zinc-900 text-zinc-450 hover:text-zinc-200 rounded-xl text-[9.5px] font-semibold cursor-pointer transition-colors"
+                >
+                  Hanya Esensial
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.setItem("maria_cookie_consent_level", "all");
+                    localStorage.setItem("maria_cookie_consent", "true");
+                    setIsCookieConsentVisible(false);
+                  }}
+                  className={`px-4 py-1.5 ${
+                    settings.theme === "emerald-green" ? "bg-emerald-600 hover:bg-emerald-700" :
+                    settings.theme === "cosmic-purple" ? "bg-purple-600 hover:bg-purple-700" :
+                    settings.theme === "minimal-dark" ? "bg-zinc-700 hover:bg-zinc-800" :
+                    "bg-blue-600 hover:bg-blue-700"
+                  } text-white rounded-xl text-[9.5px] font-bold cursor-pointer transition-colors shadow-sm`}
+                >
+                  Terima Semua
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Cookie Policy Modal linked from Banner */}
+        <CookiePolicyModal 
+          isOpen={isCookieModalOpenFromBanner} 
+          onClose={() => setIsCookieModalOpenFromBanner(false)}
+          accentClass={
+            settings.theme === "emerald-green" ? "text-emerald-400" :
+            settings.theme === "cosmic-purple" ? "text-purple-400" :
+            settings.theme === "minimal-dark" ? "text-zinc-450" :
+            "text-blue-400"
+          }
+          accentBgClass={
+            settings.theme === "emerald-green" ? "bg-emerald-600 hover:bg-emerald-700" :
+            settings.theme === "cosmic-purple" ? "bg-purple-600 hover:bg-purple-700" :
+            settings.theme === "minimal-dark" ? "bg-zinc-750 hover:bg-zinc-800" :
+            "bg-blue-600 hover:bg-blue-700"
+          }
+        />
 
       </div>
     </div>

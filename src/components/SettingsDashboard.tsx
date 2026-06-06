@@ -3,6 +3,7 @@ import { UserSettings, MariaTone, LanguageStyle, AppTheme } from "../types";
 import { safeLocalStorageSetItem } from "../utils";
 import { PRESET_VOICES, PRESET_MODELS } from "../services/elevenLabsService";
 import { auth } from "../firebase";
+import CookiePolicyModal from "./CookiePolicyModal";
 import { 
   Settings, 
   Bell, 
@@ -73,6 +74,7 @@ export default function SettingsDashboard({
 
   const [saveBannerText, setSaveBannerText] = useState<string | null>(null);
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
+  const [isCookieModalOpen, setIsCookieModalOpen] = useState(false);
 
   // Synchronization feedback helper
   const triggerSave = (updates: Partial<UserSettings> & { accentVal?: string }) => {
@@ -597,6 +599,22 @@ export default function SettingsDashboard({
 
                   <div className="pt-3 border-t border-zinc-900/40 flex items-center justify-between">
                     <div className="space-y-0.5 max-w-[280px]">
+                      <span className="text-zinc-200 font-semibold text-[11px] block">Kebijakan Cookies (Cookies Policy)</span>
+                      <span className="text-[9.5px] text-zinc-450 block leading-tight">
+                        Pelajari penggunaan file teks esensial, analisis data, dan opsi manajemen privasi Kakak di platform ini sesuai standar global.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsCookieModalOpen(true)}
+                      className="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 border border-zinc-800 rounded-xl text-[10.5px] font-bold cursor-pointer transition-colors shrink-0"
+                    >
+                      Baca Kebijakan
+                    </button>
+                  </div>
+
+                  <div className="pt-3 border-t border-zinc-900/40 flex items-center justify-between">
+                    <div className="space-y-0.5 max-w-[280px]">
                       <span className="text-zinc-200 font-semibold text-[11px] block">Hapus Semua Riwayat Obrolan</span>
                       <span className="text-[9.5px] text-zinc-450 block leading-tight">Bersihkan semua thread chat dari Firestore.</span>
                     </div>
@@ -650,6 +668,14 @@ export default function SettingsDashboard({
           <span>{saveBannerText}</span>
         </div>
       )}
+
+      {/* Interactive Cookies Policy Reader overlay */}
+      <CookiePolicyModal 
+        isOpen={isCookieModalOpen} 
+        onClose={() => setIsCookieModalOpen(false)}
+        accentClass={getAccentTextClass()}
+        accentBgClass={getAccentBgClass()}
+      />
 
     </div>
   );
