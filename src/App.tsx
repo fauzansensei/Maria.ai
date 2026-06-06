@@ -39,6 +39,7 @@ const ChatArea = React.lazy(() => import("./components/ChatArea"));
 const SettingsDashboard = React.lazy(() => import("./components/SettingsDashboard"));
 const DiscoverArea = React.lazy(() => import("./components/DiscoverArea"));
 const LibraryArea = React.lazy(() => import("./components/LibraryArea"));
+const AuxiliaryModals = React.lazy(() => import("./components/AuxiliaryModals"));
 import { 
   Bot, 
   Settings, 
@@ -1763,8 +1764,63 @@ export default function App() {
           </div>
         )}
 
-        {/* Custom Edit Profile Modal (Beautiful Centered Dark Dialog matching Screenshot 2) */}
-        {isProfileOpen && (
+        {/* Dynamic Lazy Loaded Utility Modals */}
+        <React.Suspense fallback={null}>
+          <AuxiliaryModals
+            isProfileOpen={isProfileOpen}
+            setIsProfileOpen={setIsProfileOpen}
+            showColorSelector={showColorSelector}
+            setShowColorSelector={setShowColorSelector}
+            profileUseInitials={profileUseInitials}
+            setProfileUseInitials={setProfileUseInitials}
+            profileAvatarBg={profileAvatarBg}
+            setProfileAvatarBg={setProfileAvatarBg}
+            profileDisplayName={profileDisplayName}
+            setProfileDisplayName={setProfileDisplayName}
+            profileAvatarUrl={profileAvatarUrl}
+            setProfileAvatarUrl={setProfileAvatarUrl}
+            profileUsername={profileUsername}
+            setProfileUsername={setProfileUsername}
+            isSignUpMode={isSignUpMode}
+            setIsSignUpMode={setIsSignUpMode}
+            loginEmail={loginEmail}
+            setLoginEmail={setLoginEmail}
+            loginPassword={loginPassword}
+            setLoginPassword={setLoginPassword}
+            isAuthenticating={isAuthenticating}
+            setIsAuthenticating={setIsAuthenticating}
+            authLocalError={authLocalError}
+            setAuthLocalError={setAuthLocalError}
+            isLoggedIn={isLoggedIn}
+            setIsLoggedIn={setIsLoggedIn}
+            settings={settings}
+            setSettings={setSettings}
+            isIframe={isIframe}
+            handleAddSystemNotification={handleAddSystemNotification}
+            setIsSettingsOpen={setIsSettingsOpen}
+            handleEmailAuthSubmit={handleEmailAuthSubmit}
+            handleAnonymousAuthSubmit={handleAnonymousAuthSubmit}
+            handleProfileImageUploadWrapper={(e) => {
+              handleProfileImageUpload(e);
+            }}
+            threadToDeleteId={threadToDeleteId}
+            setThreadToDeleteId={setThreadToDeleteId}
+            threads={threads}
+            executeDeleteThread={executeDeleteThread}
+            isClearingAllHistory={isClearingAllHistory}
+            setIsClearingAllHistory={setIsClearingAllHistory}
+            executeClearHistory={executeClearHistory}
+            simulatedEmail={simulatedEmail}
+            setSimulatedEmail={setSimulatedEmail}
+            simulatedPush={simulatedPush}
+            setSimulatedPush={setSimulatedPush}
+            showGoogleGuide={showGoogleGuide}
+            setShowGoogleGuide={setShowGoogleGuide}
+          />
+        </React.Suspense>
+
+        {/* Disabled fallback modals for rendering bundle size reduction */}
+        {false && isProfileOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop Overlay */}
             <div 
@@ -2297,7 +2353,7 @@ export default function App() {
         )}
 
         {/* Custom Confirmation Modal: Delete Chat Thread */}
-        {threadToDeleteId && (
+        {false && threadToDeleteId && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop Blur Overlay */}
             <div 
@@ -2333,7 +2389,7 @@ export default function App() {
         )}
 
         {/* Custom Confirmation Modal: Clear All History */}
-        {isClearingAllHistory && (
+        {false && isClearingAllHistory && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop Blur Overlay */}
             <div 
@@ -2371,7 +2427,7 @@ export default function App() {
         {/* ===================== SIMULATION CENTER: DISPATCHERS ===================== */}
         
         {/* Real-time Email Simulation Drawer Overlay */}
-        {simulatedEmail && simulatedEmail.shown && (
+        {false && simulatedEmail && simulatedEmail.shown && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             {/* Blurred Backdrop */}
             <div 
@@ -2480,7 +2536,7 @@ export default function App() {
         )}
 
         {/* Real-time Web Push notification toast overlay (slides into screen on top right) */}
-        {simulatedPush && simulatedPush.shown && (
+        {false && simulatedPush && simulatedPush.shown && (
           <div className="fixed top-4 right-4 z-[9999] w-80 max-w-sm bg-zinc-950/95 border border-[#333333] shadow-2xl rounded-2xl p-4 overflow-hidden animate-slide-in-right text-zinc-100 flex flex-col gap-2.5">
             {/* Browser push design wrapper */}
             <div className="flex items-center justify-between">

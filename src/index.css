@@ -47,13 +47,13 @@ body,
   background: rgba(156, 163, 175, 0.45);
 }
 
-/* Typing wave keyframes */
+/* Typing wave keyframes - optimized for smooth mobile rendering */
 @keyframes wave {
-  0%, 60%, 100% {
-    transform: translateY(0);
+  0%, 100% {
+    opacity: 0.25;
   }
-  30% {
-    transform: translateY(-4px);
+  50% {
+    opacity: 1;
   }
 }
 

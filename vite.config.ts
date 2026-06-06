@@ -23,18 +23,15 @@ export default defineConfig(() => {
       rollupOptions: {
         output: {
           manualChunks(id) {
+            if (id.includes('lucide') || id.includes('lucide-react')) {
+              return 'lucide-icons';
+            }
             if (id.includes('node_modules')) {
               if (id.includes('react') || id.includes('react-dom') || id.includes('scheduler')) {
                 return 'react-core';
               }
               if (id.includes('firebase')) {
                 return 'firebase-sdk';
-              }
-              if (id.includes('@google/genai')) {
-                return 'gemini-sdk';
-              }
-              if (id.includes('lucide-react')) {
-                return 'lucide-icons';
               }
               if (id.includes('motion')) {
                 return 'motion';
