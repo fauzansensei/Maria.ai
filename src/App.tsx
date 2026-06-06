@@ -1731,7 +1731,7 @@ export default function App() {
             />
             
             {/* Modal centerpiece card container */}
-            <div className="relative w-full max-w-xl md:max-w-2xl bg-[#171717] rounded-3xl border border-zinc-850 shadow-2xl h-[85vh] max-h-[640px] flex flex-col overflow-hidden animate-fade-in z-55">
+            <div className="relative w-full max-w-xl md:max-w-3xl lg:max-w-4xl bg-[#0d0d0e] rounded-3xl border border-zinc-900 shadow-2xl h-[85vh] max-h-[640px] flex flex-col overflow-hidden animate-fade-in z-55">
               <React.Suspense fallback={
                 <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#171717] text-zinc-400">
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-zinc-500 mb-3" />

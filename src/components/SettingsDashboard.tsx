@@ -889,23 +889,23 @@ export default function SettingsDashboard({
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#171717] font-sans antialiased text-zinc-100 relative select-none">
+    <div className="flex flex-col h-full bg-[#0d0d0e] font-sans antialiased text-zinc-100 relative select-none">
       
-      {/* Top Main Heading Row matching Screenshots */}
-      <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-[#2c2c2c] shrink-0">
-        <h2 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
-          {activeTab === "umum" && "Umum"}
+      {/* Mobile Top Header (hidden on desktop) */}
+      <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-900 shrink-0 md:hidden bg-[#0d0d0e]">
+        <h2 className="text-[13px] font-bold text-zinc-200">
+          {activeTab === "umum" && "Profil & Umum"}
           {activeTab === "notifikasi" && "Notifikasi"}
-          {activeTab === "personalisasi" && "Personalisasi"}
-          {activeTab === "aplikasi" && "Aplikasi"}
-          {activeTab === "tagihan" && "Tagihan"}
-          {activeTab === "kontrol-data" && "Kontrol data"}
+          {activeTab === "personalisasi" && "Perilaku & Karakter"}
+          {activeTab === "aplikasi" && "Format Aplikasi"}
+          {activeTab === "tagihan" && "Paket Langganan"}
+          {activeTab === "kontrol-data" && "Kontrol Data"}
         </h2>
         {onClose && (
           <button 
             type="button" 
             onClick={onClose} 
-            className="p-1 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-805 transition-colors cursor-pointer"
             title="Tutup Pengaturan"
             aria-label="Tutup Pengaturan"
           >
@@ -914,96 +914,214 @@ export default function SettingsDashboard({
         )}
       </div>
 
-      {/* Horizontal Tabs Roller Bar - Exactly matching Screenshot scrollability */}
-      <div className="flex items-center gap-1.5 px-4 py-3 bg-[#171717] border-b border-[#2c2c2c] overflow-x-auto no-scrollbar shrink-0">
-        
-        {/* Tab ITEM: UMUM */}
-        <button
-          type="button"
-          onClick={() => { setActiveTab("umum"); setActiveDropdownId(null); }}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-medium leading-none cursor-pointer transition-all shrink-0 border border-transparent ${
-            activeTab === "umum" 
-              ? "bg-[#2f2f2f] text-white border-zinc-700/50" 
-              : "text-zinc-400 hover:text-zinc-200 hover:bg-[#202020]/60"
-          }`}
-        >
-          <Settings className={`w-3.5 h-3.5 ${activeTab === "umum" ? getAccentTextClass() : ""}`} />
-          <span>Umum</span>
-        </button>
+      {/* Main Split Viewport */}
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden h-full">
+        {/* SIDEBAR FOR DESKTOP */}
+        <div className="hidden md:flex flex-col w-56 lg:w-64 bg-[#0d0d0e] border-r border-zinc-900 p-4 shrink-0 justify-between">
+          <div className="space-y-6">
+            <div className="px-1 py-1">
+              <h1 className="text-[16px] font-extrabold text-white flex items-center gap-2">
+                <Settings className={`w-4.5 h-4.5 ${getAccentTextClass()}`} />
+                <span>Pengaturan</span>
+              </h1>
+              <p className="text-[9.5px] text-zinc-500 font-medium mt-0.5">Sesuaikan asisten Maria AI Anda</p>
+            </div>
+            
+            <nav className="space-y-1">
+              {/* Tab ITEM: UMUM */}
+              <button
+                type="button"
+                onClick={() => { setActiveTab("umum"); setActiveDropdownId(null); }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all cursor-pointer border ${
+                  activeTab === "umum" 
+                    ? "bg-zinc-900 border-zinc-800 text-white" 
+                    : "text-zinc-400 border-transparent hover:text-zinc-200 hover:bg-zinc-950/70"
+                }`}
+              >
+                <Settings className={`w-3.5 h-3.5 ${activeTab === "umum" ? getAccentTextClass() : "text-zinc-400"}`} />
+                <span>Profil & Umum</span>
+              </button>
 
-        {/* Tab ITEM: NOTIFIKASI */}
-        <button
-          type="button"
-          onClick={() => { setActiveTab("notifikasi"); setActiveDropdownId(null); }}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-medium leading-none cursor-pointer transition-all shrink-0 border border-transparent ${
-            activeTab === "notifikasi" 
-              ? "bg-[#2f2f2f] text-white border-zinc-700/50" 
-              : "text-zinc-400 hover:text-zinc-200 hover:bg-[#202020]/60"
-          }`}
-        >
-          <Bell className={`w-3.5 h-3.5 ${activeTab === "notifikasi" ? getAccentTextClass() : ""}`} />
-          <span>Notifikasi</span>
-        </button>
+              {/* Tab ITEM: NOTIFIKASI */}
+              <button
+                type="button"
+                onClick={() => { setActiveTab("notifikasi"); setActiveDropdownId(null); }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all cursor-pointer border ${
+                  activeTab === "notifikasi" 
+                    ? "bg-zinc-900 border-zinc-800 text-white" 
+                    : "text-zinc-400 border-transparent hover:text-zinc-200 hover:bg-zinc-950/70"
+                }`}
+              >
+                <Bell className={`w-3.5 h-3.5 ${activeTab === "notifikasi" ? getAccentTextClass() : "text-zinc-400"}`} />
+                <span>Notifikasi</span>
+              </button>
 
-        {/* Tab ITEM: PERSONALISASI */}
-        <button
-          type="button"
-          onClick={() => { setActiveTab("personalisasi"); setActiveDropdownId(null); }}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-medium leading-none cursor-pointer transition-all shrink-0 border border-transparent ${
-            activeTab === "personalisasi" 
-              ? "bg-[#2f2f2f] text-white border-zinc-700/50" 
-              : "text-zinc-400 hover:text-zinc-200 hover:bg-[#202020]/60"
-          }`}
-        >
-          <Sliders className={`w-3.5 h-3.5 ${activeTab === "personalisasi" ? getAccentTextClass() : ""}`} />
-          <span>Personalisasi</span>
-        </button>
+              {/* Tab ITEM: PERSONALISASI */}
+              <button
+                type="button"
+                onClick={() => { setActiveTab("personalisasi"); setActiveDropdownId(null); }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all cursor-pointer border ${
+                  activeTab === "personalisasi" 
+                    ? "bg-zinc-900 border-zinc-800 text-white" 
+                    : "text-zinc-400 border-transparent hover:text-zinc-200 hover:bg-zinc-950/70"
+                }`}
+              >
+                <Sliders className={`w-3.5 h-3.5 ${activeTab === "personalisasi" ? getAccentTextClass() : "text-zinc-400"}`} />
+                <span>Perilaku & Karakter</span>
+              </button>
 
-        {/* Tab ITEM: APLIKASI */}
-        <button
-          type="button"
-          onClick={() => { setActiveTab("aplikasi"); setActiveDropdownId(null); }}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-medium leading-none cursor-pointer transition-all shrink-0 border border-transparent ${
-            activeTab === "aplikasi" 
-              ? "bg-[#2f2f2f] text-white border-zinc-700/50" 
-              : "text-zinc-400 hover:text-zinc-200 hover:bg-[#202020]/60"
-          }`}
-        >
-          <LayoutGrid className={`w-3.5 h-3.5 ${activeTab === "aplikasi" ? getAccentTextClass() : ""}`} />
-          <span>Aplikasi</span>
-        </button>
+              {/* Tab ITEM: APLIKASI */}
+              <button
+                type="button"
+                onClick={() => { setActiveTab("aplikasi"); setActiveDropdownId(null); }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all cursor-pointer border ${
+                  activeTab === "aplikasi" 
+                    ? "bg-zinc-900 border-zinc-800 text-white" 
+                    : "text-zinc-400 border-transparent hover:text-zinc-200 hover:bg-zinc-950/70"
+                }`}
+              >
+                <LayoutGrid className={`w-3.5 h-3.5 ${activeTab === "aplikasi" ? getAccentTextClass() : "text-zinc-400"}`} />
+                <span>Format Aplikasi</span>
+              </button>
 
-        {/* Tab ITEM: TAGIHAN */}
-        <button
-          type="button"
-          onClick={() => { setActiveTab("tagihan"); setActiveDropdownId(null); }}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-medium leading-none cursor-pointer transition-all shrink-0 border border-transparent ${
-            activeTab === "tagihan" 
-              ? "bg-[#2f2f2f] text-white border-zinc-700/50" 
-              : "text-zinc-400 hover:text-zinc-200 hover:bg-[#202020]/60"
-          }`}
-        >
-          <CreditCard className={`w-3.5 h-3.5 ${activeTab === "tagihan" ? getAccentTextClass() : ""}`} />
-          <span>Tagihan</span>
-        </button>
+              {/* Tab ITEM: TAGIHAN */}
+              <button
+                type="button"
+                onClick={() => { setActiveTab("tagihan"); setActiveDropdownId(null); }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all cursor-pointer border ${
+                  activeTab === "tagihan" 
+                    ? "bg-zinc-900 border-zinc-800 text-white" 
+                    : "text-zinc-400 border-transparent hover:text-zinc-200 hover:bg-zinc-950/70"
+                }`}
+              >
+                <CreditCard className={`w-3.5 h-3.5 ${activeTab === "tagihan" ? getAccentTextClass() : "text-zinc-400"}`} />
+                <span>Paket Langganan</span>
+              </button>
 
-        {/* Tab ITEM: KONTROL DATA */}
-        <button
-          type="button"
-          onClick={() => { setActiveTab("kontrol-data"); setActiveDropdownId(null); }}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-medium leading-none cursor-pointer transition-all shrink-0 border border-transparent ${
-            activeTab === "kontrol-data" 
-              ? "bg-[#2f2f2f] text-white border-zinc-700/50" 
-              : "text-zinc-400 hover:text-zinc-200 hover:bg-[#202020]/60"
-          }`}
-        >
-          <Database className={`w-3.5 h-3.5 ${activeTab === "kontrol-data" ? getAccentTextClass() : ""}`} />
-          <span>Kontrol data</span>
-        </button>
-      </div>
+              {/* Tab ITEM: KONTROL DATA */}
+              <button
+                type="button"
+                onClick={() => { setActiveTab("kontrol-data"); setActiveDropdownId(null); }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all cursor-pointer border ${
+                  activeTab === "kontrol-data" 
+                    ? "bg-zinc-900 border-zinc-800 text-white" 
+                    : "text-zinc-400 border-transparent hover:text-zinc-200 hover:bg-zinc-950/70"
+                }`}
+              >
+                <Database className={`w-3.5 h-3.5 ${activeTab === "kontrol-data" ? getAccentTextClass() : "text-zinc-400"}`} />
+                <span>Kontrol Privasi</span>
+              </button>
+            </nav>
+          </div>
 
-      {/* Dynamic Sub-tab Body Canvas */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5 no-scrollbar pb-10">
+          <div className="px-2 py-1 text-[8.5px] font-mono text-zinc-650 border-t border-zinc-900/50 pt-2.5 leading-normal">
+            SISTEM v2.5.4<br />
+            OBROLAN INTEGRASI CLOUD
+          </div>
+        </div>
+
+        {/* MOBILE HORIZONTAL SCROLL NOTIFICATION BAR */}
+        <div className="flex md:hidden items-center gap-1.5 px-4 py-2 bg-[#0d0d0e] border-b border-zinc-900 overflow-x-auto no-scrollbar shrink-0">
+          <button
+            type="button"
+            onClick={() => { setActiveTab("umum"); setActiveDropdownId(null); }}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold leading-none cursor-pointer transition-all shrink-0 border ${
+              activeTab === "umum" 
+                ? "bg-zinc-900 border-zinc-800 text-white" 
+                : "text-zinc-400 border-transparent hover:bg-zinc-950"
+            }`}
+          >
+            <span>Umum</span>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => { setActiveTab("notifikasi"); setActiveDropdownId(null); }}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold leading-none cursor-pointer transition-all shrink-0 border ${
+              activeTab === "notifikasi" 
+                ? "bg-zinc-900 border-zinc-800 text-white" 
+                : "text-zinc-400 border-transparent hover:bg-zinc-950"
+            }`}
+          >
+            <span>Notifikasi</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setActiveTab("personalisasi"); setActiveDropdownId(null); }}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold leading-none cursor-pointer transition-all shrink-0 border ${
+              activeTab === "personalisasi" 
+                ? "bg-zinc-900 border-zinc-800 text-white" 
+                : "text-zinc-400 border-transparent hover:bg-zinc-150"
+            }`}
+          >
+            <span>Karakter</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setActiveTab("aplikasi"); setActiveDropdownId(null); }}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold leading-none cursor-pointer transition-all shrink-0 border ${
+              activeTab === "aplikasi" 
+                ? "bg-zinc-900 border-zinc-800 text-white" 
+                : "text-zinc-400 border-transparent hover:bg-zinc-950"
+            }`}
+          >
+            <span>Format</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setActiveTab("tagihan"); setActiveDropdownId(null); }}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold leading-none cursor-pointer transition-all shrink-0 border ${
+              activeTab === "tagihan" 
+                ? "bg-zinc-900 border-zinc-800 text-white" 
+                : "text-zinc-400 border-transparent hover:bg-zinc-950"
+            }`}
+          >
+            <span>Tagihan</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setActiveTab("kontrol-data"); setActiveDropdownId(null); }}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold leading-none cursor-pointer transition-all shrink-0 border ${
+              activeTab === "kontrol-data" 
+                ? "bg-zinc-900 border-zinc-800 text-white" 
+                : "text-zinc-400 border-transparent hover:bg-zinc-950"
+            }`}
+          >
+            <span>Data</span>
+          </button>
+        </div>
+
+        {/* CONTAINER FOR CONTENT PANEL */}
+        <div className="flex-1 flex flex-col h-full bg-[#131314] overflow-hidden">
+          {/* Top Panel bar shown on Desktop */}
+          <div className="hidden md:flex items-center justify-between px-6 py-4.5 border-b border-zinc-900 shrink-0 bg-[#131314]">
+            <h2 className="text-[12.5px] font-extrabold text-[#d4d4d8] tracking-widest uppercase">
+              {activeTab === "umum" && "Profil & Pengaturan Umum"}
+              {activeTab === "notifikasi" && "Pengaturan Notifikasi Pintar"}
+              {activeTab === "personalisasi" && "Perilaku & Karakter Asisten"}
+              {activeTab === "aplikasi" && "Pengaturan Format Aplikasi"}
+              {activeTab === "tagihan" && "Paket Langganan Maria Plus"}
+              {activeTab === "kontrol-data" && "Kerahasiaan & Kontrol Data"}
+            </h2>
+            {onClose && (
+              <button 
+                type="button" 
+                onClick={onClose} 
+                className="p-1 px-3 bg-zinc-900 hover:bg-zinc-850 rounded-xl border border-zinc-800 text-zinc-400 hover:text-white transition-all cursor-pointer text-[10.5px] font-bold"
+                title="Tutup Pengaturan"
+                aria-label="Tutup Pengaturan"
+              >
+                Tutup
+              </button>
+            )}
+          </div>
+
+          {/* Scrolling Content viewport */}
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5 no-scrollbar pb-16">
         
         {/* ===================== TAB: UMUM ===================== */}
         {activeTab === "umum" && (
@@ -2434,6 +2552,11 @@ export default function SettingsDashboard({
           </div>
         )}
 
+          {/* Closing of scrolling content area */}
+          </div>
+        {/* Closing of container for content panel */}
+        </div>
+      {/* Closing of main split viewport */}
       </div>
 
       {/* Persistent Save Status Notification Banner */}
