@@ -228,13 +228,13 @@ function LinkOpenerCard({
             {specs.icon}
           </div>
           <div className="min-w-0">
-            <h4 className="font-display font-medium text-slate-900 text-xs sm:text-[13px] tracking-tight flex items-center gap-1.5 leading-snug">
+            <div className="font-display font-medium text-slate-900 text-xs sm:text-[13px] tracking-tight flex items-center gap-1.5 leading-snug">
               {ytEmbedUrl ? "Pemutar Musik Maria (YouTube)" : `Buka ${name}`}
               <span className="inline-block w-1 h-1 rounded-full bg-slate-300"></span>
               <span className="text-[10px] font-normal text-slate-400">
                 {ytEmbedUrl ? "Putar Langsung" : "Tautan Aplikasi"}
               </span>
-            </h4>
+            </div>
             <p className="text-[10px] font-mono text-slate-500 mt-0.5 truncate max-w-[200px] sm:max-w-[280px]">
               {displayUrl}
             </p>

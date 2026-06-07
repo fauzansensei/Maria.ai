@@ -1842,7 +1842,7 @@ export default function App() {
               <div className="flex items-start gap-3">
                 <span className="p-2.5 bg-zinc-800/80 rounded-xl text-sm shrink-0 select-none">🍪</span>
                 <div className="space-y-1">
-                  <h2 className="text-[13px] font-bold text-zinc-50 tracking-tight leading-tight">Persetujuan Cookies & Privasi</h2>
+                  <strong className="block text-[13px] font-bold text-zinc-50 tracking-tight leading-tight">Persetujuan Cookies & Privasi</strong>
                   <p className="text-[11px] text-zinc-300 leading-relaxed font-sans">
                     Kami menggunakan cookies esensial untuk menyimpan sesi obrolan Anda dan meningkatkan keandalan navigasi di Maria AI. Kakak dapat membaca selengkapnya pada draf <button type="button" onClick={() => setIsCookieModalOpenFromBanner(true)} className="text-blue-400 hover:text-blue-300 underline font-bold cursor-pointer transition-colors decoration-blue-400/40 hover:decoration-blue-300">Kebijakan Cookies</button> kami.
                   </p>
