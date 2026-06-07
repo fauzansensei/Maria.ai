@@ -23,6 +23,15 @@ export default defineConfig(() => {
       rollupOptions: {
         output: {
           manualChunks(id) {
+            if (id.includes('node_modules/firebase')) {
+              return 'firebase-bndl';
+            }
+            if (id.includes('node_modules/lucide-react')) {
+              return 'icons-bndl';
+            }
+            if (id.includes('node_modules/motion') || id.includes('node_modules/framer-motion')) {
+              return 'motion-bndl';
+            }
             if (id.includes('node_modules')) {
               return 'vendor';
             }

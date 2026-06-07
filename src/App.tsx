@@ -44,10 +44,16 @@ function lazyWithRetry(importFn: () => Promise<any>) {
     } catch (error) {
       console.error("Dynamic import failed, reloading to fetch updated compilation bundles...", error);
       try {
-        const hasRetried = sessionStorage.getItem("chunk-retry-lazy");
-        if (!hasRetried) {
-          sessionStorage.setItem("chunk-retry-lazy", "true");
+        const now = Date.now();
+        const lastReloadStr = sessionStorage.getItem("chunk-last-reload-time");
+        const lastReload = lastReloadStr ? parseInt(lastReloadStr, 10) : 0;
+        
+        // Prevent infinite reload loops by enforcing a 15-second delay between automatic reloads
+        if (now - lastReload > 15000) {
+          sessionStorage.setItem("chunk-last-reload-time", now.toString());
           window.location.reload();
+        } else {
+          console.error("Chunk loading error occurred again within 15 seconds. Aborting auto-reload to protect user experience.");
         }
       } catch (_) {}
       throw error;
@@ -104,10 +110,6 @@ export default function App() {
   const [isIframe, setIsIframe] = useState<boolean>(false);
   useEffect(() => {
     setIsIframe(window.self !== window.top);
-    try {
-      sessionStorage.removeItem("chunk-error-reload-retried");
-      sessionStorage.removeItem("chunk-retry-lazy");
-    } catch (_) {}
   }, []);
 
   const [showGoogleGuide, setShowGoogleGuide] = useState<boolean>(false);
