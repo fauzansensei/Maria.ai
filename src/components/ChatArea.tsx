@@ -38,6 +38,7 @@ import {
   ExternalLink,
   Laptop
 } from "lucide-react";
+import GeminiLiveCall from "./GeminiLiveCall";
 
 interface ChatAreaProps {
   messages: Message[];
@@ -800,6 +801,7 @@ export default function ChatArea({
   stopSpeech,
 }: ChatAreaProps) {
   const [inputText, setInputText] = useState("");
+  const [isLiveCallOpen, setIsLiveCallOpen] = useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
   // Auto-grow textarea height on content change
@@ -1099,6 +1101,17 @@ export default function ChatArea({
 
           {/* Action buttons (Notification Bell Drawer trigger) */}
           <div className="flex items-center gap-2">
+
+            {/* Gemini Live calling button */}
+            <button
+              type="button"
+              onClick={() => setIsLiveCallOpen(true)}
+              className="p-2 text-slate-500 hover:text-purple-600 hover:bg-purple-950/10 hover:border-purple-500/30 active:scale-95 transition-all rounded-lg border border-slate-200 cursor-pointer flex items-center justify-center gap-1.5"
+              title="Panggilan Suara Maria Live (Gemini API)"
+            >
+              <Mic className="w-4 h-4 text-purple-500 animate-pulse" />
+              <span className="hidden sm:inline text-xs font-semibold text-slate-700">Live Call</span>
+            </button>
             
             {/* Real-time Notification Bell Popover */}
             <div className="relative">
@@ -1635,6 +1648,13 @@ export default function ChatArea({
         </div>
 
       </div>
+
+      <GeminiLiveCall
+        isOpen={isLiveCallOpen}
+        onClose={() => setIsLiveCallOpen(false)}
+        username={settings?.username || "Pengguna"}
+      />
+
     </div>
   );
 }

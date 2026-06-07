@@ -87,41 +87,7 @@ export default function App() {
     setIsIframe(window.self !== window.top);
   }, []);
 
-  const [authMethod, setAuthMethod] = useState<"google" | "email" | "anon" | "firebase">("google");
   const [showGoogleGuide, setShowGoogleGuide] = useState<boolean>(false);
-  
-  // States for Custom Firebase SDK Configuration
-  const [customFirebaseJson, setCustomFirebaseJson] = useState("");
-  const [isCustomFirebaseSaved, setIsCustomFirebaseSaved] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      return !!localStorage.getItem("maria_custom_firebase_config");
-    }
-    return false;
-  });
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("maria_custom_firebase_config");
-      if (saved) {
-        try {
-          setCustomFirebaseJson(JSON.stringify(JSON.parse(saved), null, 2));
-        } catch {
-          setCustomFirebaseJson(saved);
-        }
-      } else {
-        const template = {
-          apiKey: "SALIN_API_KEY_ANDA_DI_SINI",
-          authDomain: "PROJECT_ID.firebaseapp.com",
-          projectId: "PROJECT_ID",
-          storageBucket: "PROJECT_ID.firebasestorage.app",
-          messagingSenderId: "SENDER_ID",
-          appId: "APP_ID",
-          firestoreDatabaseId: ""
-        };
-        setCustomFirebaseJson(JSON.stringify(template, null, 2));
-      }
-    }
-  }, [authMethod]);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [isSignUpMode, setIsSignUpMode] = useState(false);
@@ -176,21 +142,6 @@ export default function App() {
         message = "Pola/format alamat email tidak sah.";
       }
       
-      const isApiKeyError = (err.message || "").toLowerCase().includes("api-key-not-valid") || 
-                           (err.message || "").toLowerCase().includes("api key not valid") ||
-                           (err.message || "").toLowerCase().includes("invalid-api-key");
-      if (isApiKeyError) {
-        localStorage.removeItem("maria_custom_firebase_config");
-        handleAddSystemNotification(
-          "Koneksi Dipulihkan",
-          "Kunci Firebase kustom tidak valid. Menyetel ulang konfigurasi ke server default...",
-          "success"
-        );
-        setTimeout(() => {
-          window.location.reload();
-        }, 2500);
-        return;
-      }
       setAuthLocalError(message);
     } finally {
       setIsAuthenticating(false);
@@ -218,67 +169,12 @@ export default function App() {
     } catch (err: any) {
       console.error("Anon login error:", err);
       let message = "Koneksi Cepat gagal: " + (err.message || String(err));
-      const isApiKeyError = (err.message || "").toLowerCase().includes("api-key-not-valid") || 
-                           (err.message || "").toLowerCase().includes("api key not valid") ||
-                           (err.message || "").toLowerCase().includes("invalid-api-key");
-      if (isApiKeyError) {
-        localStorage.removeItem("maria_custom_firebase_config");
-        handleAddSystemNotification(
-          "Koneksi Dipulihkan",
-          "Konfigurasi Firebase custom Anda tidak valid. Mengembalikan server aslinya...",
-          "success"
-        );
-        setTimeout(() => {
-          window.location.reload();
-        }, 2500);
-        return;
-      }
       setAuthLocalError(message);
     } finally {
       setIsAuthenticating(false);
     }
   };
 
-  // Custom Firebase configuration handlers
-  const handleSaveCustomFirebase = () => {
-    if (!customFirebaseJson.trim()) {
-      setAuthLocalError("Teks JSON pengaturan tidak boleh kosong.");
-      return;
-    }
-    try {
-      const parsed = JSON.parse(customFirebaseJson);
-      if (!parsed.apiKey || !parsed.projectId) {
-        throw new Error("Objek JSON wajib menyertakan 'apiKey' dan 'projectId'.");
-      }
-      localStorage.setItem("maria_custom_firebase_config", JSON.stringify(parsed, null, 2));
-      setIsCustomFirebaseSaved(true);
-      setAuthLocalError(null);
-      handleAddSystemNotification(
-        "Kredensial SDK Diubah",
-        "Firebase SDK custom berhasil disimpan! Mereload halaman dalam hitungan detik...",
-        "success"
-      );
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
-    } catch (err: any) {
-      setAuthLocalError("JSON Tidak Sah: " + (err.message || String(err)));
-    }
-  };
-
-  const handleResetCustomFirebase = () => {
-    localStorage.removeItem("maria_custom_firebase_config");
-    setIsCustomFirebaseSaved(false);
-    setAuthLocalError(null);
-    handleAddSystemNotification(
-      "Kredensial Diatur Ulang",
-      "Kembali memuat konfigurasi server bawaan Google AI Studio...",
-      "success"
-    );
-    setTimeout(() => {
-      window.location.reload();
-    }, 1500);
-  };
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
@@ -622,19 +518,6 @@ export default function App() {
         message = "Login dibatalkan: Jendela dialog ditutup sebelum proses selesai.";
       }
       
-      const isApiKeyError = (err.message || "").toLowerCase().includes("api-key-not-valid") || 
-                           (err.message || "").toLowerCase().includes("api key not valid") ||
-                           (err.message || "").toLowerCase().includes("invalid-api-key");
-      if (isApiKeyError) {
-        localStorage.removeItem("maria_custom_firebase_config");
-        handleAddSystemNotification(
-          "Konfigurasi Diperbarui",
-          "Modul kustom tidak cocok. Sistem otomatis mengembalikan konfigurasi hosting default. Silakan memuat ulang.",
-          "success"
-        );
-        setTimeout(() => { window.location.reload(); }, 2500);
-        return;
-      }
       setAuthLocalError(message);
       setIsProfileOpen(true);
       setIsAuthenticating(false);

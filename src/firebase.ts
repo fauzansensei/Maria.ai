@@ -4,36 +4,7 @@ import { getFirestore } from 'firebase/firestore';
 import firebaseConfigRaw from '../firebase-applet-config.json';
 
 // Dynamic resolver to load user custom Firebase/Google API configuration
-function getActiveFirebaseConfig() {
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const saved = window.localStorage.getItem('maria_custom_firebase_config');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (
-          parsed &&
-          parsed.projectId &&
-          parsed.projectId.trim() !== "" &&
-          parsed.projectId !== "PROJECT_ID" &&
-          parsed.apiKey &&
-          parsed.apiKey.trim() !== "" &&
-          parsed.apiKey !== "SALIN_API_KEY_ANDA_DI_SINI" &&
-          !parsed.apiKey.includes("SALIN_")
-        ) {
-          return parsed;
-        } else {
-          // Clean up invalid placeholder or corrupted configuration
-          window.localStorage.removeItem('maria_custom_firebase_config');
-        }
-      }
-    }
-  } catch (e) {
-    console.error('Failed to parse custom firebase config from localStorage:', e);
-  }
-  return firebaseConfigRaw;
-}
-
-const firebaseConfig = getActiveFirebaseConfig();
+const firebaseConfig = firebaseConfigRaw;
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 // If database ID is absent/empty, default to standard Firestore database context
