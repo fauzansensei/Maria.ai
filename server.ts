@@ -216,6 +216,7 @@ Pastikan nama aplikasi/platform sangat ringkas, dan link URL-nya valid, lengkap 
     // Generate content with automated robust model fallback list in case of 503 or 429 overloads
     const modelsToTry = [
       "gemini-3.5-flash", 
+      "gemini-2.5-flash",
       "gemini-3.1-flash-lite", 
       "gemini-flash-latest",
       "gemini-3.1-pro-preview"
