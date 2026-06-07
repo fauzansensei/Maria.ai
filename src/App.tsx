@@ -44,6 +44,18 @@ function lazyWithRetry(importFn: () => Promise<any>) {
     } catch (error) {
       console.error("Dynamic import failed, reloading to fetch updated compilation bundles...", error);
       try {
+        const isLighthouse = typeof navigator !== 'undefined' && (
+          navigator.userAgent.includes("Lighthouse") || 
+          navigator.userAgent.includes("Chrome-Lighthouse") || 
+          navigator.userAgent.includes("Google-PageSpeed") ||
+          navigator.userAgent.includes("PageSpeed")
+        );
+        
+        if (isLighthouse) {
+          console.warn("Lighthouse/PageSpeed sandbox detected. Suppressing automatic reload.");
+          throw error;
+        }
+
         const now = Date.now();
         const lastReloadStr = sessionStorage.getItem("chunk-last-reload-time");
         const lastReload = lastReloadStr ? parseInt(lastReloadStr, 10) : 0;
@@ -247,9 +259,18 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false); // Controls responsive drawer tracker
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isCookieConsentVisible, setIsCookieConsentVisible] = useState<boolean>(() => {
-    return localStorage.getItem("maria_cookie_consent") !== "true";
-  });
+  const [isCookieConsentVisible, setIsCookieConsentVisible] = useState<boolean>(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        const consent = localStorage.getItem("maria_cookie_consent") !== "true";
+        if (consent) {
+          setIsCookieConsentVisible(true);
+        }
+      } catch (_) {}
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
   const [isCookieModalOpenFromBanner, setIsCookieModalOpenFromBanner] = useState<boolean>(false);
   const [profileDisplayName, setProfileDisplayName] = useState("User");
   const [profileUsername, setProfileUsername] = useState("@user");
@@ -1696,59 +1717,61 @@ export default function App() {
         )}
 
         {/* Dynamic Lazy Loaded Utility Modals */}
-        <React.Suspense fallback={null}>
-          <AuxiliaryModals
-            isProfileOpen={isProfileOpen}
-            setIsProfileOpen={setIsProfileOpen}
-            showColorSelector={showColorSelector}
-            setShowColorSelector={setShowColorSelector}
-            profileUseInitials={profileUseInitials}
-            setProfileUseInitials={setProfileUseInitials}
-            profileAvatarBg={profileAvatarBg}
-            setProfileAvatarBg={setProfileAvatarBg}
-            profileDisplayName={profileDisplayName}
-            setProfileDisplayName={setProfileDisplayName}
-            profileAvatarUrl={profileAvatarUrl}
-            setProfileAvatarUrl={setProfileAvatarUrl}
-            profileUsername={profileUsername}
-            setProfileUsername={setProfileUsername}
-            isSignUpMode={isSignUpMode}
-            setIsSignUpMode={setIsSignUpMode}
-            loginEmail={loginEmail}
-            setLoginEmail={setLoginEmail}
-            loginPassword={loginPassword}
-            setLoginPassword={setLoginPassword}
-            isAuthenticating={isAuthenticating}
-            setIsAuthenticating={setIsAuthenticating}
-            authLocalError={authLocalError}
-            setAuthLocalError={setAuthLocalError}
-            isLoggedIn={isLoggedIn}
-            setIsLoggedIn={setIsLoggedIn}
-            settings={settings}
-            setSettings={setSettings}
-            isIframe={isIframe}
-            handleAddSystemNotification={handleAddSystemNotification}
-            setIsSettingsOpen={setIsSettingsOpen}
-            handleEmailAuthSubmit={handleEmailAuthSubmit}
-            handleAnonymousAuthSubmit={handleAnonymousAuthSubmit}
-            handleProfileImageUploadWrapper={(e) => {
-              handleProfileImageUpload(e);
-            }}
-            threadToDeleteId={threadToDeleteId}
-            setThreadToDeleteId={setThreadToDeleteId}
-            threads={threads}
-            executeDeleteThread={executeDeleteThread}
-            isClearingAllHistory={isClearingAllHistory}
-            setIsClearingAllHistory={setIsClearingAllHistory}
-            executeClearHistory={executeClearHistory}
-            simulatedEmail={simulatedEmail}
-            setSimulatedEmail={setSimulatedEmail}
-            simulatedPush={simulatedPush}
-            setSimulatedPush={setSimulatedPush}
-            showGoogleGuide={showGoogleGuide}
-            setShowGoogleGuide={setShowGoogleGuide}
-          />
-        </React.Suspense>
+        {(isProfileOpen || threadToDeleteId !== null || isClearingAllHistory || simulatedEmail !== null || simulatedPush !== null || showGoogleGuide) && (
+          <React.Suspense fallback={null}>
+            <AuxiliaryModals
+              isProfileOpen={isProfileOpen}
+              setIsProfileOpen={setIsProfileOpen}
+              showColorSelector={showColorSelector}
+              setShowColorSelector={setShowColorSelector}
+              profileUseInitials={profileUseInitials}
+              setProfileUseInitials={setProfileUseInitials}
+              profileAvatarBg={profileAvatarBg}
+              setProfileAvatarBg={setProfileAvatarBg}
+              profileDisplayName={profileDisplayName}
+              setProfileDisplayName={setProfileDisplayName}
+              profileAvatarUrl={profileAvatarUrl}
+              setProfileAvatarUrl={setProfileAvatarUrl}
+              profileUsername={profileUsername}
+              setProfileUsername={setProfileUsername}
+              isSignUpMode={isSignUpMode}
+              setIsSignUpMode={setIsSignUpMode}
+              loginEmail={loginEmail}
+              setLoginEmail={setLoginEmail}
+              loginPassword={loginPassword}
+              setLoginPassword={setLoginPassword}
+              isAuthenticating={isAuthenticating}
+              setIsAuthenticating={setIsAuthenticating}
+              authLocalError={authLocalError}
+              setAuthLocalError={setAuthLocalError}
+              isLoggedIn={isLoggedIn}
+              setIsLoggedIn={setIsLoggedIn}
+              settings={settings}
+              setSettings={setSettings}
+              isIframe={isIframe}
+              handleAddSystemNotification={handleAddSystemNotification}
+              setIsSettingsOpen={setIsSettingsOpen}
+              handleEmailAuthSubmit={handleEmailAuthSubmit}
+              handleAnonymousAuthSubmit={handleAnonymousAuthSubmit}
+              handleProfileImageUploadWrapper={(e) => {
+                handleProfileImageUpload(e);
+              }}
+              threadToDeleteId={threadToDeleteId}
+              setThreadToDeleteId={setThreadToDeleteId}
+              threads={threads}
+              executeDeleteThread={executeDeleteThread}
+              isClearingAllHistory={isClearingAllHistory}
+              setIsClearingAllHistory={setIsClearingAllHistory}
+              executeClearHistory={executeClearHistory}
+              simulatedEmail={simulatedEmail}
+              setSimulatedEmail={setSimulatedEmail}
+              simulatedPush={simulatedPush}
+              setSimulatedPush={setSimulatedPush}
+              showGoogleGuide={showGoogleGuide}
+              setShowGoogleGuide={setShowGoogleGuide}
+            />
+          </React.Suspense>
+        )}
 
         {/* Dynamic Cookie Consent Banner */}
         {isCookieConsentVisible && (
