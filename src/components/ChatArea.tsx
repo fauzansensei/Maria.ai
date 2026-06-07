@@ -126,7 +126,7 @@ function getAppSpecs(name: string) {
 }
 
 // Interactive component representing a link preview to open an external website
-function LinkOpenerCard({ 
+const LinkOpenerCard = React.memo(function LinkOpenerCard({ 
   name, 
   url, 
   messageId, 
@@ -277,10 +277,10 @@ function LinkOpenerCard({
       )}
     </div>
   );
-}
+});
 
 // Helper to render formatting inside non-app-opener parts
-function FormattedSubPart({ text, isAi = true }: { text: string; isAi?: boolean; key?: React.Key }) {
+const FormattedSubPart = React.memo(function FormattedSubPart({ text, isAi = true }: { text: string; isAi?: boolean; key?: React.Key }) {
   const parts = text.split(/(```[\s\S]*?```)/g);
 
   return (
@@ -559,10 +559,10 @@ function FormattedSubPart({ text, isAi = true }: { text: string; isAi?: boolean;
       })}
     </>
   );
-}
+});
 
 // A regex-based syntax formatting renderer for rendering Voxa's responses beautifully
-function FormattedContent({ 
+const FormattedContent = React.memo(function FormattedContent({ 
   text, 
   messageId, 
   messageTimestamp,
@@ -600,7 +600,7 @@ function FormattedContent({
       })}
     </div>
   );
-}
+});
 
 // Sub-helper parsing bold/italic/links/bare URLs inline markdown inside FormattedContent
 function parseInlineStyles(text: string, isAi: boolean = true): React.ReactNode[] {
@@ -772,35 +772,34 @@ function parseInlineStyles(text: string, isAi: boolean = true): React.ReactNode[
   return result;
 }
 
-export default function ChatArea({
-  messages,
+interface ChatInputFormProps {
+  isLoading: boolean;
+  onSendMessage: (text: string, image?: string, audio?: string) => void;
+  onAddSystemNotification: (title: string, body: string, type: "info" | "success" | "reminder" | "message") => void;
+  pendingPrompt?: string | null;
+  onClearPendingPrompt?: () => void;
+  themeStyle: any;
+}
+
+const ChatInputForm = React.memo(function ChatInputForm({
   isLoading,
   onSendMessage,
-  settings,
-  notifications,
-  onMarkNotificationRead,
-  onClearNotifications,
   onAddSystemNotification,
-  isSidebarCollapsed,
-  onToggleSidebar,
-  onToggleSettings,
-  onRegenerateResponse,
-  onSetFeedback,
-  onEditUserMessage,
-  onToggleBookmark,
-  bookmarkedMessages = [],
-  isLoggedIn = false,
-  profileDisplayNameProp,
-  onOpenLogin,
   pendingPrompt,
   onClearPendingPrompt,
-  isPlus = false,
-  speakMessage,
-  isPlayingAudio,
-  stopSpeech,
-}: ChatAreaProps) {
+  themeStyle,
+}: ChatInputFormProps) {
   const [inputText, setInputText] = useState("");
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const [attachedImage, setAttachedImage] = useState<string | null>(null);
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [voiceBase64, setVoiceBase64] = useState<string | null>(null);
+  const [, setVoiceBlob] = useState<Blob | null>(null);
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Auto-grow textarea height on content change
   useEffect(() => {
@@ -809,6 +808,23 @@ export default function ChatArea({
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 180)}px`;
     }
   }, [inputText]);
+
+  // Clean recording interval on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Load a pending prompt stored in reactive states cleanly (used by Library / Discover redirection)
+  useEffect(() => {
+    if (pendingPrompt) {
+      setInputText(pendingPrompt);
+      onClearPendingPrompt?.();
+    }
+  }, [pendingPrompt, onClearPendingPrompt]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -824,60 +840,6 @@ export default function ChatArea({
     }
   };
 
-  // Load a pending prompt stored in reactive states cleanly (used by Library / Discover redirection)
-  useEffect(() => {
-    if (pendingPrompt) {
-      setInputText(pendingPrompt);
-      onClearPendingPrompt?.();
-    }
-  }, [pendingPrompt, onClearPendingPrompt]);
-  const [isCopiedId, setIsCopiedId] = useState<string | null>(null);
-  const [isWidgetPanelExpanded, setIsWidgetPanelExpanded] = useState(true);
-  const [isNotificationTrayOpen, setIsNotificationTrayOpen] = useState(false);
-
-  // States for in-chat editing of user messages
-  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-  const [editingText, setEditingText] = useState<string>("");
-
-  const startEditing = (id: string, currentContent: string) => {
-    setEditingMessageId(id);
-    setEditingText(currentContent);
-  };
-
-  const handleSaveMessageEdit = (id: string) => {
-    if (onEditUserMessage && editingText.trim()) {
-      onEditUserMessage(id, editingText);
-    }
-    setEditingMessageId(null);
-  };
-
-  // Attachment / Voice Note states for absolute multimodal support
-  const [attachedImage, setAttachedImage] = useState<string | null>(null);
-  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  const [voiceBase64, setVoiceBase64] = useState<string | null>(null);
-  const [, setVoiceBlob] = useState<Blob | null>(null);
-
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading]);
-
-  // Clean recording interval on unmount
-  useEffect(() => {
-    return () => {
-      if (recordingIntervalRef.current) {
-        clearInterval(recordingIntervalRef.current);
-      }
-    };
-  }, []);
-
-  // File Upload Helper
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -887,7 +849,6 @@ export default function ChatArea({
       if (event.target?.result && typeof event.target.result === "string") {
         try {
           const rawBase64 = event.target.result;
-          // Dynamically scale/compress image to lightweight JPEG format (~20-50KB)
           const compressed = await compressImage(rawBase64);
           setAttachedImage(compressed);
           onAddSystemNotification(
@@ -896,7 +857,6 @@ export default function ChatArea({
             "success"
           );
         } catch (compressionErr) {
-          // Robust fallback
           setAttachedImage(event.target.result);
           onAddSystemNotification(
             "Gambar Terlampir",
@@ -907,11 +867,9 @@ export default function ChatArea({
       }
     };
     reader.readAsDataURL(file);
-    // Reset file input value so same image can be reselected
     e.target.value = "";
   };
 
-  // Start Media Recording with robust sandbox fallback
   const startRecording = async () => {
     audioChunksRef.current = [];
     setRecordingDuration(0);
@@ -958,15 +916,14 @@ export default function ChatArea({
 
       recordingIntervalRef.current = setInterval(() => {
         setRecordingDuration(prev => prev + 1);
-      }, 1000);
+      }, 1050);
 
     } catch (err: any) {
       console.warn("Media recording failed (this is expected under sandbox frame permissions):", err);
-      // Fallback: Enable full sandbox simulation
       setIsRecordingVoice(true);
       recordingIntervalRef.current = setInterval(() => {
         setRecordingDuration(prev => prev + 1);
-      }, 1000);
+      }, 1055);
       
       onAddSystemNotification(
         "Akses Mikrofon Terhalang",
@@ -985,7 +942,6 @@ export default function ChatArea({
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
     } else {
-      // Fallback wav builder so the simulation gives correct feedback
       const mockWav = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAAA";
       setVoiceBase64(mockWav);
       onAddSystemNotification(
@@ -1039,6 +995,194 @@ export default function ChatArea({
     setVoiceBase64(null);
     setVoiceBlob(null);
   };
+
+  return (
+    <div className="max-w-3xl mx-auto">
+      {(attachedImage || voiceBase64) && (
+        <div className="flex items-center gap-3 p-2.5 bg-slate-50 border border-slate-200 border-b-0 rounded-t-xl animate-fade-in text-[11px]">
+          {attachedImage && (
+            <div className="relative group bg-white border border-slate-250 rounded-lg p-1 shadow-2xs shrink-0">
+              <img src={attachedImage} className="w-12 h-12 object-cover rounded" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
+              <button
+                type="button"
+                onClick={() => setAttachedImage(null)}
+                aria-label="Hapus Lampiran Gambar"
+                className="absolute -top-1.5 -right-1.5 bg-red-500 text-white p-0.5 rounded-full hover:bg-red-650 shadow-sm transition-colors cursor-pointer"
+                title="Hapus"
+              >
+                <X className="w-2.5 h-2.5" />
+              </button>
+            </div>
+          )}
+          {voiceBase64 && (
+            <div className="relative group bg-white border border-slate-250 rounded-lg py-1.5 px-3 flex items-center gap-2 shadow-2xs font-medium text-slate-700">
+              <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
+              <span>Voice Memo Terkam ({recordingDuration > 0 ? `${recordingDuration}s` : "Simulasi"})</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setVoiceBase64(null);
+                  setVoiceBlob(null);
+                }}
+                aria-label="Hapus Memo Suara"
+                className="bg-slate-100 hover:bg-slate-200 text-slate-500 p-0.5 rounded hover:text-slate-850 cursor-pointer transition-colors"
+                title="Hapus Memo"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <form onSubmit={handleSend} className="relative flex items-center">
+        {isRecordingVoice ? (
+          <div className="w-full bg-red-50 border border-red-100 rounded-xl py-3 px-4 flex items-center justify-between text-xs animate-pulse-slow">
+            <div className="flex items-center gap-2 text-red-700 font-bold">
+              <span className="w-2 h-2 bg-red-600 rounded-full animate-ping shrink-0" style={{ animationDuration: "1s" }}></span>
+              <span>Merekam memo suara...</span>
+              <span className="font-mono bg-red-600/15 text-red-700 px-1.5 py-0.5 rounded text-[11px] font-bold shrink-0">
+                {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:
+                {(recordingDuration % 60).toString().padStart(2, '0')}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={cancelRecording}
+                aria-label="Batalkan Merekam Memo Suara"
+                className="px-3 py-1.5 bg-slate-100 hover:bg-[#eaeaea] text-slate-600 rounded-lg font-bold text-[10.5px] cursor-pointer active:scale-95 transition-all"
+              >
+                Batalkan
+              </button>
+              <button
+                type="button"
+                onClick={stopRecording}
+                aria-label="Selesai Merekam Memo Suara"
+                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-[10.5px] cursor-pointer shadow-sm active:scale-95 transition-all"
+              >
+                Selesai
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="absolute left-3 flex items-center gap-0.5 z-10 bg-transparent border-none">
+              <label htmlFor="img-upload-chat" className="p-1.5 cursor-pointer text-slate-450 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-all" title="Unggah Gambar">
+                <Image className="w-[15px] h-[15px]" />
+                <input
+                  id="img-upload-chat"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                  disabled={isLoading}
+                />
+              </label>
+
+              <button
+                type="button"
+                onClick={startRecording}
+                disabled={isLoading}
+                aria-label="Rekam Memo Suara"
+                className="p-1.5 cursor-pointer text-slate-455 hover:text-red-500 hover:bg-slate-200/60 rounded-lg transition-all"
+                title="Rekam Memo Suara"
+              >
+                <Mic className="w-[15px] h-[15px]" />
+              </button>
+            </div>
+
+            <textarea
+              ref={textareaRef}
+              placeholder={isLoading ? "Mohon tunggu, Maria sedang memproses..." : "Tanya Maria..."}
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isLoading}
+              aria-label="Input Chat Utama"
+              rows={1}
+              className="w-full bg-slate-100 border-none rounded-xl py-3 pl-[62px] pr-14 text-xs text-slate-800 font-medium focus:ring-1 focus:ring-slate-300 hover:bg-slate-200/50 focus:bg-white outline-none transition-all duration-200 placeholder:text-slate-500 overflow-y-auto resize-none leading-relaxed align-middle block min-h-[44px] max-h-[180px]"
+              style={{ height: "auto" }}
+            />
+            <button
+              type="submit"
+              disabled={(!inputText.trim() && !attachedImage && !voiceBase64) || isLoading}
+              aria-label="Kirim Pesan"
+              className={`absolute right-2.5 p-2 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 text-white ${
+                (inputText.trim() || attachedImage || voiceBase64) && !isLoading
+                  ? `${themeStyle.primary.split(" ")[0]} shadow-sm`
+                  : "bg-slate-200 text-slate-400 cursor-not-allowed"
+              }`}
+            >
+              <Send id="icon-send-b" className="w-3.5 h-3.5" />
+            </button>
+          </>
+        )}
+      </form>
+
+      <div className="flex items-center justify-between text-[10px] text-slate-500 px-2 mt-2 font-mono uppercase tracking-tight font-medium">
+        <span>Maria adalah AI dapat melakukan kesalahan</span>
+        <span className="flex items-center gap-1 font-sans text-[9px] uppercase font-bold text-slate-600">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          Enter untuk kirim
+        </span>
+      </div>
+    </div>
+  );
+});
+
+export default function ChatArea({
+  messages,
+  isLoading,
+  onSendMessage,
+  settings,
+  notifications,
+  onMarkNotificationRead,
+  onClearNotifications,
+  onAddSystemNotification,
+  isSidebarCollapsed,
+  onToggleSidebar,
+  onToggleSettings,
+  onRegenerateResponse,
+  onSetFeedback,
+  onEditUserMessage,
+  onToggleBookmark,
+  bookmarkedMessages = [],
+  isLoggedIn = false,
+  profileDisplayNameProp,
+  onOpenLogin,
+  pendingPrompt,
+  onClearPendingPrompt,
+  isPlus = false,
+  speakMessage,
+  isPlayingAudio,
+  stopSpeech,
+}: ChatAreaProps) {
+  const [isCopiedId, setIsCopiedId] = useState<string | null>(null);
+  const [isWidgetPanelExpanded, setIsWidgetPanelExpanded] = useState(true);
+  const [isNotificationTrayOpen, setIsNotificationTrayOpen] = useState(false);
+
+  // States for in-chat editing of user messages
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState<string>("");
+
+  const startEditing = (id: string, currentContent: string) => {
+    setEditingMessageId(id);
+    setEditingText(currentContent);
+  };
+
+  const handleSaveMessageEdit = (id: string) => {
+    if (onEditUserMessage && editingText.trim()) {
+      onEditUserMessage(id, editingText);
+    }
+    setEditingMessageId(null);
+  };
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isLoading]);
 
   const copyToClipboard = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -1493,146 +1637,17 @@ export default function ChatArea({
               <div ref={messagesEndRef} />
             </div>
           )}
-        </div>
-
-        {/* Dynamic Theme Controlled Input Desk Panel */}
+              {/* Dynamic Theme Controlled Input Desk Panel */}
         <div className="p-4 border-t border-slate-200 bg-white sticky bottom-0 z-10 shrink-0">
-          <div className="max-w-3xl mx-auto">
-            {/* Attached media items previews before sending */}
-            {(attachedImage || voiceBase64) && (
-              <div className="flex items-center gap-3 p-2.5 bg-slate-50 border border-slate-200 border-b-0 rounded-t-xl animate-fade-in text-[11px]">
-                {attachedImage && (
-                  <div className="relative group bg-white border border-slate-250 rounded-lg p-1 shadow-2xs shrink-0">
-                    <img src={attachedImage} className="w-12 h-12 object-cover rounded" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
-                    <button
-                      type="button"
-                      onClick={() => setAttachedImage(null)}
-                      aria-label="Hapus Lampiran Gambar"
-                      className="absolute -top-1.5 -right-1.5 bg-red-500 text-white p-0.5 rounded-full hover:bg-red-650 shadow-sm transition-colors cursor-pointer"
-                      title="Hapus"
-                    >
-                      <X className="w-2.5 h-2.5" />
-                    </button>
-                  </div>
-                )}
-                {voiceBase64 && (
-                  <div className="relative group bg-white border border-slate-250 rounded-lg py-1.5 px-3 flex items-center gap-2 shadow-2xs font-medium text-slate-700">
-                    <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
-                    <span>Voice Memo Terkam ({recordingDuration > 0 ? `${recordingDuration}s` : "Simulasi"})</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setVoiceBase64(null);
-                        setVoiceBlob(null);
-                      }}
-                      aria-label="Hapus Memo Suara"
-                      className="bg-slate-100 hover:bg-slate-200 text-slate-500 p-0.5 rounded hover:text-slate-850 cursor-pointer transition-colors"
-                      title="Hapus Memo"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <form onSubmit={handleSend} className="relative flex items-center">
-              {isRecordingVoice ? (
-                <div className="w-full bg-red-50 border border-red-100 rounded-xl py-3 px-4 flex items-center justify-between text-xs animate-pulse-slow">
-                  <div className="flex items-center gap-2 text-red-700 font-bold">
-                    <span className="w-2 h-2 bg-red-600 rounded-full animate-ping shrink-0" style={{ animationDuration: "1s" }}></span>
-                    <span>Merekam memo suara...</span>
-                    <span className="font-mono bg-red-600/15 text-red-700 px-1.5 py-0.5 rounded text-[11px] font-bold shrink-0">
-                      {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:
-                      {(recordingDuration % 60).toString().padStart(2, '0')}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={cancelRecording}
-                      aria-label="Batalkan Merekam Memo Suara"
-                      className="px-3 py-1.5 bg-slate-100 hover:bg-[#eaeaea] text-slate-600 rounded-lg font-bold text-[10.5px] cursor-pointer active:scale-95 transition-all"
-                    >
-                      Batalkan
-                    </button>
-                    <button
-                      type="button"
-                      onClick={stopRecording}
-                      aria-label="Selesai Merekam Memo Suara"
-                      className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-[10.5px] cursor-pointer shadow-sm active:scale-95 transition-all"
-                    >
-                      Selesai
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {/* Attachment Triggers */}
-                  <div className="absolute left-3 flex items-center gap-0.5 z-10 bg-transparent border-none">
-                    {/* Image Attachment Trigger */}
-                    <label htmlFor="img-upload-chat" className="p-1.5 cursor-pointer text-slate-450 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-all" title="Unggah Gambar">
-                      <Image className="w-[15px] h-[15px]" />
-                      <input
-                        id="img-upload-chat"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleImageUpload}
-                        disabled={isLoading}
-                      />
-                    </label>
-
-                    {/* Voice Memo Trigger */}
-                    <button
-                      type="button"
-                      onClick={startRecording}
-                      disabled={isLoading}
-                      aria-label="Rekam Memo Suara"
-                      className="p-1.5 cursor-pointer text-slate-455 hover:text-red-500 hover:bg-slate-200/60 rounded-lg transition-all"
-                      title="Rekam Memo Suara"
-                    >
-                      <Mic className="w-[15px] h-[15px]" />
-                    </button>
-                  </div>
-
-                  <textarea
-                    ref={textareaRef}
-                    placeholder={isLoading ? "Mohon tunggu, Maria sedang memproses..." : "Tanya Maria..."}
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    disabled={isLoading}
-                    aria-label="Input Chat Utama"
-                    rows={1}
-                    className="w-full bg-slate-100 border-none rounded-xl py-3 pl-[62px] pr-14 text-xs text-slate-800 font-medium focus:ring-1 focus:ring-slate-300 hover:bg-slate-200/50 focus:bg-white outline-none transition-all duration-200 placeholder:text-slate-500 overflow-y-auto resize-none leading-relaxed align-middle block min-h-[44px] max-h-[180px]"
-                    style={{ height: "auto" }}
-                  />
-                  <button
-                    type="submit"
-                    disabled={(!inputText.trim() && !attachedImage && !voiceBase64) || isLoading}
-                    aria-label="Kirim Pesan"
-                    className={`absolute right-2.5 p-2 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 text-white ${
-                      (inputText.trim() || attachedImage || voiceBase64) && !isLoading
-                        ? `${themeStyle.primary.split(" ")[0]} shadow-sm`
-                        : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                    }`}
-                  >
-                    <Send id="icon-send-b" className="w-3.5 h-3.5" />
-                  </button>
-                </>
-              )}
-            </form>
-
-            <div className="flex items-center justify-between text-[10px] text-slate-500 px-2 mt-2 font-mono uppercase tracking-tight font-medium">
-              <span>Maria adalah AI dapat melakukan kesalahan</span>
-              <span className="flex items-center gap-1 font-sans text-[9px] uppercase font-bold text-slate-600">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                Enter untuk kirim
-              </span>
-            </div>
-          </div>
-        </div>
+          <ChatInputForm
+            isLoading={isLoading}
+            onSendMessage={onSendMessage}
+            onAddSystemNotification={onAddSystemNotification}
+            pendingPrompt={pendingPrompt}
+            onClearPendingPrompt={onClearPendingPrompt}
+            themeStyle={themeStyle}
+          />
+        </div>    </div>
 
       </div>
 
