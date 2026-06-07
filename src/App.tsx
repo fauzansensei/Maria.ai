@@ -36,11 +36,30 @@ import {
 // Statically import primary main-screen components to avoid double-flicker loading states, sequentially blocked network waterfalls, and LCP/CLS degradation
 import Sidebar from "./components/Sidebar";
 import ChatArea from "./components/ChatArea";
-const CookiePolicyModal = React.lazy(() => import("./components/CookiePolicyModal"));
-const SettingsDashboard = React.lazy(() => import("./components/SettingsDashboard"));
-const DiscoverArea = React.lazy(() => import("./components/DiscoverArea"));
-const LibraryArea = React.lazy(() => import("./components/LibraryArea"));
-const AuxiliaryModals = React.lazy(() => import("./components/AuxiliaryModals"));
+// Helper to dynamically load components with automatic page reload upon chunk loading errors (such as outdated chunk hashes)
+function lazyWithRetry(importFn: () => Promise<any>) {
+  return React.lazy(async () => {
+    try {
+      return await importFn();
+    } catch (error) {
+      console.error("Dynamic import failed, reloading to fetch updated compilation bundles...", error);
+      try {
+        const hasRetried = sessionStorage.getItem("chunk-retry-lazy");
+        if (!hasRetried) {
+          sessionStorage.setItem("chunk-retry-lazy", "true");
+          window.location.reload();
+        }
+      } catch (_) {}
+      throw error;
+    }
+  });
+}
+
+const CookiePolicyModal = lazyWithRetry(() => import("./components/CookiePolicyModal"));
+const SettingsDashboard = lazyWithRetry(() => import("./components/SettingsDashboard"));
+const DiscoverArea = lazyWithRetry(() => import("./components/DiscoverArea"));
+const LibraryArea = lazyWithRetry(() => import("./components/LibraryArea"));
+const AuxiliaryModals = lazyWithRetry(() => import("./components/AuxiliaryModals"));
 import { 
   Bot, 
   Settings, 
@@ -85,6 +104,10 @@ export default function App() {
   const [isIframe, setIsIframe] = useState<boolean>(false);
   useEffect(() => {
     setIsIframe(window.self !== window.top);
+    try {
+      sessionStorage.removeItem("chunk-error-reload-retried");
+      sessionStorage.removeItem("chunk-retry-lazy");
+    } catch (_) {}
   }, []);
 
   const [showGoogleGuide, setShowGoogleGuide] = useState<boolean>(false);

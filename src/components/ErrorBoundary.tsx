@@ -29,6 +29,24 @@ export default class ErrorBoundary extends React.Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error caught by ErrorBoundary:", error, errorInfo);
+
+    // Auto-recovery for Vite dynamic import chunk issues (dynamic hash mismatch/deploy updates)
+    const isChunkError = error && error.message && (
+      error.message.includes("Failed to fetch dynamically imported module") ||
+      error.message.includes("ChunkLoadError") ||
+      error.message.includes("loading chunk")
+    );
+
+    if (isChunkError) {
+      try {
+        const hasRetried = sessionStorage.getItem("chunk-error-reload-retried");
+        if (!hasRetried) {
+          sessionStorage.setItem("chunk-error-reload-retried", "true");
+          console.warn("Chunk loading error detected. Auto-reloading page with fresh bundles...");
+          window.location.reload();
+        }
+      } catch (_) {}
+    }
   }
 
   private handleReset = () => {

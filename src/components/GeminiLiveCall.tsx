@@ -443,12 +443,22 @@ export default function GeminiLiveCall({ isOpen, onClose, username = "Pengguna" 
 
         {/* Error warning notification */}
         {status === "error" && (
-          <div className="w-full bg-red-950/40 border border-red-500/30 text-red-200 p-3 rounded-2xl mb-4 text-xs flex items-start gap-2.5">
-            <ShieldAlert className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-semibold">Kesalahan Sambungan:</p>
-              <p className="text-[11px] text-red-300 mt-1">{errorMsg || "Gagal membuka sambungan mikrofon."}</p>
+          <div className="w-full bg-red-950/40 border border-red-500/30 text-red-200 p-3 rounded-2xl mb-4 text-xs flex flex-col gap-2.5">
+            <div className="flex items-start gap-2.5">
+              <ShieldAlert className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">Kesalahan Sambungan:</p>
+                <p className="text-[11px] text-red-300 mt-1">{errorMsg || "Gagal membuka sambungan mikrofon."}</p>
+              </div>
             </div>
+            {errorMsg.toLowerCase().includes("permission") && (
+              <div className="pt-2 border-t border-red-900/40 text-left text-[11px] text-red-200 leading-normal bg-red-950/25 p-2 rounded-xl">
+                <p className="font-semibold text-white flex items-center gap-1">👉 Solusi Mudah:</p>
+                <p className="mt-1 text-[10.5px] text-red-300">
+                  Browser melarang rekaman suara dalam bingkai iframe (AI Studio). Silakan klik ikon dengan tiga titik (•••) di pojok bawah lalu ketuk <strong>Open in new tab</strong> / buka tautan langsung agar mikrofon berfungsi penuh secara normal!
+                </p>
+              </div>
+            )}
           </div>
         )}
 
