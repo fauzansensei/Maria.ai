@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import { Message, PromptStarter, UserSettings, AppNotification } from "../types";
 import { PROMPT_STARTERS, THEME_OPTIONS } from "../constants";
-import WidgetsList from "./WidgetsList";
 import { compressImage } from "../utils";
 import { 
   Send, 

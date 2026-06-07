@@ -216,12 +216,12 @@ export default function AuxiliaryModals({
 
                           <div className="grid grid-cols-6 gap-1.5 pt-1">
                             {[
-                              "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&q=80",
-                              "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?w=100&h=100&fit=crop&q=80",
-                              "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&q=80",
-                              "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&h=100&fit=crop&q=80",
-                              "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&h=100&fit=crop&q=80",
-                              "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&q=80"
+                              "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=360&h=360&fit=crop&q=60",
+                              "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?w=360&h=360&fit=crop&q=60",
+                              "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=360&h=360&fit=crop&q=60",
+                              "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=360&h=360&fit=crop&q=60",
+                              "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=360&h=360&fit=crop&q=60",
+                              "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=360&h=360&fit=crop&q=60"
                             ].map((url, idx) => (
                               <button
                                 key={idx}

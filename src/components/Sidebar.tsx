@@ -191,7 +191,7 @@ export default function Sidebar({
   const [paymentMethod, setPaymentMethod] = useState<"gpay" | "qris" | "bank">("qris");
 
   // Load avatar and user properties precisely matching Settings / Props / Firebase
-  const userAvatar = profileAvatarProp !== undefined ? profileAvatarProp : (auth.currentUser?.photoURL || "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150&h=150&fit=crop&q=80");
+  const userAvatar = profileAvatarProp !== undefined ? profileAvatarProp : (auth.currentUser?.photoURL || "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=360&h=360&fit=crop&q=60");
   const userDisplayName = isLoggedIn ? (profileDisplayNameProp || settings.username || auth.currentUser?.displayName || "User") : "User";
   const userEmail = isLoggedIn ? (auth.currentUser?.email || "user@example.com") : "user@example.com";
 

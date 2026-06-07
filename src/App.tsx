@@ -36,7 +36,7 @@ import {
 // Statically import primary main-screen components to avoid double-flicker loading states, sequentially blocked network waterfalls, and LCP/CLS degradation
 import Sidebar from "./components/Sidebar";
 import ChatArea from "./components/ChatArea";
-import CookiePolicyModal from "./components/CookiePolicyModal";
+const CookiePolicyModal = React.lazy(() => import("./components/CookiePolicyModal"));
 const SettingsDashboard = React.lazy(() => import("./components/SettingsDashboard"));
 const DiscoverArea = React.lazy(() => import("./components/DiscoverArea"));
 const LibraryArea = React.lazy(() => import("./components/LibraryArea"));
@@ -335,7 +335,7 @@ export default function App() {
   const [profileAvatarBg, setProfileAvatarBg] = useState("bg-[#064e3b]"); // premium deep green bg
   const [showColorSelector, setShowColorSelector] = useState(false);
   const [profileUseInitials, setProfileUseInitials] = useState(true);
-  const [profileAvatarUrl, setProfileAvatarUrl] = useState("https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150&h=150&fit=crop&q=80");
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState("https://images.unsplash.com/photo-1578632767115-351597cf2477?w=360&h=360&fit=crop&q=60");
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -710,7 +710,7 @@ export default function App() {
               displayName: initialDisplayName,
               username: initialUsername,
               email: user.email || "user@example.com",
-              avatarUrl: user.photoURL || "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150&h=150&fit=crop&q=80",
+              avatarUrl: user.photoURL || "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=360&h=360&fit=crop&q=60",
               settings: {
                 ...DEFAULT_SETTINGS,
                 username: initialDisplayName
@@ -1882,22 +1882,24 @@ export default function App() {
         )}
 
         {/* Cookie Policy Modal linked from Banner */}
-        <CookiePolicyModal 
-          isOpen={isCookieModalOpenFromBanner} 
-          onClose={() => setIsCookieModalOpenFromBanner(false)}
-          accentClass={
-            settings.theme === "emerald-green" ? "text-emerald-400" :
-            settings.theme === "cosmic-purple" ? "text-purple-400" :
-            settings.theme === "minimal-dark" ? "text-zinc-450" :
-            "text-blue-400"
-          }
-          accentBgClass={
-            settings.theme === "emerald-green" ? "bg-emerald-600 hover:bg-emerald-700" :
-            settings.theme === "cosmic-purple" ? "bg-purple-600 hover:bg-purple-700" :
-            settings.theme === "minimal-dark" ? "bg-zinc-750 hover:bg-zinc-800" :
-            "bg-blue-600 hover:bg-blue-700"
-          }
-        />
+        <React.Suspense fallback={null}>
+          <CookiePolicyModal 
+            isOpen={isCookieModalOpenFromBanner} 
+            onClose={() => setIsCookieModalOpenFromBanner(false)}
+            accentClass={
+              settings.theme === "emerald-green" ? "text-emerald-400" :
+              settings.theme === "cosmic-purple" ? "text-purple-400" :
+              settings.theme === "minimal-dark" ? "text-zinc-450" :
+              "text-blue-400"
+            }
+            accentBgClass={
+              settings.theme === "emerald-green" ? "bg-emerald-600 hover:bg-emerald-700" :
+              settings.theme === "cosmic-purple" ? "bg-purple-600 hover:bg-purple-700" :
+              settings.theme === "minimal-dark" ? "bg-zinc-750 hover:bg-zinc-800" :
+              "bg-blue-600 hover:bg-blue-700"
+            }
+          />
+        </React.Suspense>
 
       </div>
     </div>

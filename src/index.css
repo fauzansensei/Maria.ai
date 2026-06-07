@@ -79,3 +79,27 @@ body,
 .animate-slide-in-right {
   animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Optimasi respon sentuhan dan animasi untuk tampilan Mobile (lebar layar < 768px) */
+@media (max-width: 767px) {
+  /* Hilangkan efek transformasi hover & active yang lengket/delay pada perangkat layar sentuh */
+  .hover\:scale-101:hover,
+  .hover\:scale-102:hover,
+  .hover\:scale-105:hover,
+  .hover\:scale-110:hover,
+  .hover\:scale-105:active,
+  .active\:scale-95:active,
+  .active\:scale-[0.985]:active,
+  .active\:scale-[0.975]:active,
+  .active\:scale-[0.95]:active,
+  .group-hover\:scale-105 {
+    transform: none !important;
+    scale: 1 !important;
+  }
+
+  /* Batasi transisi hanya untuk opasitas & warna agar meringankan beban render GPU mobile */
+  .transition-all {
+    transition-property: opacity, background-color !important;
+    transition-duration: 120ms !important;
+  }
+}
