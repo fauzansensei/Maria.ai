@@ -4,8 +4,6 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import compression from "compression";
-import { WebSocketServer, WebSocket } from "ws";
-
 // Load environment variables
 dotenv.config();
 
@@ -407,121 +405,8 @@ async function startServer() {
     });
   }
 
-  const wss = new WebSocketServer({ noServer: true });
-
-  wss.on("connection", async (clientWs: WebSocket) => {
-    console.log("Client connected to Gemini Live session");
-    let session: any = null;
-
-    try {
-      const ai = getGeminiClient();
-      session = await ai.live.connect({
-        model: "gemini-3.1-flash-live-preview",
-        callbacks: {
-          onmessage: (message: any) => {
-            const audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
-            const text = message.serverContent?.modelTurn?.parts?.[0]?.text;
-            const interrupted = message.serverContent?.interrupted;
-
-            const payload: any = {};
-            if (audio) payload.audio = audio;
-            if (text) payload.text = text;
-            if (interrupted) payload.interrupted = true;
-
-            if (message.serverContent?.turnComplete) {
-              payload.turnComplete = true;
-            }
-
-            if (Object.keys(payload).length > 0) {
-              if (clientWs.readyState === WebSocket.OPEN) {
-                clientWs.send(JSON.stringify(payload));
-              }
-            }
-          },
-          onclose: () => {
-            console.log("Gemini Live session closed from Google side");
-            if (clientWs.readyState === WebSocket.OPEN) {
-              clientWs.close();
-            }
-          },
-          onerror: (err: any) => {
-            console.error("Gemini Live session encountered error:", err);
-            if (clientWs.readyState === WebSocket.OPEN) {
-              clientWs.send(JSON.stringify({ error: err.message || "Gemini Live API error" }));
-            }
-          }
-        },
-        config: {
-          responseModalities: ["AUDIO" as any],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: {
-                voiceName: "Zephyr"
-              }
-            }
-          },
-          systemInstruction: "Anda adalah Maria, asisten AI pribadi yang berkepribadian cerdas, hangat, penuh empati, dan sigap membantu secara lisan dengan suara Zephyr yang ramah. Jawab dengan singkat, lugas, lisan, interaktif, dan penuh empati."
-        }
-      });
-      console.log("Connected to Google Gemini Live API platform");
-    } catch (err: any) {
-      console.error("Failed to connect to Gemini Live session:", err);
-      if (clientWs.readyState === WebSocket.OPEN) {
-        clientWs.send(JSON.stringify({ error: "Gagal menyambung ke Gemini Live: " + err.message }));
-        clientWs.close();
-      }
-      return;
-    }
-
-    clientWs.on("message", (data: any) => {
-      try {
-        const msg = JSON.parse(data.toString());
-        if (msg.audio) {
-          if (session) {
-            session.sendRealtimeInput({
-              audio: {
-                data: msg.audio,
-                mimeType: "audio/pcm;rate=16000"
-              }
-            });
-          }
-        } else if (msg.text) {
-          if (session) {
-            session.sendRealtimeInput({
-              text: msg.text
-            });
-          }
-        } else if (msg.type === "ping") {
-          clientWs.send(JSON.stringify({ type: "pong" }));
-        }
-      } catch (e) {
-        console.error("Error processing live client WS message:", e);
-      }
-    });
-
-    clientWs.on("close", () => {
-      console.log("Client closed live WS socket connection");
-      if (session) {
-        try {
-          session.close();
-        } catch (e) {
-          console.error("Error closing remote live session:", e);
-        }
-      }
-    });
-  });
-
-  const server = app.listen(PORT, "0.0.0.0", () => {
+  app.listen(PORT, "0.0.0.0", () => {
     console.log(`Maria Server listening at http://0.0.0.0:${PORT}`);
-  });
-
-  server.on("upgrade", (request, socket, head) => {
-    const { pathname } = new URL(request.url || "", `http://${request.headers.host || 'localhost'}`);
-    if (pathname === "/live") {
-      wss.handleUpgrade(request, socket, head, (ws) => {
-        wss.emit("connection", ws, request);
-      });
-    }
   });
 }
 
