@@ -1339,6 +1339,15 @@ export default function App() {
     const threadToDelete = threads.find(t => t.id === threadToDeleteId);
     const title = threadToDelete ? threadToDelete.title : "Percakapan";
     
+    // Reset active thread selection and clear messages BEFORE running deletions on the database,
+    // to unsubscribe active snapshot listeners.
+    if (activeThreadId === threadToDeleteId) {
+      setActiveThreadId("");
+      setMessages([]);
+      // Small timeout to allow state dispatching and unsubscription of the real-time messages listener
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
     if (isLoggedIn && auth.currentUser) {
       const threadId = threadToDeleteId;
       const messagesSnapshot = await getDocs(collection(db, "threads", threadId, "messages")).catch(() => null);
@@ -1350,11 +1359,6 @@ export default function App() {
       await deleteDoc(doc(db, "threads", threadId)).catch(err => handleFirestoreError(err, OperationType.DELETE, `threads/${threadId}`));
     } else {
       setThreads(prev => prev.filter(t => t.id !== threadToDeleteId));
-    }
-    
-    if (activeThreadId === threadToDeleteId) {
-      setActiveThreadId("");
-      setMessages([]);
     }
     
     handleAddSystemNotification(
@@ -1460,6 +1464,11 @@ export default function App() {
 
   // Execute actual clearing of all history
   const executeClearHistory = async () => {
+    // Reset active selection and clear messages first to cleanly unsubscribe real-time snapshot listeners before deleting resources
+    setActiveThreadId("");
+    setMessages([]);
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     if (isLoggedIn && auth.currentUser) {
       // Delete all user's threads from Firestore
       const threadsQuery = query(collection(db, "threads"), where("userId", "==", auth.currentUser.uid));
@@ -1479,9 +1488,7 @@ export default function App() {
       }
     }
 
-    setMessages([]);
     setThreads([]);
-    setActiveThreadId("");
     
     handleAddSystemNotification(
       "Riwayat Berhasil Dihapus", 
