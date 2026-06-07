@@ -21,7 +21,9 @@ service cloud.firestore {
     }
 
     function isThreadOwner(threadId) {
-      return get(/databases/$(database)/documents/threads/$(threadId)).data.userId == request.auth.uid;
+      return !exists(/databases/$(database)/documents/threads/$(threadId)) || 
+             !('userId' in get(/databases/$(database)/documents/threads/$(threadId)).data) ||
+             get(/databases/$(database)/documents/threads/$(threadId)).data.userId == request.auth.uid;
     }
 
     // Validate User Profiles
@@ -63,7 +65,7 @@ service cloud.firestore {
       allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
       allow create: if isSignedIn() && isValidId(threadId) && isValidThread(request.resource.data);
       allow update: if isSignedIn() && isValidId(threadId) && isValidThread(request.resource.data) && resource.data.userId == request.auth.uid;
-      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && (resource == null || !('userId' in resource.data) || resource.data.userId == null || resource.data.userId == request.auth.uid);
     }
 
     // MESSAGES SUBCOLLECTION RULES
