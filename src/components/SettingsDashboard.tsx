@@ -333,7 +333,7 @@ export default function SettingsDashboard({
                         { name: "Biru", color: "bg-blue-500" },
                         { name: "Hijau", color: "bg-emerald-500" },
                         { name: "Ungu", color: "bg-purple-500" },
-                        { name: "Hitam", color: "bg-zinc-450" }
+                        { name: "Hitam", color: "bg-zinc-600" }
                       ].map((opt) => (
                         <button
                           key={opt.name}
@@ -431,7 +431,7 @@ export default function SettingsDashboard({
                         setCustomInstructions(val);
                         triggerSave({ customPrompt: val });
                       }}
-                      className="w-full h-32 p-3 rounded-xl border border-zinc-850 bg-[#0d0d0e] text-zinc-150 text-[11px] focus:border-zinc-700 outline-none resize-none leading-relaxed"
+                      className="w-full h-32 p-3 rounded-xl border border-zinc-800 bg-[#0d0d0e] text-zinc-100 text-[11px] focus:border-zinc-700 outline-none resize-none leading-relaxed"
                       placeholder="Contoh: Jawab selalu dengan ramah dan panggil aku Kakak, suka memakai emoji gemas..."
                     />
                   </div>
@@ -565,7 +565,7 @@ export default function SettingsDashboard({
                         localStorage.setItem("maria_plus_plan", "monthly");
                         triggerSave({});
                       }}
-                      className={`px-4 py-2 border rounded-xl text-[10.5px] font-bold cursor-pointer transition-all ${isPlus ? "bg-zinc-900 text-white border-zinc-700" : "bg-[#0d0d0e]/60 border-transparent text-zinc-450 hover:bg-zinc-900"}`}
+                      className={`px-4 py-2 border rounded-xl text-[10.5px] font-bold cursor-pointer transition-all ${isPlus ? "bg-zinc-900 text-white border-zinc-700" : "bg-[#0d0d0e]/60 border-transparent text-zinc-400 hover:bg-zinc-900 hover:text-white"}`}
                     >
                       Aktifkan Maria Plus (Simulator)
                     </button>
@@ -576,7 +576,7 @@ export default function SettingsDashboard({
                         localStorage.setItem("maria_is_plus", "false");
                         triggerSave({});
                       }}
-                      className={`px-4 py-2 border rounded-xl text-[10.5px] font-semibold cursor-pointer transition-all ${!isPlus ? "bg-zinc-900 text-white border-zinc-700" : "bg-[#0d0d0e]/60 border-transparent text-zinc-450 hover:bg-zinc-900"}`}
+                      className={`px-4 py-2 border rounded-xl text-[10.5px] font-semibold cursor-pointer transition-all ${!isPlus ? "bg-zinc-900 text-white border-zinc-700" : "bg-[#0d0d0e]/60 border-transparent text-zinc-400 hover:bg-zinc-900 hover:text-white"}`}
                     >
                       Batal Langganan
                     </button>
@@ -600,7 +600,7 @@ export default function SettingsDashboard({
                   <div className="pt-3 border-t border-zinc-900/40 flex items-center justify-between">
                     <div className="space-y-0.5 max-w-[280px]">
                       <span className="text-zinc-200 font-semibold text-[11px] block">Kebijakan Cookies (Cookies Policy)</span>
-                      <span className="text-[9.5px] text-zinc-450 block leading-tight">
+                      <span className="text-[9.5px] text-zinc-400 block leading-tight">
                         Pelajari penggunaan file teks esensial, analisis data, dan opsi manajemen privasi Kakak di platform ini sesuai standar global.
                       </span>
                     </div>
@@ -616,7 +616,7 @@ export default function SettingsDashboard({
                   <div className="pt-3 border-t border-zinc-900/40 flex items-center justify-between">
                     <div className="space-y-0.5 max-w-[280px]">
                       <span className="text-zinc-200 font-semibold text-[11px] block">Hapus Semua Riwayat Obrolan</span>
-                      <span className="text-[9.5px] text-zinc-450 block leading-tight">Bersihkan semua thread chat dari Firestore.</span>
+                      <span className="text-[9.5px] text-zinc-400 block leading-tight">Bersihkan semua thread chat dari Firestore.</span>
                     </div>
 
                     {!isConfirmingClear ? (

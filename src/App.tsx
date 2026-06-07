@@ -1837,18 +1837,18 @@ export default function App() {
 
         {/* Dynamic Cookie Consent Banner */}
         {isCookieConsentVisible && (
-          <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-6 md:max-w-md bg-zinc-950/95 backdrop-blur-md border border-zinc-900/60 rounded-2xl p-4.5 z-45 shadow-2xl animate-fade-in text-left">
+          <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-6 md:max-w-md bg-zinc-900/95 backdrop-blur-md border border-zinc-800 rounded-2xl p-5 z-45 shadow-2xl animate-fade-in text-left">
             <div className="space-y-3">
-              <div className="flex items-start gap-2.5">
-                <span className="p-2 bg-zinc-900 rounded-xl text-xs shrink-0 select-none">🍪</span>
+              <div className="flex items-start gap-3">
+                <span className="p-2.5 bg-zinc-800/80 rounded-xl text-sm shrink-0 select-none">🍪</span>
                 <div className="space-y-1">
-                  <h4 className="text-[11.5px] font-bold text-zinc-150 tracking-tight leading-tight">Persetujuan Cookies & Privasi</h4>
-                  <p className="text-[10px] text-zinc-400 leading-normal font-sans">
-                    Kami menggunakan cookies esensial untuk menyimpan sesi obrolan Anda dan meningkatkan keandalan navigasi di Maria AI. Kakak dapat membaca selengkapnya pada draf <button type="button" onClick={() => setIsCookieModalOpenFromBanner(true)} className="text-zinc-200 underline font-semibold hover:text-white cursor-pointer hover:underline">Kebijakan Cookies</button> kami.
+                  <h4 className="text-[13px] font-bold text-zinc-50 tracking-tight leading-tight">Persetujuan Cookies & Privasi</h4>
+                  <p className="text-[11px] text-zinc-300 leading-relaxed font-sans">
+                    Kami menggunakan cookies esensial untuk menyimpan sesi obrolan Anda dan meningkatkan keandalan navigasi di Maria AI. Kakak dapat membaca selengkapnya pada draf <button type="button" onClick={() => setIsCookieModalOpenFromBanner(true)} className="text-blue-400 hover:text-blue-300 underline font-bold cursor-pointer transition-colors decoration-blue-400/40 hover:decoration-blue-300">Kebijakan Cookies</button> kami.
                   </p>
                 </div>
               </div>
-              <div className="flex items-center justify-end gap-2 pt-1 border-t border-zinc-900/40">
+              <div className="flex items-center justify-end gap-3 pt-2 border-t border-zinc-800/60">
                 <button
                   type="button"
                   onClick={() => {
@@ -1856,7 +1856,7 @@ export default function App() {
                     localStorage.setItem("maria_cookie_consent", "true");
                     setIsCookieConsentVisible(false);
                   }}
-                  className="px-3 py-1.5 hover:bg-zinc-900 text-zinc-450 hover:text-zinc-200 rounded-xl text-[9.5px] font-semibold cursor-pointer transition-colors"
+                  className="px-3.5 py-1.5 bg-zinc-800/40 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl text-[10.5px] font-medium cursor-pointer transition-colors"
                 >
                   Hanya Esensial
                 </button>
@@ -1867,12 +1867,12 @@ export default function App() {
                     localStorage.setItem("maria_cookie_consent", "true");
                     setIsCookieConsentVisible(false);
                   }}
-                  className={`px-4 py-1.5 ${
+                  className={`px-4.5 py-1.5 ${
                     settings.theme === "emerald-green" ? "bg-emerald-600 hover:bg-emerald-700" :
                     settings.theme === "cosmic-purple" ? "bg-purple-600 hover:bg-purple-700" :
-                    settings.theme === "minimal-dark" ? "bg-zinc-700 hover:bg-zinc-800" :
+                    settings.theme === "minimal-dark" ? "bg-zinc-700 hover:bg-zinc-600" :
                     "bg-blue-600 hover:bg-blue-700"
-                  } text-white rounded-xl text-[9.5px] font-bold cursor-pointer transition-colors shadow-sm`}
+                  } text-white rounded-xl text-[10.5px] font-bold cursor-pointer transition-colors shadow-md`}
                 >
                   Terima Semua
                 </button>
@@ -1889,13 +1889,13 @@ export default function App() {
             accentClass={
               settings.theme === "emerald-green" ? "text-emerald-400" :
               settings.theme === "cosmic-purple" ? "text-purple-400" :
-              settings.theme === "minimal-dark" ? "text-zinc-450" :
+              settings.theme === "minimal-dark" ? "text-zinc-300" :
               "text-blue-400"
             }
             accentBgClass={
               settings.theme === "emerald-green" ? "bg-emerald-600 hover:bg-emerald-700" :
               settings.theme === "cosmic-purple" ? "bg-purple-600 hover:bg-purple-700" :
-              settings.theme === "minimal-dark" ? "bg-zinc-750 hover:bg-zinc-800" :
+              settings.theme === "minimal-dark" ? "bg-zinc-700 hover:bg-zinc-600" :
               "bg-blue-600 hover:bg-blue-700"
             }
           />

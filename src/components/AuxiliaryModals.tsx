@@ -565,7 +565,7 @@ export default function AuxiliaryModals({
                             Browser seluler atau desktop Anda memblokir pop-up baru di dalam frame pratinjau AI Studio. Silakan ikuti langkah mudah ini:
                           </p>
                           <ul className="list-disc list-inside space-y-1 text-slate-400">
-                            <li>Tekan tombol <b className="text-zinc-150">Open in New Tab</b> di pojok kanan atas layar panel AI Studio ini.</li>
+                            <li>Tekan tombol <b className="text-zinc-200 font-bold text-white">Open in New Tab</b> di pojok kanan atas layar panel AI Studio ini.</li>
                             <li>Atau izinkan izin Pop-up pada ikon gembok / setelan bar alamat URL browser Anda.</li>
                             <li>Gunakan alternatif pendaftaran instan melalui nama pengguna atau Guest Account jika Anda ingin mencoba cepat.</li>
                           </ul>
@@ -769,7 +769,7 @@ export default function AuxiliaryModals({
                     {simulatedEmail.body}
                   </div>
 
-                  <p className="text-[10px] text-zinc-450 leading-relaxed">
+                  <p className="text-[10px] text-zinc-400 leading-relaxed">
                     Simulasi email ini dikirimkan karena jenis notifikasi pintar di atas disetel ke opsi pengiriman <span className="text-emerald-400 font-semibold">Email</span> di halaman pengaturan Anda.
                   </p>
                 </div>

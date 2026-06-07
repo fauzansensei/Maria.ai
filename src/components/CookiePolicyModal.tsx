@@ -53,7 +53,7 @@ export default function CookiePolicyModal({
           
           {/* Document Header Metadata */}
           <div className="bg-[#151518]/60 rounded-xl p-4 border border-zinc-900/40 space-y-1.5">
-            <div className="flex items-center gap-1.5 text-zinc-450 font-semibold text-[10px] uppercase font-mono">
+            <div className="flex items-center gap-1.5 text-zinc-400 font-semibold text-[10px] uppercase font-mono">
               <Clock className="w-3.5 h-3.5" />
               <span>Pembaruan Terakhir: 7 Juni 2026</span>
             </div>
@@ -117,28 +117,28 @@ export default function CookiePolicyModal({
               
               <div className="p-3.5 bg-[#141416] rounded-xl border border-zinc-900/60">
                 <p className="font-bold text-zinc-200 text-[10.5px] mb-1">a. Cookies Wajib (Strictly Necessary Cookies)</p>
-                <p className="text-zinc-450 leading-relaxed text-[10.5px]">
+                <p className="text-zinc-400 leading-relaxed text-[10.5px]">
                   <em>Cookies</em> ini mutlak diperlukan agar Situs dapat berfungsi dengan baik. Tanpa <em>cookies</em> ini, layanan yang Anda minta (seperti navigasi halaman, enkripsi pesan, atau akses ke area aman Situs) tidak dapat disediakan.
                 </p>
               </div>
 
               <div className="p-3.5 bg-[#141416] rounded-xl border border-zinc-900/60">
                 <p className="font-bold text-zinc-200 text-[10.5px] mb-1">b. Cookies Kinerja dan Analisis (Performance & Analytics Cookies)</p>
-                <p className="text-zinc-450 leading-relaxed text-[10.5px]">
-                  <em>Cookies</em> ini mengumpulkan informasi anonim tentang bagaimana pengunjung menggunakan Situs Kami. Kami menggunakan data ini untuk menganalisis lalu lintas web dan meningkatkan pengalaman pengguna. Kami mungkin menggunakan layanan pihak ketiga, seperti <em>Google Analytics</em>, untuk tujuan ini.
+                <p className="text-zinc-400 leading-relaxed text-[10.5px]">
+                  <em>Cookies</em> ini mengumpulkan informasi anonim tentang bagaimana pengunjung menggunakan Situs Kami. Kami menggunakan data ini untuk menganalisis lalu intrat web dan meningkatkan pengalaman pengguna. Kami mungkin menggunakan layanan pihak ketiga, seperti <em>Google Analytics</em>, untuk tujuan ini.
                 </p>
               </div>
 
               <div className="p-3.5 bg-[#141416] rounded-xl border border-zinc-900/60">
                 <p className="font-bold text-zinc-200 text-[10.5px] mb-1">c. Cookies Fungsionalitas (Functionality Cookies)</p>
-                <p className="text-zinc-450 leading-relaxed text-[10.5px]">
+                <p className="text-zinc-400 leading-relaxed text-[10.5px]">
                   <em>Cookies</em> ini memungkinkan Situs untuk mengingat pilihan yang Anda buat (seperti nama pengguna, tema warna terpilih, atau preferensi bahasa) dan menyediakan fitur yang lebih personal serta disempurnakan.
                 </p>
               </div>
 
               <div className="p-3.5 bg-[#141416] rounded-xl border border-zinc-900/60">
                 <p className="font-bold text-zinc-200 text-[10.5px] mb-1">d. Cookies Iklan dan Penargetan (Targeting & Advertising Cookies)</p>
-                <p className="text-zinc-450 leading-relaxed text-[10.5px]">
+                <p className="text-zinc-400 leading-relaxed text-[10.5px]">
                   <em>Cookies</em> ini digunakan untuk menyampaikan iklan yang lebih relevan bagi Anda dan minat Anda. Mereka juga digunakan untuk membatasi berapa kali Anda melihat iklan serta membantu mengukur efektivitas kampanye iklan.
                 </p>
               </div>
@@ -158,13 +158,13 @@ export default function CookiePolicyModal({
             <ul className="space-y-2 pl-1.5">
               <li className="bg-[#121214]/50 border border-zinc-900/50 p-3 rounded-xl space-y-1">
                 <p className="font-bold text-zinc-200">• Spanduk Persetujuan Cookies (Cookie Consent Banner)</p>
-                <p className="text-zinc-450 text-[10.5px]">
+                <p className="text-zinc-400 text-[10.5px]">
                   Saat pertama kali mengunjungi Situs Kami, Anda akan melihat spanduk yang meminta persetujuan Anda untuk penggunaan <em>cookies</em> non-esensial. Anda dapat memilih untuk menerima semua, menolak, atau mengatur preferensi Anda.
                 </p>
               </li>
               <li className="bg-[#121214]/50 border border-zinc-900/50 p-3 rounded-xl space-y-1">
                 <p className="font-bold text-zinc-200">• Pengaturan Browser</p>
-                <p className="text-zinc-450 text-[10.5px]">
+                <p className="text-zinc-400 text-[10.5px]">
                   Sebagian besar browser web memungkinkan Anda untuk memblokir atau menghapus <em>cookies</em> melalui pengaturan browser Anda. Harap diperhatikan bahwa jika Anda menonaktifkan <em>cookies</em> wajib, beberapa bagian dari Situs Kami mungkin tidak dapat berfungsi dengan optimal.
                 </p>
                 <div className="text-[10px] text-zinc-400 pl-3 leading-loose">
