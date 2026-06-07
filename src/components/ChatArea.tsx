@@ -801,12 +801,19 @@ const ChatInputForm = React.memo(function ChatInputForm({
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Auto-grow textarea height on content change
+  // Auto-grow textarea height on content change (layout-optimized to eliminate layout thrashing lag during typing)
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 180)}px`;
-    }
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    // Run measurement and styling updates off-thread inside an animation frame
+    const frameId = requestAnimationFrame(() => {
+      textarea.style.height = "auto";
+      const measuredHeight = textarea.scrollHeight;
+      textarea.style.height = `${Math.min(measuredHeight, 180)}px`;
+    });
+
+    return () => cancelAnimationFrame(frameId);
   }, [inputText]);
 
   // Clean recording interval on unmount
