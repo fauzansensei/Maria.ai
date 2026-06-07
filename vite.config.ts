@@ -6,8 +6,8 @@ import {defineConfig} from 'vite';
 export default defineConfig(() => {
   return {
     esbuild: {
-      drop: ['console', 'debugger'],
-      legalComments: 'none',
+      drop: ['console', 'debugger'] as any,
+      legalComments: 'none' as const,
     },
     plugins: [react(), tailwindcss()],
     resolve: {
@@ -17,27 +17,8 @@ export default defineConfig(() => {
     },
     build: {
       cssMinify: true,
-      minify: 'esbuild',
       reportCompressedSize: false,
-      chunkSizeWarningLimit: 1200,
-      rollupOptions: {
-        output: {
-          manualChunks(id) {
-            if (id.includes('node_modules/firebase')) {
-              return 'firebase-bndl';
-            }
-            if (id.includes('node_modules/lucide-react')) {
-              return 'icons-bndl';
-            }
-            if (id.includes('node_modules/motion') || id.includes('node_modules/framer-motion')) {
-              return 'motion-bndl';
-            }
-            if (id.includes('node_modules')) {
-              return 'vendor';
-            }
-          }
-        }
-      }
+      chunkSizeWarningLimit: 2000,
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
