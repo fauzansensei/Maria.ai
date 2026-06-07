@@ -1644,7 +1644,9 @@ export default function ChatArea({
               <div ref={messagesEndRef} />
             </div>
           )}
-              {/* Dynamic Theme Controlled Input Desk Panel */}
+        </div>
+
+        {/* Dynamic Theme Controlled Input Desk Panel */}
         <div className="p-4 border-t border-slate-200 bg-white sticky bottom-0 z-10 shrink-0">
           <ChatInputForm
             isLoading={isLoading}
@@ -1654,7 +1656,7 @@ export default function ChatArea({
             onClearPendingPrompt={onClearPendingPrompt}
             themeStyle={themeStyle}
           />
-        </div>    </div>
+        </div>
 
       </div>
 

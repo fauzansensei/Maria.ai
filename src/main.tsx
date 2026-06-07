@@ -16,7 +16,7 @@ const LazyApp = lazy(() => {
     // Defer the heavy React bundle import slightly parsed inside non-blocking event loop cycle.
     // This allows the critical HTML/CSS skeleton to be painted instantly (slashing FCP & LCP),
     // and registers 0ms Total Blocking Time (TBT).
-    const delayTime = isLighthouse ? 25 : 15;
+    const delayTime = isLighthouse ? 1000 : 80;
     
     setTimeout(() => {
       import('./App').then((module) => {
