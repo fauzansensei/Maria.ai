@@ -74,6 +74,7 @@ export default function SettingsDashboard({
 
   const [saveBannerText, setSaveBannerText] = useState<string | null>(null);
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
+  const [isConfirmingLocalClear, setIsConfirmingLocalClear] = useState(false);
   const [isCookieModalOpen, setIsCookieModalOpen] = useState(false);
 
   // Synchronization feedback helper
@@ -643,6 +644,45 @@ export default function SettingsDashboard({
                         <button
                           type="button"
                           onClick={() => setIsConfirmingClear(false)}
+                          className="px-3 py-1.5 bg-zinc-900 text-zinc-400 rounded-lg text-[10px] font-semibold cursor-pointer"
+                        >
+                          Batal
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-3 border-t border-zinc-900/40 flex items-center justify-between">
+                    <div className="space-y-0.5 max-w-[280px]">
+                      <span className="text-zinc-200 font-semibold text-[11px] block">Hapus Data Lokal Browser (LocalStorage)</span>
+                      <span className="text-[9.5px] text-zinc-400 block leading-tight">Kosongkan semua preferensi, tema, sesi, dan data cache yang tersimpan di browser Anda.</span>
+                    </div>
+
+                    {!isConfirmingLocalClear ? (
+                      <button
+                        type="button"
+                        onClick={() => setIsConfirmingLocalClear(true)}
+                        className="px-3.5 py-1.5 bg-amber-950/40 hover:bg-amber-900/30 text-amber-400 border border-amber-500/15 rounded-xl text-[10.5px] font-bold cursor-pointer transition-colors"
+                      >
+                        Hapus Data Lokal
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1.5 animate-fade-in duration-150">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            localStorage.clear();
+                            sessionStorage.clear();
+                            setIsConfirmingLocalClear(false);
+                            window.location.reload();
+                          }}
+                          className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[10px] font-extrabold cursor-pointer"
+                        >
+                          Ya, Bersihkan & Reload
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsConfirmingLocalClear(false)}
                           className="px-3 py-1.5 bg-zinc-900 text-zinc-400 rounded-lg text-[10px] font-semibold cursor-pointer"
                         >
                           Batal
