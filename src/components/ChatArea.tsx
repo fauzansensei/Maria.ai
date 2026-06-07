@@ -1108,8 +1108,7 @@ const ChatInputForm = React.memo(function ChatInputForm({
               disabled={isLoading}
               aria-label="Input Chat Utama"
               rows={1}
-              className="w-full bg-slate-100 border-none rounded-xl py-3 pl-[62px] pr-14 text-xs text-slate-800 font-medium focus:ring-1 focus:ring-slate-300 hover:bg-slate-200/50 focus:bg-white outline-none transition-all duration-200 placeholder:text-slate-500 overflow-y-auto resize-none leading-relaxed align-middle block min-h-[44px] max-h-[180px]"
-              style={{ height: "auto" }}
+              className="w-full bg-slate-100 border-none rounded-xl py-3 pl-[62px] pr-14 text-sm text-slate-800 font-medium focus:ring-1 focus:ring-slate-300 hover:bg-slate-200/50 focus:bg-white outline-none transition-all duration-200 placeholder:text-slate-500 overflow-y-auto resize-none leading-relaxed align-middle block min-h-[44px] max-h-[180px]"
             />
             <button
               type="submit"
