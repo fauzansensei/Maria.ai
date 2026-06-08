@@ -910,10 +910,20 @@ const ChatInputForm = React.memo(function ChatInputForm({
         const reader = new FileReader();
         reader.onloadend = () => {
           if (reader.result && typeof reader.result === "string") {
-            setVoiceBase64(reader.result);
+            const voiceData = reader.result;
+            
+            // Auto send directly
+            const textToSend = inputText.trim() || "[Voice Note]";
+            onSendMessage(textToSend, attachedImage || undefined, voiceData);
+            
+            setInputText("");
+            setAttachedImage(null);
+            setVoiceBase64(null);
+            setVoiceBlob(null);
+
             onAddSystemNotification(
-              "Voice Note Direkam",
-              "Memo audio berhasil direkam dan siap dikirim ke Maria.",
+              "Voice Note Terkirim",
+              "Memo audio berhasil direkam dan otomatis dikirim ke Maria.",
               "success"
             );
           }
@@ -954,11 +964,20 @@ const ChatInputForm = React.memo(function ChatInputForm({
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
     } else {
+      // Direct send fallback simulation
       const mockWav = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAAA";
-      setVoiceBase64(mockWav);
+      
+      const textToSend = inputText.trim() || "[Voice Note]";
+      onSendMessage(textToSend, attachedImage || undefined, mockWav);
+      
+      setInputText("");
+      setAttachedImage(null);
+      setVoiceBase64(null);
+      setVoiceBlob(null);
+
       onAddSystemNotification(
-        "Voice Note Disimpan",
-        "Voice note simulasi berhasil dibuat untuk Anda.",
+        "Voice Note Terkirim",
+        "Voice note simulasi otomatis terkirim ke Maria.",
         "success"
       );
     }

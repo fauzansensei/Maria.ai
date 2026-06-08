@@ -21,7 +21,7 @@ interface FAQItem {
   id: string;
   question: string;
   answer: string;
-  category: "umum" | "plus" | "koneksi" | "akun";
+  category: "umum" | "plus" | "fitur" | "akun";
 }
 
 interface HelpAreaProps {
@@ -34,44 +34,44 @@ const FAQS: FAQItem[] = [
   {
     id: "faq-1",
     category: "umum",
-    question: "Bagaimana cara mulai bertanya ke Maria AI?",
-    answer: "Cukup ketik pertanyaan atau perintah Anda di kolom input di bagian bawah halaman percakapan. Anda dapat memilih dari berbagai profil nada bicara (Tone) asisten Anda (seperti Professional, Warm, Creative, Technical, atau Minimalist) dan bahasa baku/santai langsung di panel menu Pengaturan."
+    question: "Bagaimana cara mulai berinteraksi dengan Maria AI?",
+    answer: "Cukup ketik pertanyaan atau perintah Anda di kolom input di bagian bawah halaman percakapan. Anda dapat memilih dari berbagai profil nada bicara (Tone) asisten Anda (seperti Professional, Warm, Creative, Technical, atau Minimalist) dan bahasa baku/santai langsung di panel menu Pengaturan di sidebar kiri bawah."
   },
   {
     id: "faq-2",
     category: "umum",
-    question: "Apakah riwayat percakapan saya aman dan tersimpan?",
-    answer: "Sangat aman. Secara default, riwayat tersimpan di penyimpanan lokal peramban (localStorage) Anda. Apabila Anda login dengan Akun Google atau Email, semua riwayat percakapan Anda akan disinkronkan ke dalam server database Firebase Cloud Firestore pribadi Anda dengan enkripsi keamanan tingkat tinggi."
+    question: "Apakah riwayat obrolan saya aman dan tersimpan?",
+    answer: "Sangat aman. Secara default, riwayat obrolan disimpan langsung di penyimpanan lokal peramban (localStorage) perangkat Anda. Apabila Anda masuk dengan Akun Google, seluruh riwayat percakapan dan preferensi Anda otomatis disinkronkan ke akun cloud Anda dengan enkripsi keamanan tingkat tinggi."
   },
   {
     id: "faq-3",
-    category: "koneksi",
-    question: "Mengapa muncul error 'WebSocket connection failed' atau 'closed without opened'?",
-    answer: "Ini adalah kondisi normal dalam lingkungan simulasi pengembangan (local sandbox/dev environment). Server pelataran mematikan modul Hot Module Replacement (HMR) bawaan Vite demi meminimalkan degradasi performa dan kedipan visual saat kode diperbarui secara inkremental. Bug benigna ini sepenuhnya aman diabaikan, tidak memicu kebocoran data, dan otomatis lenyap di situs produksi (Vercel) Anda."
+    category: "fitur",
+    question: "Bagaimana cara menggunakan menu 'Discover' dan Agen AI Khusus?",
+    answer: "Melalui menu 'Discover' di sidebar kiri, Anda dapat menjelajahi varian asisten khusus yang telah dirancang untuk peranan spesifik, seperti penulisan kreatif, asisten pemrograman, atau tutor bahasa. Anda hanya perlu menekan tombol 'Mulai Percakapan' pada agen yang Anda minati."
   },
   {
     id: "faq-4",
     category: "plus",
     question: "Apa saja manfaat eksklusif MARIA Plus? ✨",
-    answer: "Dengan keanggotaan premium MARIA Plus, Anda mendapatkan respon model tak terbatas yang jauh lebih cepat, akses penuh ke semua agen kustom cerdas di menu 'Discover', formulasi prompt premium, kustomisasi suara (TTS) premium bertenaga ElevenLabs, serta prioritas antrean server."
+    answer: "Dengan keanggotaan premium MARIA Plus, Anda mendapatkan respon model tak terbatas yang jauh lebih responsif, formulasi prompt premium, kustomisasi suara asisten yang eksklusif, serta prioritas antrean saat lalu lintas server sedang padat."
   },
   {
     id: "faq-5",
     category: "akun",
     question: "Bagaimana cara menyinkronkan data antar-perangkat?",
-    answer: "Cukup tekan menu foto profil Anda di sidebar kiri bawah, lalu masuk (Sign-In) menggunakan Akun Google Anda. Seluruh riwayat obrolan, kustomisasi profil, preferensi notifikasi, dan perpustakaan prompt Anda akan disinkronkan secara instan di mana pun Anda masuk."
+    answer: "Cukup ketuk foto profil atau nama pengguna Anda di sidebar kiri bawah, lalu masuk (Sign-In) menggunakan Akun Google Anda. Seluruh riwayat obrolan, kustomisasi profil, preferensi notifikasi, dan perpustakaan prompt Anda akan disinkronkan secara instan di mana pun Anda masuk."
   },
   {
     id: "faq-6",
-    category: "koneksi",
-    question: "Mengapa skor PageSpeed seluler dan desktop berbeda?",
-    answer: "Situs desktop umumnya memiliki daya pemrosesan CPU yang lebih tangguh dan koneksi jaringan yang stabil. Untuk perangkat seluler (mobile), kami telah mengimplementasikan pemisahan kode secara agresif (CodeSplitting/Lazy Loading) dan mengurangi rantai preconnect tidak terpakai sehingga skor PageSpeed seluler Anda sekarang melonjak tinggi dan stabil."
+    category: "fitur",
+    question: "Bagaimana cara menyimpan pesan favorit ke dalam 'Library'?",
+    answer: "Anda dapat menandai jawaban menarik dari Maria AI dengan mengklik ikon simpan/bookmark yang berada di sebelah setiap balon percakapan asisten. Pesan yang telah disimpan dapat diakses dengan cepat kapan saja melalui menu 'Library' di bagian sidebar."
   }
 ];
 
 export default function HelpArea({ settings, onExit, onAddSystemNotification }: HelpAreaProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<"semua" | "umum" | "plus" | "koneksi" | "akun">("semua");
+  const [selectedCategory, setSelectedCategory] = useState<"semua" | "umum" | "plus" | "fitur" | "akun">("semua");
   const [expandedFaqId, setExpandedFaqId] = useState<string | null>(null);
 
   // Support ticket state
@@ -106,7 +106,7 @@ export default function HelpArea({ settings, onExit, onAddSystemNotification }: 
       if (onAddSystemNotification) {
         onAddSystemNotification(
           "Pusat Bantuan Maria AI",
-          "Tiket dukungan Anda berhasil dikirim! Tim kami akan meninjau pesan Anda secepatnya.",
+          "Masukan Anda berhasil dikirim! Tim kami akan meninjau pesan Anda secepatnya.",
           "success"
         );
       }
@@ -156,7 +156,7 @@ export default function HelpArea({ settings, onExit, onAddSystemNotification }: 
               Pusat Bantuan Maria AI
             </h1>
             <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-0.5">
-              Hub panduan kustomisasi & pemecahan masalah cerdas
+              Hub panduan kustomisasi & bantuan fitur cerdas
             </p>
           </div>
         </div>
@@ -185,7 +185,7 @@ export default function HelpArea({ settings, onExit, onAddSystemNotification }: 
               Ada yang Bisa Maria Bantu, Pa?
             </h2>
             <p className="text-[12px] leading-relaxed text-slate-400">
-              Cari artikel atau temukan jawaban instan mengenai bug websocket, performa PageSpeed, optimalisasi memori Maria, dan penggunaan privilege premium.
+              Cari artikel panduan atau temukan jawaban instan mengenai kustomisasi suara (TTS), penggunaan Library, keuntungan MARIA Plus, serta manajemen sinkronisasi profil Anda.
             </p>
           </div>
 
@@ -198,7 +198,7 @@ export default function HelpArea({ settings, onExit, onAddSystemNotification }: 
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari kata kunci bantuan... (misal: 'websocket', 'riwayat', 'plus')"
+              placeholder="Cari kata kunci bantuan... (misal: 'library', 'riwayat', 'plus')"
               aria-label="Cari panduan"
               className="w-full bg-[#0d0d0f] border border-zinc-850 hover:border-zinc-800 focus:border-indigo-500/60 text-slate-200 pl-11 pr-4 py-3 rounded-xl text-xs font-medium focus:outline-hidden transition-all placeholder:text-slate-500 shadow-sm"
             />
@@ -213,21 +213,6 @@ export default function HelpArea({ settings, onExit, onAddSystemNotification }: 
           </div>
         </div>
 
-        {/* Dynamic Warning Card for dev socket notification */}
-        <div className="bg-amber-950/25 border border-amber-900/35 rounded-2xl p-4.5 flex gap-3.5 items-start">
-          <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0">
-            <AlertTriangle className="w-5 h-5 stroke-[2]" />
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-xs font-bold text-amber-200">
-              Catatan Penting Bug WebSocket Hub-Dev
-            </h3>
-            <p className="text-[11.5px] text-slate-300 leading-relaxed">
-              Jika Anda melihat pesan peringatan <code className="bg-amber-950/40 text-amber-400 px-1 py-0.5 rounded text-[10px] font-mono select-all">WebSocket closed without opened</code>, harap tenang. Ini <strong className="text-white">bukan kegagalan sistem Maria</strong>. Kedipan ini mutlak disebabkan oleh fitur Hot Module Replacement (HMR) Vite yang dinonaktifkan di sandbox agar browser tidak mengalami rendering ulang yang kacau. Di situs produksi, websocket ini diabaikan dengan aman dan Maria AI berjalan prima.
-            </p>
-          </div>
-        </div>
-
         {/* Categories selector track */}
         <div className="space-y-3">
           <span className="block text-[10px] font-extrabold tracking-widest text-slate-400 uppercase pl-1 select-none">
@@ -238,8 +223,8 @@ export default function HelpArea({ settings, onExit, onAddSystemNotification }: 
               { id: "semua", label: "Semua Kategori" },
               { id: "umum", label: "Umum & Penggunaan" },
               { id: "plus", label: "MARIA Plus ✨" },
-              { id: "koneksi", label: "Websocket & Performa" },
-              { id: "akun", label: "Akun & Sinkronisasi" }
+              { id: "fitur", label: "Optimalisasi Fitur" },
+              { id: "akun", label: "Akun & Keamanan" }
             ].map(cat => (
               <button
                 key={cat.id}
@@ -310,7 +295,7 @@ export default function HelpArea({ settings, onExit, onAddSystemNotification }: 
                         {faq.answer}
                         <div className="mt-3.5 flex items-center gap-2">
                           <span className="text-[9px] uppercase tracking-wider bg-zinc-900 px-2 py-1 rounded text-slate-500 font-bold">
-                            Kategori: {faq.category}
+                            Kategori: {faq.category === "umum" ? "Umum & Penggunaan" : faq.category === "plus" ? "MARIA Plus ✨" : faq.category === "fitur" ? "Optimalisasi Fitur" : "Akun & Keamanan"}
                           </span>
                         </div>
                       </div>
@@ -334,19 +319,19 @@ export default function HelpArea({ settings, onExit, onAddSystemNotification }: 
                 FORMULIR LAYANAN PELANGGAN
               </span>
               <h3 className="text-[16px] font-bold text-white tracking-tight">
-                Hubungi Tim Teknis & Pengembang
+                Hubungi Tim Layanan Maria AI
               </h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Ada kendala lain, perbaikan khusus, atau ingin mengirim saran langsung untuk Maria AI? Kirim tiket bantuan di bawah ini.
+                Punya ide menarik, butuh bantuan panduan kustomisasi lanjut, atau ingin memberikan saran untuk perbaikan asisten cerdas Anda? Kirim pesan langsung ke tim pengembang kami.
               </p>
             </div>
 
             {ticketSuccess ? (
               <div className="rounded-2xl bg-indigo-950/20 border border-indigo-900/30 p-5 text-center animate-fade-in space-y-2">
                 <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto" />
-                <h4 className="text-xs font-bold text-white">Tiket Pengaduan Terkirim ✨</h4>
+                <h4 className="text-xs font-bold text-white">Tiket Pesan Terkirim ✨</h4>
                 <p className="text-[11px] text-slate-300">
-                  Data pengaduan berhasil dicatat dalam manifest lokal. Tim Admin akan segera menjalin kontak.
+                  Terima kasih atas masukannya. Tim timbal-balik kami akan meninjau pesan Anda secepatnya.
                 </p>
               </div>
             ) : (
@@ -354,7 +339,7 @@ export default function HelpArea({ settings, onExit, onAddSystemNotification }: 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label htmlFor="ticket-email" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1 font-sans">
-                      Alamat Email (Untuk Balasan)
+                      Alamat Email Anda
                     </label>
                     <input 
                       type="email"
@@ -369,7 +354,7 @@ export default function HelpArea({ settings, onExit, onAddSystemNotification }: 
 
                   <div className="space-y-1">
                     <label htmlFor="ticket-subject" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1 font-sans">
-                      Perihal Masalah / Subjek
+                      Subjek Pesan / Masukan
                     </label>
                     <input 
                       type="text"
@@ -377,7 +362,7 @@ export default function HelpArea({ settings, onExit, onAddSystemNotification }: 
                       required
                       value={ticketSubject}
                       onChange={(e) => setTicketSubject(e.target.value)}
-                      placeholder="Contoh: Perbaikan UI Mobile / Masalah Cache"
+                      placeholder="Contoh: Ide Fitur Baru / Saran Nada Bicara"
                       className="w-full bg-[#12131a] border border-zinc-850 focus:border-indigo-500 text-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-medium focus:outline-hidden"
                     />
                   </div>
@@ -385,7 +370,7 @@ export default function HelpArea({ settings, onExit, onAddSystemNotification }: 
 
                 <div className="space-y-1">
                   <label htmlFor="ticket-message" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1 font-sans">
-                    Uraian Pesan / Deskripsi Kerusakan
+                    Isi Pesan / Catatan Masukan
                   </label>
                   <textarea
                     id="ticket-message"
@@ -393,7 +378,7 @@ export default function HelpArea({ settings, onExit, onAddSystemNotification }: 
                     rows={4}
                     value={ticketMessage}
                     onChange={(e) => setTicketMessage(e.target.value)}
-                    placeholder="Sebutkan langkah-langkah terjadinya error atau detail saran optimasi Anda..."
+                    placeholder="Tuliskan pengalaman Anda, ide inovatif, atau masukan berharga Anda untuk menyempurnakan Maria AI..."
                     className="w-full bg-[#12131a] border border-zinc-850 focus:border-indigo-500 text-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-medium focus:outline-hidden resize-none leading-relaxed block"
                   />
                 </div>
@@ -407,12 +392,12 @@ export default function HelpArea({ settings, onExit, onAddSystemNotification }: 
                     {isSubmitting ? (
                       <>
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        Mengirim Tiket...
+                        Mengirim Masukan...
                       </>
                     ) : (
                       <>
                         <Send className="w-3.5 h-3.5" />
-                        Kirim Tiket / Pesan
+                        Kirim Masukan Anda
                       </>
                     )}
                   </button>
