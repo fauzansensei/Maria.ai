@@ -1,11 +1,16 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore, getFirestore } from 'firebase/firestore';
 import firebaseConfigRaw from '../firebase-applet-config.json';
 
 // Dynamic resolver to load user custom Firebase/Google API configuration
 const firebaseConfig = firebaseConfigRaw;
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+
+// Initialize Firestore with long polling to prevent WebChannel/WebSocket drops in this environment
+initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+});
 
 // If database ID is absent/empty, default to standard Firestore database context
 const dbId = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId.trim() !== "" 

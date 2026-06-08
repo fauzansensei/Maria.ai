@@ -238,11 +238,9 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
     }
 
     // Generate content with automated robust model fallback list in case of 503 or 429 overloads
-    // We prioritize gemini-pro-latest to avoid the strict 20-request-per-day quota limit of gemini-3.5-flash on the free tier
+    // We prioritize gemini-1.5-flash to avoid the strict 20-request-per-day quota limit of newer models on the free tier
     const modelsToTry = [
       "gemini-2.5-flash",
-      "gemini-3.5-flash",
-      "gemini-3.1-flash-lite",
       "gemini-flash-latest"
     ];
     let response = null;
