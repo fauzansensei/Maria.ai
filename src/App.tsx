@@ -77,6 +77,7 @@ const LibraryArea = lazyWithRetry(() => import("./components/LibraryArea"));
 const AuxiliaryModals = lazyWithRetry(() => import("./components/AuxiliaryModals"));
 const Sidebar = lazyWithRetry(() => import("./components/Sidebar"));
 const ChatArea = lazyWithRetry(() => import("./components/ChatArea"));
+const HelpArea = lazyWithRetry(() => import("./components/HelpArea"));
 import { 
   Bot, 
   Settings, 
@@ -316,7 +317,7 @@ export default function App() {
   const [isClearingAllHistory, setIsClearingAllHistory] = useState<boolean>(false);
 
   // Library and Discover states matching Maria AI suggestions
-  const [activeView, setActiveView] = useState<"chat" | "library" | "discover">("chat");
+  const [activeView, setActiveView] = useState<"chat" | "library" | "discover" | "help">("chat");
   const [bookmarkedMessages, setBookmarkedMessages] = useState<Message[]>([]);
   const [isPlus, setIsPlus] = useState(() => {
     if (typeof window !== "undefined") {
@@ -1717,6 +1718,21 @@ export default function App() {
                 onSelectAgent={handleSelectAgent}
                 onUsePrompt={handleUsePromptFormula}
                 onExit={() => setActiveView("chat")}
+              />
+            </React.Suspense>
+          )}
+
+          {activeView === "help" && (
+            <React.Suspense fallback={
+              <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#0b0f17] text-slate-400">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500 mb-3" />
+                <p className="text-xs font-sans font-medium tracking-wide">Membuka bantuan teknis...</p>
+              </div>
+            }>
+              <HelpArea
+                settings={settings}
+                onExit={() => setActiveView("chat")}
+                onAddSystemNotification={handleAddSystemNotification}
               />
             </React.Suspense>
           )}

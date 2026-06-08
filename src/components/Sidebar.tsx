@@ -20,7 +20,8 @@ import {
   Pin,
   Pencil,
   Trash2,
-  Archive
+  Archive,
+  HelpCircle
 } from "lucide-react";
 import { Message, UserSettings, ChatThread } from "../types";
 import { THEME_OPTIONS } from "../constants";
@@ -44,8 +45,8 @@ interface SidebarProps {
   onDeleteThread?: (id: string) => void;
   onShareThread?: (id: string) => void;
   onArchiveThread?: (id: string) => void;
-  activeView?: "chat" | "library" | "discover";
-  onViewChange?: (view: "chat" | "library" | "discover") => void;
+  activeView?: "chat" | "library" | "discover" | "help";
+  onViewChange?: (view: "chat" | "library" | "discover" | "help") => void;
   profileAvatarProp?: string;
   useInitialsAvatarProp?: boolean;
   profileAvatarBgProp?: string;
@@ -356,6 +357,25 @@ export default function Sidebar({
             >
               <Settings className="w-4 h-4" />
               <span>Pengaturan</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (onViewChange) onViewChange("help");
+                if (window.innerWidth < 1024) {
+                  onToggleCollapse();
+                }
+              }}
+              aria-label="Buka Pusat Bantuan"
+              className={`w-full py-2.5 px-3 rounded-lg transition-all text-xs font-semibold flex items-center gap-3 text-left cursor-pointer ${
+                activeView === "help"
+                  ? "text-white bg-[#1c1e24] font-semibold"
+                  : "text-slate-300 hover:text-white hover:bg-[#1a1c23]/60"
+              }`}
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span>Pusat Bantuan</span>
             </button>
           </div>
 

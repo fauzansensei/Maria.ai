@@ -228,6 +228,35 @@
     <!-- Suppress benign local development websocket connection warnings -->
     <script>
       (function() {
+        // Intercept global WebSocket to suppress Vite HMR connection dropouts gracefully
+        if (typeof window.Proxy !== 'undefined' && typeof window.WebSocket !== 'undefined') {
+          window.WebSocket = new Proxy(window.WebSocket, {
+            construct(target, args) {
+              try {
+                const ws = Reflect.construct(target, args);
+                // Bind error listener immediately to stifle uncaught socket exceptions
+                ws.addEventListener('error', function(e) {
+                  if (e) {
+                    try {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.stopImmediatePropagation();
+                    } catch (_) {}
+                  }
+                }, { capture: true });
+                return ws;
+              } catch (err) {
+                console.warn('HMR WebSocket creation bypassed in sandboxed environment.', err);
+                const dummyWs = document.createElement('div');
+                dummyWs.close = function() {};
+                dummyWs.send = function() {};
+                dummyWs.readyState = 3; // CLOSED
+                return dummyWs;
+              }
+            }
+          });
+        }
+
         // Safeguard against browser extensions (AdBlock, Youtube enhancers, Google Translate) overriding the DOM
         // which causes React's parent-child Node reconciliation to crash (Failed to execute 'removeChild' / 'insertBefore' errors)
         if (typeof Node !== 'undefined' && Node.prototype) {
@@ -289,7 +318,8 @@
               lowerReason.indexOf('web-socket') !== -1 ||
               lowerReason.indexOf('ditutup tanpa dibuka') !== -1 ||
               lowerReason.indexOf('closed before') !== -1 ||
-              lowerReason.indexOf('connection failed') !== -1
+              lowerReason.indexOf('connection failed') !== -1 ||
+              lowerReason.indexOf('closed without opened') !== -1
             ) {
               event.preventDefault();
               event.stopImmediatePropagation();
@@ -309,7 +339,8 @@
               combined.indexOf('web-socket') !== -1 ||
               combined.indexOf('ditutup tanpa dibuka') !== -1 ||
               combined.indexOf('closed before') !== -1 ||
-              combined.indexOf('connection failed') !== -1
+              combined.indexOf('connection failed') !== -1 ||
+              combined.indexOf('closed without opened') !== -1
             ) {
               event.preventDefault();
               event.stopImmediatePropagation();
