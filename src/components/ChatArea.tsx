@@ -806,6 +806,11 @@ const ChatInputForm = React.memo(function ChatInputForm({
     const textarea = textareaRef.current;
     if (!textarea) return;
 
+    if (!inputText) {
+      textarea.style.height = "44px"; // Reset to default style height instantly without reading layouts
+      return;
+    }
+
     // Run measurement and styling updates off-thread inside an animation frame
     const frameId = requestAnimationFrame(() => {
       textarea.style.height = "auto";
@@ -1185,9 +1190,23 @@ export default function ChatArea({
   };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isInitialScrollMount = useRef(true);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (isInitialScrollMount.current) {
+      isInitialScrollMount.current = false;
+      // Use instant auto scroll on mount if elements are ready, avoiding scrollIntoView layout calculations
+      if (messages.length > 0) {
+        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+      }
+      return;
+    }
+    
+    const frameId = requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    });
+    
+    return () => cancelAnimationFrame(frameId);
   }, [messages, isLoading]);
 
   const copyToClipboard = (id: string, text: string) => {

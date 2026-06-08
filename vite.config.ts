@@ -16,28 +16,12 @@ export default defineConfig(() => {
       },
     },
     build: {
-      modulePreload: false,
+      modulePreload: {
+        resolveDependencies: () => [] // Disable preload warnings/dependencies nesting
+      },
       cssMinify: true,
       reportCompressedSize: false,
-      chunkSizeWarningLimit: 2500,
-      rollupOptions: {
-        output: {
-          manualChunks(id) {
-            if (id.includes('node_modules/firebase')) {
-              return 'firebase-libs';
-            }
-            if (id.includes('node_modules/lucide-react')) {
-              return 'lucide-libs';
-            }
-            if (id.includes('node_modules/motion')) {
-              return 'motion-libs';
-            }
-            if (id.includes('node_modules')) {
-              return 'vendor';
-            }
-          }
-        }
-      }
+      chunkSizeWarningLimit: 3000,
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
