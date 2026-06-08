@@ -1009,7 +1009,7 @@ const ChatInputForm = React.memo(function ChatInputForm({
         <div className="flex items-center gap-3 p-2.5 bg-slate-50 border border-slate-200 border-b-0 rounded-t-xl animate-fade-in text-[11px]">
           {attachedImage && (
             <div className="relative group bg-white border border-slate-250 rounded-lg p-1 shadow-2xs shrink-0">
-              <img src={attachedImage} className="w-12 h-12 object-cover rounded" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
+              <img src={attachedImage} alt="Preview Lampiran" className="w-12 h-12 object-cover rounded" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
               <button
                 type="button"
                 onClick={() => setAttachedImage(null)}

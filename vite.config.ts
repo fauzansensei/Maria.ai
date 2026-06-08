@@ -26,6 +26,12 @@ export default defineConfig(() => {
             if (id.includes('node_modules/firebase')) {
               return 'firebase-libs';
             }
+            if (id.includes('node_modules/lucide-react')) {
+              return 'lucide-libs';
+            }
+            if (id.includes('node_modules/motion')) {
+              return 'motion-libs';
+            }
             if (id.includes('node_modules')) {
               return 'vendor';
             }
