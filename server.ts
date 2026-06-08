@@ -213,11 +213,11 @@ Pastikan nama aplikasi/platform sangat ringkas, dan link URL-nya valid, lengkap 
     }
 
     // Generate content with automated robust model fallback list in case of 503 or 429 overloads
+    // We prioritize gemini-3.1-flash-lite and gemini-flash-latest to avoid the strict 20-request-per-day quota limit of gemini-3.5-flash on the free tier
     const modelsToTry = [
-      "gemini-3.5-flash", 
-      "gemini-2.5-flash",
-      "gemini-3.1-flash-lite", 
+      "gemini-3.1-flash-lite",
       "gemini-flash-latest",
+      "gemini-3.5-flash",
       "gemini-3.1-pro-preview"
     ];
     let response = null;

@@ -16,6 +16,7 @@ export default defineConfig(() => {
       },
     },
     build: {
+      modulePreload: false,
       cssMinify: true,
       reportCompressedSize: false,
       chunkSizeWarningLimit: 2500,
@@ -24,15 +25,6 @@ export default defineConfig(() => {
           manualChunks(id) {
             if (id.includes('node_modules/firebase')) {
               return 'firebase-libs';
-            }
-            if (id.includes('node_modules/lucide-react')) {
-              return 'lucide-icons';
-            }
-            if (id.includes('node_modules/motion') || id.includes('node_modules/framer-motion')) {
-              return 'framer-motion';
-            }
-            if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/scheduler')) {
-              return 'react';
             }
             if (id.includes('node_modules')) {
               return 'vendor';

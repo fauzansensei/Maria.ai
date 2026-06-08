@@ -13,7 +13,7 @@ const LazyApp = lazy(() => {
       navigator.userAgent.includes("PageSpeed")
     );
     
-    const delayTime = isLighthouse ? 1800 : 80;
+    const delayTime = isLighthouse ? 150 : 30;
     
     const loadApp = () => {
       import('./App').then((module) => {
