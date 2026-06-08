@@ -65,3 +65,10 @@ export interface ChatThread {
   isPinned?: boolean;
 }
 
+export interface UserMemory {
+  id: string;
+  text: string;
+  category: "personal" | "preferences" | "work" | "other";
+  timestamp: string;
+}
+

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { UserSettings, MariaTone, LanguageStyle, AppTheme } from "../types";
+import { UserSettings, MariaTone, LanguageStyle, AppTheme, UserMemory } from "../types";
 import { safeLocalStorageSetItem } from "../utils";
 import { PRESET_VOICES, PRESET_MODELS } from "../services/elevenLabsService";
 import { auth } from "../firebase";
@@ -22,7 +22,8 @@ import {
   Sparkles,
   User,
   Shield,
-  Palette
+  Palette,
+  Brain
 } from "lucide-react";
 
 interface SettingsDashboardProps {
@@ -36,9 +37,11 @@ interface SettingsDashboardProps {
   onSimulatePush?: (title: string, body: string) => void;
   isPlus?: boolean;
   setIsPlus?: (val: boolean) => void;
+  memories?: UserMemory[];
+  onSaveMemories?: (memories: UserMemory[]) => void;
 }
 
-type MenuTab = "profile" | "appearance" | "behavior" | "notifications" | "billing" | "privacy";
+type MenuTab = "profile" | "appearance" | "behavior" | "notifications" | "billing" | "privacy" | "memories";
 
 export default function SettingsDashboard({
   settings,
@@ -50,7 +53,9 @@ export default function SettingsDashboard({
   onSimulateEmail,
   onSimulatePush,
   isPlus = false,
-  setIsPlus
+  setIsPlus,
+  memories = [],
+  onSaveMemories
 }: SettingsDashboardProps) {
   const [activeTab, setActiveTab] = useState<MenuTab>("profile");
 
@@ -76,6 +81,37 @@ export default function SettingsDashboard({
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
   const [isConfirmingLocalClear, setIsConfirmingLocalClear] = useState(false);
   const [isCookieModalOpen, setIsCookieModalOpen] = useState(false);
+
+  // New memory list form controller states
+  const [newMemoryText, setNewMemoryText] = useState("");
+  const [newMemoryCategory, setNewMemoryCategory] = useState<"personal" | "preferences" | "work" | "other">("personal");
+
+  const handleAddMemory = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMemoryText.trim()) return;
+    const newMemoryItem: UserMemory = {
+      id: "mem_" + Date.now(),
+      text: newMemoryText.trim(),
+      category: newMemoryCategory,
+      timestamp: new Date().toISOString()
+    };
+    const updated = [newMemoryItem, ...memories];
+    if (onSaveMemories) {
+      onSaveMemories(updated);
+    }
+    setNewMemoryText("");
+    setSaveBannerText("Memori berhasil dicatat!");
+    setTimeout(() => setSaveBannerText(null), 2500);
+  };
+
+  const handleDeleteMemory = (id: string) => {
+    const updated = memories.filter(m => m.id !== id);
+    if (onSaveMemories) {
+      onSaveMemories(updated);
+    }
+    setSaveBannerText("Memori berhasil dihapus.");
+    setTimeout(() => setSaveBannerText(null), 2500);
+  };
 
   // Synchronization feedback helper
   const triggerSave = (updates: Partial<UserSettings> & { accentVal?: string }) => {
@@ -189,11 +225,12 @@ export default function SettingsDashboard({
                 { id: "profile", label: "Profil", icon: User },
                 { id: "appearance", label: "Tampilan & Tema", icon: Palette },
                 { id: "behavior", label: "Perilaku Asisten", icon: Sliders },
+                { id: "memories", label: "Memori Maria", icon: Brain },
                 { id: "notifications", label: "Suara & Notifikasi", icon: Bell },
                 { id: "billing", label: "Langganan Plus", icon: CreditCard },
                 { id: "privacy", label: "Data & Privasi", icon: Database },
               ].map((tab) => {
-                const TabIcon = tab.id === "privacy" ? Database : tab.icon;
+                const TabIcon = tab.id === "privacy" ? Database : (tab.id === "memories" ? Brain : tab.icon);
                 return (
                   <button
                     key={tab.id}
@@ -225,6 +262,7 @@ export default function SettingsDashboard({
             { id: "profile", label: "Profil" },
             { id: "appearance", label: "Tampilan" },
             { id: "behavior", label: "Perilaku" },
+            { id: "memories", label: "Memori" },
             { id: "notifications", label: "Notifikasi" },
             { id: "billing", label: "Tagihan" },
             { id: "privacy", label: "Data" }
@@ -252,6 +290,7 @@ export default function SettingsDashboard({
               {activeTab === "profile" && "Manajemen Profil Saya"}
               {activeTab === "appearance" && "Kustomisasi Tema & Tampilan"}
               {activeTab === "behavior" && "Perilaku & Gaya Berbicara Maria AI"}
+              {activeTab === "memories" && "Memori Jangka Panjang Maria AI"}
               {activeTab === "notifications" && "Integrasi Suara & Simulasi Notifikasi"}
               {activeTab === "billing" && "Kelola Paket Maria Plus"}
               {activeTab === "privacy" && "Kerahasiaan & Kontrol Database"}
@@ -691,6 +730,128 @@ export default function SettingsDashboard({
                     )}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* 7. LONG-TERM MEMORIES */}
+            {activeTab === "memories" && (
+              <div className="space-y-4 max-w-xl duration-150 font-sans">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold text-zinc-200 font-sans">Memori Jangka Panjang</h3>
+                  <p className="text-[10px] text-zinc-500 leading-normal">
+                    Tuliskan fakta penting tentang diri Kakak (seperti cita-cita, peliharaan, alergi, hobi, atau preferensi bahasa) agar Maria selalu mengingatnya dan sinkron secara realtime ke Firestore database.
+                  </p>
+                </div>
+
+                {/* ADD MEMORY INLINE FORM */}
+                <form onSubmit={handleAddMemory} className="bg-[#161617] rounded-2xl p-4 border border-zinc-900/60 shadow-xs space-y-3">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Fakta Baru Tentang Saya</label>
+                    <input 
+                      type="text"
+                      value={newMemoryText}
+                      onChange={(e) => setNewMemoryText(e.target.value)}
+                      placeholder="e.g. Saya sangat suka minum kopi susu aren dingin / Saya sedang belajar React Native"
+                      maxLength={150}
+                      className="w-full px-3 py-2 bg-zinc-950 border border-zinc-900 rounded-xl text-xs text-white placeholder-zinc-600 focus:outline-hidden focus:ring-1 focus:ring-zinc-800 transition-all font-sans"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 pt-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider shrink-0">Kategori:</span>
+                      <select
+                        value={newMemoryCategory}
+                        onChange={(e) => setNewMemoryCategory(e.target.value as any)}
+                        className="bg-[#0d0d0e] border border-zinc-900 rounded-lg text-[10.5px] text-zinc-300 px-2 py-1 focus:outline-hidden cursor-pointer"
+                      >
+                        <option value="personal">Profil & Fakta</option>
+                        <option value="preferences">Kesukaan & Minat</option>
+                        <option value="work">Karir & Edukasi</option>
+                        <option value="other">Lain-lain</option>
+                      </select>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={!newMemoryText.trim()}
+                      className="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-850 disabled:opacity-40 text-white rounded-xl text-[10.5px] font-extrabold cursor-pointer border border-zinc-800 transition-colors"
+                    >
+                      Simpan Memori
+                    </button>
+                  </div>
+                </form>
+
+                {/* CURRENT MEMORIES CONTAINER */}
+                <div className="space-y-2">
+                  <h4 className="text-[10px] uppercase font-extrabold text-zinc-500 tracking-wider">Koleksi Memori Terdaftar ({memories.length})</h4>
+
+                  {memories.length === 0 ? (
+                    <div className="bg-[#161617]/40 rounded-2xl p-6 border border-dashed border-zinc-900/50 flex flex-col items-center justify-center text-center space-y-2">
+                      <Brain className="w-6 h-6 text-zinc-600 animate-pulse" />
+                      <p className="text-[10.5px] text-zinc-500 font-sans leading-relaxed max-w-sm">
+                        Belum ada memori terdaftar. Tulis sebuah fakta di atas agar Maria dapat mengenal dan memahami Kakak secara personal di luar batas riwayat chat!
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[280px] overflow-y-auto no-scrollbar pr-0.5">
+                      {memories.map((m) => (
+                        <div 
+                          key={m.id}
+                          className="bg-[#161617] rounded-xl p-3 border border-zinc-900/60 flex items-start justify-between gap-3.5 hover:border-zinc-800/40 transition-all group duration-150"
+                        >
+                          <div className="space-y-1.5 flex-1 select-none">
+                            <span className="text-zinc-200 text-[11px] leading-relaxed font-sans block">{m.text}</span>
+                            <div className="flex items-center gap-2">
+                              {m.category === "personal" && (
+                                <span className="px-1.5 py-0.5 rounded-md text-[8.5px] font-bold uppercase tracking-wider bg-teal-500/15 text-teal-400 border border-teal-500/20">
+                                  Profil & Fakta
+                                </span>
+                              )}
+                              {m.category === "preferences" && (
+                                <span className="px-1.5 py-0.5 rounded-md text-[8.5px] font-bold uppercase tracking-wider bg-fuchsia-500/15 text-fuchsia-400 border border-fuchsia-500/12">
+                                  Minat Saya
+                                </span>
+                              )}
+                              {m.category === "work" && (
+                                <span className="px-1.5 py-0.5 rounded-md text-[8.5px] font-bold uppercase tracking-wider bg-sky-500/15 text-sky-400 border border-sky-500/20">
+                                  Edukasi/Karir
+                                </span>
+                              )}
+                              {m.category === "other" && (
+                                <span className="px-1.5 py-0.5 rounded-md text-[8.5px] font-bold uppercase tracking-wider bg-zinc-500/15 text-zinc-400 border border-zinc-500/15">
+                                  Lain-lain
+                                </span>
+                              )}
+                              <span className="text-[8.5px] text-zinc-500 font-mono">
+                                {m.timestamp ? new Date(m.timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : 'Baru'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteMemory(m.id)}
+                            className="p-1 px-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg border border-transparent hover:border-red-950/10 cursor-pointer transition-all self-center md:opacity-0 group-hover:opacity-100"
+                            title="Hapus Memori"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* SINKRONISASI BANNER */}
+                <div className="bg-[#161617]/30 border border-zinc-900/40 p-3 rounded-2xl flex items-center gap-3">
+                  <Database className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <div className="space-y-0.5">
+                    <span className="text-[10.5px] font-bold text-zinc-300 block">Sinkronisasi Realtime Aktif</span>
+                    <span className="text-[9px] text-zinc-500 leading-tight block">Tiap penambahan, edit, dan penghapusan sinkron langsung dengan basis data Firestore Kakak secara otomatis dan instan.</span>
+                  </div>
+                </div>
+
               </div>
             )}
 

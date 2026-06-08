@@ -24,7 +24,21 @@
         "avatarUrl": { "type": "string" },
         "avatarBg": { "type": "string" },
         "useInitials": { "type": "boolean" },
-        "isLoggedIn": { "type": "boolean" }
+        "isLoggedIn": { "type": "boolean" },
+        "memories": {
+          "type": "array",
+          "description": "Long-term memories and facts about the user that Maria remembers",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "text": { "type": "string" },
+              "category": { "type": "string", "enum": ["personal", "preferences", "work", "other"] },
+              "timestamp": { "type": "string", "format": "date-time" }
+            },
+            "required": ["id", "text", "category", "timestamp"]
+          }
+        }
       },
       "required": ["displayName", "email", "isLoggedIn"]
     },

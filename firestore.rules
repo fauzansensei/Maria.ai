@@ -28,7 +28,8 @@ service cloud.firestore {
 
     // Validate User Profiles
     function isValidUserProfile(data) {
-      return data.displayName is string;
+      return data.displayName is string
+         && (!('memories' in data) || data.memories is list);
     }
 
     // Validate Chat Threads

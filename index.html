@@ -259,25 +259,38 @@
             const reasonStr = typeof event.reason === 'object' 
               ? (event.reason.message || event.reason.toString() || '') 
               : String(event.reason);
+            const lowerReason = reasonStr.toLowerCase();
             if (
-              reasonStr.toLowerCase().indexOf('websocket') !== -1 || 
-              reasonStr.toLowerCase().indexOf('web-socket') !== -1
+              lowerReason.indexOf('websocket') !== -1 || 
+              lowerReason.indexOf('web-socket') !== -1 ||
+              lowerReason.indexOf('ditutup tanpa dibuka') !== -1 ||
+              lowerReason.indexOf('closed before') !== -1 ||
+              lowerReason.indexOf('connection failed') !== -1
             ) {
               event.preventDefault();
+              event.stopImmediatePropagation();
               event.stopPropagation();
+              return true;
             }
           }
         }, true);
 
         window.addEventListener('error', function(event) {
-          if (event && event.message) {
-            const msgStr = String(event.message);
+          if (event) {
+            const msgStr = event.message ? String(event.message) : '';
+            const errStr = (event.error && event.error.message) ? String(event.error.message) : '';
+            const combined = (msgStr + ' ' + errStr).toLowerCase();
             if (
-              msgStr.toLowerCase().indexOf('websocket') !== -1 || 
-              msgStr.toLowerCase().indexOf('web-socket') !== -1
+              combined.indexOf('websocket') !== -1 || 
+              combined.indexOf('web-socket') !== -1 ||
+              combined.indexOf('ditutup tanpa dibuka') !== -1 ||
+              combined.indexOf('closed before') !== -1 ||
+              combined.indexOf('connection failed') !== -1
             ) {
               event.preventDefault();
+              event.stopImmediatePropagation();
               event.stopPropagation();
+              return true;
             }
           }
         }, true);

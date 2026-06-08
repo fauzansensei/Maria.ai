@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Message, UserSettings, AppNotification, ChatThread, AppTheme } from "./types";
+import { Message, UserSettings, AppNotification, ChatThread, AppTheme, UserMemory } from "./types";
 import { DEFAULT_SETTINGS, THEME_OPTIONS } from "./constants";
 import { generateSpeech, playAudioBlob, stopSpeech } from "./services/elevenLabsService";
 
@@ -213,6 +213,7 @@ export default function App() {
   };
 
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
+  const [memories, setMemories] = useState<UserMemory[]>([]);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
   const speakMessage = (text: string) => {
@@ -621,6 +622,11 @@ export default function App() {
             if (data.settings) {
               setSettings(data.settings);
             }
+            if (data.memories) {
+              setMemories(data.memories);
+            } else {
+              setMemories([]);
+            }
             if (data.bookmarks) {
               setBookmarkedMessages(data.bookmarks);
             }
@@ -697,6 +703,7 @@ export default function App() {
       } else {
         setIsLoggedIn(false);
         setSettings(DEFAULT_SETTINGS);
+        setMemories([]);
         setProfileDisplayName("User");
         setProfileUsername("@user");
         setBookmarkedMessages([]);
@@ -766,6 +773,17 @@ export default function App() {
       `Preferensi Maria berhasil diperbarui. Tema warna: ${themeName}.`, 
       "success"
     );
+  };
+
+  // Save user memories when modified in panel
+  const handleSaveMemories = async (newMemories: UserMemory[]) => {
+    setMemories(newMemories);
+    if (isLoggedIn && auth.currentUser) {
+      const userRef = doc(db, "users", auth.currentUser.uid);
+      await updateDoc(userRef, {
+        memories: newMemories
+      }).catch(err => handleFirestoreError(err, OperationType.UPDATE, `users/${auth.currentUser?.uid}`));
+    }
   };
 
   // Synchronize active thread with messages in guest mode
@@ -939,6 +957,7 @@ export default function App() {
             ...settings,
             username: isLoggedIn ? (profileDisplayName || settings.username || "User") : "User"
           },
+          memories: memories
         }),
       });
 
@@ -1074,6 +1093,7 @@ export default function App() {
             ...settings,
             username: isLoggedIn ? (profileDisplayName || settings.username || "User") : "User"
           },
+          memories: memories
         }),
       });
 
@@ -1224,6 +1244,7 @@ export default function App() {
             ...settings,
             username: isLoggedIn ? (profileDisplayName || settings.username || "User") : "User"
           },
+          memories: memories
         }),
       });
 
@@ -1733,6 +1754,8 @@ export default function App() {
                   onSimulatePush={handleSimulatePush}
                   isPlus={isPlus}
                   setIsPlus={setIsPlus}
+                  memories={memories}
+                  onSaveMemories={handleSaveMemories}
                 />
               </React.Suspense>
             </div>
