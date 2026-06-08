@@ -1189,21 +1189,24 @@ export default function ChatArea({
     setEditingMessageId(null);
   };
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isInitialScrollMount = useRef(true);
 
   useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
     if (isInitialScrollMount.current) {
       isInitialScrollMount.current = false;
-      // Use instant auto scroll on mount if elements are ready, avoiding scrollIntoView layout calculations
-      if (messages.length > 0) {
-        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
-      }
+      container.scrollTop = container.scrollHeight;
       return;
     }
     
     const frameId = requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: "smooth"
+      });
     });
     
     return () => cancelAnimationFrame(frameId);
@@ -1355,7 +1358,7 @@ export default function ChatArea({
         </div>
 
         {/* Messages Stream Container */}
-        <div className={`flex-grow overflow-y-auto p-6 ${messages.length === 0 ? "flex flex-col items-center justify-center" : "space-y-6"}`}>
+        <div ref={scrollContainerRef} className={`flex-grow overflow-y-auto p-6 ${messages.length === 0 ? "flex flex-col items-center justify-center" : "space-y-6"}`}>
           {messages.length === 0 ? (
             
             // Clean stylized centered minimalist Maria welcome panel matching Screenshot 5 with beautiful center typography
@@ -1659,7 +1662,7 @@ export default function ChatArea({
                 </div>
               )}
 
-              <div ref={messagesEndRef} />
+
             </div>
           )}
         </div>
