@@ -389,11 +389,57 @@ Maaf sekali, Kak **${username}**. Layanan model asisten AI saat ini sedang menga
 
     const text = response.text || "Maaf, saya tidak dapat menghasilkan respon untuk saat ini.";
 
+    // Real-time automatic user memory generator & synthesizer
+    let updatedMemory = "";
+    try {
+      const existingMemoryStr = memories && Array.isArray(memories) && memories.length > 0 
+        ? (typeof memories[0] === "string" ? memories[0] : (memories[0].text || ""))
+        : "";
+
+      const completeHistoryForMemory = [
+        ...balancedHistory,
+        {
+          role: "model",
+          parts: [{ text: text }]
+        }
+      ];
+
+      const memoryPromptSystem = `Anda adalah Mesin NLP Sintesis Memori Maria. Tugas Anda adalah membaca seluruh riwayat percakapan antara Maria dan pengguna (${username}), serta ingatan lama jika ada, lalu menuliskan kembali SATU PARAGRAF tunggal padat, hangat, dan alami (maksimal 4 kalimat) dalam Bahasa Indonesia yang merangkum keseluruhan ingatan, fakta pribadi, preferensi, riwayat, atau cita-cita yang berhasil dipelajari tentang diri Kak ${username}.
+
+Aturan Mutlak Sintesis Memori:
+1. Mulailah kalimat pertama dengan: "Kak ${username} adalah..." atau "Kak ${username} bekerja di..." atau sejenisnya.
+2. Ingatan baru Kakak harus mencakup semua detail penting yang valid dari riwayat percakapan (seperti hobi, bahasa favorit, cita-cita, peliharaan, alergi, minat personal, dsb), serta menggabungkan informasi dari ingatan lama jika masih relevan.
+3. JANGAN mengada-ada atau berhalusinasi. Jika tidak ada fakta pribadi baru yang disebutkan dalam riwayat chat terbaru, pertahankan ingatan lama secara utuh atau kemas dengan kalimat yang lebih rapi.
+4. Output harus berupa SATU PARAGRAF murni tanpa label, tanda kutip ekstra, salam, atau penjelasan lainnya.
+5. Jika riwayat percakapan tidak mengandung fakta personal atau detail spesifik sama sekali tentang pengguna, dan ingatan lama kosong, kembalikan string kosong "".
+
+Ingatan lama saat ini: "${existingMemoryStr}"`;
+
+      console.log("Synthesizing unified memory paragraph...");
+      const memoryResult = await ai.models.generateContent({
+        model: "gemini-3.1-flash-lite",
+        contents: completeHistoryForMemory,
+        config: {
+          systemInstruction: memoryPromptSystem,
+          temperature: 0.2
+        }
+      });
+
+      if (memoryResult && memoryResult.text) {
+        updatedMemory = memoryResult.text.trim();
+        // Clean potential surrounding quotes or backticks
+        updatedMemory = updatedMemory.replace(/^["'`\s]+|["'`\s]+$/g, "");
+      }
+    } catch (memError) {
+      console.warn("Failed to automatically synthesize user memory paragraph:", memError);
+    }
+
     res.json({
       role: "assistant",
       content: text,
       timestamp: new Date().toISOString(),
       modelUsed: fallbackUsed,
+      updatedMemory: updatedMemory || undefined
     });
   } catch (error: any) {
     console.error("General API Error in /api/chat:", error);

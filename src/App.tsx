@@ -971,6 +971,21 @@ export default function App() {
           timestamp: data.timestamp || new Date().toISOString(),
         };
 
+        // Automate dynamic user memory update if returned from server
+        if (data.updatedMemory && isLoggedIn && auth.currentUser) {
+          const userRef = doc(db, "users", auth.currentUser.uid);
+          const newMemList = [{
+            id: "mem-unified",
+            text: data.updatedMemory,
+            category: "personal" as const,
+            timestamp: new Date().toISOString()
+          }];
+          setMemories(newMemList);
+          updateDoc(userRef, {
+            memories: newMemList
+          }).catch(() => {});
+        }
+
         if (isLoggedIn && auth.currentUser) {
           await setDoc(doc(db, "threads", currentThreadId, "messages", assistantMsg.id), {
             id: assistantMsg.id,
@@ -1106,6 +1121,21 @@ export default function App() {
           content: data.content,
           timestamp: data.timestamp || new Date().toISOString(),
         };
+
+        // Automate dynamic user memory update if returned from server
+        if (data.updatedMemory && isLoggedIn && auth.currentUser) {
+          const userRef = doc(db, "users", auth.currentUser.uid);
+          const newMemList = [{
+            id: "mem-unified",
+            text: data.updatedMemory,
+            category: "personal" as const,
+            timestamp: new Date().toISOString()
+          }];
+          setMemories(newMemList);
+          updateDoc(userRef, {
+            memories: newMemList
+          }).catch(() => {});
+        }
 
         if (isLoggedIn && auth.currentUser && activeThreadId) {
           await setDoc(doc(db, "threads", activeThreadId, "messages", assistantMsg.id), {
@@ -1715,6 +1745,7 @@ export default function App() {
             }>
               <DiscoverArea
                 settings={settings}
+                isLoggedIn={isLoggedIn}
                 onSelectAgent={handleSelectAgent}
                 onUsePrompt={handleUsePromptFormula}
                 onExit={() => setActiveView("chat")}

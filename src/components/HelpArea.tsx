@@ -17,6 +17,9 @@ import {
 } from "lucide-react";
 import { UserSettings } from "../types";
 
+import { db, auth } from "../firebase";
+import { collection, addDoc } from "firebase/firestore";
+
 interface FAQItem {
   id: string;
   question: string;
@@ -41,7 +44,7 @@ const FAQS: FAQItem[] = [
     id: "faq-2",
     category: "umum",
     question: "Apakah riwayat obrolan saya aman dan tersimpan?",
-    answer: "Sangat aman. Secara default, riwayat obrolan disimpan langsung di penyimpanan lokal peramban (localStorage) perangkat Anda. Apabila Anda masuk dengan Akun Google, seluruh riwayat percakapan dan preferensi Anda otomatis disinkronkan ke akun cloud Anda dengan enkripsi keamanan tingkat tinggi."
+    answer: "Sangat aman. Seluruh riwayat obrolan, preferensi profil, kreasi agen kustom, dan tiket bantuan Anda disimpan secara terenkripsi dan real-time langsung ke database Firebase Cloud milik Maria AI."
   },
   {
     id: "faq-3",
@@ -93,37 +96,34 @@ export default function HelpArea({ settings, onExit, onAddSystemNotification }: 
     setExpandedFaqId(expandedFaqId === id ? null : id);
   };
 
-  const handleSendTicket = (e: React.FormEvent) => {
+  const handleSendTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ticketSubject.trim() || !ticketMessage.trim()) return;
 
     setIsSubmitting(true);
     
-    // Simulate API request to support system
-    setTimeout(() => {
+    try {
+      // Save support ticket directly to Firestore under "support_tickets" collection
+      const newTicket = {
+        subject: ticketSubject.trim(),
+        message: ticketMessage.trim(),
+        email: ticketEmail.trim() || auth.currentUser?.email || "anonib@maria.ai",
+        userId: auth.currentUser?.uid || "guest",
+        timestamp: new Date().toISOString(),
+        status: "Sedang Ditinjau",
+        createdAt: new Date().toISOString()
+      };
+
+      await addDoc(collection(db, "support_tickets"), newTicket);
+
       setIsSubmitting(false);
       setTicketSuccess(true);
       if (onAddSystemNotification) {
         onAddSystemNotification(
           "Pusat Bantuan Maria AI",
-          "Masukan Anda berhasil dikirim! Tim kami akan meninjau pesan Anda secepatnya.",
+          "Masukan Anda berhasil dikirim langsung ke Firebase Cloud! Tim kami akan meninjau pesan Anda secepatnya.",
           "success"
         );
-      }
-      
-      // Save simulation ticket to localStorage
-      try {
-        const savedTickets = JSON.parse(localStorage.getItem("maria_support_tickets") || "[]");
-        savedTickets.push({
-          subject: ticketSubject,
-          message: ticketMessage,
-          email: ticketEmail || "anonim@maria.ai",
-          timestamp: new Date().toISOString(),
-          status: "Sedang Ditinjau"
-        });
-        localStorage.setItem("maria_support_tickets", JSON.stringify(savedTickets));
-      } catch (err) {
-        console.error("Local storage ticket failure", err);
       }
 
       // Reset form
@@ -133,7 +133,11 @@ export default function HelpArea({ settings, onExit, onAddSystemNotification }: 
       
       // Clear success alert after 4s
       setTimeout(() => setTicketSuccess(false), 4000);
-    }, 1200);
+    } catch (err) {
+      console.error("Gagal mengirim tiket ke Firestore", err);
+      setIsSubmitting(false);
+      alert("Gagal mengirim tiket bantuan. Silakan coba kembali.");
+    }
   };
 
   return (

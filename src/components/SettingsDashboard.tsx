@@ -691,165 +691,72 @@ export default function SettingsDashboard({
                       </div>
                     )}
                   </div>
-
-                  <div className="pt-3 border-t border-zinc-900/40 flex items-center justify-between">
-                    <div className="space-y-0.5 max-w-[280px]">
-                      <span className="text-zinc-200 font-semibold text-[11px] block">Hapus Data Lokal Browser (LocalStorage)</span>
-                      <span className="text-[9.5px] text-zinc-400 block leading-tight">Kosongkan semua preferensi, tema, sesi, dan data cache yang tersimpan di browser Anda.</span>
-                    </div>
-
-                    {!isConfirmingLocalClear ? (
-                      <button
-                        type="button"
-                        onClick={() => setIsConfirmingLocalClear(true)}
-                        className="px-3.5 py-1.5 bg-amber-950/40 hover:bg-amber-900/30 text-amber-400 border border-amber-500/15 rounded-xl text-[10.5px] font-bold cursor-pointer transition-colors"
-                      >
-                        Hapus Data Lokal
-                      </button>
-                    ) : (
-                      <div className="flex items-center gap-1.5 animate-fade-in duration-150">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            localStorage.clear();
-                            sessionStorage.clear();
-                            setIsConfirmingLocalClear(false);
-                            window.location.reload();
-                          }}
-                          className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[10px] font-extrabold cursor-pointer"
-                        >
-                          Ya, Bersihkan & Reload
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setIsConfirmingLocalClear(false)}
-                          className="px-3 py-1.5 bg-zinc-900 text-zinc-400 rounded-lg text-[10px] font-semibold cursor-pointer"
-                        >
-                          Batal
-                        </button>
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
             )}
 
             {/* 7. LONG-TERM MEMORIES */}
             {activeTab === "memories" && (
-              <div className="space-y-4 max-w-xl duration-150 font-sans">
+              <div className="space-y-5 max-w-xl duration-150 font-sans">
                 <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-zinc-200 font-sans">Memori Jangka Panjang</h3>
+                  <h3 className="text-sm font-semibold text-zinc-200 font-sans">Ingatan Jangka Panjang Terpadu</h3>
                   <p className="text-[10px] text-zinc-500 leading-normal">
-                    Tuliskan fakta penting tentang diri Kakak (seperti cita-cita, peliharaan, alergi, hobi, atau preferensi bahasa) agar Maria selalu mengingatnya dan sinkron secara realtime ke Firestore database.
+                    Maria merekam secara otomatis hal penting tentang diri Kakak (seperti cita-cita, kepribadian, hobi, atau preferensi lainnya) langsung dari percakapan obrolan harian Anda dan menyimpannya dalam satu ingatan terpadu yang sinkron ke Firebase Cloud.
                   </p>
                 </div>
 
-                {/* ADD MEMORY INLINE FORM */}
-                <form onSubmit={handleAddMemory} className="bg-[#161617] rounded-2xl p-4 border border-zinc-900/60 shadow-xs space-y-3">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Fakta Baru Tentang Saya</label>
-                    <input 
-                      type="text"
-                      value={newMemoryText}
-                      onChange={(e) => setNewMemoryText(e.target.value)}
-                      placeholder="e.g. Saya sangat suka minum kopi susu aren dingin / Saya sedang belajar React Native"
-                      maxLength={150}
-                      className="w-full px-3 py-2 bg-zinc-950 border border-zinc-900 rounded-xl text-xs text-white placeholder-zinc-600 focus:outline-hidden focus:ring-1 focus:ring-zinc-800 transition-all font-sans"
-                    />
+                {memories.length === 0 || !memories[0]?.text ? (
+                  <div className="bg-[#161617]/40 rounded-2xl p-8 border border-dashed border-zinc-900/50 flex flex-col items-center justify-center text-center space-y-3">
+                    <Brain className="w-8 h-8 text-zinc-600 animate-pulse" />
+                    <p className="text-[11px] text-zinc-400 font-sans leading-relaxed max-w-sm">
+                      Ingatannya Maria saat ini masih bersih & kosong.
+                    </p>
+                    <p className="text-[9.5px] text-zinc-600 max-w-xs">
+                      Silakan kirim pesan atau mengobrol santai dengannya! Maria akan menganalisis percakapan secara otomatis dan mulai mengabadikan ingatan terpadu tentang Kakak di sini.
+                    </p>
                   </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="bg-gradient-to-br from-[#12131a] to-[#161720] border border-zinc-800/60 rounded-2xl p-5 shadow-2xl relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl" />
+                      
+                      <div className="flex items-center gap-2 mb-3">
+                        <Brain className="w-4 h-4 text-indigo-400 animate-pulse" />
+                        <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Memori Terpadu Maria</span>
+                      </div>
 
-                  <div className="flex items-center justify-between gap-3 pt-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider shrink-0">Kategori:</span>
-                      <select
-                        value={newMemoryCategory}
-                        onChange={(e) => setNewMemoryCategory(e.target.value as any)}
-                        className="bg-[#0d0d0e] border border-zinc-900 rounded-lg text-[10.5px] text-zinc-300 px-2 py-1 focus:outline-hidden cursor-pointer"
-                      >
-                        <option value="personal">Profil & Fakta</option>
-                        <option value="preferences">Kesukaan & Minat</option>
-                        <option value="work">Karir & Edukasi</option>
-                        <option value="other">Lain-lain</option>
-                      </select>
-                    </div>
+                      <div className="text-xs text-zinc-200 leading-relaxed italic bg-zinc-950/40 p-4 border border-zinc-900 rounded-xl font-sans">
+                        &ldquo;{memories[0].text}&rdquo;
+                      </div>
 
-                    <button
-                      type="submit"
-                      disabled={!newMemoryText.trim()}
-                      className="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-850 disabled:opacity-40 text-white rounded-xl text-[10.5px] font-extrabold cursor-pointer border border-zinc-800 transition-colors"
-                    >
-                      Simpan Memori
-                    </button>
-                  </div>
-                </form>
-
-                {/* CURRENT MEMORIES CONTAINER */}
-                <div className="space-y-2">
-                  <h4 className="text-[10px] uppercase font-extrabold text-zinc-500 tracking-wider">Koleksi Memori Terdaftar ({memories.length})</h4>
-
-                  {memories.length === 0 ? (
-                    <div className="bg-[#161617]/40 rounded-2xl p-6 border border-dashed border-zinc-900/50 flex flex-col items-center justify-center text-center space-y-2">
-                      <Brain className="w-6 h-6 text-zinc-600 animate-pulse" />
-                      <p className="text-[10.5px] text-zinc-500 font-sans leading-relaxed max-w-sm">
-                        Belum ada memori terdaftar. Tulis sebuah fakta di atas agar Maria dapat mengenal dan memahami Kakak secara personal di luar batas riwayat chat!
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-[280px] overflow-y-auto no-scrollbar pr-0.5">
-                      {memories.map((m) => (
-                        <div 
-                          key={m.id}
-                          className="bg-[#161617] rounded-xl p-3 border border-zinc-900/60 flex items-start justify-between gap-3.5 hover:border-zinc-800/40 transition-all group duration-150"
+                      <div className="flex items-center justify-between mt-3 text-[9px] text-zinc-500">
+                        <span>
+                          Terakhir Diperbarui: {memories[0].timestamp ? new Date(memories[0].timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : "Baru saja"}
+                        </span>
+                        
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm("Apakah Kakak yakin ingin mengosongkan seluruh memori jangka panjang Maria? Maria akan melupakan semua detail personal tentang Kakak.")) {
+                              if (onSaveMemories) onSaveMemories([]);
+                            }
+                          }}
+                          className="px-2.5 py-1 rounded bg-red-950/20 hover:bg-red-900/30 text-red-400 hover:text-white border border-red-900/10 font-bold transition-all cursor-pointer flex items-center gap-1"
                         >
-                          <div className="space-y-1.5 flex-1 select-none">
-                            <span className="text-zinc-200 text-[11px] leading-relaxed font-sans block">{m.text}</span>
-                            <div className="flex items-center gap-2">
-                              {m.category === "personal" && (
-                                <span className="px-1.5 py-0.5 rounded-md text-[8.5px] font-bold uppercase tracking-wider bg-teal-500/15 text-teal-400 border border-teal-500/20">
-                                  Profil & Fakta
-                                </span>
-                              )}
-                              {m.category === "preferences" && (
-                                <span className="px-1.5 py-0.5 rounded-md text-[8.5px] font-bold uppercase tracking-wider bg-fuchsia-500/15 text-fuchsia-400 border border-fuchsia-500/12">
-                                  Minat Saya
-                                </span>
-                              )}
-                              {m.category === "work" && (
-                                <span className="px-1.5 py-0.5 rounded-md text-[8.5px] font-bold uppercase tracking-wider bg-sky-500/15 text-sky-400 border border-sky-500/20">
-                                  Edukasi/Karir
-                                </span>
-                              )}
-                              {m.category === "other" && (
-                                <span className="px-1.5 py-0.5 rounded-md text-[8.5px] font-bold uppercase tracking-wider bg-zinc-500/15 text-zinc-400 border border-zinc-500/15">
-                                  Lain-lain
-                                </span>
-                              )}
-                              <span className="text-[8.5px] text-zinc-500 font-mono">
-                                {m.timestamp ? new Date(m.timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : 'Baru'}
-                              </span>
-                            </div>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteMemory(m.id)}
-                            className="p-1 px-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-950/20 rounded-lg border border-transparent hover:border-red-950/10 cursor-pointer transition-all self-center md:opacity-0 group-hover:opacity-100"
-                            title="Hapus Memori"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
+                          <Trash2 className="w-2.5 h-2.5" />
+                          <span>Bersihkan Memori</span>
+                        </button>
+                      </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 {/* SINKRONISASI BANNER */}
-                <div className="bg-[#161617]/30 border border-zinc-900/40 p-3 rounded-2xl flex items-center gap-3">
+                <div className="bg-[#161617]/30 border border-zinc-900/40 p-3.5 rounded-2xl flex items-center gap-3">
                   <Database className="w-4 h-4 text-emerald-500 shrink-0" />
                   <div className="space-y-0.5">
-                    <span className="text-[10.5px] font-bold text-zinc-300 block">Sinkronisasi Realtime Aktif</span>
-                    <span className="text-[9px] text-zinc-500 leading-tight block">Tiap penambahan, edit, dan penghapusan sinkron langsung dengan basis data Firestore Kakak secara otomatis dan instan.</span>
+                    <span className="text-[10.5px] font-bold text-zinc-300 block">Autopilot Sinkronisasi Cloud Aktif</span>
+                    <span className="text-[9px] text-zinc-500 leading-tight block">Pembentukan ingatan terpadu Maria berjalan di belakang layar secara cerdas dan sinkron langsung ke database Firebase.</span>
                   </div>
                 </div>
 
