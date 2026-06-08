@@ -556,6 +556,29 @@ export default function App() {
     } catch (err: any) {
       console.error(err);
       let message = err.message || String(err);
+      
+      const isCoopOrIframeIssue = 
+        message.includes("Cross-Origin-Opener-Policy") || 
+        err.code === "auth/popup-blocked" ||
+        err.code === "auth/cancelled-popup-request" ||
+        message?.toUpperCase()?.includes("COOP") ||
+        message?.toUpperCase()?.includes("POPUP-BLOCKED") ||
+        message?.toUpperCase()?.includes("CLOSED-BY-USER");
+
+      if (isCoopOrIframeIssue) {
+        message = "Pop-up login diblokir kebijakan browser (COOP/Iframe). Mengalihkan Anda secara otomatis ke Google Login via Redirect...";
+        setAuthLocalError(message);
+        setIsProfileOpen(true);
+        setTimeout(() => {
+          signInWithRedirect(auth, googleProvider).catch((redirErr: any) => {
+            console.error("Redirect fallback error:", redirErr);
+            setAuthLocalError(`Gagal redirect: ${redirErr.message}`);
+            setIsAuthenticating(false);
+          });
+        }, 2000);
+        return;
+      }
+
       if (err.code === "auth/unauthorized-domain") {
         message = `Gagal: Domain '${window.location.hostname}' belum diizinkan oleh Firebase Console Anda.`;
       } else if (err.code === "auth/popup-blocked") {

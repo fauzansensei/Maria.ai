@@ -504,6 +504,29 @@ export default function AuxiliaryModals({
                         } catch (err: any) {
                           console.error("Popup sign in error:", err);
                           let message = err.message || String(err);
+                          
+                          // Detect Cross-Origin-Opener-Policy or iframe block issues
+                          const isCoopOrIframeIssue = 
+                            message.includes("Cross-Origin-Opener-Policy") || 
+                            err.code === "auth/popup-blocked" ||
+                            err.code === "auth/cancelled-popup-request" ||
+                            message?.toUpperCase()?.includes("COOP") ||
+                            message?.toUpperCase()?.includes("POPUP-BLOCKED") ||
+                            message?.toUpperCase()?.includes("CLOSED-BY-USER");
+
+                          if (isCoopOrIframeIssue) {
+                            message = "Pop-up login terhalang kebijakan browser (COOP/Iframe). Mengalihkan Anda secara otomatis ke Google Login via Redirect dalam 2 detik...";
+                            setAuthLocalError(message);
+                            setTimeout(() => {
+                              signInWithRedirect(auth, googleProvider).catch((redirErr: any) => {
+                                console.error("Redirect sign in error:", redirErr);
+                                setAuthLocalError(`Gagal redirect: ${redirErr.message}`);
+                                setIsAuthenticating(false);
+                              });
+                            }, 2000);
+                            return;
+                          }
+
                           if (err.code === "auth/unauthorized-domain") {
                             message = `Gagal: Domain '${window.location.hostname}' belum diizinkan oleh Firebase Console Anda.`;
                           } else if (err.code === "auth/popup-blocked") {
@@ -527,7 +550,27 @@ export default function AuxiliaryModals({
                           <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.08l3.66 2.82c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
                         </svg>
                       </div>
-                      <span>Masuk dengan Google</span>
+                      <span>Masuk dengan Google (Popup)</span>
+                    </button>
+
+                    {/* Dedicated fallback Google sign in via redirect */}
+                    <button
+                      type="button"
+                      disabled={isAuthenticating}
+                      onClick={async () => {
+                        setAuthLocalError(null);
+                        setIsAuthenticating(true);
+                        try {
+                          await signInWithRedirect(auth, googleProvider);
+                        } catch (err: any) {
+                          console.error("Redirect sign in error:", err);
+                          setAuthLocalError(`Gagal redirect: ${err.message || err}`);
+                          setIsAuthenticating(false);
+                        }
+                      }}
+                      className="w-full max-w-[280px] h-9 gap-2 flex items-center justify-center bg-slate-800 hover:bg-slate-700 text-zinc-100 font-sans font-semibold rounded-xl transition-all shadow-md active:scale-975 cursor-pointer disabled:opacity-50 text-[10.5px]"
+                    >
+                      <span>🔄 Masuk dengan Google (Mode Redirect)</span>
                     </button>
 
                     <button
