@@ -204,9 +204,10 @@ Pastikan nama aplikasi/platform sangat ringkas, dan link URL-nya valid, lengkap 
     }
 
     const modelsToTry = [
+      "gemini-2.5-flash",
+      "gemini-3.5-flash",
       "gemini-3.1-flash-lite", 
       "gemini-flash-latest",
-      "gemini-3.5-flash",
       "gemini-3.1-pro-preview"
     ];
     let response = null;
