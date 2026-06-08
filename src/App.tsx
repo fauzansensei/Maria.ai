@@ -33,10 +33,6 @@ import {
   getDocs
 } from "firebase/firestore";
 
-// Statically import primary main-screen components to avoid double-flicker loading states, sequentially blocked network waterfalls, and LCP/CLS degradation
-import Sidebar from "./components/Sidebar";
-import ChatArea from "./components/ChatArea";
-
 // Helper to dynamically load components with automatic page reload upon chunk loading errors (such as outdated chunk hashes)
 function lazyWithRetry(importFn: () => Promise<any>) {
   return React.lazy(async () => {
@@ -74,6 +70,8 @@ function lazyWithRetry(importFn: () => Promise<any>) {
   });
 }
 
+const Sidebar = lazyWithRetry(() => import("./components/Sidebar"));
+const ChatArea = lazyWithRetry(() => import("./components/ChatArea"));
 const CookiePolicyModal = lazyWithRetry(() => import("./components/CookiePolicyModal"));
 const SettingsDashboard = lazyWithRetry(() => import("./components/SettingsDashboard"));
 const DiscoverArea = lazyWithRetry(() => import("./components/DiscoverArea"));

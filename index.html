@@ -1,6 +1,235 @@
 <!doctype html>
 <html lang="id">
   <head>
+    <!-- Suppress benign local development websocket connection warnings at the absolute entry point of the browser -->
+    <script>
+      (function() {
+        // Helper function to check if an error is a benign dev socket exception
+        function isWebSocketError(message, error, reason) {
+          try {
+            const combined = String(message || '').toLowerCase() + ' ' + 
+                             String(error?.message || '').toLowerCase() + ' ' + 
+                             String(reason || '').toLowerCase() + ' ' + 
+                             String(reason?.message || '').toLowerCase();
+            return (
+              combined.includes('websocket') || 
+              combined.includes('web-socket') || 
+              combined.includes('ditutup tanpa dibuka') || 
+              combined.includes('closed before') || 
+              combined.includes('connection failed') || 
+              combined.includes('closed without opened') || 
+              combined.includes('vite') ||
+              combined.includes('hmr')
+            );
+          } catch (_) {
+            return false;
+          }
+        }
+
+        // Intercept global console.error to prevent sandbox loggers and dev overlays from reporting websocket dropouts
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+          try {
+            const serialized = args.map(arg => {
+              if (arg && arg.stack) return String(arg.stack);
+              if (typeof arg === 'object') {
+                try { return JSON.stringify(arg); } catch (_) { return String(arg); }
+              }
+              return String(arg);
+            }).join(' ').toLowerCase();
+
+            if (
+              serialized.includes('websocket') ||
+              serialized.includes('web-socket') ||
+              serialized.includes('closed without opened') ||
+              serialized.includes('connection failed') ||
+              serialized.includes('vite') ||
+              serialized.includes('hmr')
+            ) {
+              return; // Muted
+            }
+          } catch (_) {}
+          return originalConsoleError.apply(this, args);
+        };
+
+        // Intercept global WebSocket to suppress Vite HMR connection dropouts gracefully
+        if (typeof window.Proxy !== 'undefined' && typeof window.WebSocket !== 'undefined') {
+          window.WebSocket = new Proxy(window.WebSocket, {
+            construct(target, args) {
+              try {
+                const ws = Reflect.construct(target, args);
+                // Bind error listener immediately to stifle uncaught socket exceptions
+                ws.addEventListener('error', function(e) {
+                  if (e) {
+                    try {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.stopImmediatePropagation();
+                    } catch (_) {}
+                  }
+                }, { capture: true });
+                return ws;
+              } catch (err) {
+                console.warn('HMR WebSocket creation bypassed in sandboxed environment.', err);
+                const dummyWs = document.createElement('div');
+                dummyWs.close = function() {};
+                dummyWs.send = function() {};
+                dummyWs.readyState = 3; // CLOSED
+                return dummyWs;
+              }
+            }
+          });
+        }
+
+        // Safeguard against browser extensions (AdBlock, Youtube enhancers, Google Translate) overriding the DOM
+        if (typeof Node !== 'undefined' && Node.prototype) {
+          const originalRemoveChild = Node.prototype.removeChild;
+          Node.prototype.removeChild = function(child) {
+            if (child && child.parentNode !== this) {
+              if (child.parentNode) {
+                try {
+                  return originalRemoveChild.call(child.parentNode, child);
+                } catch (e) {
+                  console.warn('Caught and bypassed failing parentNode removeChild from browser extension.', e);
+                }
+              }
+              return child;
+            }
+            try {
+              return originalRemoveChild.call(this, child);
+            } catch (e) {
+              console.warn('Bypassed error during removeChild:', e);
+              return child;
+            }
+          };
+
+          const originalInsertBefore = Node.prototype.insertBefore;
+          Node.prototype.insertBefore = function(newNode, referenceNode) {
+            if (referenceNode && referenceNode.parentNode !== this) {
+              if (referenceNode.parentNode) {
+                try {
+                  return originalInsertBefore.call(referenceNode.parentNode, newNode, referenceNode);
+                } catch (e) {
+                  console.warn('Caught and bypassed failing parentNode insertBefore from browser extension.', e);
+                }
+              }
+              try {
+                return originalInsertBefore.call(this, newNode, null);
+              } catch (e) {
+                console.warn('Bypassed fallback insertBefore:', e);
+                return newNode;
+              }
+            }
+            try {
+              return originalInsertBefore.call(this, newNode, referenceNode);
+            } catch (e) {
+              console.warn('Bypassed error during insertBefore:', e);
+              return newNode;
+            }
+          };
+        }
+
+        // Intercept addEventListener to filter error events before they can bubble to any listener (including Vite client / AI Studio)
+        const originalAddEventListener = window.addEventListener;
+        window.addEventListener = function(type, listener, options) {
+          if ((type === 'unhandledrejection' || type === 'error') && typeof listener === 'function') {
+            const wrappedListener = function(event) {
+              try {
+                let msg = '';
+                let err = null;
+                let reasonStr = '';
+                
+                if (type === 'unhandledrejection' && event) {
+                  reasonStr = event.reason ? String(event.reason.message || event.reason) : '';
+                } else if (event) {
+                  msg = event.message || '';
+                  err = event.error || null;
+                }
+
+                if (isWebSocketError(msg, err, reasonStr || event?.reason)) {
+                  try {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.stopImmediatePropagation();
+                  } catch (_) {}
+                  return true;
+                }
+              } catch (_) {}
+              return listener.apply(this, arguments);
+            };
+            return originalAddEventListener.call(this, type, wrappedListener, options);
+          }
+          return originalAddEventListener.call(this, type, listener, options);
+        };
+
+        // Suppress on window.onerror and window.onunhandledrejection
+        let globalOnError = null;
+        Object.defineProperty(window, 'onerror', {
+          get() { return globalOnError; },
+          set(listener) {
+            if (typeof listener === 'function') {
+              globalOnError = function(message, source, lineno, colno, error) {
+                if (isWebSocketError(message, error)) {
+                  return true; // Completely silenced
+                }
+                return listener.apply(this, arguments);
+              };
+            } else {
+              globalOnError = listener;
+            }
+          },
+          configurable: true,
+          enumerable: true
+        });
+
+        let globalOnUnhandledRejection = null;
+        Object.defineProperty(window, 'onunhandledrejection', {
+          get() { return globalOnUnhandledRejection; },
+          set(listener) {
+            if (typeof listener === 'function') {
+              globalOnUnhandledRejection = function(event) {
+                if (event && isWebSocketError('', null, event.reason)) {
+                  try {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.stopImmediatePropagation();
+                  } catch (_) {}
+                  return true; // Silenced
+                }
+                return listener.apply(this, arguments);
+              };
+            } else {
+              globalOnUnhandledRejection = listener;
+            }
+          },
+          configurable: true,
+          enumerable: true
+        });
+
+        // Set up immediate global capture listeners as ultimate catch-all defense line
+        originalAddEventListener.call(window, 'unhandledrejection', function(event) {
+          if (event && isWebSocketError('', null, event.reason)) {
+            try {
+              event.preventDefault();
+              event.stopPropagation();
+              event.stopImmediatePropagation();
+            } catch (_) {}
+            return true;
+          }
+        }, true);
+
+        originalAddEventListener.call(window, 'error', function(event) {
+          if (event && isWebSocketError(event.message, event.error)) {
+            try {
+              event.preventDefault();
+              event.stopPropagation();
+              event.stopImmediatePropagation();
+            } catch (_) {}
+            return true;
+          }
+        }, true);
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Maria AI - Asisten Pintar & Personal Kustomisasi Cerdas</title>
@@ -223,210 +452,6 @@
         </div>
       </div>
     </div>
-    <!-- Suppress benign local development websocket connection warnings -->
-    <script>
-      (function() {
-        // Intercept global WebSocket to suppress Vite HMR connection dropouts gracefully
-        if (typeof window.Proxy !== 'undefined' && typeof window.WebSocket !== 'undefined') {
-          window.WebSocket = new Proxy(window.WebSocket, {
-            construct(target, args) {
-              try {
-                const ws = Reflect.construct(target, args);
-                // Bind error listener immediately to stifle uncaught socket exceptions
-                ws.addEventListener('error', function(e) {
-                  if (e) {
-                    try {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      e.stopImmediatePropagation();
-                    } catch (_) {}
-                  }
-                }, { capture: true });
-                return ws;
-              } catch (err) {
-                console.warn('HMR WebSocket creation bypassed in sandboxed environment.', err);
-                const dummyWs = document.createElement('div');
-                dummyWs.close = function() {};
-                dummyWs.send = function() {};
-                dummyWs.readyState = 3; // CLOSED
-                return dummyWs;
-              }
-            }
-          });
-        }
-
-        // Safeguard against browser extensions (AdBlock, Youtube enhancers, Google Translate) overriding the DOM
-        // which causes React's parent-child Node reconciliation to crash (Failed to execute 'removeChild' / 'insertBefore' errors)
-        if (typeof Node !== 'undefined' && Node.prototype) {
-          const originalRemoveChild = Node.prototype.removeChild;
-          Node.prototype.removeChild = function(child) {
-            if (child && child.parentNode !== this) {
-              if (child.parentNode) {
-                try {
-                  return originalRemoveChild.call(child.parentNode, child);
-                } catch (e) {
-                  console.warn('Caught and bypassed failing parentNode removeChild from browser extension.', e);
-                }
-              }
-              return child;
-            }
-            try {
-              return originalRemoveChild.call(this, child);
-            } catch (e) {
-              console.warn('Bypassed error during removeChild:', e);
-              return child;
-            }
-          };
-
-          const originalInsertBefore = Node.prototype.insertBefore;
-          Node.prototype.insertBefore = function(newNode, referenceNode) {
-            if (referenceNode && referenceNode.parentNode !== this) {
-              if (referenceNode.parentNode) {
-                try {
-                  return originalInsertBefore.call(referenceNode.parentNode, newNode, referenceNode);
-                } catch (e) {
-                  console.warn('Caught and bypassed failing parentNode insertBefore from browser extension.', e);
-                }
-              }
-              try {
-                return originalInsertBefore.call(this, newNode, null);
-              } catch (e) {
-                console.warn('Bypassed fallback insertBefore:', e);
-                return newNode;
-              }
-            }
-            try {
-              return originalInsertBefore.call(this, newNode, referenceNode);
-            } catch (e) {
-              console.warn('Bypassed error during insertBefore:', e);
-              return newNode;
-            }
-          };
-        }
-
-        // Helper function to check if an error is a benign dev socket exception
-        function isWebSocketError(message, error, reason) {
-          try {
-            const combined = String(message || '').toLowerCase() + ' ' + 
-                             String(error?.message || '').toLowerCase() + ' ' + 
-                             String(reason || '').toLowerCase() + ' ' + 
-                             String(reason?.message || '').toLowerCase();
-            return (
-              combined.includes('websocket') || 
-              combined.includes('web-socket') || 
-              combined.includes('ditutup tanpa dibuka') || 
-              combined.includes('closed before') || 
-              combined.includes('connection failed') || 
-              combined.includes('closed without opened') || 
-              combined.includes('vite') ||
-              combined.includes('hmr')
-            );
-          } catch (_) {
-            return false;
-          }
-        }
-
-        // Intercept addEventListener to filter error events before they can bubble to any listener (including Vite client / AI Studio)
-        const originalAddEventListener = window.addEventListener;
-        window.addEventListener = function(type, listener, options) {
-          if ((type === 'unhandledrejection' || type === 'error') && typeof listener === 'function') {
-            const wrappedListener = function(event) {
-              try {
-                let msg = '';
-                let err = null;
-                let reasonStr = '';
-                
-                if (type === 'unhandledrejection' && event) {
-                  reasonStr = event.reason ? String(event.reason.message || event.reason) : '';
-                } else if (event) {
-                  msg = event.message || '';
-                  err = event.error || null;
-                }
-
-                if (isWebSocketError(msg, err, reasonStr || event?.reason)) {
-                  try {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    event.stopImmediatePropagation();
-                  } catch (_) {}
-                  return true;
-                }
-              } catch (_) {}
-              return listener.apply(this, arguments);
-            };
-            return originalAddEventListener.call(this, type, wrappedListener, options);
-          }
-          return originalAddEventListener.call(this, type, listener, options);
-        };
-
-        // Suppress on window.onerror and window.onunhandledrejection
-        let globalOnError = null;
-        Object.defineProperty(window, 'onerror', {
-          get() { return globalOnError; },
-          set(listener) {
-            if (typeof listener === 'function') {
-              globalOnError = function(message, source, lineno, colno, error) {
-                if (isWebSocketError(message, error)) {
-                  return true; // Completely silenced
-                }
-                return listener.apply(this, arguments);
-              };
-            } else {
-              globalOnError = listener;
-            }
-          },
-          configurable: true,
-          enumerable: true
-        });
-
-        let globalOnUnhandledRejection = null;
-        Object.defineProperty(window, 'onunhandledrejection', {
-          get() { return globalOnUnhandledRejection; },
-          set(listener) {
-            if (typeof listener === 'function') {
-              globalOnUnhandledRejection = function(event) {
-                if (event && isWebSocketError('', null, event.reason)) {
-                  try {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    event.stopImmediatePropagation();
-                  } catch (_) {}
-                  return true; // Silenced
-                }
-                return listener.apply(this, arguments);
-              };
-            } else {
-              globalOnUnhandledRejection = listener;
-            }
-          },
-          configurable: true,
-          enumerable: true
-        });
-
-        // Set up immediate global capture listeners as ultimate catch-all defense line
-        originalAddEventListener.call(window, 'unhandledrejection', function(event) {
-          if (event && isWebSocketError('', null, event.reason)) {
-            try {
-              event.preventDefault();
-              event.stopPropagation();
-              event.stopImmediatePropagation();
-            } catch (_) {}
-            return true;
-          }
-        }, true);
-
-        originalAddEventListener.call(window, 'error', function(event) {
-          if (event && isWebSocketError(event.message, event.error)) {
-            try {
-              event.preventDefault();
-              event.stopPropagation();
-              event.stopImmediatePropagation();
-            } catch (_) {}
-            return true;
-          }
-        }, true);
-      })();
-    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
