@@ -38,6 +38,12 @@
 
     <!-- GPU-Accelerated Inline Critical CSS for instantaneous loading performance (0.1-0.2s FCP) -->
     <style id="critical-skeleton-css">
+      vite-error-overlay, [id^="vite-error-overlay"] {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+      }
       body {
         margin: 0;
         font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;

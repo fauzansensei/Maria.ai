@@ -77,6 +77,11 @@ export default function SettingsDashboard({
   const [elevenlabsVoiceId, setElevenlabsVoiceId] = useState(settings.elevenlabsVoiceId || "EXAVITQu4vr4xnSDxMaL");
   const [elevenlabsVoiceModel, setElevenlabsVoiceModel] = useState(settings.elevenlabsVoiceModel || "eleven_flash_v2_5");
 
+  // Local notification preferences states
+  const [soundEnabled, setSoundEnabled] = useState(settings.notifications?.soundEnabled ?? true);
+  const [statusUpdates, setStatusUpdates] = useState(settings.notifications?.statusUpdates ?? true);
+  const [remindersEnabled, setRemindersEnabled] = useState(settings.notifications?.remindersEnabled ?? true);
+
   const [saveBannerText, setSaveBannerText] = useState<string | null>(null);
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
   const [isConfirmingLocalClear, setIsConfirmingLocalClear] = useState(false);
@@ -130,9 +135,9 @@ export default function SettingsDashboard({
       theme: targetTheme,
       widgets: settings.widgets,
       notifications: {
-        soundEnabled: settings.notifications?.soundEnabled ?? true,
-        statusUpdates: settings.notifications?.statusUpdates ?? true,
-        remindersEnabled: settings.notifications?.remindersEnabled ?? true,
+        soundEnabled: updates.notifications?.soundEnabled !== undefined ? updates.notifications.soundEnabled : soundEnabled,
+        statusUpdates: updates.notifications?.statusUpdates !== undefined ? updates.notifications.statusUpdates : statusUpdates,
+        remindersEnabled: updates.notifications?.remindersEnabled !== undefined ? updates.notifications.remindersEnabled : remindersEnabled,
       },
       elevenlabsApiKey: updates.elevenlabsApiKey !== undefined ? updates.elevenlabsApiKey : elevenlabsApiKey,
       elevenlabsVoiceId: updates.elevenlabsVoiceId !== undefined ? updates.elevenlabsVoiceId : elevenlabsVoiceId,
@@ -191,7 +196,7 @@ export default function SettingsDashboard({
           {activeTab === "profile" && "Profil"}
           {activeTab === "appearance" && "Tampilan & Tema"}
           {activeTab === "behavior" && "Perilaku Asisten"}
-          {activeTab === "notifications" && "Suara & Notifikasi"}
+          {activeTab === "notifications" && "Notifikasi"}
           {activeTab === "billing" && "Langganan Plus"}
           {activeTab === "privacy" && "Privasi & Data"}
         </h2>
@@ -226,7 +231,7 @@ export default function SettingsDashboard({
                 { id: "appearance", label: "Tampilan & Tema", icon: Palette },
                 { id: "behavior", label: "Perilaku Asisten", icon: Sliders },
                 { id: "memories", label: "Memori Maria", icon: Brain },
-                { id: "notifications", label: "Suara & Notifikasi", icon: Bell },
+                { id: "notifications", label: "Notifikasi Sistem", icon: Bell },
                 { id: "billing", label: "Langganan Plus", icon: CreditCard },
                 { id: "privacy", label: "Data & Privasi", icon: Database },
               ].map((tab) => {
@@ -291,7 +296,7 @@ export default function SettingsDashboard({
               {activeTab === "appearance" && "Kustomisasi Tema & Tampilan"}
               {activeTab === "behavior" && "Perilaku & Gaya Berbicara Maria AI"}
               {activeTab === "memories" && "Memori Jangka Panjang Maria AI"}
-              {activeTab === "notifications" && "Integrasi Suara & Simulasi Notifikasi"}
+              {activeTab === "notifications" && "Pengaturan & Simulasi Notifikasi"}
               {activeTab === "billing" && "Kelola Paket Maria Plus"}
               {activeTab === "privacy" && "Kerahasiaan & Kontrol Database"}
             </h2>
@@ -479,72 +484,68 @@ export default function SettingsDashboard({
               </div>
             )}
 
-            {/* 4. NOTIFICATIONS & VOICE */}
+            {/* 4. NOTIFICATIONS */}
             {activeTab === "notifications" && (
               <div className="space-y-4 max-w-xl duration-150 font-sans">
-                <h3 className="text-sm font-semibold text-zinc-200">Suara & Notifikasi</h3>
+                <h3 className="text-sm font-semibold text-zinc-200">Notifikasi Sistem</h3>
                 <div className="bg-[#161617] rounded-2xl p-4.5 border border-zinc-900/60 space-y-4">
                   
-                  {/* Voice toggle */}
+                  {/* Sound enabled toggle */}
                   <div className="flex items-center justify-between pb-3 border-b border-zinc-900/35">
                     <div className="space-y-0.5">
-                      <span className="text-zinc-100 font-medium text-[11.5px] block">Aktifkan Respon Suara AI</span>
-                      <span className="text-[10px] text-zinc-500 block leading-tight">Gunakan teks-ke-suara ElevenLabs harian.</span>
+                      <span className="text-zinc-100 font-medium text-[11.5px] block">Pemberitahuan Suara</span>
+                      <span className="text-[10px] text-zinc-500 block leading-tight">Bunyi efek suara lembut saat pesan dikirim atau diterima secara berkala.</span>
                     </div>
                     <div
                       onClick={() => {
-                        const next = !voiceEnabled;
-                        setVoiceEnabled(next);
-                        triggerSave({ voiceEnabled: next });
+                        const next = !soundEnabled;
+                        setSoundEnabled(next);
+                        triggerSave({ notifications: { soundEnabled: next, statusUpdates, remindersEnabled } });
                       }}
-                      className={`w-9 h-5 rounded-full p-[2px] cursor-pointer transition-colors duration-200 ${voiceEnabled ? getAccentBgClass() : 'bg-[#323235]'}`}
+                      className={`w-9 h-5 rounded-full p-[2px] cursor-pointer transition-colors duration-200 ${soundEnabled ? getAccentBgClass() : 'bg-[#323235]'}`}
                     >
-                      <div className={`w-4 h-4 bg-white rounded-full shadow-md transition-transform duration-200 transform ${voiceEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                      <div className={`w-4 h-4 bg-white rounded-full shadow-md transition-transform duration-200 transform ${soundEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
                     </div>
                   </div>
 
-                  {voiceEnabled && (
-                    <div className="space-y-3.5 pt-1 text-left animate-fade-in duration-150">
-                      <div className="space-y-1.5">
-                        <label className="block text-[9px] font-bold text-zinc-400 uppercase tracking-wider">
-                          Kunci API ElevenLabs
-                        </label>
-                        <input
-                          type="password"
-                          value={elevenlabsApiKey}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setElevenlabsApiKey(val);
-                            triggerSave({ elevenlabsApiKey: val });
-                          }}
-                          placeholder="Masukkan xi-api-key..."
-                          className="w-full bg-[#0d0d0e] border border-zinc-850 rounded-lg px-3 py-2 text-zinc-200 text-[11px] focus:border-zinc-700 outline-none"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="block text-[9px] font-bold text-zinc-400 uppercase tracking-wider">
-                          Karakis Suara Default
-                        </label>
-                        <select
-                          value={elevenlabsVoiceId}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setElevenlabsVoiceId(val);
-                            triggerSave({ elevenlabsVoiceId: val });
-                          }}
-                          className="w-full bg-[#0d0d0e] border border-zinc-850 rounded-lg p-2 text-zinc-200 text-[11px] outline-none"
-                        >
-                          {PRESET_VOICES.map(v => (
-                            <option key={v.id} value={v.id} className="bg-[#161617]">{v.name}</option>
-                          ))}
-                        </select>
-                      </div>
+                  {/* Status updates toggle */}
+                  <div className="flex items-center justify-between pb-3 border-b border-zinc-900/35">
+                    <div className="space-y-0.5">
+                      <span className="text-zinc-100 font-medium text-[11.5px] block">Pembaruan Status Maria</span>
+                      <span className="text-[10px] text-zinc-500 block leading-tight">Terima notifikasi status sistem atau rilis terbaru dari kecerdasan Maria.</span>
                     </div>
-                  )}
+                    <div
+                      onClick={() => {
+                        const next = !statusUpdates;
+                        setStatusUpdates(next);
+                        triggerSave({ notifications: { soundEnabled, statusUpdates: next, remindersEnabled } });
+                      }}
+                      className={`w-9 h-5 rounded-full p-[2px] cursor-pointer transition-colors duration-200 ${statusUpdates ? getAccentBgClass() : 'bg-[#323235]'}`}
+                    >
+                      <div className={`w-4 h-4 bg-white rounded-full shadow-md transition-transform duration-200 transform ${statusUpdates ? 'translate-x-4' : 'translate-x-0'}`} />
+                    </div>
+                  </div>
+
+                  {/* Reminders / Suggestions toggle */}
+                  <div className="flex items-center justify-between pb-3 border-b border-zinc-900/35">
+                    <div className="space-y-0.5">
+                      <span className="text-zinc-100 font-medium text-[11.5px] block">Saran & Pengingat Rutin</span>
+                      <span className="text-[10px] text-zinc-500 block leading-tight">Ijinkan Maria memberikan rekomendasi tugas asisten pribadi ke panel instrumen.</span>
+                    </div>
+                    <div
+                      onClick={() => {
+                        const next = !remindersEnabled;
+                        setRemindersEnabled(next);
+                        triggerSave({ notifications: { soundEnabled, statusUpdates, remindersEnabled: next } });
+                      }}
+                      className={`w-9 h-5 rounded-full p-[2px] cursor-pointer transition-colors duration-200 ${remindersEnabled ? getAccentBgClass() : 'bg-[#323235]'}`}
+                    >
+                      <div className={`w-4 h-4 bg-white rounded-full shadow-md transition-transform duration-200 transform ${remindersEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                    </div>
+                  </div>
 
                   {/* Simulation notifications control section */}
-                  <div className="space-y-2 pt-2 border-t border-zinc-900/35">
+                  <div className="space-y-2 pt-2">
                     <label className="block text-[9.5px] font-bold text-zinc-400 uppercase tracking-wide">
                       Simulasikan Notifikasi Sistem
                     </label>
