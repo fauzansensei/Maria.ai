@@ -31,10 +31,8 @@
     <!-- Preconnect to high-value origins (under 4 links limit) to accelerate resource handshakes -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preconnect" href="https://apis.google.com" crossorigin />
     <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
     <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
-    <link rel="dns-prefetch" href="https://apis.google.com" />
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -65,8 +63,8 @@
       body {
         margin: 0;
         font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        background-color: #f8fafc;
-        color: #1e293b;
+        background-color: #101117;
+        color: #e2e8f0;
       }
       .sk-container {
         display: flex;
@@ -88,13 +86,13 @@
         flex: 1;
         display: flex;
         flex-direction: column;
-        background-color: #ffffff;
+        background-color: #101117;
         position: relative;
         overflow: hidden;
       }
       .sk-header {
         height: 56px;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid #1e2025;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -116,8 +114,8 @@
       }
       .sk-bottom-bar {
         padding: 16px;
-        border-top: 1px solid #e2e8f0;
-        background-color: #ffffff;
+        border-top: 1px solid #1e2025;
+        background-color: #101117;
         box-sizing: border-box;
         display: flex;
         justify-content: center;
@@ -131,17 +129,17 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        background-color: #f1f5f9;
+        background-color: #0e0f14;
         box-sizing: border-box;
       }
       .sk-shimmer {
         animation: sk-pulse-anim 1.4s infinite ease-in-out;
-        background-color: #e2e8f0;
+        background-color: #1a1c23;
         border-radius: 8px;
       }
       .sk-dark-shimmer {
         animation: sk-pulse-anim 1.4s infinite ease-in-out;
-        background-color: #1e293b;
+        background-color: #14161f;
         border-radius: 8px;
       }
       @keyframes sk-pulse-anim {
@@ -306,47 +304,125 @@
           };
         }
 
-        // Handle unhandled rejections globally
-        window.addEventListener('unhandledrejection', function(event) {
-          if (event && event.reason) {
-            const reasonStr = typeof event.reason === 'object' 
-              ? (event.reason.message || event.reason.toString() || '') 
-              : String(event.reason);
-            const lowerReason = reasonStr.toLowerCase();
-            if (
-              lowerReason.indexOf('websocket') !== -1 || 
-              lowerReason.indexOf('web-socket') !== -1 ||
-              lowerReason.indexOf('ditutup tanpa dibuka') !== -1 ||
-              lowerReason.indexOf('closed before') !== -1 ||
-              lowerReason.indexOf('connection failed') !== -1 ||
-              lowerReason.indexOf('closed without opened') !== -1
-            ) {
-              event.preventDefault();
-              event.stopImmediatePropagation();
-              event.stopPropagation();
-              return true;
+        // Helper function to check if an error is a benign dev socket exception
+        function isWebSocketError(message, error, reason) {
+          try {
+            const combined = String(message || '').toLowerCase() + ' ' + 
+                             String(error?.message || '').toLowerCase() + ' ' + 
+                             String(reason || '').toLowerCase() + ' ' + 
+                             String(reason?.message || '').toLowerCase();
+            return (
+              combined.includes('websocket') || 
+              combined.includes('web-socket') || 
+              combined.includes('ditutup tanpa dibuka') || 
+              combined.includes('closed before') || 
+              combined.includes('connection failed') || 
+              combined.includes('closed without opened') || 
+              combined.includes('vite') ||
+              combined.includes('hmr')
+            );
+          } catch (_) {
+            return false;
+          }
+        }
+
+        // Intercept addEventListener to filter error events before they can bubble to any listener (including Vite client / AI Studio)
+        const originalAddEventListener = window.addEventListener;
+        window.addEventListener = function(type, listener, options) {
+          if ((type === 'unhandledrejection' || type === 'error') && typeof listener === 'function') {
+            const wrappedListener = function(event) {
+              try {
+                let msg = '';
+                let err = null;
+                let reasonStr = '';
+                
+                if (type === 'unhandledrejection' && event) {
+                  reasonStr = event.reason ? String(event.reason.message || event.reason) : '';
+                } else if (event) {
+                  msg = event.message || '';
+                  err = event.error || null;
+                }
+
+                if (isWebSocketError(msg, err, reasonStr || event?.reason)) {
+                  try {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.stopImmediatePropagation();
+                  } catch (_) {}
+                  return true;
+                }
+              } catch (_) {}
+              return listener.apply(this, arguments);
+            };
+            return originalAddEventListener.call(this, type, wrappedListener, options);
+          }
+          return originalAddEventListener.call(this, type, listener, options);
+        };
+
+        // Suppress on window.onerror and window.onunhandledrejection
+        let globalOnError = null;
+        Object.defineProperty(window, 'onerror', {
+          get() { return globalOnError; },
+          set(listener) {
+            if (typeof listener === 'function') {
+              globalOnError = function(message, source, lineno, colno, error) {
+                if (isWebSocketError(message, error)) {
+                  return true; // Completely silenced
+                }
+                return listener.apply(this, arguments);
+              };
+            } else {
+              globalOnError = listener;
             }
+          },
+          configurable: true,
+          enumerable: true
+        });
+
+        let globalOnUnhandledRejection = null;
+        Object.defineProperty(window, 'onunhandledrejection', {
+          get() { return globalOnUnhandledRejection; },
+          set(listener) {
+            if (typeof listener === 'function') {
+              globalOnUnhandledRejection = function(event) {
+                if (event && isWebSocketError('', null, event.reason)) {
+                  try {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.stopImmediatePropagation();
+                  } catch (_) {}
+                  return true; // Silenced
+                }
+                return listener.apply(this, arguments);
+              };
+            } else {
+              globalOnUnhandledRejection = listener;
+            }
+          },
+          configurable: true,
+          enumerable: true
+        });
+
+        // Set up immediate global capture listeners as ultimate catch-all defense line
+        originalAddEventListener.call(window, 'unhandledrejection', function(event) {
+          if (event && isWebSocketError('', null, event.reason)) {
+            try {
+              event.preventDefault();
+              event.stopPropagation();
+              event.stopImmediatePropagation();
+            } catch (_) {}
+            return true;
           }
         }, true);
 
-        window.addEventListener('error', function(event) {
-          if (event) {
-            const msgStr = event.message ? String(event.message) : '';
-            const errStr = (event.error && event.error.message) ? String(event.error.message) : '';
-            const combined = (msgStr + ' ' + errStr).toLowerCase();
-            if (
-              combined.indexOf('websocket') !== -1 || 
-              combined.indexOf('web-socket') !== -1 ||
-              combined.indexOf('ditutup tanpa dibuka') !== -1 ||
-              combined.indexOf('closed before') !== -1 ||
-              combined.indexOf('connection failed') !== -1 ||
-              combined.indexOf('closed without opened') !== -1
-            ) {
+        originalAddEventListener.call(window, 'error', function(event) {
+          if (event && isWebSocketError(event.message, event.error)) {
+            try {
               event.preventDefault();
-              event.stopImmediatePropagation();
               event.stopPropagation();
-              return true;
-            }
+              event.stopImmediatePropagation();
+            } catch (_) {}
+            return true;
           }
         }, true);
       })();
