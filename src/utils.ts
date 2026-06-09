@@ -15,10 +15,12 @@ const imageMemoryFallback: Record<string, string> = {};
  * and lowers quality to 0.7. This shrinks a multi-megabyte image down to 20-50KB,
  * completely resolving LocalStorage and Firestore document limits.
  */
-export function compressImage(base64Str: string, maxWidth = 800, maxHeight = 800, quality = 0.7): Promise<string> {
+export function compressImage(base64Str: string, maxWidth = 600, maxHeight = 600, quality = 0.6): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
-    img.crossOrigin = "anonymous";
+    if (!base64Str.startsWith("data:")) {
+      img.crossOrigin = "anonymous";
+    }
     img.onload = () => {
       let width = img.width;
       let height = img.height;

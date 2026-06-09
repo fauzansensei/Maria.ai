@@ -922,6 +922,7 @@ export default function App() {
     };
 
     const postMessages = [...messages, userMsg];
+    setMessages(postMessages);
 
     if (isLoggedIn && auth.currentUser) {
       await setDoc(doc(db, "threads", currentThreadId, "messages", userMsg.id), {
@@ -935,8 +936,6 @@ export default function App() {
         ...(userMsg.images && userMsg.images.length > 0 ? { images: userMsg.images } : {}),
         ...(userMsg.audio ? { audio: userMsg.audio } : {})
       }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${currentThreadId}/messages/${userMsg.id}`));
-    } else {
-      setMessages(postMessages);
     }
 
     setIsLoading(true);
@@ -992,9 +991,8 @@ export default function App() {
             isEdited: false,
             feedback: null
           }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${currentThreadId}/messages/${assistantMsg.id}`));
-        } else {
-          setMessages((prev) => [...prev, assistantMsg]);
         }
+        setMessages((prev) => [...prev, assistantMsg]);
         
         // Render speak output if configured
         speakMessage(assistantMsg.content);
@@ -1025,9 +1023,8 @@ export default function App() {
             isEdited: false,
             feedback: null
           }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${currentThreadId}/messages/${errorMsg.id}`));
-        } else {
-          setMessages((prev) => [...prev, errorMsg]);
         }
+        setMessages((prev) => [...prev, errorMsg]);
         
         handleAddSystemNotification(
           "Peringatan Sambungan", 
@@ -1055,9 +1052,8 @@ export default function App() {
           isEdited: false,
           feedback: null
         }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${currentThreadId}/messages/${errorMsg.id}`));
-      } else {
-        setMessages((prev) => [...prev, errorMsg]);
       }
+      setMessages((prev) => [...prev, errorMsg]);
 
       handleAddSystemNotification(
         "Koneksi Offline", 
@@ -1086,9 +1082,9 @@ export default function App() {
       for (const m of messagesToDelete) {
         await deleteDoc(doc(db, "threads", activeThreadId, "messages", m.id)).catch(err => handleFirestoreError(err, OperationType.DELETE, `threads/${activeThreadId}/messages/${m.id}`));
       }
-    } else {
-      setMessages(precedingMessages);
     }
+    
+    setMessages(precedingMessages);
 
     setIsLoading(true);
 
@@ -1143,9 +1139,8 @@ export default function App() {
             isEdited: false,
             feedback: null
           }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${assistantMsg.id}`));
-        } else {
-          setMessages((prev) => [...prev, assistantMsg]);
         }
+        setMessages((prev) => [...prev, assistantMsg]);
 
         // Render speak output if configured
         speakMessage(assistantMsg.content);
@@ -1174,9 +1169,8 @@ export default function App() {
             isEdited: false,
             feedback: null
           }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${errorMsg.id}`));
-        } else {
-          setMessages((prev) => [...prev, errorMsg]);
         }
+        setMessages((prev) => [...prev, errorMsg]);
       }
     } catch (networkError: any) {
       console.error("Regenerate Error:", networkError);
@@ -1198,9 +1192,8 @@ export default function App() {
           isEdited: false,
           feedback: null
         }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${errorMsg.id}`));
-      } else {
-        setMessages((prev) => [...prev, errorMsg]);
       }
+      setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
     }
@@ -1252,10 +1245,9 @@ export default function App() {
         ...(updatedUserMsg.image ? { image: updatedUserMsg.image } : {}),
         ...(updatedUserMsg.audio ? { audio: updatedUserMsg.audio } : {})
       }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${updatedUserMsg.id}`));
-    } else {
-      setMessages(nextMessages);
     }
 
+    setMessages(nextMessages);
     setIsLoading(true);
 
     try {
@@ -1294,9 +1286,8 @@ export default function App() {
             isEdited: false,
             feedback: null
           }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${assistantMsg.id}`));
-        } else {
-          setMessages((prev) => [...prev, assistantMsg]);
         }
+        setMessages((prev) => [...prev, assistantMsg]);
 
         // Render speak output if configured
         speakMessage(assistantMsg.content);
@@ -1325,9 +1316,8 @@ export default function App() {
             isEdited: false,
             feedback: null
           }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${errorMsg.id}`));
-        } else {
-          setMessages((prev) => [...prev, errorMsg]);
         }
+        setMessages((prev) => [...prev, errorMsg]);
       }
     } catch (networkError: any) {
       console.error("Edit Message Error:", networkError);
@@ -1349,9 +1339,8 @@ export default function App() {
           isEdited: false,
           feedback: null
         }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${errorMsg.id}`));
-      } else {
-        setMessages((prev) => [...prev, errorMsg]);
       }
+      setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
     }

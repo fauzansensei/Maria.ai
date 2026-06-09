@@ -298,8 +298,8 @@ const FormattedSubPart = React.memo(function FormattedSubPart({ text, isAi = tru
           }
 
           return (
-            <div key={index} className="my-3 rounded-lg overflow-hidden border border-slate-200/80 shadow-2xs font-mono text-[12px]">
-              <div className="flex items-center justify-between px-4 py-1.5 bg-slate-900 text-slate-400 text-[10px] font-bold tracking-wider uppercase select-none">
+            <div key={index} className="my-3 rounded-lg overflow-x-auto max-w-full border border-slate-200/80 shadow-2xs font-mono text-[12px]">
+              <div className="flex items-center justify-between px-4 py-1.5 bg-slate-900 text-slate-400 text-[10px] font-bold tracking-wider uppercase select-none min-w-max">
                 <span>{language}</span>
                 <span className="text-[9px] text-slate-500">KODE RESPONS</span>
               </div>
@@ -1489,7 +1489,7 @@ export default function ChatArea({
                         </div>
                       ) : (
                         <div
-                          className={`p-3.5 border rounded-2xl relative ${
+                          className={`p-3.5 border rounded-2xl relative min-w-0 break-words ${
                             m.isError
                               ? "bg-red-50/50 border-red-100"
                               : isAi
