@@ -81,6 +81,27 @@ function getBase64Hash(str: string): string {
  * and replaces them with a reference string.
  */
 function processAndExtractImages(obj: any, originalSet: any): any {
+  if (typeof obj === "string" && obj.startsWith("data:") && obj.length > 50000) {
+    const imgId = getBase64Hash(obj);
+    imageMemoryFallback[imgId] = obj;
+    if (originalSet) {
+      try {
+        originalSet.call(window.localStorage, "maria_image_" + imgId, obj);
+      } catch (e: any) {
+        try {
+          const keys: string[] = [];
+          for (let i = 0; i < window.localStorage.length; i++) {
+            const localKey = window.localStorage.key(i);
+            if (localKey && localKey.startsWith("maria_image_")) keys.push(localKey);
+          }
+          keys.slice(0, Math.min(keys.length, 5)).forEach(lk => window.localStorage.removeItem(lk));
+          originalSet.call(window.localStorage, "maria_image_" + imgId, obj);
+        } catch {}
+      }
+    }
+    return `local-image-ref:${imgId}`;
+  }
+
   if (!obj || typeof obj !== "object") return obj;
 
   if (Array.isArray(obj)) {
@@ -90,40 +111,7 @@ function processAndExtractImages(obj: any, originalSet: any): any {
   const newObj: any = {};
   for (const k in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, k)) {
-      const val = obj[k];
-      if (typeof val === "string" && val.startsWith("data:") && val.length > 102400) {
-        const imgId = getBase64Hash(val);
-        // Ensure availability in RAM cache
-        imageMemoryFallback[imgId] = val;
-        
-        // Save to its own tiny independent key in disk with maximum safety
-        if (originalSet) {
-          try {
-            originalSet.call(window.localStorage, "maria_image_" + imgId, val);
-          } catch (e: any) {
-            // Under extreme quota exhaustion conditions, prune some older distinct images to clear workspace
-            try {
-              const keys: string[] = [];
-              for (let i = 0; i < window.localStorage.length; i++) {
-                const localKey = window.localStorage.key(i);
-                if (localKey && localKey.startsWith("maria_image_")) {
-                  keys.push(localKey);
-                }
-              }
-              // Flush up to 5 older distinct cached images
-              keys.slice(0, Math.min(keys.length, 5)).forEach(lk => {
-                window.localStorage.removeItem(lk);
-              });
-              // Safe retry write
-              originalSet.call(window.localStorage, "maria_image_" + imgId, val);
-            } catch {}
-          }
-        }
-        
-        newObj[k] = `local-image-ref:${imgId}`;
-      } else {
-        newObj[k] = processAndExtractImages(val, originalSet);
-      }
+      newObj[k] = processAndExtractImages(obj[k], originalSet);
     }
   }
   return newObj;
@@ -133,6 +121,27 @@ function processAndExtractImages(obj: any, originalSet: any): any {
  * Searches and reconstitutes any placeholder reference indices back to their original full base64 strings.
  */
 function restoreExtractedImages(obj: any, originalGet: any): any {
+  if (typeof obj === "string" && obj.startsWith("local-image-ref:")) {
+    const imgId = obj.substring("local-image-ref:".length);
+    const cached = imageMemoryFallback[imgId];
+    if (cached) return cached;
+    try {
+      let diskStored = null;
+      if (originalGet) {
+        diskStored = originalGet.call(window.localStorage, "maria_image_" + imgId);
+      } else {
+        diskStored = window.localStorage.getItem("maria_image_" + imgId);
+      }
+      if (diskStored) {
+        imageMemoryFallback[imgId] = diskStored;
+        return diskStored;
+      }
+      return "[Gambar]";
+    } catch {
+      return "[Gambar]";
+    }
+  }
+
   if (!obj || typeof obj !== "object") return obj;
 
   if (Array.isArray(obj)) {
@@ -142,33 +151,7 @@ function restoreExtractedImages(obj: any, originalGet: any): any {
   const newObj: any = {};
   for (const k in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, k)) {
-      const val = obj[k];
-      if (typeof val === "string" && val.startsWith("local-image-ref:")) {
-        const imgId = val.substring("local-image-ref:".length);
-        const cached = imageMemoryFallback[imgId];
-        if (cached) {
-          newObj[k] = cached;
-        } else {
-          try {
-            let diskStored = null;
-            if (originalGet) {
-              diskStored = originalGet.call(window.localStorage, "maria_image_" + imgId);
-            } else {
-              diskStored = window.localStorage.getItem("maria_image_" + imgId);
-            }
-            if (diskStored) {
-              newObj[k] = diskStored;
-              imageMemoryFallback[imgId] = diskStored; // pop cache
-            } else {
-              newObj[k] = "[Gambar]";
-            }
-          } catch {
-            newObj[k] = "[Gambar]";
-          }
-        }
-      } else {
-        newObj[k] = restoreExtractedImages(val, originalGet);
-      }
+      newObj[k] = restoreExtractedImages(obj[k], originalGet);
     }
   }
   return newObj;

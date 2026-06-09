@@ -736,6 +736,7 @@ export default function App() {
           isEdited: msgData.isEdited || false,
           feedback: msgData.feedback || null,
           image: msgData.image || undefined,
+          images: msgData.images || undefined,
           audio: msgData.audio || undefined
         });
       });
