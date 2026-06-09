@@ -158,6 +158,22 @@ Pastikan nama aplikasi/platform sangat ringkas, dan link URL-nya valid, lengkap 
         }
       }
 
+      if (m.images && Array.isArray(m.images)) {
+        m.images.forEach((img) => {
+          if (typeof img === "string") {
+            const matches = img.match(/^data:([^;]+);base64,(.+)$/);
+            if (matches) {
+              parts.push({
+                inlineData: {
+                  mimeType: matches[1],
+                  data: matches[2]
+                }
+              });
+            }
+          }
+        });
+      }
+
       if (m.audio && typeof m.audio === "string") {
         const matches = m.audio.match(/^data:([^;]+);base64,(.+)$/);
         if (matches) {

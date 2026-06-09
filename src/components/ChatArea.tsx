@@ -42,7 +42,7 @@ import {
 interface ChatAreaProps {
   messages: Message[];
   isLoading: boolean;
-  onSendMessage: (text: string, image?: string, audio?: string) => void;
+  onSendMessage: (text: string, images?: string[], audio?: string) => void;
   settings: UserSettings;
   notifications: AppNotification[];
   onMarkNotificationRead: (id: string) => void;
@@ -774,7 +774,7 @@ function parseInlineStyles(text: string, isAi: boolean = true): React.ReactNode[
 
 interface ChatInputFormProps {
   isLoading: boolean;
-  onSendMessage: (text: string, image?: string, audio?: string) => void;
+  onSendMessage: (text: string, images?: string[], audio?: string) => void;
   onAddSystemNotification: (title: string, body: string, type: "info" | "success" | "reminder" | "message") => void;
   pendingPrompt?: string | null;
   onClearPendingPrompt?: () => void;
@@ -790,7 +790,7 @@ const ChatInputForm = React.memo(function ChatInputForm({
   themeStyle,
 }: ChatInputFormProps) {
   const [inputText, setInputText] = useState("");
-  const [attachedImage, setAttachedImage] = useState<string | null>(null);
+  const [attachedImages, setAttachedImages] = useState<string[]>([]);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [voiceBase64, setVoiceBase64] = useState<string | null>(null);
@@ -841,7 +841,7 @@ const ChatInputForm = React.memo(function ChatInputForm({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault(); // Prevent standard newline behavior of textarea
-      if (inputText.trim() || attachedImage || voiceBase64) {
+      if (inputText.trim() || attachedImages.length > 0 || voiceBase64) {
         if (!isLoading) {
           const form = e.currentTarget.closest("form");
           if (form) {
@@ -853,32 +853,40 @@ const ChatInputForm = React.memo(function ChatInputForm({
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
     
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      if (event.target?.result && typeof event.target.result === "string") {
-        try {
-          const rawBase64 = event.target.result;
-          const compressed = await compressImage(rawBase64);
-          setAttachedImage(compressed);
-          onAddSystemNotification(
-            "Gambar Terlampir",
-            `Gambar "${file.name}" berhasil diunggah dan siap dikirim ke Maria.`,
-            "success"
-          );
-        } catch (compressionErr) {
-          setAttachedImage(event.target.result);
-          onAddSystemNotification(
-            "Gambar Terlampir",
-            `Gambar "${file.name}" berhasil diunggah.`,
-            "success"
-          );
+    // Validate number of files (optional, e.g. max 4 images to prevent overflow)
+    if (attachedImages.length + files.length > 5) {
+      onAddSystemNotification("Terlalu Banyak Gambar", "Maksimal hanya dapat melampirkan 5 gambar.", "info");
+      return;
+    }
+
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        if (event.target?.result && typeof event.target.result === "string") {
+          try {
+            const rawBase64 = event.target.result;
+            const compressed = await compressImage(rawBase64);
+            setAttachedImages(prev => [...prev, compressed]);
+            onAddSystemNotification(
+              "Gambar Terlampir",
+              `Gambar "${file.name}" berhasil diunggah.`,
+              "success"
+            );
+          } catch (compressionErr) {
+            setAttachedImages(prev => [...prev, event.target.result as string]);
+            onAddSystemNotification(
+              "Gambar Terlampir",
+              `Gambar "${file.name}" berhasil diunggah.`,
+              "success"
+            );
+          }
         }
-      }
-    };
-    reader.readAsDataURL(file);
+      };
+      reader.readAsDataURL(file);
+    });
     e.target.value = "";
   };
 
@@ -914,10 +922,10 @@ const ChatInputForm = React.memo(function ChatInputForm({
             
             // Auto send directly
             const textToSend = inputText.trim() || "[Voice Note]";
-            onSendMessage(textToSend, attachedImage || undefined, voiceData);
+            onSendMessage(textToSend, attachedImages.length > 0 ? attachedImages : undefined, voiceData);
             
             setInputText("");
-            setAttachedImage(null);
+            setAttachedImages([]);
             setVoiceBase64(null);
             setVoiceBlob(null);
 
@@ -968,10 +976,10 @@ const ChatInputForm = React.memo(function ChatInputForm({
       const mockWav = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAAA";
       
       const textToSend = inputText.trim() || "[Voice Note]";
-      onSendMessage(textToSend, attachedImage || undefined, mockWav);
+      onSendMessage(textToSend, attachedImages.length > 0 ? attachedImages : undefined, mockWav);
       
       setInputText("");
-      setAttachedImage(null);
+      setAttachedImages([]);
       setVoiceBase64(null);
       setVoiceBlob(null);
 
@@ -1006,37 +1014,37 @@ const ChatInputForm = React.memo(function ChatInputForm({
     if (isRecordingVoice) return;
     
     const cleanText = inputText.trim();
-    if (!cleanText && !attachedImage && !voiceBase64 && !isLoading) return;
+    if (!cleanText && attachedImages.length === 0 && !voiceBase64 && !isLoading) return;
 
     let textToSend = cleanText;
     if (!textToSend) {
-      if (attachedImage && voiceBase64) {
+      if (attachedImages.length > 0 && voiceBase64) {
         textToSend = "[Melampirkan Gambar & Voice Note]";
-      } else if (attachedImage) {
+      } else if (attachedImages.length > 0) {
         textToSend = "[Melampirkan Gambar]";
       } else if (voiceBase64) {
         textToSend = "[Melampirkan Voice Note]";
       }
     }
 
-    onSendMessage(textToSend, attachedImage || undefined, voiceBase64 || undefined);
+    onSendMessage(textToSend, attachedImages.length > 0 ? attachedImages : undefined, voiceBase64 || undefined);
     
     setInputText("");
-    setAttachedImage(null);
+    setAttachedImages([]);
     setVoiceBase64(null);
     setVoiceBlob(null);
   };
 
   return (
     <div className="max-w-3xl mx-auto">
-      {(attachedImage || voiceBase64) && (
-        <div className="flex items-center gap-3 p-2.5 bg-slate-50 border border-slate-200 border-b-0 rounded-t-xl animate-fade-in text-[11px]">
-          {attachedImage && (
-            <div className="relative group bg-white border border-slate-250 rounded-lg p-1 shadow-2xs shrink-0">
-              <img src={attachedImage} alt="Preview Lampiran" className="w-12 h-12 object-cover rounded" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
+      {(attachedImages.length > 0 || voiceBase64) && (
+        <div className="flex flex-wrap items-center gap-3 p-2.5 bg-slate-50 border border-slate-200 border-b-0 rounded-t-xl animate-fade-in text-[11px]">
+          {attachedImages.map((imgBase64, idx) => (
+            <div key={idx} className="relative group bg-white border border-slate-250 rounded-lg p-1 shadow-2xs shrink-0">
+              <img src={imgBase64} alt={`Preview Lampiran ${idx + 1}`} className="w-12 h-12 object-cover rounded" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
               <button
                 type="button"
-                onClick={() => setAttachedImage(null)}
+                onClick={() => setAttachedImages(prev => prev.filter((_, i) => i !== idx))}
                 aria-label="Hapus Lampiran Gambar"
                 className="absolute -top-1.5 -right-1.5 bg-red-500 text-white p-0.5 rounded-full hover:bg-red-650 shadow-sm transition-colors cursor-pointer"
                 title="Hapus"
@@ -1044,7 +1052,7 @@ const ChatInputForm = React.memo(function ChatInputForm({
                 <X className="w-2.5 h-2.5" />
               </button>
             </div>
-          )}
+          ))}
           {voiceBase64 && (
             <div className="relative group bg-white border border-slate-250 rounded-lg py-1.5 px-3 flex items-center gap-2 shadow-2xs font-medium text-slate-700">
               <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
@@ -1105,6 +1113,7 @@ const ChatInputForm = React.memo(function ChatInputForm({
                   id="img-upload-chat"
                   type="file"
                   accept="image/*"
+                  multiple
                   className="hidden"
                   onChange={handleImageUpload}
                   disabled={isLoading}
@@ -1136,10 +1145,10 @@ const ChatInputForm = React.memo(function ChatInputForm({
             />
             <button
               type="submit"
-              disabled={(!inputText.trim() && !attachedImage && !voiceBase64) || isLoading}
+              disabled={(!inputText.trim() && attachedImages.length === 0 && !voiceBase64) || isLoading}
               aria-label="Kirim Pesan"
               className={`absolute right-2.5 p-2 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 text-white ${
-                (inputText.trim() || attachedImage || voiceBase64) && !isLoading
+                (inputText.trim() || attachedImages.length > 0 || voiceBase64) && !isLoading
                   ? `${themeStyle.primary.split(" ")[0]} shadow-sm`
                   : "bg-slate-200 text-slate-400 cursor-not-allowed"
               }`}
@@ -1512,6 +1521,15 @@ export default function ChatArea({
                               {m.image && (
                                 <div className="max-w-xs sm:max-w-md rounded-xl overflow-hidden border border-slate-200/50 shadow-3xs">
                                   <img src={m.image} className="w-full h-auto max-h-60 object-contain rounded-lg" alt="Lampiran" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
+                                </div>
+                              )}
+                              {m.images && m.images.length > 0 && (
+                                <div className="flex flex-wrap gap-2 max-w-xs sm:max-w-md">
+                                  {m.images.map((imgStr, idx) => (
+                                    <div key={idx} className="rounded-xl overflow-hidden border border-slate-200/50 shadow-3xs max-w-[200px]">
+                                      <img src={imgStr} className="w-full h-auto max-h-60 object-contain rounded-lg" alt={`Lampiran ${idx + 1}`} referrerPolicy="no-referrer" loading="lazy" decoding="async" />
+                                    </div>
+                                  ))}
                                 </div>
                               )}
                               {m.audio && (

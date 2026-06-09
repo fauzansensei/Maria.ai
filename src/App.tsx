@@ -879,7 +879,7 @@ export default function App() {
   };
 
   // Handles sending messages to the Express backend proxy endpoint
-  const handleSendMessage = async (text: string, image?: string, audio?: string) => {
+  const handleSendMessage = async (text: string, images?: string[], audio?: string) => {
     if (isLoading) return;
 
     let currentThreadId = activeThreadId;
@@ -916,7 +916,7 @@ export default function App() {
       role: "user",
       content: text,
       timestamp: new Date().toISOString(),
-      ...(image ? { image } : {}),
+      ...(images && images.length > 0 ? { images } : {}),
       ...(audio ? { audio } : {}),
     };
 
@@ -931,7 +931,7 @@ export default function App() {
         isError: false,
         isEdited: false,
         feedback: null,
-        ...(userMsg.image ? { image: userMsg.image } : {}),
+        ...(userMsg.images && userMsg.images.length > 0 ? { images: userMsg.images } : {}),
         ...(userMsg.audio ? { audio: userMsg.audio } : {})
       }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${currentThreadId}/messages/${userMsg.id}`));
     } else {

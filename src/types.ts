@@ -37,6 +37,7 @@ export interface Message {
   timestamp: string;
   isError?: boolean;
   image?: string;
+  images?: string[];
   audio?: string;
   feedback?: "like" | "dislike";
   isEdited?: boolean;
