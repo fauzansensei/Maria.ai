@@ -1260,12 +1260,12 @@ export default function ChatArea({
               <div className={`w-10 h-10 rounded-lg bg-[#171F36] flex items-center justify-center overflow-hidden shadow-sm border border-[#bcc6d4]/20 select-none`}>
                 <svg className="w-full h-full" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect width="512" height="512" fill="#171f36"/>
-                  <circle cx="256" cy="256" r="160" stroke="#bcc6d4" stroke-width="14"/>
-                  <g stroke="#f6acad" stroke-width="16" stroke-linecap="round">
+                  <circle cx="256" cy="256" r="160" stroke="#bcc6d4" strokeWidth="14"/>
+                  <g stroke="#f6acad" strokeWidth="16" strokeLinecap="round">
                     <line x1="160" y1="390" x2="240" y2="278"/>
                     <line x1="286" y1="214" x2="352" y2="122"/>
                   </g>
-                  <text x="256" y="325" font-family="'Inter', sans-serif" font-weight="900" font-size="220" fill="white" text-anchor="middle">M</text>
+                  <text x="256" y="325" fontFamily="'Inter', sans-serif" fontWeight="900" fontSize="220" fill="white" textAnchor="middle">M</text>
                   <path d="M400 120 C 400 132, 408 140, 420 140 C 408 140, 400 148, 400 160 C 400 148, 392 140, 380 140 C 392 140, 400 132, 400 120 Z" fill="#f6acad"/>
                 </svg>
               </div>
@@ -1398,12 +1398,12 @@ export default function ChatArea({
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <rect width="512" height="512" fill="#171f36"/>
-                  <circle cx="256" cy="256" r="160" stroke="#bcc6d4" stroke-width="12"/>
-                  <g stroke="#f6acad" stroke-width="14" stroke-linecap="round">
+                  <circle cx="256" cy="256" r="160" stroke="#bcc6d4" strokeWidth="12"/>
+                  <g stroke="#f6acad" strokeWidth="14" strokeLinecap="round">
                     <line x1="160" y1="390" x2="240" y2="278"/>
                     <line x1="286" y1="214" x2="352" y2="122"/>
                   </g>
-                  <text x="256" y="325" font-family="'Inter', sans-serif" font-weight="900" font-size="220" fill="white" text-anchor="middle">M</text>
+                  <text x="256" y="325" fontFamily="'Inter', sans-serif" fontWeight="900" fontSize="220" fill="white" textAnchor="middle">M</text>
                   <path d="M400 120 C 400 132, 408 140, 420 140 C 408 140, 400 148, 400 160 C 400 148, 392 140, 380 140 C 392 140, 400 132, 400 120 Z" fill="#f6acad"/>
                 </svg>
               </div>
@@ -1441,12 +1441,12 @@ export default function ChatArea({
                         <div className={`w-8 h-8 rounded shrink-0 flex items-center justify-center font-display font-bold text-xs select-none bg-[#171F36] border border-[#bcc6d4]/20 overflow-hidden`}>
                           <svg className="w-full h-full" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <rect width="512" height="512" fill="#171f36"/>
-                            <circle cx="256" cy="256" r="160" stroke="#bcc6d4" stroke-width="16"/>
-                            <g stroke="#f6acad" stroke-width="18" stroke-linecap="round">
+                            <circle cx="256" cy="256" r="160" stroke="#bcc6d4" strokeWidth="16"/>
+                            <g stroke="#f6acad" strokeWidth="18" strokeLinecap="round">
                               <line x1="160" y1="390" x2="240" y2="278"/>
                               <line x1="286" y1="214" x2="352" y2="122"/>
                             </g>
-                            <text x="256" y="325" font-family="'Inter', sans-serif" font-weight="900" font-size="220" fill="white" text-anchor="middle">M</text>
+                            <text x="256" y="325" fontFamily="'Inter', sans-serif" fontWeight="900" fontSize="220" fill="white" textAnchor="middle">M</text>
                             <path d="M400 120 C 400 132, 408 140, 420 140 C 408 140, 400 148, 400 160 C 400 148, 392 140, 380 140 C 392 140, 400 132, 400 120 Z" fill="#f6acad"/>
                           </svg>
                         </div>
@@ -1689,12 +1689,12 @@ export default function ChatArea({
                     <div className={`w-8 h-8 flex-shrink-0 rounded bg-[#171F36] border border-[#bcc6d4]/20 flex items-center justify-center overflow-hidden`}>
                       <svg className="w-full h-full animate-spin animate-duration-[4s]" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect width="512" height="512" fill="#171f36"/>
-                        <circle cx="256" cy="256" r="160" stroke="#bcc6d4" stroke-width="16"/>
-                        <g stroke="#f6acad" stroke-width="18" stroke-linecap="round">
+                        <circle cx="256" cy="256" r="160" stroke="#bcc6d4" strokeWidth="16"/>
+                        <g stroke="#f6acad" strokeWidth="18" strokeLinecap="round">
                           <line x1="160" y1="390" x2="240" y2="278"/>
                           <line x1="286" y1="214" x2="352" y2="122"/>
                         </g>
-                        <text x="256" y="325" font-family="'Inter', sans-serif" font-weight="900" font-size="220" fill="white" text-anchor="middle">M</text>
+                        <text x="256" y="325" fontFamily="'Inter', sans-serif" fontWeight="900" fontSize="220" fill="white" textAnchor="middle">M</text>
                         <path d="M400 120 C 400 132, 408 140, 420 140 C 408 140, 400 148, 400 160 C 400 148, 392 140, 380 140 C 392 140, 400 132, 400 120 Z" fill="#f6acad"/>
                       </svg>
                     </div>

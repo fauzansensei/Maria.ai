@@ -76,8 +76,8 @@ const SkeletonFallback = () => {
           <div style={{ width: '112px', height: '112px', borderRadius: '24px', background: '#171f36', border: '1px solid rgba(188, 198, 212, 0.2)', opacity: 0.85, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(23, 31, 54, 0.15)', animation: 'sk-pulse-anim 1.4s infinite ease-in-out' }}>
             <svg style={{ width: '56px', height: '56px' }} viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect width="512" height="512" fill="#171f36"/>
-              <circle cx="256" cy="256" r="160" stroke="#bcc6d4" stroke-width="12"/>
-              <g stroke="#f6acad" stroke-width="14" stroke-linecap="round">
+              <circle cx="256" cy="256" r="160" stroke="#bcc6d4" strokeWidth="12"/>
+              <g stroke="#f6acad" strokeWidth="14" strokeLinecap="round">
                 <line x1="160" y1="390" x2="240" y2="278"/>
                 <line x1="286" y1="214" x2="352" y2="122"/>
               </g>
