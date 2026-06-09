@@ -38,7 +38,7 @@ const SkeletonFallback = () => {
     <div className="sk-container" id="loading-skeleton">
       <div className="sk-sidebar" id="maria-ai-sidebar-skeleton">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
-          <div className="sk-dark-shimmer" style={{ height: '32px', width: '32px', borderRadius: '10px', backgroundColor: '#3b82f6' }}></div>
+          <div className="sk-dark-shimmer" style={{ height: '32px', width: '32px', borderRadius: '10px', backgroundColor: '#171f36', border: '1px solid rgba(188, 198, 212, 0.2)' }}></div>
           <div style={{ color: 'white', fontWeight: 600, fontFamily: "'Outfit', sans-serif", fontSize: '16px', letterSpacing: '-0.025em' }}>Maria AI</div>
         </div>
         <div className="sk-dark-shimmer" style={{ height: '48px', marginBottom: '20px', borderRadius: '12px', opacity: 0.8 }}></div>
@@ -73,9 +73,16 @@ const SkeletonFallback = () => {
         </div>
         
         <div className="sk-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-          <div style={{ width: '112px', height: '112px', borderRadius: '24px', background: 'linear-gradient(135deg, #3b82f6, #10b981)', opacity: 0.85, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.15)', animation: 'sk-pulse-anim 1.4s infinite ease-in-out' }}>
-            <svg style={{ width: '56px', height: '56px', color: 'white' }} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M16 6C16 10.5 14.5 13.5 11.5 15C8.5 16.5 6 16.5 6 16.5C6 16.5 8.5 16.5 11.5 18C14.5 19.5 16 22.5 16 27C16 22.5 17.5 19.5 20.5 18C23.5 16.5 26 16.5 26 16.5C26 16.5 23.5 16.5 20.5 15C17.5 13.5 16 10.5 16 6Z" fill="currentColor"/>
+          <div style={{ width: '112px', height: '112px', borderRadius: '24px', background: '#171f36', border: '1px solid rgba(188, 198, 212, 0.2)', opacity: 0.85, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(23, 31, 54, 0.15)', animation: 'sk-pulse-anim 1.4s infinite ease-in-out' }}>
+            <svg style={{ width: '56px', height: '56px' }} viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="512" height="512" fill="#171f36"/>
+              <circle cx="256" cy="256" r="160" stroke="#bcc6d4" stroke-width="12"/>
+              <g stroke="#f6acad" stroke-width="14" stroke-linecap="round">
+                <line x1="160" y1="390" x2="240" y2="278"/>
+                <line x1="286" y1="214" x2="352" y2="122"/>
+              </g>
+              <text x="256" y="325" fontFamily="'Inter', sans-serif" fontWeight="900" fontSize="220" fill="white" textAnchor="middle">M</text>
+              <path d="M400 120 C 400 132, 408 140, 420 140 C 408 140, 400 148, 400 160 C 400 148, 392 140, 380 140 C 392 140, 400 132, 400 120 Z" fill="#f6acad"/>
             </svg>
           </div>
         </div>
