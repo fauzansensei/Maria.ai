@@ -519,7 +519,8 @@ export default function App() {
       })
       .catch((err: any) => {
         console.error("Firebase auth redirect result error:", err);
-        if (err.code && err.code !== "auth/redirect-cancelled-by-user") {
+        const errString = String(err).toLowerCase();
+        if (err.code && err.code !== "auth/redirect-cancelled-by-user" && !errString.includes("pending promise was never set")) {
           setAuthLocalError(`Gagal memulihkan sesi Google: ${err.message || err}`);
           handleAddSystemNotification(
             "Google Auth Gagal (Redirect)",
@@ -567,16 +568,10 @@ export default function App() {
         message?.toUpperCase()?.includes("CLOSED-BY-USER");
 
       if (isCoopOrIframeIssue) {
-        message = "Pop-up login diblokir kebijakan browser (COOP/Iframe). Mengalihkan Anda secara otomatis ke Google Login via Redirect...";
+        message = "Pop-up login diblokir kebijakan browser (COOP/Iframe). Silakan tekan tombol 'Open in New Tab' di pojok kanan atas AI Studio untuk melanjutkan login, atau gunakan Guest Account.";
         setAuthLocalError(message);
         setIsProfileOpen(true);
-        setTimeout(() => {
-          signInWithRedirect(auth, googleProvider).catch((redirErr: any) => {
-            console.error("Redirect fallback error:", redirErr);
-            setAuthLocalError(`Gagal redirect: ${redirErr.message}`);
-            setIsAuthenticating(false);
-          });
-        }, 2000);
+        setIsAuthenticating(false);
         return;
       }
 

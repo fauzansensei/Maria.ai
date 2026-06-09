@@ -1,5 +1,5 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
-import { initializeAuth, browserLocalPersistence, browserSessionPersistence, inMemoryPersistence, GoogleAuthProvider, getAuth } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { initializeFirestore, getFirestore } from 'firebase/firestore';
 import firebaseConfigRaw from '../firebase-applet-config.json';
 
@@ -18,17 +18,7 @@ const dbId = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatab
   : undefined;
 
 export const db = dbId ? getFirestore(app, dbId) : getFirestore(app); /* CRITICAL: The app will break without this line */
-// Custom auth initialization excluding indexedDb to prevent "Pending promise was never set" in sandboxed preview iframe
-let authInstance;
-try {
-  authInstance = initializeAuth(app, {
-    persistence: [browserLocalPersistence, browserSessionPersistence, inMemoryPersistence]
-  });
-} catch (e) {
-  // If initializeAuth was already called, fall back to getAuth
-  authInstance = getAuth(app);
-}
-export const auth = authInstance;
+export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
 export enum OperationType {

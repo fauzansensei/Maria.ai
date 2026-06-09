@@ -515,15 +515,9 @@ export default function AuxiliaryModals({
                             message?.toUpperCase()?.includes("CLOSED-BY-USER");
 
                           if (isCoopOrIframeIssue) {
-                            message = "Pop-up login terhalang kebijakan browser (COOP/Iframe). Mengalihkan Anda secara otomatis ke Google Login via Redirect dalam 2 detik...";
+                            message = "Pop-up login terhalang kebijakan browser (COOP/Iframe). Silakan tekan tombol 'Open in New Tab' di pojok kanan atas AI Studio untuk melanjutkan login, atau gunakan Guest Account.";
                             setAuthLocalError(message);
-                            setTimeout(() => {
-                              signInWithRedirect(auth, googleProvider).catch((redirErr: any) => {
-                                console.error("Redirect sign in error:", redirErr);
-                                setAuthLocalError(`Gagal redirect: ${redirErr.message}`);
-                                setIsAuthenticating(false);
-                              });
-                            }, 2000);
+                            setIsAuthenticating(false);
                             return;
                           }
 
@@ -564,7 +558,12 @@ export default function AuxiliaryModals({
                           await signInWithRedirect(auth, googleProvider);
                         } catch (err: any) {
                           console.error("Redirect sign in error:", err);
-                          setAuthLocalError(`Gagal redirect: ${err.message || err}`);
+                          const errString = String(err).toLowerCase();
+                          if (errString.includes("pending promise was never set")) {
+                            setAuthLocalError("Gagal redirect: Browser memblokir IndexedDB. Gunakan Open in New Tab.");
+                          } else {
+                            setAuthLocalError(`Gagal redirect: ${err.message || err}`);
+                          }
                           setIsAuthenticating(false);
                         }
                       }}
