@@ -882,6 +882,7 @@ export default function App() {
   // Handles sending messages to the Express backend proxy endpoint
   const handleSendMessage = async (text: string, images?: string[], audio?: string) => {
     if (isLoading) return;
+    setIsLoading(true);
 
     let currentThreadId = activeThreadId;
     if (!currentThreadId) {
@@ -937,8 +938,6 @@ export default function App() {
         ...(userMsg.audio ? { audio: userMsg.audio } : {})
       }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${currentThreadId}/messages/${userMsg.id}`));
     }
-
-    setIsLoading(true);
 
     try {
       const response = await fetch("/api/chat", {
@@ -1068,13 +1067,20 @@ export default function App() {
   // Regenerates a specific assistant message
   const handleRegenerateResponse = async (messageId: string) => {
     if (isLoading) return;
+    setIsLoading(true);
 
     const msgIdx = messages.findIndex(m => m.id === messageId);
-    if (msgIdx === -1) return;
+    if (msgIdx === -1) {
+      setIsLoading(false);
+      return;
+    }
 
     // Slice history up to that point
     const precedingMessages = messages.slice(0, msgIdx);
-    if (precedingMessages.length === 0) return;
+    if (precedingMessages.length === 0) {
+      setIsLoading(false);
+      return;
+    }
 
     if (isLoggedIn && auth.currentUser && activeThreadId) {
       // Delete any Firestore messages from msgIdx onwards
@@ -1085,8 +1091,6 @@ export default function App() {
     }
     
     setMessages(precedingMessages);
-
-    setIsLoading(true);
 
     try {
       const response = await fetch("/api/chat", {
@@ -1215,9 +1219,13 @@ export default function App() {
   // Edits a user's previous message and triggers a response rebuild
   const handleEditUserMessage = async (messageId: string, newContent: string) => {
     if (isLoading || !newContent.trim()) return;
+    setIsLoading(true);
 
     const msgIdx = messages.findIndex(m => m.id === messageId);
-    if (msgIdx === -1) return;
+    if (msgIdx === -1) {
+      setIsLoading(false);
+      return;
+    }
 
     const updatedUserMsg: Message = {
       ...messages[msgIdx],
@@ -1248,7 +1256,6 @@ export default function App() {
     }
 
     setMessages(nextMessages);
-    setIsLoading(true);
 
     try {
       const response = await fetch("/api/chat", {
