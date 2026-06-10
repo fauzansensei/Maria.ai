@@ -839,7 +839,15 @@ const ChatInputForm = React.memo(function ChatInputForm({
   }, [pendingPrompt, onClearPendingPrompt]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Detect mobile or touch devices (roughly)
+    const isMobileOrTouch = window.matchMedia("(max-width: 768px)").matches || window.matchMedia("(pointer: coarse)").matches;
+
     if (e.key === "Enter" && !e.shiftKey) {
+      if (isMobileOrTouch) {
+        // On mobile, Enter should create a newline. Don't prevent default.
+        return;
+      }
+
       e.preventDefault(); // Prevent standard newline behavior of textarea
       if (inputText.trim() || attachedImages.length > 0 || voiceBase64) {
         if (!isLoading) {
@@ -853,7 +861,7 @@ const ChatInputForm = React.memo(function ChatInputForm({
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+    const files = Array.from(e.target.files || []) as File[];
     if (!files.length) return;
     
     // Validate number of files (optional, e.g. max 4 images to prevent overflow)
