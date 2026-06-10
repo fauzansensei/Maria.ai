@@ -289,7 +289,7 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
         } catch (err: any) {
           tempError = err;
           const errMsg = (err?.message || "").toUpperCase();
-          console.warn(`[Attempt ${attempt}/${maxRetries}] Model ${modelName} call failed:`, err?.status || err?.name || "API Error");
+          console.log(`[Attempt ${attempt}/${maxRetries}] Model ${modelName} call failed:`, err?.status || err?.name || "API Error");
           
           // Fast-escape on 503 (UNAVAILABLE) or 429 (quota exceeded), proceed to alternate models instead of waiting
           const isOverloadedOrQuota = 
@@ -299,7 +299,7 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
             errMsg.includes("RESOURCE_EXHAUSTED");
             
           if (isOverloadedOrQuota) {
-            console.warn(`[Fast Path Fallback] Model ${modelName} is overloaded/unavailable. Skipping duplicate attempts to find a healthy backup immediately.`);
+            console.log(`[Fast Path Fallback] Model ${modelName} is overloaded/unavailable. Skipping duplicate attempts to find a healthy backup immediately.`);
             break; 
           }
 
@@ -332,7 +332,7 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
           break;
         }
       } catch (err: any) {
-        console.warn(`Model ${modelName} encountered API error during full history attempt:`, err?.status || err?.name || "API Error");
+        console.log(`Model ${modelName} encountered API error during full history attempt:`, err?.status || err?.name || "API Error");
         lastError = err;
 
         const errMsg = (err?.message || "").toUpperCase();
@@ -343,7 +343,7 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
           errMsg.includes("RESOURCE_EXHAUSTED");
 
         if (isOverloadedOrQuota) {
-          console.warn(`[Fast Path Fallback] Skipping single-shot fallback for ${modelName} due to persistent error condition to try alternative models immediately.`);
+          console.log(`[Fast Path Fallback] Skipping single-shot fallback for ${modelName} due to persistent error condition to try alternative models immediately.`);
           continue; // Proceed directly to the next model in modelsToTry
         }
         
@@ -375,7 +375,7 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
             break;
           }
         } catch (subErr: any) {
-          console.warn(`Model ${modelName} single-shot fallback also failed.`);
+          console.log(`Model ${modelName} single-shot fallback also failed.`);
           lastError = subErr;
           await sleep(200);
         }
@@ -447,7 +447,7 @@ Ingatan lama saat ini: "${existingMemoryStr}"`;
         updatedMemory = updatedMemory.replace(/^["'`\s]+|["'`\s]+$/g, "");
       }
     } catch (memError: any) {
-      console.warn("Failed to automatically synthesize user memory paragraph:", memError?.status || memError?.name || "API Error");
+      console.log("Failed to automatically synthesize user memory paragraph:", memError?.status || memError?.name || "Resource Exhausted");
     }
 
     res.json({
