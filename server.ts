@@ -289,7 +289,6 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
         } catch (err: any) {
           tempError = err;
           const errMsg = (err?.message || "").toUpperCase();
-          console.log(`[Attempt ${attempt}/${maxRetries}] Model ${modelName} call failed:`, err?.status || err?.name || "API Error");
           
           // Fast-escape on 503 (UNAVAILABLE) or 429 (quota exceeded), proceed to alternate models instead of waiting
           const isOverloadedOrQuota = 
@@ -299,7 +298,6 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
             errMsg.includes("RESOURCE_EXHAUSTED");
             
           if (isOverloadedOrQuota) {
-            console.log(`[Fast Path Fallback] Model ${modelName} is overloaded/unavailable. Skipping duplicate attempts to find a healthy backup immediately.`);
             break; 
           }
 
@@ -328,11 +326,9 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
         
         if (response && response.text) {
           fallbackUsed = modelName;
-          console.log(`Successfully generated content using: ${modelName}`);
           break;
         }
       } catch (err: any) {
-        console.log(`Model ${modelName} encountered API error during full history attempt:`, err?.status || err?.name || "API Error");
         lastError = err;
 
         const errMsg = (err?.message || "").toUpperCase();
@@ -343,7 +339,6 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
           errMsg.includes("RESOURCE_EXHAUSTED");
 
         if (isOverloadedOrQuota) {
-          console.log(`[Fast Path Fallback] Skipping single-shot fallback for ${modelName} due to persistent error condition to try alternative models immediately.`);
           continue; // Proceed directly to the next model in modelsToTry
         }
         
@@ -352,7 +347,6 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
 
         // Attempt 2: Single-shot fallback (only the last user query) to fit tight buffer limits or mitigate tokens
         try {
-          console.log(`Retrying model ${modelName} with single-shot fallback...`);
           const singleShotPrompt = [
             {
               role: "user",
@@ -371,11 +365,9 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
           
           if (response && response.text) {
             fallbackUsed = modelName + " (Single-Shot Dynamic Fallback)";
-            console.log(`Successfully generated content using: ${modelName} via single-shot fallback`);
             break;
           }
         } catch (subErr: any) {
-          console.log(`Model ${modelName} single-shot fallback also failed.`);
           lastError = subErr;
           await sleep(200);
         }
@@ -447,7 +439,7 @@ Ingatan lama saat ini: "${existingMemoryStr}"`;
         updatedMemory = updatedMemory.replace(/^["'`\s]+|["'`\s]+$/g, "");
       }
     } catch (memError: any) {
-      console.log("Failed to automatically synthesize user memory paragraph:", memError?.status || memError?.name || "Resource Exhausted");
+      // Memory synthesis failed
     }
 
     res.json({
