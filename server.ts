@@ -288,8 +288,8 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
           }
         } catch (err: any) {
           tempError = err;
-          const errMsg = (err?.message || (typeof err === "string" ? err : JSON.stringify(err)) || "").toUpperCase();
-          console.warn(`[Attempt ${attempt}/${maxRetries}] Model ${modelName} call failed:`, err?.message || err);
+          const errMsg = (err?.message || "").toUpperCase();
+          console.warn(`[Attempt ${attempt}/${maxRetries}] Model ${modelName} call failed:`, err?.status || err?.name || "API Error");
           
           // Fast-escape on 503 (UNAVAILABLE) or 429 (quota exceeded), proceed to alternate models instead of waiting
           const isOverloadedOrQuota = 
@@ -299,7 +299,7 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
             errMsg.includes("RESOURCE_EXHAUSTED");
             
           if (isOverloadedOrQuota) {
-            console.warn(`[Fast Path Fallback] Model ${modelName} is overloaded/unavailable (${errMsg}). Skipping duplicate attempts to find a healthy backup immediately.`);
+            console.warn(`[Fast Path Fallback] Model ${modelName} is overloaded/unavailable. Skipping duplicate attempts to find a healthy backup immediately.`);
             break; 
           }
 
@@ -332,10 +332,10 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
           break;
         }
       } catch (err: any) {
-        console.warn(`Model ${modelName} encountered API error during full history attempt:`, err?.message || err);
+        console.warn(`Model ${modelName} encountered API error during full history attempt:`, err?.status || err?.name || "API Error");
         lastError = err;
 
-        const errMsg = (err?.message || (typeof err === "string" ? err : JSON.stringify(err)) || "").toUpperCase();
+        const errMsg = (err?.message || "").toUpperCase();
         const isOverloadedOrQuota = 
           errMsg.includes("503") || 
           errMsg.includes("UNAVAILABLE") || 
@@ -343,7 +343,7 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
           errMsg.includes("RESOURCE_EXHAUSTED");
 
         if (isOverloadedOrQuota) {
-          console.warn(`[Fast Path Fallback] Skipping single-shot fallback for ${modelName} due to persistent error condition (${errMsg}) to try alternative models immediately.`);
+          console.warn(`[Fast Path Fallback] Skipping single-shot fallback for ${modelName} due to persistent error condition to try alternative models immediately.`);
           continue; // Proceed directly to the next model in modelsToTry
         }
         
@@ -375,7 +375,7 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
             break;
           }
         } catch (subErr: any) {
-          console.warn(`Model ${modelName} single-shot fallback also failed:`, subErr?.message || subErr);
+          console.warn(`Model ${modelName} single-shot fallback also failed.`);
           lastError = subErr;
           await sleep(200);
         }
@@ -433,7 +433,7 @@ Ingatan lama saat ini: "${existingMemoryStr}"`;
 
       console.log("Synthesizing unified memory paragraph...");
       const memoryResult = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: fallbackUsed ? fallbackUsed.split(" ")[0] : "gemini-2.5-flash",
         contents: completeHistoryForMemory,
         config: {
           systemInstruction: memoryPromptSystem,
@@ -446,8 +446,8 @@ Ingatan lama saat ini: "${existingMemoryStr}"`;
         // Clean potential surrounding quotes or backticks
         updatedMemory = updatedMemory.replace(/^["'`\s]+|["'`\s]+$/g, "");
       }
-    } catch (memError) {
-      console.warn("Failed to automatically synthesize user memory paragraph:", memError);
+    } catch (memError: any) {
+      console.warn("Failed to automatically synthesize user memory paragraph:", memError?.status || memError?.name || "API Error");
     }
 
     res.json({
