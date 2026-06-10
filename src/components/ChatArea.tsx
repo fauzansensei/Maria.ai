@@ -1167,9 +1167,9 @@ const ChatInputForm = React.memo(function ChatInputForm({
         )}
       </form>
 
-      <div className="flex items-center justify-between text-[10px] text-slate-500 px-2 mt-2 font-mono uppercase tracking-tight font-medium">
-        <span>Maria adalah AI dapat melakukan kesalahan</span>
-        <span className="flex items-center gap-1 font-sans text-[9px] uppercase font-bold text-slate-600">
+      <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-between text-[10px] text-slate-500 px-2 mt-2 font-mono uppercase tracking-tight font-medium gap-1">
+        <span className="text-center sm:text-left">Maria adalah AI dapat melakukan kesalahan</span>
+        <span className="hidden sm:flex items-center gap-1 font-sans text-[9px] uppercase font-bold text-slate-600">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
           Enter untuk kirim
         </span>

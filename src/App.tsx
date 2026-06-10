@@ -992,7 +992,7 @@ export default function App() {
             feedback: null
           }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${currentThreadId}/messages/${assistantMsg.id}`));
         }
-        setMessages((prev) => [...prev, assistantMsg]);
+        setMessages((prev) => prev.some(m => m.id === assistantMsg.id) ? prev : [...prev, assistantMsg]);
         
         // Render speak output if configured
         speakMessage(assistantMsg.content);
@@ -1024,7 +1024,7 @@ export default function App() {
             feedback: null
           }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${currentThreadId}/messages/${errorMsg.id}`));
         }
-        setMessages((prev) => [...prev, errorMsg]);
+        setMessages((prev) => prev.some(m => m.id === errorMsg.id) ? prev : [...prev, errorMsg]);
         
         handleAddSystemNotification(
           "Peringatan Sambungan", 
@@ -1053,7 +1053,7 @@ export default function App() {
           feedback: null
         }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${currentThreadId}/messages/${errorMsg.id}`));
       }
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages((prev) => prev.some(m => m.id === errorMsg.id) ? prev : [...prev, errorMsg]);
 
       handleAddSystemNotification(
         "Koneksi Offline", 
@@ -1140,7 +1140,7 @@ export default function App() {
             feedback: null
           }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${assistantMsg.id}`));
         }
-        setMessages((prev) => [...prev, assistantMsg]);
+        setMessages((prev) => prev.some(m => m.id === assistantMsg.id) ? prev : [...prev, assistantMsg]);
 
         // Render speak output if configured
         speakMessage(assistantMsg.content);
@@ -1170,7 +1170,7 @@ export default function App() {
             feedback: null
           }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${errorMsg.id}`));
         }
-        setMessages((prev) => [...prev, errorMsg]);
+        setMessages((prev) => prev.some(m => m.id === errorMsg.id) ? prev : [...prev, errorMsg]);
       }
     } catch (networkError: any) {
       console.error("Regenerate Error:", networkError);
@@ -1193,7 +1193,7 @@ export default function App() {
           feedback: null
         }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${errorMsg.id}`));
       }
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages((prev) => prev.some(m => m.id === errorMsg.id) ? prev : [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
     }
@@ -1287,7 +1287,7 @@ export default function App() {
             feedback: null
           }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${assistantMsg.id}`));
         }
-        setMessages((prev) => [...prev, assistantMsg]);
+        setMessages((prev) => prev.some(m => m.id === assistantMsg.id) ? prev : [...prev, assistantMsg]);
 
         // Render speak output if configured
         speakMessage(assistantMsg.content);
@@ -1317,7 +1317,7 @@ export default function App() {
             feedback: null
           }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${errorMsg.id}`));
         }
-        setMessages((prev) => [...prev, errorMsg]);
+        setMessages((prev) => prev.some(m => m.id === errorMsg.id) ? prev : [...prev, errorMsg]);
       }
     } catch (networkError: any) {
       console.error("Edit Message Error:", networkError);
@@ -1340,7 +1340,7 @@ export default function App() {
           feedback: null
         }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${errorMsg.id}`));
       }
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages((prev) => prev.some(m => m.id === errorMsg.id) ? prev : [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
     }
