@@ -335,7 +335,7 @@ export default function SettingsDashboard({
                     <div className="space-y-1">
                       <p className="text-base font-bold text-zinc-100">{username}</p>
                       <p className="text-[10px] text-zinc-400 font-mono select-all">
-                        {auth.currentUser?.email || "basitfauzan42@gmail.com"}
+                        {auth.currentUser?.email || "contoh@email.com"}
                       </p>
                       <p className="text-[9px] text-[#a855f7] font-semibold">ID Anggota Aktif • Sesi Terhubung</p>
                     </div>

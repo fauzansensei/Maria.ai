@@ -299,7 +299,7 @@ export default function AuxiliaryModals({
                             setProfileUsername("@" + val);
                           }}
                           className="w-full bg-[#12151b] border border-slate-800 focus:border-emerald-500 rounded-xl pl-7 pr-3.5 py-2.5 text-white text-[12.5px] focus:outline-none transition-all placeholder-slate-500 font-medium font-sans"
-                          placeholder="basitfauzan42"
+                          placeholder="username"
                         />
                         <span className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-slate-500 text-[12.5px] font-medium pointer-events-none font-sans">
                           @
@@ -315,7 +315,7 @@ export default function AuxiliaryModals({
                         type="text"
                         readOnly
                         disabled
-                        value={auth.currentUser?.email || "user@example.com"}
+                        value={auth.currentUser?.email || "contoh@email.com"}
                         className="w-full bg-[#12151b] border border-slate-800 rounded-xl px-3.5 py-2.5 text-slate-400 text-[12.5px] cursor-not-allowed font-medium font-sans select-all"
                       />
                     </div>
@@ -357,8 +357,8 @@ export default function AuxiliaryModals({
                   <button
                     type="button"
                     onClick={async () => {
-                      const finalDisplayName = profileDisplayName.trim() || "basit fauzan";
-                      const finalUsername = profileUsername.trim() || "@basitfauzan42";
+                      const finalDisplayName = profileDisplayName.trim() || "User";
+                      const finalUsername = profileUsername.trim() || "@username";
                       
                       const updatedSettings: UserSettings = {
                         ...settings,
@@ -777,7 +777,7 @@ export default function AuxiliaryModals({
               <div className="flex items-center justify-between text-zinc-400">
                 <span className="font-semibold text-zinc-300">Kepada:</span>
                 <span className="font-mono text-zinc-200 bg-teal-500/10 border border-teal-500/20 px-1.5 py-0.5 rounded text-[10px]">
-                  basitfauzan42@gmail.com
+                  {auth.currentUser?.email || "contoh@email.com"}
                 </span>
               </div>
               <div className="flex items-center justify-between text-zinc-400">

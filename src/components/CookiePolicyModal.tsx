@@ -203,7 +203,7 @@ export default function CookiePolicyModal({
               </div>
               <div className="flex justify-between border-b border-zinc-900 pb-1">
                 <span>E-mail Resmi:</span>
-                <strong className="text-zinc-200 font-mono select-all">basitfauzan42@gmail.com</strong>
+                <strong className="text-zinc-200 font-mono select-all">support@maria.ai</strong>
               </div>
               <div className="flex justify-between border-b border-zinc-900 pb-1">
                 <span>Alamat Fisik:</span>
