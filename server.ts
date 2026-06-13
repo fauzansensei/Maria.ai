@@ -257,9 +257,7 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
     // We prioritize gemini-2.5-flash to avoid the strict quota limiting on the free tier
     const modelsToTry = [
       "gemini-2.5-flash",
-      "gemini-2.0-flash",
-      "gemini-flash-latest",
-      "gemini-pro-latest"
+      "gemini-2.0-flash"
     ];
     let response = null;
     let fallbackUsed = "";
@@ -290,19 +288,16 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
           tempError = err;
           const errMsg = (err?.message || "").toUpperCase();
           
-          // Fast-escape on 503 (UNAVAILABLE) or 429 (quota exceeded), proceed to alternate models instead of waiting
-          const isOverloadedOrQuota = 
-            errMsg.includes("503") || 
-            errMsg.includes("UNAVAILABLE") || 
-            errMsg.includes("429") || 
-            errMsg.includes("RESOURCE_EXHAUSTED");
-            
-          if (isOverloadedOrQuota) {
-            break; 
+          if (errMsg.includes("404") || errMsg.includes("NOT_FOUND")) {
+             // If model doesn't exist, fast break to skip retrying it
+             break;
           }
 
           if (attempt < maxRetries) {
-            const delay = 350 * attempt; // 350ms backoff
+            let delay = 350 * attempt; 
+            if (errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED")) {
+              delay = 2000 * attempt; // Longer backoff for rate limits
+            }
             await sleep(delay);
           }
         }
@@ -332,13 +327,19 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
         lastError = err;
 
         const errMsg = (err?.message || "").toUpperCase();
-        const isOverloadedOrQuota = 
-          errMsg.includes("503") || 
-          errMsg.includes("UNAVAILABLE") || 
-          errMsg.includes("429") || 
-          errMsg.includes("RESOURCE_EXHAUSTED");
+        
+        if (errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED")) {
+          // If the API key is completely rate limited, do not fallback to other models instantly as they share the same key.
+          break;
+        }
 
-        if (isOverloadedOrQuota) {
+        const shouldSkipToNextModel = 
+          errMsg.includes("503") || 
+          errMsg.includes("UNAVAILABLE") ||
+          errMsg.includes("404") ||
+          errMsg.includes("NOT_FOUND");
+
+        if (shouldSkipToNextModel) {
           continue; // Proceed directly to the next model in modelsToTry
         }
         
