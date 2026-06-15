@@ -366,24 +366,21 @@ export default function Sidebar({
               <span>Pengaturan</span>
             </button>
 
-            <button
-              type="button"
+            <a
+              href="/pusat-bantuan.html"
+              target="_blank"
+              rel="noopener noreferrer"
               onClick={() => {
-                if (onViewChange) onViewChange("help");
                 if (window.innerWidth < 1024) {
                   onToggleCollapse();
                 }
               }}
               aria-label="Buka Pusat Bantuan"
-              className={`w-full py-2.5 px-3 rounded-lg transition-all text-xs font-semibold flex items-center gap-3 text-left cursor-pointer ${
-                activeView === "help"
-                  ? "text-white bg-[#1c1e24] font-semibold"
-                  : "text-slate-300 hover:text-white hover:bg-[#1a1c23]/60"
-              }`}
+              className={`w-full py-2.5 px-3 rounded-lg transition-all text-xs font-semibold flex items-center gap-3 text-left cursor-pointer text-slate-300 hover:text-white hover:bg-[#1a1c23]/60`}
             >
               <HelpCircle className="w-4 h-4" />
               <span>Pusat Bantuan</span>
-            </button>
+            </a>
           </div>
 
           {/* CHATS Section Header */}

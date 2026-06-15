@@ -697,13 +697,14 @@ export default function SettingsDashboard({
                         Temukan FAQ dan informasi bantuan lainnya.
                       </span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => onOpenHelp?.()}
+                    <a
+                      href="/pusat-bantuan.html"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 border border-zinc-800 rounded-xl text-[10.5px] font-bold cursor-pointer transition-colors shrink-0 inline-block text-center"
                     >
                       Buka Bantuan
-                    </button>
+                    </a>
                   </div>
 
                   <div className="pt-3 border-t border-zinc-900/40 flex items-center justify-between">
