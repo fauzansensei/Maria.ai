@@ -23,7 +23,13 @@ import {
   User,
   Shield,
   Palette,
-  Brain
+  Brain,
+  MessageSquare,
+  Activity,
+  Heart,
+  Briefcase,
+  Zap,
+  Code
 } from "lucide-react";
 
 interface SettingsDashboardProps {
@@ -435,50 +441,81 @@ export default function SettingsDashboard({
 
             {/* 3. BEHAVIOR SECTION */}
             {activeTab === "behavior" && (
-              <div className="space-y-4 max-w-xl duration-150 font-sans">
-                <h3 className="text-sm font-semibold text-zinc-200">Perilaku Maria AI</h3>
-                <div className="bg-[#161617] rounded-2xl p-4.5 border border-zinc-900/60 space-y-4">
-                  {/* Dialog Personality option */}
-                  <div className="space-y-2">
-                    <label className="block text-[9.5px] font-bold text-zinc-400 uppercase tracking-wide">
-                      Karakter Kepribadian Asisten
+              <div className="space-y-5 max-w-xl duration-150 font-sans">
+                <div className="space-y-1">
+                  <h3 className="text-[14.5px] font-bold text-zinc-100 flex items-center gap-2">
+                    <Sliders className={`w-4 h-4 ${getAccentTextClass()}`} />
+                    Personalisasi Perilaku Maria 
+                  </h3>
+                  <p className="text-[10px] text-zinc-500 leading-normal max-w-md">
+                    Sesuaikan gaya berbicara dan karakter unik asisten agar sesuai dengan alur kerja, mood, atau kebutuhan produktivitas Kakak sehari-hari.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-1.5 text-[9.5px] font-bold text-zinc-400 uppercase tracking-widest pl-1">
+                      Karakter Kepribadian
                     </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {["Professional", "Warm", "Creative", "Technical", "Minimalist"].map((tone) => (
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { tone: "Professional", icon: Briefcase, desc: "Akurat & formal" },
+                        { tone: "Warm", icon: Heart, desc: "Ramah & empati" },
+                        { tone: "Creative", icon: Sparkles, desc: "Imajinatif & unik" },
+                        { tone: "Technical", icon: Code, desc: "Logis & analitis" },
+                        { tone: "Minimalist", icon: Zap, desc: "Singkat, to-the-point" }
+                      ].map((item) => (
                         <button
-                          key={tone}
+                          key={item.tone}
                           type="button"
                           onClick={() => {
-                            setToneStyle(tone as MariaTone);
-                            triggerSave({ tone: tone as MariaTone });
+                            setToneStyle(item.tone as MariaTone);
+                            triggerSave({ tone: item.tone as MariaTone });
                           }}
-                          className={`p-2 rounded-xl text-[10.5px] font-semibold border transition-all cursor-pointer text-center ${
-                            toneStyle === tone 
-                              ? "bg-zinc-900 border-zinc-750 text-white" 
-                              : "bg-[#0d0d0e]/60 border-transparent text-zinc-400 hover:bg-zinc-900/40"
+                          className={`relative p-3.5 rounded-2xl flex flex-col items-start gap-1.5 border transition-all cursor-pointer overflow-hidden ${
+                            toneStyle === item.tone 
+                              ? `bg-zinc-900/90 border-zinc-700 shadow-sm ${getAccentTextClass()}` 
+                              : "bg-[#161617]/50 border-zinc-900 hover:bg-[#161617]/90 text-zinc-400 hover:border-zinc-800"
                           }`}
                         >
-                          {tone}
+                          {toneStyle === item.tone && (
+                            <div className="absolute top-0 right-0 w-12 h-12 bg-current opacity-[0.04] blur-xl rounded-full" />
+                          )}
+                          <div className={`p-1.5 rounded-lg mb-0.5 ${toneStyle === item.tone ? "bg-zinc-950/50" : "bg-black/20"}`}>
+                            <item.icon className="w-4 h-4" />
+                          </div>
+                          <div className="text-left">
+                            <h4 className={`text-[11.5px] font-bold ${toneStyle === item.tone ? "text-zinc-100" : "text-zinc-300"}`}>
+                              {item.tone}
+                            </h4>
+                            <p className="text-[9.5px] font-medium opacity-70 mt-0.5">
+                              {item.desc}
+                            </p>
+                          </div>
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  {/* Custom System Prompt Instructions */}
-                  <div className="space-y-2 pt-2 border-t border-zinc-900/20">
-                    <label className="block text-[9.5px] font-bold text-zinc-400 uppercase tracking-wide">
-                      Petunjuk Kustom (Custom Instructions)
+                  <div className="space-y-3 pt-3">
+                    <label className="flex items-center gap-1.5 text-[9.5px] font-bold text-zinc-400 uppercase tracking-widest pl-1">
+                      Instruksi Kustom (Opsional)
                     </label>
-                    <textarea
-                      value={customInstructions}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setCustomInstructions(val);
-                        triggerSave({ customPrompt: val });
-                      }}
-                      className="w-full h-32 p-3 rounded-xl border border-zinc-800 bg-[#0d0d0e] text-zinc-100 text-[11px] focus:border-zinc-700 outline-none resize-none leading-relaxed"
-                      placeholder="Contoh: Jawab selalu dengan ramah dan panggil aku Kakak, suka memakai emoji gemas..."
-                    />
+                    <div className="relative group">
+                      <div className="absolute top-3 left-3 text-zinc-500">
+                        <MessageSquare className="w-4 h-4" />
+                      </div>
+                      <textarea
+                        value={customInstructions}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCustomInstructions(val);
+                          triggerSave({ customPrompt: val });
+                        }}
+                        className="w-full h-32 pl-9 p-3.5 pt-3 rounded-2xl border border-zinc-900 bg-[#161617] text-zinc-100 text-[11px] focus:border-zinc-700 focus:bg-zinc-900/50 outline-none resize-none leading-relaxed transition-all shadow-inner"
+                        placeholder="Contoh: Selalu sapa saya dengan 'Halo Kak!' setiap memulai percakapan baru, gunakan bahasa yang sangat puitis..."
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -486,97 +523,128 @@ export default function SettingsDashboard({
 
             {/* 4. NOTIFICATIONS */}
             {activeTab === "notifications" && (
-              <div className="space-y-4 max-w-xl duration-150 font-sans">
-                <h3 className="text-sm font-semibold text-zinc-200">Notifikasi Sistem</h3>
-                <div className="bg-[#161617] rounded-2xl p-4.5 border border-zinc-900/60 space-y-4">
-                  
+              <div className="space-y-5 max-w-xl duration-150 font-sans">
+                <div className="space-y-1">
+                  <h3 className="text-[14.5px] font-bold text-zinc-100 flex items-center gap-2">
+                    <Bell className={`w-4 h-4 ${getAccentTextClass()}`} />
+                    Aktivitas & Notifikasi
+                  </h3>
+                  <p className="text-[10px] text-zinc-500 leading-normal max-w-md">
+                    Atur preferensi pemberitahuan untuk memastikan Anda tidak ketinggalan inspirasi pintar atau sekadar menikmati keheningan produktivitas tinggi.
+                  </p>
+                </div>
+
+                <div className="bg-[#161617] rounded-3xl border border-zinc-900/80 overflow-hidden divide-y divide-zinc-900/50 shadow-sm">
                   {/* Sound enabled toggle */}
-                  <div className="flex items-center justify-between pb-3 border-b border-zinc-900/35">
-                    <div className="space-y-0.5">
-                      <span className="text-zinc-100 font-medium text-[11.5px] block">Pemberitahuan Suara</span>
-                      <span className="text-[10px] text-zinc-500 block leading-tight">Bunyi efek suara lembut saat pesan dikirim atau diterima secara berkala.</span>
+                  <label className="flex items-center justify-between p-4.5 hover:bg-zinc-900/30 transition-colors cursor-pointer">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+                        <Volume2 className="w-4 h-4 text-blue-400" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <span className="text-zinc-100 font-bold text-[11.5px] block">Efek Suara Antarmuka</span>
+                        <span className="text-[10px] text-zinc-500 block leading-tight max-w-[200px]">Umpan balik audio lembut saat interaksi sistem.</span>
+                      </div>
                     </div>
                     <div
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.preventDefault();
                         const next = !soundEnabled;
                         setSoundEnabled(next);
                         triggerSave({ notifications: { soundEnabled: next, statusUpdates, remindersEnabled } });
                       }}
-                      className={`w-9 h-5 rounded-full p-[2px] cursor-pointer transition-colors duration-200 ${soundEnabled ? getAccentBgClass() : 'bg-[#323235]'}`}
+                      className={`relative w-9 h-5 rounded-full p-[2px] transition-colors duration-300 shadow-inner ${soundEnabled ? getAccentBgClass() : 'bg-[#323235]'}`}
                     >
-                      <div className={`w-4 h-4 bg-white rounded-full shadow-md transition-transform duration-200 transform ${soundEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                      <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300 transform ${soundEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
                     </div>
-                  </div>
+                  </label>
 
                   {/* Status updates toggle */}
-                  <div className="flex items-center justify-between pb-3 border-b border-zinc-900/35">
-                    <div className="space-y-0.5">
-                      <span className="text-zinc-100 font-medium text-[11.5px] block">Pembaruan Status Maria</span>
-                      <span className="text-[10px] text-zinc-500 block leading-tight">Terima notifikasi status sistem atau rilis terbaru dari kecerdasan Maria.</span>
+                  <label className="flex items-center justify-between p-4.5 hover:bg-zinc-900/30 transition-colors cursor-pointer">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                        <Activity className="w-4 h-4 text-emerald-400" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <span className="text-zinc-100 font-bold text-[11.5px] block">Pembaruan Sistem</span>
+                        <span className="text-[10px] text-zinc-500 block leading-tight max-w-[200px]">Terima metrik dan info terkait versi rilis Maria.</span>
+                      </div>
                     </div>
                     <div
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.preventDefault();
                         const next = !statusUpdates;
                         setStatusUpdates(next);
                         triggerSave({ notifications: { soundEnabled, statusUpdates: next, remindersEnabled } });
                       }}
-                      className={`w-9 h-5 rounded-full p-[2px] cursor-pointer transition-colors duration-200 ${statusUpdates ? getAccentBgClass() : 'bg-[#323235]'}`}
+                      className={`relative w-9 h-5 rounded-full p-[2px] transition-colors duration-300 shadow-inner ${statusUpdates ? getAccentBgClass() : 'bg-[#323235]'}`}
                     >
-                      <div className={`w-4 h-4 bg-white rounded-full shadow-md transition-transform duration-200 transform ${statusUpdates ? 'translate-x-4' : 'translate-x-0'}`} />
+                      <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300 transform ${statusUpdates ? 'translate-x-4' : 'translate-x-0'}`} />
                     </div>
-                  </div>
+                  </label>
 
                   {/* Reminders / Suggestions toggle */}
-                  <div className="flex items-center justify-between pb-3 border-b border-zinc-900/35">
-                    <div className="space-y-0.5">
-                      <span className="text-zinc-100 font-medium text-[11.5px] block">Saran & Pengingat Rutin</span>
-                      <span className="text-[10px] text-zinc-500 block leading-tight">Ijinkan Maria memberikan rekomendasi tugas asisten pribadi ke panel instrumen.</span>
+                  <label className="flex items-center justify-between p-4.5 hover:bg-zinc-900/30 transition-colors cursor-pointer">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0">
+                        <Sparkles className="w-4 h-4 text-purple-400" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <span className="text-zinc-100 font-bold text-[11.5px] block">Saran Pintar</span>
+                        <span className="text-[10px] text-zinc-500 block leading-tight max-w-[200px]">Izinkan asisten merokemendasikan tugas proaktif.</span>
+                      </div>
                     </div>
                     <div
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.preventDefault();
                         const next = !remindersEnabled;
                         setRemindersEnabled(next);
                         triggerSave({ notifications: { soundEnabled, statusUpdates, remindersEnabled: next } });
                       }}
-                      className={`w-9 h-5 rounded-full p-[2px] cursor-pointer transition-colors duration-200 ${remindersEnabled ? getAccentBgClass() : 'bg-[#323235]'}`}
+                      className={`relative w-9 h-5 rounded-full p-[2px] transition-colors duration-300 shadow-inner ${remindersEnabled ? getAccentBgClass() : 'bg-[#323235]'}`}
                     >
-                      <div className={`w-4 h-4 bg-white rounded-full shadow-md transition-transform duration-200 transform ${remindersEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                      <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300 transform ${remindersEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
                     </div>
-                  </div>
+                  </label>
+                </div>
 
-                  {/* Simulation notifications control section */}
-                  <div className="space-y-2 pt-2">
-                    <label className="block text-[9.5px] font-bold text-zinc-400 uppercase tracking-wide">
-                      Simulasikan Notifikasi Sistem
-                    </label>
-                    <div className="grid grid-cols-3 gap-2.5">
-                      <button
-                        type="button"
-                        onClick={() => triggerSimulation("reminders")}
-                        className="bg-blue-600/10 hover:bg-blue-500/15 border border-blue-500/15 rounded-xl p-2 text-[10px] font-semibold text-blue-400 flex flex-col items-center gap-1 cursor-pointer transition-all active:scale-98"
-                      >
-                        <Bell className="w-3.5 h-3.5" />
-                        <span>Agenda</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => triggerSimulation("updates")}
-                        className="bg-emerald-600/10 hover:bg-emerald-500/15 border border-emerald-500/15 rounded-xl p-2 text-[10px] font-semibold text-emerald-400 flex flex-col items-center gap-1 cursor-pointer transition-all active:scale-98"
-                      >
-                        <Mail className="w-3.5 h-3.5" />
-                        <span>Pembaruan</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => triggerSimulation("suggestions")}
-                        className="bg-orange-600/10 hover:bg-orange-500/15 border border-orange-500/15 rounded-xl p-2 text-[10px] font-semibold text-orange-400 flex flex-col items-center gap-1 cursor-pointer transition-all active:scale-98"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>Saran</span>
-                      </button>
-                    </div>
+                {/* Simulation notifications control section */}
+                <div className="space-y-3 pt-2">
+                  <label className="block text-[9.5px] font-bold text-zinc-400 uppercase tracking-widest pl-1">
+                    Coba Pengujian Notifikasi
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => triggerSimulation("reminders")}
+                      className="bg-[#161617] hover:bg-zinc-900/80 border border-zinc-900 rounded-2xl p-3 text-center flex flex-col items-center gap-2 cursor-pointer transition-all active:scale-95 shadow-sm group"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Bell className="w-3.5 h-3.5 text-blue-400" />
+                      </div>
+                      <span className="text-[10px] font-bold text-zinc-300">Agenda</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => triggerSimulation("updates")}
+                      className="bg-[#161617] hover:bg-zinc-900/80 border border-zinc-900 rounded-2xl p-3 text-center flex flex-col items-center gap-2 cursor-pointer transition-all active:scale-95 shadow-sm group"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Mail className="w-3.5 h-3.5 text-emerald-400" />
+                      </div>
+                      <span className="text-[10px] font-bold text-zinc-300">Pembaruan</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => triggerSimulation("suggestions")}
+                      className="bg-[#161617] hover:bg-zinc-900/80 border border-zinc-900 rounded-2xl p-3 text-center flex flex-col items-center gap-2 cursor-pointer transition-all active:scale-95 shadow-sm group"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Sparkles className="w-3.5 h-3.5 text-orange-400" />
+                      </div>
+                      <span className="text-[10px] font-bold text-zinc-300">Saran</span>
+                    </button>
                   </div>
-
                 </div>
               </div>
             )}
