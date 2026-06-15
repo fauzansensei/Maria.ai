@@ -45,8 +45,8 @@ interface SidebarProps {
   onDeleteThread?: (id: string) => void;
   onShareThread?: (id: string) => void;
   onArchiveThread?: (id: string) => void;
-  activeView?: "chat" | "library" | "discover" | "help";
-  onViewChange?: (view: "chat" | "library" | "discover" | "help") => void;
+  activeView?: "chat" | "library" | "discover";
+  onViewChange?: (view: "chat" | "library" | "discover") => void;
   profileAvatarProp?: string;
   useInitialsAvatarProp?: boolean;
   profileAvatarBgProp?: string;
@@ -367,7 +367,7 @@ export default function Sidebar({
             </button>
 
             <a
-              href="/pusat-bantuan"
+              href="/pusat-bantuan.html"
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => {

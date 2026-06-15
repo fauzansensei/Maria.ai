@@ -39,7 +39,6 @@ interface SettingsDashboardProps {
   setIsPlus?: (val: boolean) => void;
   memories?: UserMemory[];
   onSaveMemories?: (memories: UserMemory[]) => void;
-  onOpenHelp?: () => void;
 }
 
 type MenuTab = "profile" | "appearance" | "behavior" | "notifications" | "billing" | "privacy" | "memories";
@@ -698,7 +697,7 @@ export default function SettingsDashboard({
                       </span>
                     </div>
                     <a
-                      href="/pusat-bantuan"
+                      href="/pusat-bantuan.html"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 border border-zinc-800 rounded-xl text-[10.5px] font-bold cursor-pointer transition-colors shrink-0 inline-block text-center"

@@ -77,7 +77,6 @@ const SettingsDashboard = lazyWithRetry(() => import("./components/SettingsDashb
 const DiscoverArea = lazyWithRetry(() => import("./components/DiscoverArea"));
 const LibraryArea = lazyWithRetry(() => import("./components/LibraryArea"));
 const AuxiliaryModals = lazyWithRetry(() => import("./components/AuxiliaryModals"));
-const HelpArea = lazyWithRetry(() => import("./components/HelpArea"));
 import { 
   Bot, 
   Settings, 
@@ -324,7 +323,7 @@ export default function App() {
   const [isClearingAllHistory, setIsClearingAllHistory] = useState<boolean>(false);
 
   // Library and Discover states matching Maria AI suggestions
-  const [activeView, setActiveView] = useState<"chat" | "library" | "discover" | "help">("chat");
+  const [activeView, setActiveView] = useState<"chat" | "library" | "discover">("chat");
   const [bookmarkedMessages, setBookmarkedMessages] = useState<Message[]>([]);
   const [isPlus, setIsPlus] = useState(() => {
     if (typeof window !== "undefined") {
@@ -1611,22 +1610,6 @@ export default function App() {
   // Get active themed colors
   const activeColorTheme = THEME_OPTIONS.find(t => t.value === settings.theme) || THEME_OPTIONS[0];
 
-  const isHelpRoute = typeof window !== "undefined" && window.location.pathname === "/pusat-bantuan";
-
-  if (isHelpRoute) {
-    return (
-      <div className="h-[100dvh] w-screen flex flex-col">
-        <React.Suspense fallback={<div className="flex-1 bg-[#101117]" />}>
-          <HelpArea 
-            settings={settings} 
-            onExit={() => window.location.href = "/"} 
-            onAddSystemNotification={handleAddSystemNotification}
-          />
-        </React.Suspense>
-      </div>
-    );
-  }
-
   return (
     <div className="h-[100dvh] w-screen flex flex-col font-sans overflow-hidden bg-slate-50 text-slate-700 select-none">
       
@@ -1767,21 +1750,6 @@ export default function App() {
               />
             </React.Suspense>
           )}
-
-          {activeView === "help" && (
-            <React.Suspense fallback={
-              <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#0b0f17] text-slate-400">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500 mb-3" />
-                <p className="text-xs font-sans font-medium tracking-wide">Membuka bantuan teknis...</p>
-              </div>
-            }>
-              <HelpArea
-                settings={settings}
-                onExit={() => setActiveView("chat")}
-                onAddSystemNotification={handleAddSystemNotification}
-              />
-            </React.Suspense>
-          )}
         </main>
       </React.Suspense>
 
@@ -1817,10 +1785,6 @@ export default function App() {
                   setIsPlus={setIsPlus}
                   memories={memories}
                   onSaveMemories={handleSaveMemories}
-                  onOpenHelp={() => {
-                    setIsSettingsOpen(false);
-                    setActiveView("help");
-                  }}
                 />
               </React.Suspense>
             </div>
