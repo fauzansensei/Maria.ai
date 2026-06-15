@@ -413,14 +413,18 @@ export default function HelpArea({ settings, onExit, onAddSystemNotification }: 
 
         <div className="mt-8 text-center border-t border-zinc-900/50 pt-6">
           <p className="text-[10px] text-zinc-500 font-semibold uppercase tracking-widest mb-3">TAUTAN LEGAL</p>
-          <div className="flex justify-center items-center gap-4 text-xs">
+          <div className="flex justify-center items-center gap-4 text-xs flex-wrap">
             <a href="/kebijakan-privasi.html" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-indigo-400 transition-colors font-semibold">
               Kebijakan Privasi
             </a>
-            <span className="text-zinc-700">•</span>
-            <button onClick={() => window.dispatchEvent(new CustomEvent('open-cookie-policy'))} className="text-zinc-400 hover:text-indigo-400 transition-colors font-semibold cursor-pointer">
+            <span className="text-zinc-700 hidden sm:inline-block">•</span>
+            <a href="/ketentuan-layanan.html" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-indigo-400 transition-colors font-semibold">
+              Ketentuan Layanan
+            </a>
+            <span className="text-zinc-700 hidden sm:inline-block">•</span>
+            <a href="/kebijakan-cookies.html" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-indigo-400 transition-colors font-semibold">
               Kebijakan Cookies
-            </button>
+            </a>
           </div>
           <p className="text-[10px] text-zinc-600 mt-4">&copy; {new Date().getFullYear()} Maria AI. Seluruh Hak Cipta Dilindungi.</p>
         </div>

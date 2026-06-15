@@ -1801,6 +1801,10 @@ export default function App() {
                   setIsPlus={setIsPlus}
                   memories={memories}
                   onSaveMemories={handleSaveMemories}
+                  onOpenHelp={() => {
+                    setIsSettingsOpen(false);
+                    setActiveView("help");
+                  }}
                 />
               </React.Suspense>
             </div>
@@ -1873,7 +1877,7 @@ export default function App() {
                 <div className="space-y-1">
                   <strong className="block text-[13px] font-bold text-zinc-50 tracking-tight leading-tight">Persetujuan Cookies & Privasi</strong>
                   <p className="text-[11px] text-zinc-300 leading-relaxed font-sans">
-                    Kami menggunakan cookies esensial untuk menyimpan sesi obrolan Anda dan meningkatkan keandalan navigasi di Maria AI. Kakak dapat membaca selengkapnya pada draf <button type="button" onClick={() => setIsCookieModalOpenFromBanner(true)} className="text-blue-400 hover:text-blue-300 underline font-bold cursor-pointer transition-colors decoration-blue-400/40 hover:decoration-blue-300">Kebijakan Cookies</button> kami.
+                    Kami menggunakan cookies esensial untuk menyimpan sesi obrolan Anda dan meningkatkan keandalan navigasi di Maria AI. Kakak dapat membaca selengkapnya pada draf <a href="/kebijakan-cookies.html" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline font-bold cursor-pointer transition-colors decoration-blue-400/40 hover:decoration-blue-300">Kebijakan Cookies</a> kami.
                   </p>
                 </div>
               </div>

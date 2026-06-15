@@ -39,6 +39,7 @@ interface SettingsDashboardProps {
   setIsPlus?: (val: boolean) => void;
   memories?: UserMemory[];
   onSaveMemories?: (memories: UserMemory[]) => void;
+  onOpenHelp?: () => void;
 }
 
 type MenuTab = "profile" | "appearance" | "behavior" | "notifications" | "billing" | "privacy" | "memories";
@@ -662,12 +663,46 @@ export default function SettingsDashboard({
                         Pelajari penggunaan file teks esensial, analisis data, dan opsi manajemen privasi Kakak di platform ini sesuai standar global.
                       </span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setIsCookieModalOpen(true)}
-                      className="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 border border-zinc-800 rounded-xl text-[10.5px] font-bold cursor-pointer transition-colors shrink-0"
+                    <a
+                      href="/kebijakan-cookies.html"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 border border-zinc-800 rounded-xl text-[10.5px] font-bold cursor-pointer transition-colors shrink-0 inline-block text-center"
                     >
                       Baca Kebijakan
+                    </a>
+                  </div>
+
+                  <div className="pt-3 border-t border-zinc-900/40 flex items-center justify-between">
+                    <div className="space-y-0.5 max-w-[280px]">
+                      <span className="text-zinc-200 font-semibold text-[11px] block">Ketentuan Layanan (Terms of Service)</span>
+                      <span className="text-[9.5px] text-zinc-400 block leading-tight">
+                        Syarat dan ketentuan dalam menggunakan layanan asisten cerdas Maria AI.
+                      </span>
+                    </div>
+                    <a
+                      href="/ketentuan-layanan.html"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 border border-zinc-800 rounded-xl text-[10.5px] font-bold cursor-pointer transition-colors shrink-0 inline-block text-center"
+                    >
+                      Baca TOS
+                    </a>
+                  </div>
+
+                  <div className="pt-3 border-t border-zinc-900/40 flex items-center justify-between">
+                    <div className="space-y-0.5 max-w-[280px]">
+                      <span className="text-zinc-200 font-semibold text-[11px] block">Pusat Bantuan (Help Center)</span>
+                      <span className="text-[9.5px] text-zinc-400 block leading-tight">
+                        Temukan FAQ dan informasi bantuan lainnya.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onOpenHelp?.()}
+                      className="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 border border-zinc-800 rounded-xl text-[10.5px] font-bold cursor-pointer transition-colors shrink-0 inline-block text-center"
+                    >
+                      Buka Bantuan
                     </button>
                   </div>
 
