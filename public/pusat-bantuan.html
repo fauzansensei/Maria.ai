@@ -48,13 +48,10 @@
         .logo-icon {
             width: 20px;
             height: 20px;
-            border: 1.5px solid white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 13px;
-            font-weight: bold;
         }
         .go-to-app {
             color: #b3b3b3;
@@ -128,14 +125,12 @@
         .collection-icon {
             width: 64px;
             height: 64px;
-            background-color: transparent;
-            border: 1.5px solid var(--text-main);
+            background-color: #171f36; /* Based on typical Maria icon background */
             border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            color: var(--text-main);
         }
         .collection-info h2 {
             font-size: 28px;
@@ -280,7 +275,7 @@
     <div class="header-bg">
         <header>
             <a href="/" class="logo">
-                <div class="logo-icon">M</div>
+                <img src="/favicon.svg" alt="Maria AI Logo" class="logo-icon" />
                 Maria AI
             </a>
             <a href="/" class="go-to-app">Go to Maria AI</a>
@@ -305,12 +300,7 @@
 
         <div class="collection-header">
             <div class="collection-icon">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                    <path d="M9 10h.01"></path>
-                    <path d="M12 10h.01"></path>
-                    <path d="M15 10h.01"></path>
-                </svg>
+                <img src="/favicon.svg" alt="Maria AI" style="width: 64px; height: 64px; border-radius: 16px;" />
             </div>
             <div class="collection-info">
                 <h2>Maria AI</h2>
