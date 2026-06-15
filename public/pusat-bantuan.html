@@ -222,6 +222,43 @@
         .article-wrapper.active .article-arrow {
             transform: rotate(90deg);
         }
+        .support-section {
+            margin-top: 60px;
+        }
+        .support-section h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-main);
+        }
+        .support-section p {
+            color: var(--text-muted);
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+        .contact-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .contact-btn {
+            display: inline-block;
+            background-color: var(--primary);
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            margin-top: 8px;
+            transition: opacity 0.2s;
+        }
+        .contact-btn:hover {
+            opacity: 0.9;
+        }
         .footer {
             text-align: center;
             padding: 40px 20px;
@@ -243,7 +280,7 @@
     <div class="header-bg">
         <header>
             <a href="/" class="logo">
-                <div class="logo-icon">i</div>
+                <div class="logo-icon">M</div>
                 Maria AI
             </a>
             <a href="/" class="go-to-app">Go to Maria AI</a>
@@ -410,6 +447,20 @@
                     <p>Layanan <strong>Maria Plus</strong> diperuntukkan sebagai simulasi tier premium yang menggunakan akses model yang diklaim lebih canggih serta kemampuan simulasi analisia gambar.</p>
                     <p>Secara riil di antarmuka ini, status Maria Plus berperan sebagai perubah preferensi tampilan model premium dan lencana yang dapat Anda pamerkan, serta akses tanpa batas pada respons berdimensi tinggi bila diperlukan.</p>
                 </div>
+            </div>
+        </div>
+
+        <div class="support-section">
+            <div class="contact-card">
+                <h3>Melaporkan Masalah Teknis</h3>
+                <p>Jika Anda mengalami <em>bug</em>, halaman macet (error), atau asisten gagal memuat jawaban, Anda bisa menyegarkan halaman Anda atau mencoba lagi nanti. Jika masalah tersebut masih berlanjut, hubungi tim pengembang.</p>
+            </div>
+            
+            <div class="contact-card">
+                <h3>Hubungi Dukungan</h3>
+                <p>Masih memiliki pertanyaan atau membutuhkan bantuan langsung dari pengembang?</p>
+                <p>Silakan kirimkan pesan pengajuan keluhan atau laporan Anda melalui Email.</p>
+                <a href="mailto:basitfauzan42@gmail.com" class="contact-btn">Kirim Pesan Pengajuan</a>
             </div>
         </div>
     </main>
