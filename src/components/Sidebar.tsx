@@ -367,7 +367,7 @@ export default function Sidebar({
             </button>
 
             <a
-              href="/pusat-bantuan.html"
+              href="/pusat-bantuan"
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => {

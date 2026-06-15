@@ -1611,6 +1611,22 @@ export default function App() {
   // Get active themed colors
   const activeColorTheme = THEME_OPTIONS.find(t => t.value === settings.theme) || THEME_OPTIONS[0];
 
+  const isHelpRoute = typeof window !== "undefined" && window.location.pathname === "/pusat-bantuan";
+
+  if (isHelpRoute) {
+    return (
+      <div className="h-[100dvh] w-screen flex flex-col">
+        <React.Suspense fallback={<div className="flex-1 bg-[#101117]" />}>
+          <HelpArea 
+            settings={settings} 
+            onExit={() => window.location.href = "/"} 
+            onAddSystemNotification={handleAddSystemNotification}
+          />
+        </React.Suspense>
+      </div>
+    );
+  }
+
   return (
     <div className="h-[100dvh] w-screen flex flex-col font-sans overflow-hidden bg-slate-50 text-slate-700 select-none">
       
