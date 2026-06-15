@@ -46,12 +46,14 @@
             gap: 8px;
         }
         .logo-icon {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
+            background-color: transparent;
         }
         .go-to-app {
             color: #b3b3b3;
@@ -125,12 +127,12 @@
         .collection-icon {
             width: 64px;
             height: 64px;
-            background-color: #171f36; /* Based on typical Maria icon background */
             border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            overflow: hidden;
         }
         .collection-info h2 {
             font-size: 28px;
@@ -275,7 +277,17 @@
     <div class="header-bg">
         <header>
             <a href="/" class="logo">
-                <img src="/favicon.svg" alt="Maria AI Logo" class="logo-icon" />
+                <div class="logo-icon">
+                    <svg viewBox="0 0 512 512" fill="none" style="width:100%; height:100%;">
+                        <rect width="512" height="512" fill="#171f36"/>
+                        <circle cx="256" cy="256" r="160" stroke="#bcc6d4" stroke-width="12"/>
+                        <g stroke="#f6acad" stroke-width="14" stroke-linecap="round">
+                            <line x1="160" y1="390" x2="240" y2="278"/>
+                            <line x1="286" y1="214" x2="352" y2="122"/>
+                        </g>
+                        <text x="256" y="325" font-family="'Inter', sans-serif" font-weight="900" font-size="220" fill="white" text-anchor="middle">M</text>
+                    </svg>
+                </div>
                 Maria AI
             </a>
             <a href="/" class="go-to-app">Go to Maria AI</a>
@@ -300,7 +312,15 @@
 
         <div class="collection-header">
             <div class="collection-icon">
-                <img src="/favicon.svg" alt="Maria AI" style="width: 64px; height: 64px; border-radius: 16px;" />
+                <svg viewBox="0 0 512 512" fill="none" style="width:100%; height:100%;">
+                    <rect width="512" height="512" fill="#171f36"/>
+                    <circle cx="256" cy="256" r="160" stroke="#bcc6d4" stroke-width="12"/>
+                    <g stroke="#f6acad" stroke-width="14" stroke-linecap="round">
+                        <line x1="160" y1="390" x2="240" y2="278"/>
+                        <line x1="286" y1="214" x2="352" y2="122"/>
+                    </g>
+                    <text x="256" y="325" font-family="'Inter', sans-serif" font-weight="900" font-size="220" fill="white" text-anchor="middle">M</text>
+                </svg>
             </div>
             <div class="collection-info">
                 <h2>Maria AI</h2>
