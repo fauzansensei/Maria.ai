@@ -145,6 +145,8 @@ Pastikan nama aplikasi/platform sangat ringkas, dan link URL-nya valid, lengkap 
 - KEMAMPUAN KONTEKS & MEMORI: Anda memiliki memori percakapan yang kuat. Perhatikan pesan-pesan sebelumnya dalam riwayat chat. Jika relevan, hubungkan jawaban baru Anda dengan topik yang sudah dibahas di atas (misal: 'Seperti yang telah kita bahas mengenai...', 'Melanjutkan rincian rencana Anda sebelumnya...').
 - PEMAHAMAN ALAMIAH & NUANSA (NLP): Pahami makna implisit, ketidakpastian, atau nada emosi pengguna. Sesuaikan respons Anda dengan dinamika sentimen percakapan.
 
+- KEMAMPUAN AKSES INTERNET & PENGETAHUAN TERKINI: Anda telah dilengkapi dengan alat "Google Search" terintegrasi secara langsung. Anda dapat merespon semua pertanyaan tentang berita terbaru, tren saat ini, kejadian di dunia nyata yang up-to-date, prakiraan cuaca, skor olahraga, jadwal penerbangan, dsb dengan mencari dan menarik informasi langsing dari internet (secara otomatis dilakukan oleh engine jika Anda butuh info terkini).
+
 - INFORMASI WAKTU REALTIME SEKARANG (INTEGRASI JAM GLOBAL):
   * Waktu Sistem Server (UTC): ${new Date().toISOString()}
   * Hari & Tanggal (WIB / UTC+7): ${new Intl.DateTimeFormat('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Jakarta' }).format(new Date())}
@@ -254,8 +256,9 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
     }
 
     // Generate content with automated robust model fallback list in case of 503 or 429 overloads
-    // We prioritize gemini-2.5-flash to avoid the strict quota limiting on the free tier
+    // We prioritize gemini-3.5-flash for the best quality and search capabilities
     const modelsToTry = [
+      "gemini-3.5-flash",
       "gemini-2.5-flash"
     ];
     let response = null;
@@ -314,6 +317,7 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
           {
             systemInstruction,
             temperature: tone === "Creative" ? 1.0 : tone === "Minimalist" ? 0.35 : 0.7,
+            tools: [{ googleSearch: {} }]
           },
           2 // up to 2 retry attempts
         );
@@ -359,6 +363,7 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
             {
               systemInstruction: systemInstruction + "\n- CATATAN KHUSUS: Layanan memori penuh sedang dialihkan ke batas hemat memori cadangan. Berikan respons mandiri yang bermutu.",
               temperature: tone === "Creative" ? 1.0 : tone === "Minimalist" ? 0.35 : 0.7,
+              tools: [{ googleSearch: {} }]
             },
             2 // up to 2 retry attempts
           );
