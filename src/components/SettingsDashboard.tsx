@@ -640,6 +640,23 @@ export default function SettingsDashboard({
 
                   <div className="pt-3 border-t border-zinc-900/40 flex items-center justify-between">
                     <div className="space-y-0.5 max-w-[280px]">
+                      <span className="text-zinc-200 font-semibold text-[11px] block">Kebijakan Privasi (Privacy Policy)</span>
+                      <span className="text-[9.5px] text-zinc-400 block leading-tight">
+                        Pelajari bagaimana kami mengumpulkan, menggunakan, dan melindungi data pribadi Kakak di Maria AI.
+                      </span>
+                    </div>
+                    <a
+                      href="/kebijakan-privasi.html"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 border border-zinc-800 rounded-xl text-[10.5px] font-bold cursor-pointer transition-colors shrink-0 inline-block text-center"
+                    >
+                      Baca Privasi
+                    </a>
+                  </div>
+
+                  <div className="pt-3 border-t border-zinc-900/40 flex items-center justify-between">
+                    <div className="space-y-0.5 max-w-[280px]">
                       <span className="text-zinc-200 font-semibold text-[11px] block">Kebijakan Cookies (Cookies Policy)</span>
                       <span className="text-[9.5px] text-zinc-400 block leading-tight">
                         Pelajari penggunaan file teks esensial, analisis data, dan opsi manajemen privasi Kakak di platform ini sesuai standar global.

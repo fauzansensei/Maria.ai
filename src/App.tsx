@@ -270,7 +270,14 @@ export default function App() {
         }
       } catch (_) {}
     }, 2500);
-    return () => clearTimeout(timer);
+    
+    const handleOpenCookiePolicy = () => setIsCookieModalOpenFromBanner(true);
+    window.addEventListener('open-cookie-policy', handleOpenCookiePolicy);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('open-cookie-policy', handleOpenCookiePolicy);
+    };
   }, []);
   const [isCookieModalOpenFromBanner, setIsCookieModalOpenFromBanner] = useState<boolean>(false);
   const [profileDisplayName, setProfileDisplayName] = useState("User");
