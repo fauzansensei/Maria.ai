@@ -1565,7 +1565,7 @@ export default function ChatArea({
 
                     {/* Actions feedback & options row below the bubble */}
                     {editingMessageId !== m.id && !m.isError && (
-                      <div className={`flex items-center gap-3 pt-0.5 text-[10px] text-slate-450 opacity-0 group-hover:opacity-100 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150 ${isAi ? "pl-11" : "pr-1"}`}>
+                      <div className={`flex items-center gap-3 pt-0.5 text-[10px] text-slate-450 opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150 ${isAi ? "pl-11" : "pr-1"}`}>
                         <button
                           type="button"
                           onClick={() => copyToClipboard(m.id, m.content)}
