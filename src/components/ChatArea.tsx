@@ -1707,27 +1707,25 @@ export default function ChatArea({
                   <div className="flex items-center gap-1.5 text-[10px] text-slate-600 font-medium">
                     <span className="font-bold text-slate-650">Maria AI</span>
                     <span className="text-slate-400 font-extrabold">•</span>
-                    <span className="text-slate-600 flex items-center gap-1 font-semibold">
-                      Sedang bernalar secara interaktif...
+                    <span className="text-slate-600 flex items-center gap-1 font-semibold animate-pulse">
+                      Sedang memproses...
                     </span>
                   </div>
                   <div className="flex items-start gap-2.5">
-                    <div className={`w-8 h-8 flex-shrink-0 rounded bg-[#171F36] border border-[#bcc6d4]/20 flex items-center justify-center overflow-hidden`}>
-                      <svg className="w-full h-full animate-spin animate-duration-[4s]" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="512" height="512" fill="#171f36"/>
-                        <circle cx="256" cy="256" r="160" stroke="#bcc6d4" strokeWidth="16"/>
-                        <g stroke="#f6acad" strokeWidth="18" strokeLinecap="round">
-                          <line x1="160" y1="390" x2="240" y2="278"/>
-                          <line x1="286" y1="214" x2="352" y2="122"/>
-                        </g>
-                        <text x="256" y="325" fontFamily="'Inter', sans-serif" fontWeight="900" fontSize="220" fill="white" textAnchor="middle">M</text>
-                        <path d="M400 120 C 400 132, 408 140, 420 140 C 408 140, 400 148, 400 160 C 400 148, 392 140, 380 140 C 392 140, 400 132, 400 120 Z" fill="#f6acad"/>
-                      </svg>
-                    </div>
-                    <div className="p-3.5 bg-slate-100 border border-slate-200 rounded-2xl rounded-tl-none flex items-center gap-1.5 py-2.5 shadow-2xs">
-                      <span className="w-2 h-2 bg-blue-500 rounded-full dot-wave" style={{ animationDelay: "0ms" }}></span>
-                      <span className="w-2 h-2 bg-indigo-505 rounded-full dot-wave" style={{ animationDelay: "150ms" }}></span>
-                      <span className="w-2 h-2 bg-purple-500 rounded-full dot-wave" style={{ animationDelay: "300ms" }}></span>
+                    <div className="p-1 px-1.5">
+                      <div className={`relative w-9 h-9 flex-shrink-0 rounded-full bg-[#171F36] border border-[#f6acad]/40 flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(246,172,173,0.6)]`}>
+                        <svg className="w-full h-full animate-[spin_2s_linear_infinite] scale-110" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect width="512" height="512" fill="#171f36"/>
+                          <circle cx="256" cy="256" r="160" stroke="#bcc6d4" strokeWidth="16"/>
+                          <g stroke="#f6acad" strokeWidth="18" strokeLinecap="round">
+                            <line x1="160" y1="390" x2="240" y2="278"/>
+                            <line x1="286" y1="214" x2="352" y2="122"/>
+                          </g>
+                          <text x="256" y="325" fontFamily="'Inter', sans-serif" fontWeight="900" fontSize="220" fill="white" textAnchor="middle">M</text>
+                          <path d="M400 120 C 400 132, 408 140, 420 140 C 408 140, 400 148, 400 160 C 400 148, 392 140, 380 140 C 392 140, 400 132, 400 120 Z" fill="#f6acad"/>
+                        </svg>
+                        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent animate-pulse" />
+                      </div>
                     </div>
                   </div>
                 </div>
