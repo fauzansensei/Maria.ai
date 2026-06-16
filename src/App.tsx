@@ -969,6 +969,7 @@ export default function App() {
           role: "assistant",
           content: data.content,
           timestamp: data.timestamp || new Date().toISOString(),
+          isError: data.isRecoveredError || false
         };
 
         // Automate dynamic user memory update if returned from server
@@ -992,7 +993,7 @@ export default function App() {
             role: assistantMsg.role,
             content: assistantMsg.content,
             timestamp: assistantMsg.timestamp,
-            isError: false,
+            isError: data.isRecoveredError || false,
             isEdited: false,
             feedback: null
           }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${currentThreadId}/messages/${assistantMsg.id}`));
@@ -1122,6 +1123,7 @@ export default function App() {
           role: "assistant",
           content: data.content,
           timestamp: data.timestamp || new Date().toISOString(),
+          isError: data.isRecoveredError || false
         };
 
         // Automate dynamic user memory update if returned from server
@@ -1145,7 +1147,7 @@ export default function App() {
             role: assistantMsg.role,
             content: assistantMsg.content,
             timestamp: assistantMsg.timestamp,
-            isError: false,
+            isError: data.isRecoveredError || false,
             isEdited: false,
             feedback: null
           }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${assistantMsg.id}`));
@@ -1287,6 +1289,7 @@ export default function App() {
           role: "assistant",
           content: data.content,
           timestamp: data.timestamp || new Date().toISOString(),
+          isError: data.isRecoveredError || false
         };
 
         if (isLoggedIn && auth.currentUser && activeThreadId) {
@@ -1295,7 +1298,7 @@ export default function App() {
             role: assistantMsg.role,
             content: assistantMsg.content,
             timestamp: assistantMsg.timestamp,
-            isError: false,
+            isError: data.isRecoveredError || false,
             isEdited: false,
             feedback: null
           }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${assistantMsg.id}`));
