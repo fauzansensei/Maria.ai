@@ -492,12 +492,6 @@ export default function AuxiliaryModals({
                         setAuthLocalError(null);
                         setIsAuthenticating(true);
 
-                        if (isIframe) {
-                          setAuthLocalError("Login Google dibatasi oleh browser di dalam panel preview AI Studio (Iframe). Silakan klik tombol 'Buka Aplikasi di Tab Baru' di bagian bawah panel login.");
-                          setIsAuthenticating(false);
-                          return;
-                        }
-
                         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                         if (isMobile) {
                           try {
@@ -582,12 +576,6 @@ export default function AuxiliaryModals({
                       onClick={async () => {
                         setAuthLocalError(null);
                         setIsAuthenticating(true);
-
-                        if (isIframe) {
-                          setAuthLocalError("Login Google dibatasi oleh browser di dalam panel preview AI Studio (Iframe). Silakan klik tombol 'Buka Aplikasi di Tab Baru' di bagian bawah panel login.");
-                          setIsAuthenticating(false);
-                          return;
-                        }
 
                         try {
                           await signInWithRedirect(auth, googleProvider);
