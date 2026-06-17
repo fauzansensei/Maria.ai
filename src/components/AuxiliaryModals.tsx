@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import { X, AlertCircle, Inbox, Bell, ChevronRight, ChevronDown, Info, RefreshCw } from "lucide-react";
 import { UserSettings } from "../types";
 import { doc, updateDoc } from "firebase/firestore";
@@ -121,6 +121,15 @@ export default function AuxiliaryModals({
   setShowGoogleGuide
 }: AuxiliaryModalsProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isProfileOpen) {
+      setAuthLocalError(null);
+      setIsAuthenticating(false);
+      setLoginEmail("");
+      setLoginPassword("");
+    }
+  }, [isProfileOpen, setAuthLocalError, setIsAuthenticating, setLoginEmail, setLoginPassword]);
 
   return (
     <>
@@ -483,6 +492,12 @@ export default function AuxiliaryModals({
                         setAuthLocalError(null);
                         setIsAuthenticating(true);
 
+                        if (isIframe) {
+                          setAuthLocalError("Login Google dibatasi oleh browser di dalam panel preview AI Studio (Iframe). Silakan klik tombol 'Buka Aplikasi di Tab Baru' di bagian bawah panel login.");
+                          setIsAuthenticating(false);
+                          return;
+                        }
+
                         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                         if (isMobile) {
                           try {
@@ -567,6 +582,13 @@ export default function AuxiliaryModals({
                       onClick={async () => {
                         setAuthLocalError(null);
                         setIsAuthenticating(true);
+
+                        if (isIframe) {
+                          setAuthLocalError("Login Google dibatasi oleh browser di dalam panel preview AI Studio (Iframe). Silakan klik tombol 'Buka Aplikasi di Tab Baru' di bagian bawah panel login.");
+                          setIsAuthenticating(false);
+                          return;
+                        }
+
                         try {
                           await signInWithRedirect(auth, googleProvider);
                         } catch (err: any) {
