@@ -574,7 +574,7 @@ export default function App() {
         message?.toUpperCase()?.includes("CLOSED-BY-USER");
 
       if (isCoopOrIframeIssue) {
-        message = "Pop-up login diblokir kebijakan browser (COOP/Iframe). Silakan tekan tombol 'Open in New Tab' di pojok kanan atas AI Studio untuk melanjutkan login, atau gunakan Guest Account.";
+        message = "Login dibatalkan karena membatalkan sesi atau kebijakan browser (COOP/Iframe).";
         setAuthLocalError(message);
         setIsProfileOpen(true);
         setIsAuthenticating(false);

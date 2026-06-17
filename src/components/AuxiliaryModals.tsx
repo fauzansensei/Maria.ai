@@ -515,7 +515,7 @@ export default function AuxiliaryModals({
                             message?.toUpperCase()?.includes("CLOSED-BY-USER");
 
                           if (isCoopOrIframeIssue) {
-                            message = "Pop-up login terhalang kebijakan browser (COOP/Iframe). Silakan tekan tombol 'Open in New Tab' di pojok kanan atas AI Studio untuk melanjutkan login, atau gunakan Guest Account.";
+                            message = "Login dibatalkan karena membatalkan sesi atau kebijakan browser (COOP/Iframe).";
                             setAuthLocalError(message);
                             setIsAuthenticating(false);
                             return;
@@ -595,24 +595,6 @@ export default function AuxiliaryModals({
                         <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-400" />
                         <span>{authLocalError}</span>
                       </div>
-                      
-                      {(authLocalError.toLowerCase().includes("pop-up") || 
-                        authLocalError.toLowerCase().includes("popup") ||
-                        authLocalError.toLowerCase().includes("jendela")) && (
-                        <div className="mt-1.5 pt-2 border-t border-rose-900/30 w-full space-y-2 text-[10px] text-slate-350 font-sans">
-                          <p className="font-extrabold text-amber-400 flex items-center gap-1 text-[10.5px]">
-                            💡 Solusi Cepat Login Maria:
-                          </p>
-                          <p>
-                            Browser seluler atau desktop Anda memblokir pop-up baru di dalam frame pratinjau AI Studio. Silakan ikuti langkah mudah ini:
-                          </p>
-                          <ul className="list-disc list-inside space-y-1 text-slate-400">
-                            <li>Tekan tombol <b className="text-zinc-200 font-bold text-white">Open in New Tab</b> di pojok kanan atas layar panel AI Studio ini.</li>
-                            <li>Atau izinkan izin Pop-up pada ikon gembok / setelan bar alamat URL browser Anda.</li>
-                            <li>Gunakan alternatif pendaftaran instan melalui nama pengguna atau Guest Account jika Anda ingin mencoba cepat.</li>
-                          </ul>
-                        </div>
-                      )}
                     </div>
                   )}
 
