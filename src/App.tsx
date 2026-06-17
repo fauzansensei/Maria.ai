@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Message, UserSettings, AppNotification, ChatThread, AppTheme, UserMemory } from "./types";
 import { DEFAULT_SETTINGS, THEME_OPTIONS } from "./constants";
 import { generateSpeech, playAudioBlob, stopSpeech } from "./services/elevenLabsService";
+import { safeStorage } from "./utils";
 
 import type { DiscoveryAgent } from "./components/DiscoverArea";
 import { 
@@ -275,7 +276,7 @@ export default function App() {
   useEffect(() => {
     const timer = setTimeout(() => {
       try {
-        const consent = localStorage.getItem("maria_cookie_consent") !== "true";
+        const consent = safeStorage.getItem("maria_cookie_consent") !== "true";
         if (consent) {
           setIsCookieConsentVisible(true);
         }
@@ -339,11 +340,11 @@ export default function App() {
   const [bookmarkedMessages, setBookmarkedMessages] = useState<Message[]>([]);
   const [isPlus, setIsPlus] = useState(() => {
     if (typeof window !== "undefined") {
-      const active = localStorage.getItem("maria_is_plus") === "true";
-      const expiryStr = localStorage.getItem("maria_plus_expiry_date");
+      const active = safeStorage.getItem("maria_is_plus") === "true";
+      const expiryStr = safeStorage.getItem("maria_plus_expiry_date");
       if (active && expiryStr) {
         if (new Date() > new Date(expiryStr)) {
-          localStorage.setItem("maria_is_plus", "false");
+          safeStorage.setItem("maria_is_plus", "false");
           return false;
         }
       }
@@ -356,10 +357,10 @@ export default function App() {
   useEffect(() => {
     const checkExpiry = () => {
       if (typeof window === "undefined") return;
-      const plusActive = localStorage.getItem("maria_is_plus") === "true";
+      const plusActive = safeStorage.getItem("maria_is_plus") === "true";
       if (!plusActive) return;
 
-      const expiryStr = localStorage.getItem("maria_plus_expiry_date");
+      const expiryStr = safeStorage.getItem("maria_plus_expiry_date");
       if (!expiryStr) return; // Lifetime or none
 
       const expiryDate = new Date(expiryStr);
@@ -368,7 +369,7 @@ export default function App() {
       if (now > expiryDate) {
         // Revoke active subscription features automatically
         setIsPlus(false);
-        localStorage.setItem("maria_is_plus", "false");
+        safeStorage.setItem("maria_is_plus", "false");
 
         // Reset theme to classic-blue if customized subscription colors were used
         if (settings.theme === "cosmic-purple" || settings.theme === "minimal-dark") {
@@ -700,10 +701,10 @@ export default function App() {
                 }
               }
               setIsPlus(active);
-              localStorage.setItem("maria_is_plus", active ? "true" : "false");
-              if (data.plusPlan) localStorage.setItem("maria_plus_plan", data.plusPlan);
-              if (data.plusPurchaseDate) localStorage.setItem("maria_plus_purchase_date", data.plusPurchaseDate);
-              if (data.plusExpiryDate) localStorage.setItem("maria_plus_expiry_date", data.plusExpiryDate);
+              safeStorage.setItem("maria_is_plus", active ? "true" : "false");
+              if (data.plusPlan) safeStorage.setItem("maria_plus_plan", data.plusPlan);
+              if (data.plusPurchaseDate) safeStorage.setItem("maria_plus_purchase_date", data.plusPurchaseDate);
+              if (data.plusExpiryDate) safeStorage.setItem("maria_plus_expiry_date", data.plusExpiryDate);
             }
           } else {
             // New user registration - initialize user doc
@@ -1714,10 +1715,10 @@ export default function App() {
             const expiryStr = expiry.toISOString();
 
             try {
-              localStorage.setItem("maria_is_plus", "true");
-              localStorage.setItem("maria_plus_plan", planType);
-              localStorage.setItem("maria_plus_purchase_date", purchaseStr);
-              localStorage.setItem("maria_plus_expiry_date", expiryStr);
+              safeStorage.setItem("maria_is_plus", "true");
+              safeStorage.setItem("maria_plus_plan", planType);
+              safeStorage.setItem("maria_plus_purchase_date", purchaseStr);
+              safeStorage.setItem("maria_plus_expiry_date", expiryStr);
             } catch (e) {
               console.error(e);
             }
@@ -1916,8 +1917,8 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => {
-                    localStorage.setItem("maria_cookie_consent_level", "essential");
-                    localStorage.setItem("maria_cookie_consent", "true");
+                    safeStorage.setItem("maria_cookie_consent_level", "essential");
+                    safeStorage.setItem("maria_cookie_consent", "true");
                     setIsCookieConsentVisible(false);
                   }}
                   className="px-3.5 py-1.5 bg-zinc-800/40 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl text-[10.5px] font-medium cursor-pointer transition-colors"
@@ -1927,8 +1928,8 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => {
-                    localStorage.setItem("maria_cookie_consent_level", "all");
-                    localStorage.setItem("maria_cookie_consent", "true");
+                    safeStorage.setItem("maria_cookie_consent_level", "all");
+                    safeStorage.setItem("maria_cookie_consent", "true");
                     setIsCookieConsentVisible(false);
                   }}
                   className={`px-4.5 py-1.5 ${

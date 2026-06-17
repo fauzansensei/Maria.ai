@@ -170,13 +170,21 @@ function stripLargeBase64(obj: any): any {
 // ---------------------------------------------------------
 // Global Prototype Protection Hook (Foolproof Interceptor)
 // ---------------------------------------------------------
+function isLocalStorage(storage: Storage): boolean {
+  try {
+    return storage === window.localStorage;
+  } catch (_) {
+    return false;
+  }
+}
+
 try {
   const originalSet = Storage.prototype.setItem;
   const originalGet = Storage.prototype.getItem;
 
   Object.defineProperty(Storage.prototype, "setItem", {
     value: function(this: Storage, key: string, value: string) {
-      if (this !== window.localStorage) {
+      if (!isLocalStorage(this)) {
         originalSet.call(this, key, value);
         return;
       }
@@ -206,7 +214,7 @@ try {
 
   Object.defineProperty(Storage.prototype, "getItem", {
     value: function(this: Storage, key: string) {
-      if (this !== window.localStorage) {
+      if (!isLocalStorage(this)) {
         return originalGet.call(this, key);
       }
       
@@ -340,3 +348,46 @@ export function safeLocalStorageSetItem(key: string, value: string): boolean {
     return false;
   }
 }
+
+const fallbackStore: Record<string, string> = {};
+
+export const safeStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      if (typeof window !== "undefined") {
+        return localStorage.getItem(key);
+      }
+    } catch (_) {}
+    return fallbackStore[key] || null;
+  },
+  setItem: (key: string, value: string): void => {
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem(key, value);
+        return;
+      }
+    } catch (_) {}
+    fallbackStore[key] = value;
+  },
+  removeItem: (key: string): void => {
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(key);
+        return;
+      }
+    } catch (_) {}
+    delete fallbackStore[key];
+  },
+  clear: (): void => {
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.clear();
+        return;
+      }
+    } catch (_) {}
+    for (const k in fallbackStore) {
+      delete fallbackStore[k];
+    }
+  }
+};
+

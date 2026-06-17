@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { UserSettings, MariaTone, LanguageStyle, AppTheme, UserMemory } from "../types";
-import { safeLocalStorageSetItem } from "../utils";
+import { safeLocalStorageSetItem, safeStorage } from "../utils";
 import { PRESET_VOICES, PRESET_MODELS } from "../services/elevenLabsService";
 import { auth } from "../firebase";
 import CookiePolicyModal from "./CookiePolicyModal";
@@ -670,8 +670,8 @@ export default function SettingsDashboard({
                       type="button"
                       onClick={() => {
                         if (setIsPlus) setIsPlus(true);
-                        localStorage.setItem("maria_is_plus", "true");
-                        localStorage.setItem("maria_plus_plan", "monthly");
+                        safeStorage.setItem("maria_is_plus", "true");
+                        safeStorage.setItem("maria_plus_plan", "monthly");
                         triggerSave({});
                       }}
                       className={`px-4 py-2 border rounded-xl text-[10.5px] font-bold cursor-pointer transition-all ${isPlus ? "bg-zinc-900 text-white border-zinc-700" : "bg-[#0d0d0e]/60 border-transparent text-zinc-400 hover:bg-zinc-900 hover:text-white"}`}
@@ -682,7 +682,7 @@ export default function SettingsDashboard({
                       type="button"
                       onClick={() => {
                         if (setIsPlus) setIsPlus(false);
-                        localStorage.setItem("maria_is_plus", "false");
+                        safeStorage.setItem("maria_is_plus", "false");
                         triggerSave({});
                       }}
                       className={`px-4 py-2 border rounded-xl text-[10.5px] font-semibold cursor-pointer transition-all ${!isPlus ? "bg-zinc-900 text-white border-zinc-700" : "bg-[#0d0d0e]/60 border-transparent text-zinc-400 hover:bg-zinc-900 hover:text-white"}`}
