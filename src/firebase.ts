@@ -34,15 +34,13 @@ try {
 let originalAuth;
 try {
   originalAuth = initializeAuth(app, {
-    persistence: browserLocalPersistence
+    persistence: isThirdPartyCookieBlocked 
+      ? browserLocalPersistence 
+      : [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence]
   });
 } catch (e) {
   originalAuth = getAuth(app); // Returns existing if already initialized
 }
-
-import { setPersistence } from 'firebase/auth';
-// Force explicit persistence as requested
-setPersistence(originalAuth, browserLocalPersistence).catch(() => {});
 
 // Dual-activation mechanism (in-memory & local-storage) for simulated developer-mode authentication
 export function setSimulatedAuthActive(active: boolean) {
@@ -66,7 +64,6 @@ export function isSimulatedAuthActive(): boolean {
   return false;
 }
 
-export const originalAuthInstance = originalAuth;
 // Safe Proxy wrapper that satisfies standard Firebase Auth schemas and provides a high-fidelity mock session inside iframe sandboxes
 export const auth = new Proxy(originalAuth, {
   get(target, prop, receiver) {

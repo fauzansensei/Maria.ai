@@ -3,7 +3,7 @@ import { X, AlertCircle, Inbox, Bell, ChevronRight, ChevronDown, Info, RefreshCw
 import { UserSettings } from "../types";
 import { doc, updateDoc } from "firebase/firestore";
 import { signOut, signInWithRedirect, signInWithPopup, setPersistence, browserLocalPersistence } from "firebase/auth";
-import { auth, originalAuthInstance, db, googleProvider, OperationType, handleFirestoreError, setSimulatedAuthActive, isSimulatedAuthActive } from "../firebase";
+import { auth, auth, db, googleProvider, OperationType, handleFirestoreError, setSimulatedAuthActive, isSimulatedAuthActive } from "../firebase";
 
 interface AuxiliaryModalsProps {
   // Profile settings
@@ -340,7 +340,7 @@ export default function AuxiliaryModals({
                     type="button"
                     onClick={async () => {
                       setSimulatedAuthActive(false);
-                      await signOut(originalAuthInstance).catch(() => {});
+                      await signOut(auth).catch(() => {});
                       setIsLoggedIn(false);
                       setIsProfileOpen(false);
                       setShowColorSelector(false);
@@ -526,16 +526,10 @@ export default function AuxiliaryModals({
                         }
 
                         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                        
-                        try {
-                          await setPersistence(originalAuthInstance, browserLocalPersistence);
-                        } catch (e) {
-                          console.error("Failed to set persistence:", e);
-                        }
 
                         if (isMobile) {
                           try {
-                            await signInWithRedirect(originalAuthInstance, googleProvider);
+                            await signInWithRedirect(auth, googleProvider);
                           } catch (err: any) {
                             console.error("Redirect sign in error mobile:", err);
                             setAuthLocalError(`Gagal redirect: ${err.message || err}`);
@@ -545,7 +539,7 @@ export default function AuxiliaryModals({
                         }
 
                         try {
-                          const result = await signInWithPopup(originalAuthInstance, googleProvider);
+                          const result = await signInWithPopup(auth, googleProvider);
                           if (result && result.user) {
                             const user = result.user;
                             const finalDisplayName = user.displayName || "User";
@@ -579,7 +573,7 @@ export default function AuxiliaryModals({
                           if (isCoopOrIframeIssue) {
                             console.log("Coop/Popup blocked in iframe, attempting redirect fallback...");
                             try {
-                              await signInWithRedirect(originalAuthInstance, googleProvider);
+                              await signInWithRedirect(auth, googleProvider);
                               return;
                             } catch (redirectErr: any) {
                               console.error("Redirect fallback error:", redirectErr);
@@ -631,7 +625,7 @@ export default function AuxiliaryModals({
                         }
 
                         try {
-                          await signInWithRedirect(originalAuthInstance, googleProvider);
+                          await signInWithRedirect(auth, googleProvider);
                         } catch (err: any) {
                           console.error("Redirect sign in error:", err);
                           const errString = String(err).toLowerCase();
