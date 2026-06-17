@@ -23,7 +23,9 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithRedirect,
-  getRedirectResult
+  getRedirectResult,
+  setPersistence,
+  browserLocalPersistence
 } from "firebase/auth";
 import { 
   collection, 
@@ -144,6 +146,12 @@ export default function App() {
     setAuthLocalError(null);
     setIsAuthenticating(true);
     try {
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+      } catch (e) {
+        console.error("Failed to set persistence:", e);
+      }
+      
       if (isSignUpMode) {
         const credential = await createUserWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
         const user = credential.user;
@@ -193,6 +201,12 @@ export default function App() {
     setAuthLocalError(null);
     setIsAuthenticating(true);
     try {
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+      } catch (e) {
+        console.error("Failed to set persistence:", e);
+      }
+      
       setSimulatedAuthActive(false); // Reset simulation flag prior to normal auth attempt
       const result = await signInAnonymously(auth);
       const user = result.user;
@@ -562,6 +576,13 @@ export default function App() {
     }
 
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    try {
+      await setPersistence(auth, browserLocalPersistence);
+    } catch (e) {
+      console.error("Failed to set persistence:", e);
+    }
+
     if (isMobile) {
       try {
         await signInWithRedirect(auth, googleProvider);

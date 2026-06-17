@@ -34,13 +34,15 @@ try {
 let originalAuth;
 try {
   originalAuth = initializeAuth(app, {
-    persistence: isThirdPartyCookieBlocked 
-      ? browserLocalPersistence 
-      : [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence]
+    persistence: browserLocalPersistence
   });
 } catch (e) {
   originalAuth = getAuth(app); // Returns existing if already initialized
 }
+
+import { setPersistence } from 'firebase/auth';
+// Force explicit persistence as requested
+setPersistence(originalAuth, browserLocalPersistence).catch(() => {});
 
 // Dual-activation mechanism (in-memory & local-storage) for simulated developer-mode authentication
 export function setSimulatedAuthActive(active: boolean) {

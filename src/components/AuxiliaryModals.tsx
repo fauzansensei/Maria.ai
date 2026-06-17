@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from "react";
 import { X, AlertCircle, Inbox, Bell, ChevronRight, ChevronDown, Info, RefreshCw } from "lucide-react";
 import { UserSettings } from "../types";
 import { doc, updateDoc } from "firebase/firestore";
-import { signOut, signInWithRedirect, signInWithPopup } from "firebase/auth";
+import { signOut, signInWithRedirect, signInWithPopup, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { auth, db, googleProvider, OperationType, handleFirestoreError, setSimulatedAuthActive, isSimulatedAuthActive } from "../firebase";
 
 interface AuxiliaryModalsProps {
@@ -526,6 +526,13 @@ export default function AuxiliaryModals({
                         }
 
                         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                        
+                        try {
+                          await setPersistence(auth, browserLocalPersistence);
+                        } catch (e) {
+                          console.error("Failed to set persistence:", e);
+                        }
+
                         if (isMobile) {
                           try {
                             await signInWithRedirect(auth, googleProvider);
