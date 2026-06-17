@@ -7,7 +7,7 @@ import { safeStorage } from "./utils";
 import type { DiscoveryAgent } from "./components/DiscoverArea";
 import { 
   auth, 
-  auth,
+  originalAuthInstance,
   db, 
   googleProvider, 
   OperationType, 
@@ -148,7 +148,7 @@ export default function App() {
     setIsAuthenticating(true);
     try {
       if (isSignUpMode) {
-        const credential = await createUserWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
+        const credential = await createUserWithEmailAndPassword(originalAuthInstance, loginEmail.trim(), loginPassword);
         const user = credential.user;
         const initialDisplayName = "User Email";
         const initialUsername = "@" + (user.email?.split("@")[0] || "user");
@@ -162,7 +162,7 @@ export default function App() {
           "success"
         );
       } else {
-        const credential = await signInWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
+        const credential = await signInWithEmailAndPassword(originalAuthInstance, loginEmail.trim(), loginPassword);
         const user = credential.user;
         setIsLoggedIn(true);
         setIsProfileOpen(false);
@@ -197,7 +197,7 @@ export default function App() {
     setIsAuthenticating(true);
     try {
       setSimulatedAuthActive(false); // Reset simulation flag prior to normal auth attempt
-      const result = await signInAnonymously(auth);
+      const result = await signInAnonymously(originalAuthInstance);
       const user = result.user;
       const finalDisplayName = "Guest User";
       const finalUsername = "@guest_" + user.uid.substring(0, 5);
@@ -518,7 +518,7 @@ export default function App() {
 
   // Google Sign-In Redirect Handler (vital for mobile/iframe pop-up bypass)
   useEffect(() => {
-    getRedirectResult(auth)
+    getRedirectResult(originalAuthInstance)
       .then((result) => {
         if (result && result.user) {
           const user = result.user;
@@ -558,17 +558,11 @@ export default function App() {
     setAuthLocalError(null);
     setIsAuthenticating(true);
 
-    if (isIframe) {
-      setAuthLocalError("Login Google tidak diizinkan oleh kebijakan browser Chrome di dalam frame editor preview (Iframe) demi keamanan. Silakan klik tombol 'Buka Aplikasi di Tab Baru' di bawah panel login untuk menggunakan akun Google, ATAU gunakan Email Register/Login atau Guest Account secara instan di frame ini.");
-      setIsAuthenticating(false);
-      return;
-    }
-
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
     if (isMobile) {
       try {
-        await signInWithRedirect(auth, googleProvider);
+        await signInWithRedirect(originalAuthInstance, googleProvider);
       } catch (err: any) {
         console.error("Redirect sign in error mobile:", err);
         setAuthLocalError(`Gagal redirect: ${err.message || err}`);
@@ -578,7 +572,7 @@ export default function App() {
     }
 
     try {
-      const result = await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(originalAuthInstance, googleProvider);
       if (result && result.user) {
         const user = result.user;
         const finalDisplayName = user.displayName || "User";
@@ -613,7 +607,7 @@ export default function App() {
       if (isCoopOrIframeIssue) {
         console.log("Coop/Popup blocked in iframe, attempting redirect fallback in App...");
         try {
-          await signInWithRedirect(auth, googleProvider);
+          await signInWithRedirect(originalAuthInstance, googleProvider);
           return;
         } catch (redirectErr: any) {
           console.error("Redirect fallback error in App:", redirectErr);
@@ -646,7 +640,7 @@ export default function App() {
     let unsubscribeUser: (() => void) | null = null;
     let unsubscribeThreads: (() => void) | null = null;
 
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+    const unsubscribeAuth = onAuthStateChanged(originalAuthInstance, (user) => {
       // Clear any prior listeners immediately to avoid overlapping/stale calls on logout or switch
       if (unsubscribeUser) {
         unsubscribeUser();
