@@ -3,7 +3,7 @@ import { X, AlertCircle, Inbox, Bell, ChevronRight, ChevronDown, Info, RefreshCw
 import { UserSettings } from "../types";
 import { doc, updateDoc } from "firebase/firestore";
 import { signOut, signInWithRedirect, signInWithPopup } from "firebase/auth";
-import { auth, db, googleProvider, OperationType, handleFirestoreError } from "../firebase";
+import { auth, db, googleProvider, OperationType, handleFirestoreError, setSimulatedAuthActive, isSimulatedAuthActive } from "../firebase";
 
 interface AuxiliaryModalsProps {
   // Profile settings
@@ -339,6 +339,7 @@ export default function AuxiliaryModals({
                   <button
                     type="button"
                     onClick={async () => {
+                      setSimulatedAuthActive(false);
                       await signOut(auth).catch(() => {});
                       setIsLoggedIn(false);
                       setIsProfileOpen(false);

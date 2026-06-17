@@ -3,34 +3,8 @@ import { createRoot } from 'react-dom/client';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
 import './index.css';
 
-// Smart lazy-load deferral with an idle timing strategy to let the browser paint the fast critical HTML/CSS skeleton first
-const LazyApp = lazy(() => {
-  return new Promise<{ default: React.ComponentType<any> }>((resolve) => {
-    const isLighthouse = typeof navigator !== 'undefined' && (
-      navigator.userAgent.includes("Lighthouse") || 
-      navigator.userAgent.includes("Chrome-Lighthouse") || 
-      navigator.userAgent.includes("Google-PageSpeed") ||
-      navigator.userAgent.includes("PageSpeed")
-    );
-    
-    const loadApp = () => {
-      import('./App').then((module) => {
-        resolve({ default: module.default });
-      });
-    };
-
-    if (isLighthouse) {
-      // Lighthouse/PageSpeed needs absolute zero execution gap to achieve sub-1.0s FCP/LCP
-      loadApp();
-    } else if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      window.requestIdleCallback(() => {
-        setTimeout(loadApp, 0);
-      });
-    } else {
-      setTimeout(loadApp, 0);
-    }
-  });
-});
+// Standard instant lazy-load to guarantee reliable execution in all browser frame contexts
+const LazyApp = lazy(() => import('./App'));
 
 // Matches the critical inline styles in index.html to guarantee 0 cumulative layout shifts (CLS)
 const SkeletonFallback = () => {

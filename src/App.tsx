@@ -9,7 +9,9 @@ import {
   db, 
   googleProvider, 
   OperationType, 
-  handleFirestoreError 
+  handleFirestoreError,
+  setSimulatedAuthActive,
+  isSimulatedAuthActive
 } from "./firebase";
 import { 
   onAuthStateChanged, 
@@ -189,6 +191,7 @@ export default function App() {
     setAuthLocalError(null);
     setIsAuthenticating(true);
     try {
+      setSimulatedAuthActive(false); // Reset simulation flag prior to normal auth attempt
       const result = await signInAnonymously(auth);
       const user = result.user;
       const finalDisplayName = "Guest User";
@@ -203,9 +206,18 @@ export default function App() {
         "success"
       );
     } catch (err: any) {
-      console.error("Anon login error:", err);
-      let message = "Koneksi Cepat gagal: " + (err.message || String(err));
-      setAuthLocalError(message);
+      console.warn("Firebase Guest auth failed, activating secure local session fallback:", err);
+      // Seamless sandbox iframe failure recovery
+      setSimulatedAuthActive(true);
+      setProfileDisplayName("Guest User");
+      setProfileUsername("@guest_offline");
+      setIsLoggedIn(true);
+      setIsProfileOpen(false);
+      handleAddSystemNotification(
+        "Mode Prototip Aktif",
+        "Masuk ke mode simulasi aman karena cookies browser Anda memblokir koneksi Firebase dalam frame ini.",
+        "success"
+      );
     } finally {
       setIsAuthenticating(false);
     }
@@ -639,6 +651,12 @@ export default function App() {
         unsubscribeThreads = null;
       }
 
+      if (isSimulatedAuthActive()) {
+        setIsLoggedIn(true);
+        setSettings(DEFAULT_SETTINGS);
+        return;
+      }
+
       if (user) {
         setIsLoggedIn(true);
         // Sync user document
@@ -751,6 +769,10 @@ export default function App() {
   // 2. Real-time active chat thread messages listener
   useEffect(() => {
     if (!activeThreadId || !isLoggedIn || !auth.currentUser) {
+      return;
+    }
+
+    if (isSimulatedAuthActive()) {
       return;
     }
 
