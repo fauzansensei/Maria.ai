@@ -537,10 +537,17 @@ export default function AuxiliaryModals({
                             message?.toUpperCase()?.includes("CLOSED-BY-USER");
 
                           if (isCoopOrIframeIssue) {
-                            message = "Login dibatalkan karena membatalkan sesi atau kebijakan browser (COOP/Iframe).";
-                            setAuthLocalError(message);
-                            setIsAuthenticating(false);
-                            return;
+                            console.log("Coop/Popup blocked in iframe, attempting redirect fallback...");
+                            try {
+                              await signInWithRedirect(auth, googleProvider);
+                              return;
+                            } catch (redirectErr: any) {
+                              console.error("Redirect fallback error:", redirectErr);
+                              message = "Login terhalang kebijakan browser. Silakan gunakan tombol 'Buka Aplikasi di Tab Baru' atau gunakan Guest Account.";
+                              setAuthLocalError(message);
+                              setIsAuthenticating(false);
+                              return;
+                            }
                           }
 
                           if (err.code === "auth/unauthorized-domain") {
