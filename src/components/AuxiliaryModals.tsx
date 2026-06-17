@@ -482,6 +482,19 @@ export default function AuxiliaryModals({
                       onClick={async () => {
                         setAuthLocalError(null);
                         setIsAuthenticating(true);
+
+                        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                        if (isMobile) {
+                          try {
+                            await signInWithRedirect(auth, googleProvider);
+                          } catch (err: any) {
+                            console.error("Redirect sign in error mobile:", err);
+                            setAuthLocalError(`Gagal redirect: ${err.message || err}`);
+                            setIsAuthenticating(false);
+                          }
+                          return;
+                        }
+
                         try {
                           const result = await signInWithPopup(auth, googleProvider);
                           if (result && result.user) {
