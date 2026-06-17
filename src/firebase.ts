@@ -1,5 +1,5 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getAuth, initializeAuth, browserLocalPersistence, browserSessionPersistence, indexedDBLocalPersistence, GoogleAuthProvider } from 'firebase/auth';
 import { initializeFirestore, getFirestore } from 'firebase/firestore';
 import firebaseConfigRaw from '../firebase-applet-config.json';
 
@@ -18,7 +18,29 @@ const dbId = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatab
   : undefined;
 
 export const db = dbId ? getFirestore(app, dbId) : getFirestore(app); /* CRITICAL: The app will break without this line */
-const originalAuth = getAuth(app);
+
+// Check for third-party cookie blocking and use resilient authentication persistence
+export let isThirdPartyCookieBlocked = false;
+try {
+  // Test IndexedDB functionality which is typically blocked alongside third-party cookies
+  const dbTest = window.indexedDB.open("__test_3pc_maria");
+  dbTest.onerror = () => { isThirdPartyCookieBlocked = true; };
+} catch (e) {
+  isThirdPartyCookieBlocked = true;
+}
+
+// Ensure auth falls back to a persistent standard localStorage mechanism if indexedDB is blocked
+// This natively solves the mobile vs desktop iframe persistence issue
+let originalAuth;
+try {
+  originalAuth = initializeAuth(app, {
+    persistence: isThirdPartyCookieBlocked 
+      ? browserLocalPersistence 
+      : [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence]
+  });
+} catch (e) {
+  originalAuth = getAuth(app); // Returns existing if already initialized
+}
 
 // Dual-activation mechanism (in-memory & local-storage) for simulated developer-mode authentication
 export function setSimulatedAuthActive(active: boolean) {

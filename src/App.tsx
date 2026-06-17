@@ -12,7 +12,8 @@ import {
   OperationType, 
   handleFirestoreError,
   setSimulatedAuthActive,
-  isSimulatedAuthActive
+  isSimulatedAuthActive,
+  isThirdPartyCookieBlocked
 } from "./firebase";
 import { 
   onAuthStateChanged, 
@@ -660,6 +661,26 @@ export default function App() {
 
       if (user) {
         setIsLoggedIn(true);
+
+        // Forced persistent localstorage backup for auth token in cases of third-party cookie blocking
+        if (isThirdPartyCookieBlocked) {
+          try {
+            user.getIdToken().then(token => {
+              safeStorage.setItem("maria_auth_backup", JSON.stringify({
+                uid: user.uid,
+                token: token,
+                refreshToken: user.refreshToken,
+                isAnonymous: user.isAnonymous,
+                email: user.email,
+                displayName: user.displayName,
+                timestamp: Date.now()
+              }));
+            }).catch(() => {});
+          } catch (e) {
+            // Ignore
+          }
+        }
+
         // Sync user document
         const userRef = doc(db, "users", user.uid);
         unsubscribeUser = onSnapshot(userRef, (snapshot) => {
