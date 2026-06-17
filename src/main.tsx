@@ -13,7 +13,7 @@ const SkeletonFallback = () => {
       <div className="sk-sidebar" id="maria-ai-sidebar-skeleton">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
           <div className="sk-dark-shimmer" style={{ height: '32px', width: '32px', borderRadius: '10px', backgroundColor: '#171f36', border: '1px solid rgba(188, 198, 212, 0.2)' }}></div>
-          <div style={{ color: 'white', fontWeight: 600, fontFamily: "'Outfit', sans-serif", fontSize: '16px', letterSpacing: '-0.025em' }}>Maria AI</div>
+          <div style={{ color: 'white', fontWeight: 600, fontFamily: "'Outfit', sans-serif", fontSize: '16px', letterSpacing: '-0.025em' }}>Maria-ai</div>
         </div>
         <div className="sk-dark-shimmer" style={{ height: '48px', marginBottom: '20px', borderRadius: '12px', opacity: 0.8 }}></div>
         <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', fontWeight: 600, color: '#94a3b8', display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px', paddingLeft: '8px' }}>
@@ -38,7 +38,7 @@ const SkeletonFallback = () => {
         <div className="sk-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div className="sk-shimmer" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }}></div>
-            <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '11px', fontWeight: 700, color: '#64748b', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Maria AI</div>
+            <div style={{ fontFamily: "'Inter', sans-serif", fontSize: '11px', fontWeight: 700, color: '#64748b', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Maria-ai</div>
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
             <div className="sk-shimmer" style={{ width: '32px', height: '32px', borderRadius: '8px' }}></div>

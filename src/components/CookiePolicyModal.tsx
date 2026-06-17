@@ -58,7 +58,7 @@ export default function CookiePolicyModal({
               <span>Pembaruan Terakhir: 7 Juni 2026</span>
             </div>
             <p className="text-zinc-300 leading-normal">
-              Selamat datang di <strong>Maria AI</strong> (selanjutnya disebut "Kami"). Kami berkomitmen untuk melindungi privasi Anda dan bersikap transparan mengenai teknologi yang kami gunakan demi kenyamanan berselancar Kakak.
+              Selamat datang di <strong>Maria-ai</strong> (selanjutnya disebut "Kami"). Kami berkomitmen untuk melindungi privasi Anda dan bersikap transparan mengenai teknologi yang kami gunakan demi kenyamanan berselancar Kakak.
             </p>
             <p className="text-zinc-400">
               Kebijakan Cookies ini menjelaskan apa itu <em>cookies</em>, bagaimana Kami menggunakannya di situs web Kami <strong className="text-zinc-300">https://maria-ai-liart.vercel.app</strong> (selanjutnya disebut "Situs"), serta pilihan yang Anda miliki untuk mengelola penggunaannya.
@@ -199,7 +199,7 @@ export default function CookiePolicyModal({
             <div className="bg-[#121214] border border-zinc-900 rounded-xl p-3.5 space-y-1.5 text-zinc-400">
               <div className="flex justify-between border-b border-zinc-900 pb-1">
                 <span>Nama Platform:</span>
-                <strong className="text-zinc-200">Maria AI Inc.</strong>
+                <strong className="text-zinc-200">Maria-ai Inc.</strong>
               </div>
               <div className="flex justify-between border-b border-zinc-900 pb-1">
                 <span>E-mail Resmi:</span>

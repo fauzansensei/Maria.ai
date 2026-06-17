@@ -406,7 +406,7 @@ export default function AuxiliaryModals({
                 <div className="p-5 flex flex-col space-y-4 w-full items-center text-center">
                   <div className="space-y-1.5 max-w-[280px] select-none">
                     <h4 className="font-sans font-extrabold text-white text-[14.5px] tracking-tight">
-                      {isSignUpMode ? "Buat Akun Maria AI" : "Masuk ke Maria AI"}
+                      {isSignUpMode ? "Buat Akun Maria-ai" : "Masuk ke Maria-ai"}
                     </h4>
                     <p className="text-[11px] text-slate-400 font-medium leading-relaxed font-sans">
                       {isSignUpMode 

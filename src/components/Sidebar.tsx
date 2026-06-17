@@ -270,8 +270,8 @@ export default function Sidebar({
                 <path d="M400 120 C 400 132, 408 140, 420 140 C 408 140, 400 148, 400 160 C 400 148, 392 140, 380 140 C 392 140, 400 132, 400 120 Z" fill="#f6acad"/>
               </svg>
             </div>
-            <span className="font-display font-medium text-[17px] tracking-tight text-white font-semibold flex items-center">
-              Maria AI
+            <span className="font-display font-medium text-[17px] tracking-tight text-white flex items-center">
+              Maria-ai
             </span>
           </div>
 

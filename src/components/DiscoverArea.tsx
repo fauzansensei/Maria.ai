@@ -39,7 +39,7 @@ export interface DiscoveryAgent {
 const DISCOVERY_AGENTS: DiscoveryAgent[] = [
   {
     id: "maria-default",
-    name: "Maria AI (Asisten Umum)",
+    name: "Maria-ai (Asisten Umum)",
     roleTitle: "Asisten AI Utama Pintar & Berempati",
     description: "Serba tahu, profesional, ramah, dan siap mendampingi segala kebutuhan belajar maupun pekerjaan Anda secara tak terbatas.",
     avatar: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=360&h=360&fit=crop&q=60",
@@ -561,7 +561,7 @@ export default function DiscoverArea({
           <div className="relative z-10 space-y-2">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-950/40 text-[9px] font-bold text-white uppercase tracking-wider">
               <Sparkles className="w-3 h-3 text-amber-300" />
-              Sistem Agen Maria AI Berakar
+              Sistem Agen Maria-ai Berakar
             </span>
             <h2 className="text-lg sm:text-xl font-display font-black text-white leading-tight">
               Eksplorasi Agen AI Terspesialisasi & Prompt Siap Pakai

@@ -1428,7 +1428,7 @@ export default function ChatArea({
                 Dari mana kita harus mulai?
               </h2>
               <p className="text-xs sm:text-[12.5px] text-slate-500 font-medium max-w-sm mx-auto leading-relaxed mt-1">
-                Tanyakan apa saja untuk mulai mendapat ide bisnis atau penjelasan interaktif tepercaya dari Maria AI.
+                Aplikasi asisten cerdas buatan yang membantu Anda menjadwalkan tugas, mencari ide kreatif, dan merangkum konsep pemrograman secara presisi. Mulailah percakapan dengan Maria-ai.
               </p>
             </div>
           ) : (
@@ -1445,7 +1445,7 @@ export default function ChatArea({
                     {/* Role Header label */}
                     <div className="flex items-center gap-2 text-[10px] text-slate-500 font-medium">
                       <span className="font-bold text-slate-700">
-                        {isAi ? "Maria AI" : greetingName}
+                        {isAi ? "Maria-ai" : greetingName}
                       </span>
                       <span className="text-slate-300 font-extrabold">•</span>
                       <span>
