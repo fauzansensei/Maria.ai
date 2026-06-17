@@ -479,17 +479,33 @@ export default function AuxiliaryModals({
                       <span className="h-px bg-slate-800 flex-1"></span>
                     </div>
                     
-                    <div className="w-full p-3 bg-[#11131a]/85 border border-amber-500/20 text-slate-300 rounded-xl space-y-1.5 text-[10px] leading-relaxed text-left font-sans shadow-inner">
+                    <div className="w-full p-3 bg-[#11131a]/85 border border-amber-500/20 text-slate-300 rounded-xl space-y-2 text-[10px] leading-relaxed text-left font-sans shadow-inner">
                       <p className="font-bold text-amber-400 flex items-center gap-1.5">
                         <span className="text-xs">⚠️</span> Masalah Login Google di PC?
                       </p>
                       <p className="text-slate-350 text-[9px]">
                         Sistem keamanan browser (Chrome Bounce Tracking & iframe Sandbox) dapat membatalkan login Google di PC Anda. Silakan:
                       </p>
-                      <ul className="list-disc list-inside text-emerald-400 text-[9px] font-medium space-y-1 pl-1">
+                      <ul className="list-disc list-inside text-emerald-400 text-[9px] font-medium space-y-1.5 pl-1">
                         <li>Gunakan form <strong>Email & Sandi</strong> di atas untuk mendaftar/masuk langsung (10 detik langsung aktif, tanpa verifikasi link).</li>
                         <li>Gunakan tombol <strong>👤 Coba Tanpa Akun (Guest)</strong> di paling bawah.</li>
+                        {isIframe && (
+                          <li className="text-indigo-400 font-semibold list-none mt-1">
+                            <span className="mr-1">🔗</span> Atau gunakan login Google dengan membuka aplikasi di tab baru.
+                          </li>
+                        )}
                       </ul>
+                      {isIframe && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            window.open(window.location.href, "_blank");
+                          }}
+                          className="w-full mt-1 py-1.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition-all text-[9.5px] font-sans flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shadow-md"
+                        >
+                          <span>🚀 Buka Aplikasi di Tab Baru</span>
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -647,6 +663,17 @@ export default function AuxiliaryModals({
                         <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-400" />
                         <span>{authLocalError}</span>
                       </div>
+                      {isIframe && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            window.open(window.location.href, "_blank");
+                          }}
+                          className="w-full mt-1.5 py-1.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition-all text-[9.5px] font-sans flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shadow-md"
+                        >
+                          <span>🚀 Buka di Tab Baru Sekarang</span>
+                        </button>
+                      )}
                     </div>
                   )}
 
