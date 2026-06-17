@@ -66,6 +66,7 @@ export function isSimulatedAuthActive(): boolean {
   return false;
 }
 
+export const originalAuthInstance = originalAuth;
 // Safe Proxy wrapper that satisfies standard Firebase Auth schemas and provides a high-fidelity mock session inside iframe sandboxes
 export const auth = new Proxy(originalAuth, {
   get(target, prop, receiver) {
