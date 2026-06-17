@@ -472,15 +472,25 @@ export default function AuxiliaryModals({
                     </div>
                   </form>
 
-                  <div className="flex flex-col items-center gap-1.5 w-full max-w-[280px]">
+                  <div className="flex flex-col items-center gap-2 w-full max-w-[280px]">
                     <div className="flex items-center gap-2 w-full">
                       <span className="h-px bg-slate-800 flex-1"></span>
                       <span className="text-[9px] text-slate-500 font-sans uppercase font-bold tracking-wider">Atau</span>
                       <span className="h-px bg-slate-800 flex-1"></span>
                     </div>
-                    <p className="text-[9px] text-amber-500/90 font-sans text-center leading-normal">
-                      💡 Gunakan tombol Masuk Instan di bawah jika Google Sign-In diblokir browser Anda!
-                    </p>
+                    
+                    <div className="w-full p-3 bg-[#11131a]/85 border border-amber-500/20 text-slate-300 rounded-xl space-y-1.5 text-[10px] leading-relaxed text-left font-sans shadow-inner">
+                      <p className="font-bold text-amber-400 flex items-center gap-1.5">
+                        <span className="text-xs">⚠️</span> Masalah Login Google di PC?
+                      </p>
+                      <p className="text-slate-350 text-[9px]">
+                        Sistem keamanan browser (Chrome Bounce Tracking & iframe Sandbox) dapat membatalkan login Google di PC Anda. Silakan:
+                      </p>
+                      <ul className="list-disc list-inside text-emerald-400 text-[9px] font-medium space-y-1 pl-1">
+                        <li>Gunakan form <strong>Email & Sandi</strong> di atas untuk mendaftar/masuk langsung (10 detik langsung aktif, tanpa verifikasi link).</li>
+                        <li>Gunakan tombol <strong>👤 Coba Tanpa Akun (Guest)</strong> di paling bawah.</li>
+                      </ul>
+                    </div>
                   </div>
 
                   <div className="w-full flex flex-col gap-2.5 items-center justify-center">
