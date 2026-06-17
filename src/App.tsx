@@ -541,6 +541,12 @@ export default function App() {
     setAuthLocalError(null);
     setIsAuthenticating(true);
 
+    if (isIframe) {
+      setAuthLocalError("Login Google tidak diizinkan oleh kebijakan browser Chrome di dalam frame editor preview (Iframe) demi keamanan. Silakan klik tombol 'Buka Aplikasi di Tab Baru' di bawah panel login untuk menggunakan akun Google, ATAU gunakan Email Register/Login atau Guest Account secara instan di frame ini.");
+      setIsAuthenticating(false);
+      return;
+    }
+
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     if (isMobile) {
       try {
