@@ -554,6 +554,7 @@ export default function App() {
   }, []);
 
   const handleGoogleSignInDirect = async (useRedirect = false) => {
+    setSimulatedAuthActive(false); // Reset simulation flag immediately for explicit Google Auth attempt
     setAuthLocalError(null);
     setIsAuthenticating(true);
 
@@ -646,28 +647,25 @@ export default function App() {
         unsubscribeThreads = null;
       }
 
-      if (isSimulatedAuthActive()) {
-        setIsLoggedIn(true);
-        setSettings(DEFAULT_SETTINGS);
-        return;
-      }
-
       if (user) {
+        if (isSimulatedAuthActive()) {
+          setSimulatedAuthActive(false);
+        }
         setIsLoggedIn(true);
 
         // Forced persistent localstorage backup for auth token in cases of third-party cookie blocking
         if (isThirdPartyCookieBlocked) {
           try {
             user.getIdToken().then(token => {
-              safeStorage.setItem("maria_auth_backup", JSON.stringify({
-                uid: user.uid,
-                token: token,
-                refreshToken: user.refreshToken,
-                isAnonymous: user.isAnonymous,
-                email: user.email,
-                displayName: user.displayName,
-                timestamp: Date.now()
-              }));
+               safeStorage.setItem("maria_auth_backup", JSON.stringify({
+                 uid: user.uid,
+                 token: token,
+                 refreshToken: user.refreshToken,
+                 isAnonymous: user.isAnonymous,
+                 email: user.email,
+                 displayName: user.displayName,
+                 timestamp: Date.now()
+               }));
             }).catch(() => {});
           } catch (e) {
             // Ignore
@@ -760,6 +758,10 @@ export default function App() {
           handleFirestoreError(error, OperationType.LIST, "threads");
         });
 
+      } else if (isSimulatedAuthActive()) {
+        setIsLoggedIn(true);
+        setSettings(DEFAULT_SETTINGS);
+        return;
       } else {
         setIsLoggedIn(false);
         setSettings(DEFAULT_SETTINGS);

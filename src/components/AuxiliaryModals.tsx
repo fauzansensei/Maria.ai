@@ -430,6 +430,7 @@ export default function AuxiliaryModals({
                       type="button"
                       disabled={isAuthenticating}
                       onClick={async () => {
+                        setSimulatedAuthActive(false); // Disable simulated session backup so actual login registers!
                         setAuthLocalError(null);
                         setIsAuthenticating(true);
                         
