@@ -618,7 +618,7 @@ export default function App() {
         } else if (err.code === "auth/popup-blocked") {
           message = "Gagal: Jendela pop-up login Google diblokir oleh browser.";
         } else if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
-          message = "Login dibatalkan oleh pengguna.";
+          message = "Error 403 Google Oauth atau Login dibatalkan: Jika Anda melihat layar 403, pastikan email tes Anda sudah ditambahkan di Google Cloud OAuth Consent Screen.";
         } else if (message.includes("403") || message.includes("access_denied")) {
           message = "Error 403: Pastikan email tes Anda sudah ditambahkan di Google Cloud OAuth Consent Screen (karena ini mode Testing).";
         }

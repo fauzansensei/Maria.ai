@@ -1,23 +1,53 @@
-import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getAuth, initializeAuth, browserLocalPersistence, browserSessionPersistence, indexedDBLocalPersistence, GoogleAuthProvider } from 'firebase/auth';
-import { initializeFirestore, getFirestore } from 'firebase/firestore';
+import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
+import { getAuth, initializeAuth, browserLocalPersistence, browserSessionPersistence, indexedDBLocalPersistence, GoogleAuthProvider, Auth } from 'firebase/auth';
+import { initializeFirestore, getFirestore, Firestore } from 'firebase/firestore';
 import firebaseConfigRaw from '../firebase-applet-config.json';
 
 // Dynamic resolver to load user custom Firebase/Google API configuration
 const firebaseConfig = firebaseConfigRaw;
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+
+let app: FirebaseApp | undefined;
+export let isFirebaseConfigValid = false;
+
+try {
+  // Try to determine if the config has valid fields (minimal check: apiKey is present and not empty)
+  if (firebaseConfig && typeof firebaseConfig.apiKey === 'string' && firebaseConfig.apiKey.trim() !== '') {
+    isFirebaseConfigValid = true;
+  }
+  
+  // Always initialize so we don't break the SDK hooks entirely, but use a dummy project if invalid
+  const configToUse = isFirebaseConfigValid ? firebaseConfig : { 
+    apiKey: "dummy-key", 
+    projectId: "dummy-maria-ai-project", 
+    appId: "1:123456789:web:abcdef" 
+  };
+  
+  app = getApps().length === 0 ? initializeApp(configToUse) : getApp();
+} catch (e) {
+  console.error("Firebase critical fallback initialization bypassed:", e);
+  // Guarantee an app instance exists to prevent destructive module evaluation failure
+  app = initializeApp({ apiKey: "dummy", projectId: "dummy" });
+}
 
 // Initialize Firestore with long polling to prevent WebChannel/WebSocket drops in this environment
-initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-});
+try {
+  initializeFirestore(app, {
+    experimentalForceLongPolling: true,
+  });
+} catch (_) {}
 
 // If database ID is absent/empty, default to standard Firestore database context
 const dbId = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId.trim() !== "" 
   ? firebaseConfig.firestoreDatabaseId 
   : undefined;
 
-export const db = dbId ? getFirestore(app, dbId) : getFirestore(app); /* CRITICAL: The app will break without this line */
+let _db: Firestore | undefined;
+try {
+  _db = dbId ? getFirestore(app, dbId) : getFirestore(app);
+} catch (e) {
+  console.warn("Firestore access error:", e);
+}
+export const db = _db as Firestore;
 
 // Check for third-party cookie blocking and use resilient authentication persistence
 export let isThirdPartyCookieBlocked = false;

@@ -557,7 +557,7 @@ export default function AuxiliaryModals({
                             } else if (err.code === "auth/popup-blocked") {
                               message = "Gagal: Jendela pop-up login Google diblokir oleh browser.";
                             } else if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
-                              message = "Login dibatalkan oleh pengguna.";
+                              message = "Error 403 Google Oauth atau Login dibatalkan: Jika Anda melihat layar 403, pastikan email tes Anda sudah ditambahkan di Google Cloud OAuth Consent Screen.";
                             } else if (message.includes("403") || message.includes("access_denied")) {
                               message = "Error 403: Pastikan email tes Anda sudah ditambahkan di Google Cloud OAuth Consent Screen (karena ini mode Testing).";
                             }
@@ -604,6 +604,24 @@ export default function AuxiliaryModals({
                         <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-400" />
                         <span>{authLocalError}</span>
                       </div>
+                      
+                      {/* Guide for Google 403 Error */}
+                      {String(authLocalError).includes("403") && (
+                        <div className="mt-2 text-[10px] text-rose-200/90 font-sans p-2.5 bg-rose-950/30 rounded-lg border border-rose-900/30 w-full">
+                          <p className="font-bold mb-1.5 text-rose-100 uppercase tracking-wider text-[9px] flex items-center gap-1">
+                            <Info className="w-3 h-3 text-rose-400" /> 
+                            SOLUSI PERBAIKAN GOOGLE 403
+                          </p>
+                          <ul className="list-disc pl-3.5 space-y-1 ml-0.5 opacity-90 marker:text-rose-400">
+                            <li>Layar "Error 403" ini muncul <u>dari sistem Google</u>, bukan API Key Firebase yang salah.</li>
+                            <li>Aplikasi Anda di Google Cloud Console masih dalam status <b>Testing</b>.</li>
+                            <li>Buka <b>Google Cloud Console</b> &rarr; <b>APIs & Services</b> &rarr; <b>OAuth consent screen</b>.</li>
+                            <li>Di bagian "Test users", klik <b>+ ADD USERS</b> dan masukkan email Google yang akan Anda gunakan untuk login ini.</li>
+                            <li>Atau klik tombol <b>PUBLISH APP</b> (Go to production) di Consent Screen agar bisa digunakan oleh email apa saja.</li>
+                          </ul>
+                        </div>
+                      )}
+
                       {isIframe && (
                         <button
                           type="button"
