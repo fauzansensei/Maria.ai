@@ -403,79 +403,26 @@ export default function AuxiliaryModals({
               </>
             ) : (
               <>
-                <div className="p-5 flex flex-col space-y-4 w-full items-center text-center">
-                  <div className="space-y-1.5 max-w-[280px] select-none">
-                    <h4 className="font-sans font-extrabold text-white text-[14.5px] tracking-tight">
-                      {isSignUpMode ? "Buat Akun Maria-ai" : "Masuk ke Maria-ai"}
+                <div className="p-6 flex flex-col space-y-5 w-full items-center text-center">
+                  <div className="space-y-2 max-w-[280px] select-none">
+                    <h4 className="font-sans font-extrabold text-white text-[15px] tracking-tight">
+                      Masuk ke Maria-ai
                     </h4>
-                    <p className="text-[11px] text-slate-400 font-medium leading-relaxed font-sans">
-                      {isSignUpMode 
-                        ? "Daftarkan email Anda untuk menyimpan riwayat obrolan dan preferensi asisten."
-                        : "Gunakan kredensial akun Anda atau asuransikan sesi dengan metode pengalihan."
-                      }
+                    <p className="text-[11.5px] text-slate-400 font-medium leading-relaxed font-sans">
+                      Masuk menggunakan akun Google Anda untuk menyimpan riwayat obrolan, preferensi asisten, dan asuransi memori secara otomatis.
                     </p>
                   </div>
 
-                  <form onSubmit={handleEmailAuthSubmit} className="w-full max-w-[280px] space-y-3 text-left pt-1">
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1 pl-0.5">
-                        Alamat Email
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        placeholder="nama@email.com"
-                        value={loginEmail}
-                        onChange={(e) => setLoginEmail(e.target.value)}
-                        className="w-full h-9 px-3 bg-slate-950/60 border border-slate-800 rounded-xl text-[12px] text-white focus:outline-none focus:border-emerald-500/50 transition-colors placeholder-slate-650"
-                      />
+                  {isIframe && (
+                    <div className="w-full max-w-[280px] p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-left">
+                      <div className="flex gap-2 items-start text-amber-400">
+                        <AlertCircle className="w-4.5 h-4.5 shrink-0 mt-0.5" />
+                        <div className="text-[10.5px] leading-relaxed font-sans font-medium">
+                          <span className="font-bold text-amber-300">Deteksi Frame AI Studio:</span> Login Google tidak dapat diselesaikan di dalam frame (kebijakan keamanan browser). Silakan klik <span className="font-bold text-white">Buka di Tab Baru ↗</span> di sudut kanan atas AI Studio, atau gunakan <span className="font-bold text-white inline-flex items-center gap-0.5">👤 Coba Tanpa Akun</span> di bawah ini.
+                        </div>
+                      </div>
                     </div>
-                    
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1 pl-0.5">
-                        Kata Sandi
-                      </label>
-                      <input
-                        type="password"
-                        required
-                        placeholder="Minimal 6 karakter"
-                        value={loginPassword}
-                        onChange={(e) => setLoginPassword(e.target.value)}
-                        className="w-full h-9 px-3 bg-slate-950/60 border border-slate-800 rounded-xl text-[12px] text-white focus:outline-none focus:border-emerald-500/50 transition-colors placeholder-slate-650"
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={isAuthenticating}
-                      className="w-full h-9.5 mt-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-[11.5px] font-sans font-bold rounded-xl transition-all shadow-md active:scale-975 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
-                    >
-                      {isAuthenticating ? (
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      ) : isSignUpMode ? (
-                        <span>Daftarkan Akun</span>
-                      ) : (
-                        <span>Masuk Akun</span>
-                      )}
-                    </button>
-
-                    <div className="text-center pt-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsSignUpMode(!isSignUpMode);
-                          setAuthLocalError(null);
-                        }}
-                        className="text-[11px] text-emerald-400 hover:text-emerald-300 font-sans font-semibold transition-colors cursor-pointer"
-                      >
-                        {isSignUpMode ? "Sudah punya akun? Masuk di sini" : "Belum punya akun? Daftar gratis"}
-                      </button>
-                    </div>
-                  </form>
-
-                  <div className="w-full flex flex-col gap-2.5 items-center justify-center pt-2 border-t border-slate-800">
-                    <span className="text-[10px] text-slate-500 font-sans tracking-wide">ATAU LANJUTKAN DENGAN</span>
-                  </div>
+                  )}
 
                   <div className="w-full flex flex-col gap-2.5 items-center justify-center">
                     {/* Google Sign-In via Popup (Solves Google Accounts frame protection rejection) */}
