@@ -553,43 +553,75 @@ export default function App() {
       });
   }, []);
 
-  const handleGoogleSignInDirect = async () => {
+  const handleGoogleSignInDirect = async (useRedirect = false) => {
     setAuthLocalError(null);
     setIsAuthenticating(true);
 
+    const isWebview = /Instagram|FBAV|FBAN|Line|MicroMessenger|TikTok/i.test(navigator.userAgent);
+    if (isWebview) {
+      setAuthLocalError("Error 403: Browser internal aplikasi (seperti Instagram/TikTok) memblokir Login Google. Silakan buka website ini di Safari atau Chrome bawaan HP Anda.");
+      setIsAuthenticating(false);
+      return;
+    }
+
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      if (result && result.user) {
-        const user = result.user;
-        const finalDisplayName = user.displayName || "User";
-        const finalUsername = "@" + (user.email?.split("@")[0] || "user");
-        const finalEmail = user.email || "user@example.com";
-        
-        setProfileDisplayName(finalDisplayName);
-        setProfileUsername(finalUsername);
-        setIsLoggedIn(true);
+      if (useRedirect || isMobile) {
+        await signInWithRedirect(auth, googleProvider);
+        return; // Will redirect
+      } else {
+        const result = await signInWithPopup(auth, googleProvider);
+        if (result && result.user) {
+          const user = result.user;
+          const finalDisplayName = user.displayName || "User";
+          const finalUsername = "@" + (user.email?.split("@")[0] || "user");
+          const finalEmail = user.email || "user@example.com";
+          
+          setProfileDisplayName(finalDisplayName);
+          setProfileUsername(finalUsername);
+          setIsLoggedIn(true);
 
-        setIsProfileOpen(false);
-        setShowColorSelector(false);
+          setIsProfileOpen(false);
+          setShowColorSelector(false);
 
-        handleAddSystemNotification(
-          "Berhasil Masuk Akun",
-          `Selamat datang ${finalDisplayName} @ Maria-ai (${finalEmail})!`,
-          "success"
-        );
+          handleAddSystemNotification(
+            "Berhasil Masuk Akun",
+            `Selamat datang ${finalDisplayName} @ Maria-ai (${finalEmail})!`,
+            "success"
+          );
+        }
       }
     } catch (err: any) {
       console.error(err);
       let message = err.message || String(err);
       
-      if (err.code === "auth/unauthorized-domain") {
-        message = `Akses Ditolak: Domain '${window.location.hostname}' belum didaftarkan di Firebase Console.`;
-      } else if (err.code === "auth/popup-blocked") {
-        message = "Gagal: Jendela pop-up login Google diblokir oleh browser.";
-      } else if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
-        message = "Login dibatalkan oleh pengguna.";
-      } else if (message.includes("403") || message.includes("access_denied")) {
-        message = "Gagal (403): Aplikasi ini dalam tahap testing (Google Cloud).";
+      const isCoopOrIframeIssue = 
+        message.includes("Cross-Origin-Opener-Policy") || 
+        err.code === "auth/popup-blocked" ||
+        err.code === "auth/cancelled-popup-request" ||
+        message?.toUpperCase()?.includes("COOP") ||
+        message?.toUpperCase()?.includes("POPUP-BLOCKED") ||
+        message?.toUpperCase()?.includes("CLOSED-BY-USER");
+
+      if (isCoopOrIframeIssue && !useRedirect) {
+        console.log("Coop/Popup blocked, attempting redirect...");
+        try {
+          await signInWithRedirect(auth, googleProvider);
+          return;
+        } catch (redirectErr: any) {
+           message = "Login diblokir. Gunakan Buka di Tab Baru atau Guest Account.";
+        }
+      } else {
+        if (err.code === "auth/unauthorized-domain") {
+          message = `Akses Ditolak: Domain belum didaftarkan di Firebase Console.`;
+        } else if (err.code === "auth/popup-blocked") {
+          message = "Gagal: Jendela pop-up login Google diblokir oleh browser.";
+        } else if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
+          message = "Login dibatalkan oleh pengguna.";
+        } else if (message.includes("403") || message.includes("access_denied")) {
+          message = "Error 403: Pastikan email tes Anda sudah ditambahkan di Google Cloud OAuth Consent Screen (karena ini mode Testing).";
+        }
       }
       setAuthLocalError(message);
     } finally {
