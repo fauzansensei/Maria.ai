@@ -7,7 +7,6 @@ import { safeStorage } from "./utils";
 import type { DiscoveryAgent } from "./components/DiscoverArea";
 import { 
   auth, 
-  originalAuthInstance,
   db, 
   googleProvider, 
   OperationType, 
@@ -148,7 +147,7 @@ export default function App() {
     setIsAuthenticating(true);
     try {
       if (isSignUpMode) {
-        const credential = await createUserWithEmailAndPassword(originalAuthInstance, loginEmail.trim(), loginPassword);
+        const credential = await createUserWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
         const user = credential.user;
         const initialDisplayName = "User Email";
         const initialUsername = "@" + (user.email?.split("@")[0] || "user");
@@ -162,7 +161,7 @@ export default function App() {
           "success"
         );
       } else {
-        const credential = await signInWithEmailAndPassword(originalAuthInstance, loginEmail.trim(), loginPassword);
+        const credential = await signInWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
         const user = credential.user;
         setIsLoggedIn(true);
         setIsProfileOpen(false);
@@ -197,7 +196,7 @@ export default function App() {
     setIsAuthenticating(true);
     try {
       setSimulatedAuthActive(false); // Reset simulation flag prior to normal auth attempt
-      const result = await signInAnonymously(originalAuthInstance);
+      const result = await signInAnonymously(auth);
       const user = result.user;
       const finalDisplayName = "Guest User";
       const finalUsername = "@guest_" + user.uid.substring(0, 5);
@@ -518,7 +517,7 @@ export default function App() {
 
   // Google Sign-In Redirect Handler (vital for mobile/iframe pop-up bypass)
   useEffect(() => {
-    getRedirectResult(originalAuthInstance)
+    getRedirectResult(auth)
       .then((result) => {
         if (result && result.user) {
           const user = result.user;
@@ -558,17 +557,11 @@ export default function App() {
     setAuthLocalError(null);
     setIsAuthenticating(true);
 
-    if (isIframe) {
-      setAuthLocalError("Login Google tidak diizinkan oleh kebijakan browser Chrome di dalam frame preview (Iframe). Silakan tekan tombol 'Buka Aplikasi di Tab Baru' (pojok kanan atas) untuk login dengan Google, ATAU gunakan Email/Guest Account di frame ini.");
-      setIsAuthenticating(false);
-      return;
-    }
-
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera/i.test(navigator.userAgent);
     
     if (isMobile) {
       try {
-        await signInWithRedirect(originalAuthInstance, googleProvider);
+        await signInWithRedirect(auth, googleProvider);
       } catch (err: any) {
         console.error("Redirect sign in error mobile:", err);
         setAuthLocalError(`Gagal redirect: ${err.message || err}`);
@@ -578,7 +571,7 @@ export default function App() {
     }
 
     try {
-      const result = await signInWithPopup(originalAuthInstance, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
       if (result && result.user) {
         const user = result.user;
         const finalDisplayName = user.displayName || "User";
@@ -613,7 +606,7 @@ export default function App() {
       if (isCoopOrIframeIssue) {
         console.log("Coop/Popup blocked in iframe, attempting redirect fallback in App...");
         try {
-          await signInWithRedirect(originalAuthInstance, googleProvider);
+          await signInWithRedirect(auth, googleProvider);
           return;
         } catch (redirectErr: any) {
           console.error("Redirect fallback error in App:", redirectErr);
@@ -646,7 +639,7 @@ export default function App() {
     let unsubscribeUser: (() => void) | null = null;
     let unsubscribeThreads: (() => void) | null = null;
 
-    const unsubscribeAuth = onAuthStateChanged(originalAuthInstance, (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       // Clear any prior listeners immediately to avoid overlapping/stale calls on logout or switch
       if (unsubscribeUser) {
         unsubscribeUser();
