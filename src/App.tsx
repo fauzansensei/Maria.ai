@@ -1718,7 +1718,6 @@ export default function App() {
           profileDisplayNameProp={profileDisplayName}
           isLoggedIn={isLoggedIn}
           isPlus={isPlus}
-          onGoogleSignIn={handleGoogleSignInDirect}
           onUpgradeSuccess={(planType) => {
             setIsPlus(true);
             const now = new Date();

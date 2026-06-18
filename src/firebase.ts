@@ -29,18 +29,8 @@ try {
   isThirdPartyCookieBlocked = true;
 }
 
-// Ensure auth falls back to a persistent standard localStorage mechanism if indexedDB is blocked
-// This natively solves the mobile vs desktop iframe persistence issue
-let originalAuth;
-try {
-  originalAuth = initializeAuth(app, {
-    persistence: isThirdPartyCookieBlocked 
-      ? browserLocalPersistence 
-      : [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence]
-  });
-} catch (e) {
-  originalAuth = getAuth(app); // Returns existing if already initialized
-}
+// Ensure auth is reliably initialized
+export const auth = getAuth(app);
 
 // Dual-activation mechanism (in-memory & local-storage) for simulated developer-mode authentication
 export function setSimulatedAuthActive(active: boolean) {
@@ -64,29 +54,6 @@ export function isSimulatedAuthActive(): boolean {
   return false;
 }
 
-export const originalAuthInstance = originalAuth;
-// Safe Proxy wrapper that satisfies standard Firebase Auth schemas and provides a high-fidelity mock session inside iframe sandboxes
-export const auth = new Proxy(originalAuth, {
-  get(target, prop, receiver) {
-    if (prop === 'currentUser') {
-      if (isSimulatedAuthActive()) {
-        return {
-          uid: 'simulated_guest_uid',
-          email: 'guest@maria.ai',
-          displayName: 'Guest User',
-          isAnonymous: true,
-          emailVerified: true,
-          providerData: []
-        };
-      }
-    }
-    const val = Reflect.get(target, prop, receiver);
-    if (typeof val === 'function') {
-      return val.bind(target);
-    }
-    return val;
-  }
-});
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 

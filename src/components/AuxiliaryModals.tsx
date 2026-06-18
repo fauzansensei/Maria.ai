@@ -473,41 +473,8 @@ export default function AuxiliaryModals({
                     </div>
                   </form>
 
-                  <div className="flex flex-col items-center gap-2 w-full max-w-[280px]">
-                    <div className="flex items-center gap-2 w-full">
-                      <span className="h-px bg-slate-800 flex-1"></span>
-                      <span className="text-[9px] text-slate-500 font-sans uppercase font-bold tracking-wider">Atau</span>
-                      <span className="h-px bg-slate-800 flex-1"></span>
-                    </div>
-                    
-                    <div className="w-full p-3 bg-[#11131a]/85 border border-amber-500/20 text-slate-300 rounded-xl space-y-2 text-[10px] leading-relaxed text-left font-sans shadow-inner">
-                      <p className="font-bold text-amber-400 flex items-center gap-1.5">
-                        <span className="text-xs">⚠️</span> Masalah Login Google di PC?
-                      </p>
-                      <p className="text-slate-350 text-[9px]">
-                        Sistem keamanan browser (Chrome Bounce Tracking & iframe Sandbox) dapat membatalkan login Google di PC Anda. Silakan:
-                      </p>
-                      <ul className="list-disc list-inside text-emerald-400 text-[9px] font-medium space-y-1.5 pl-1">
-                        <li>Gunakan form <strong>Email & Sandi</strong> di atas untuk mendaftar/masuk langsung (10 detik langsung aktif, tanpa verifikasi link).</li>
-                        <li>Gunakan tombol <strong>👤 Coba Tanpa Akun (Guest)</strong> di paling bawah.</li>
-                        {isIframe && (
-                          <li className="text-indigo-400 font-semibold list-none mt-1">
-                            <span className="mr-1">🔗</span> Atau gunakan login Google dengan membuka aplikasi di tab baru.
-                          </li>
-                        )}
-                      </ul>
-                      {isIframe && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            window.open(window.location.href, "_blank");
-                          }}
-                          className="w-full mt-1 py-1.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition-all text-[9.5px] font-sans flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shadow-md"
-                        >
-                          <span>🚀 Buka Aplikasi di Tab Baru</span>
-                        </button>
-                      )}
-                    </div>
+                  <div className="w-full flex flex-col gap-2.5 items-center justify-center pt-2 border-t border-slate-800">
+                    <span className="text-[10px] text-slate-500 font-sans tracking-wide">ATAU LANJUTKAN DENGAN</span>
                   </div>
 
                   <div className="w-full flex flex-col gap-2.5 items-center justify-center">
@@ -571,7 +538,7 @@ export default function AuxiliaryModals({
                               return;
                             } catch (redirectErr: any) {
                               console.error("Redirect fallback error:", redirectErr);
-                              message = "Login terhalang kebijakan browser. Silakan gunakan tombol 'Buka Aplikasi di Tab Baru' atau gunakan Guest Account.";
+                              message = "Login terhalang kebijakan browser. Silakan gunakan Guest Account atau buka di tab baru.";
                               setAuthLocalError(message);
                               setIsAuthenticating(false);
                               return;
@@ -581,9 +548,9 @@ export default function AuxiliaryModals({
                           if (err.code === "auth/unauthorized-domain") {
                             message = `Gagal: Domain '${window.location.hostname}' belum diizinkan oleh Firebase Console Anda.`;
                           } else if (err.code === "auth/popup-blocked") {
-                            message = "Gagal: Jendela pop-up login Google diblokir oleh browser. Harap perbolehkan pop-up browser atau buka platform di tab baru.";
-                          } else if (err.code === "auth/popup-closed-by-user") {
-                            message = "Login dibatalkan: Jendela verifikasi ditutup sebelum selesai.";
+                            message = "Gagal: Jendela pop-up login Google diblokir oleh browser.";
+                          } else if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
+                            message = "Login dibatalkan oleh pengguna.";
                           }
                           setAuthLocalError(message);
                           setIsAuthenticating(false);
@@ -601,33 +568,7 @@ export default function AuxiliaryModals({
                           <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.08l3.66 2.82c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
                         </svg>
                       </div>
-                      <span>Masuk dengan Google (Popup)</span>
-                    </button>
-
-                    {/* Dedicated fallback Google sign in via redirect */}
-                    <button
-                      type="button"
-                      disabled={isAuthenticating}
-                      onClick={async () => {
-                        setAuthLocalError(null);
-                        setIsAuthenticating(true);
-
-                        try {
-                          await signInWithRedirect(auth, googleProvider);
-                        } catch (err: any) {
-                          console.error("Redirect sign in error:", err);
-                          const errString = String(err).toLowerCase();
-                          if (errString.includes("pending promise was never set")) {
-                            setAuthLocalError("Gagal redirect: Browser memblokir IndexedDB. Gunakan Open in New Tab.");
-                          } else {
-                            setAuthLocalError(`Gagal redirect: ${err.message || err}`);
-                          }
-                          setIsAuthenticating(false);
-                        }
-                      }}
-                      className="w-full max-w-[280px] h-9 gap-2 flex items-center justify-center bg-slate-800 hover:bg-slate-700 text-zinc-100 font-sans font-semibold rounded-xl transition-all shadow-md active:scale-975 cursor-pointer disabled:opacity-50 text-[10.5px]"
-                    >
-                      <span>🔄 Masuk dengan Google (Mode Redirect)</span>
+                      <span>Masuk dengan Google</span>
                     </button>
 
                     <button
@@ -667,55 +608,6 @@ export default function AuxiliaryModals({
                     </div>
                   )}
 
-                  <div className="w-full max-w-[280px] border border-slate-800/80 rounded-xl bg-[#0b0d10]/40 text-left overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => setShowGoogleGuide(!showGoogleGuide)}
-                      className="w-full flex items-center justify-between p-2.5 hover:bg-slate-800/20 transition-colors text-slate-400 hover:text-white"
-                    >
-                      <div className="flex items-center gap-1.5 font-sans font-bold text-[10px]">
-                        <Info className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span>Mengapa Google Login Gagal?</span>
-                      </div>
-                      <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform ${showGoogleGuide ? 'rotate-180' : ''}`} />
-                    </button>
-                    
-                    {showGoogleGuide && (
-                      <div className="p-3 border-t border-slate-900 bg-slate-950/40 space-y-2.5 text-[9.5px] text-slate-350 leading-relaxed font-sans max-h-[140px] overflow-y-auto select-text">
-                        <div>
-                          <p className="font-bold text-slate-200">1. Domain Belum Diotorisasi</p>
-                          <p className="text-slate-400 mt-0.5">
-                            Daftarkan domain kontainer ini di Authentication Settings Firebase Console Anda:
-                          </p>
-                          <code className="block mt-1 p-1.5 bg-slate-900 text-emerald-400 rounded-sm text-center font-mono text-[8.5px] select-all">
-                            {window.location.hostname}
-                          </code>
-                        </div>
-                        <div className="border-t border-slate-900 pt-2">
-                          <p className="font-bold text-slate-200">2. Provider Google Tidak Aktif</p>
-                          <p className="text-slate-400 mt-0.5">
-                            Pastikan tab <strong>Google</strong> diaktifkan di Firebase Console &gt; Authentication &gt; Sign-in method.
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {isIframe && (
-                    <div className="w-full max-w-[280px] p-3 bg-teal-950/20 border border-teal-500/10 rounded-xl text-[9.5px] text-teal-350 text-left space-y-2 leading-relaxed font-sans">
-                      <p>
-                        💡 Anda berada dalam viewport frame editor preview. Jalankan di Tab Baru agar Google Sign-In bebas hambatan:
-                      </p>
-                      <a
-                        href={window.location.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-2 px-3 rounded-lg text-[9px] uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1 text-center decoration-none font-sans"
-                      >
-                        🚀 Buka Aplikasi di Tab Baru
-                      </a>
-                    </div>
-                  )}
                 </div>
               </>
             )}
