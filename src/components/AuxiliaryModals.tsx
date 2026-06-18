@@ -519,6 +519,12 @@ export default function AuxiliaryModals({
                         setAuthLocalError(null);
                         setIsAuthenticating(true);
                         
+                        if (isIframe) {
+                          setAuthLocalError("Login Google tidak diizinkan di dalam frame preview. Silakan tekan tombol 'Buka Aplikasi di Tab Baru' (pojok kanan atas) ATAU gunakan Password Email / Guest Account.");
+                          setIsAuthenticating(false);
+                          return;
+                        }
+
                         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
                         if (isMobile) {
@@ -611,6 +617,12 @@ export default function AuxiliaryModals({
                       onClick={async () => {
                         setAuthLocalError(null);
                         setIsAuthenticating(true);
+
+                        if (isIframe) {
+                          setAuthLocalError("Login Google diblokir dalam sandbox iframe. Gunakan 'Buka di Tab Baru' untuk menggunakan mode redirect Google.");
+                          setIsAuthenticating(false);
+                          return;
+                        }
 
                         try {
                           await signInWithRedirect(originalAuthInstance, googleProvider);
