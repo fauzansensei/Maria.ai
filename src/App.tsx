@@ -557,19 +557,6 @@ export default function App() {
     setAuthLocalError(null);
     setIsAuthenticating(true);
 
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera/i.test(navigator.userAgent);
-    
-    if (isMobile) {
-      try {
-        await signInWithRedirect(auth, googleProvider);
-      } catch (err: any) {
-        console.error("Redirect sign in error mobile:", err);
-        setAuthLocalError(`Gagal redirect: ${err.message || err}`);
-        setIsAuthenticating(false);
-      }
-      return;
-    }
-
     try {
       const result = await signInWithPopup(auth, googleProvider);
       if (result && result.user) {
@@ -595,44 +582,21 @@ export default function App() {
       console.error(err);
       let message = err.message || String(err);
       
-      const isCoopOrIframeIssue = 
-        message.includes("Cross-Origin-Opener-Policy") || 
-        err.code === "auth/popup-blocked" ||
-        err.code === "auth/cancelled-popup-request" ||
-        message?.toUpperCase()?.includes("COOP") ||
-        message?.toUpperCase()?.includes("POPUP-BLOCKED") ||
-        message?.toUpperCase()?.includes("CLOSED-BY-USER");
-
-      if (isCoopOrIframeIssue) {
-        console.log("Coop/Popup blocked in iframe, attempting redirect fallback in App...");
-        try {
-          await signInWithRedirect(auth, googleProvider);
-          return;
-        } catch (redirectErr: any) {
-          console.error("Redirect fallback error in App:", redirectErr);
-          message = "Login terhalang kebijakan browser. Silakan gunakan tombol 'Buka Aplikasi di Tab Baru' atau gunakan Guest Account.";
-          setAuthLocalError(message);
-          setIsProfileOpen(true);
-          setIsAuthenticating(false);
-          return;
-        }
-      }
-
       if (err.code === "auth/unauthorized-domain") {
-        message = `Gagal: Domain '${window.location.hostname}' belum diizinkan oleh Firebase Console Anda.`;
+        message = `Akses Ditolak: Domain '${window.location.hostname}' belum didaftarkan di Firebase Console.`;
       } else if (err.code === "auth/popup-blocked") {
-        message = "Gagal: Pop-up diblokir oleh browser Anda. Silakan izinkan pop-up untuk situs ini agar pendaftaran/login stabil.";
-      } else if (err.code === "auth/popup-closed-by-user") {
-        message = "Login dibatalkan: Jendela dialog ditutup sebelum proses selesai.";
+        message = "Gagal: Jendela pop-up login Google diblokir oleh browser.";
+      } else if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
+        message = "Login dibatalkan oleh pengguna.";
+      } else if (message.includes("403") || message.includes("access_denied")) {
+        message = "Gagal (403): Aplikasi ini dalam tahap testing (Google Cloud).";
       }
-      
       setAuthLocalError(message);
-      setIsProfileOpen(true);
-      setIsAuthenticating(false);
     } finally {
       setIsAuthenticating(false);
     }
   };
+
 
   // 1. Firebase Auth and Profile real-time listener
   useEffect(() => {

@@ -522,35 +522,14 @@ export default function AuxiliaryModals({
                           console.error("Popup sign in error:", err);
                           let message = err.message || String(err);
                           
-                          // Detect Cross-Origin-Opener-Policy or iframe block issues
-                          const isCoopOrIframeIssue = 
-                            message.includes("Cross-Origin-Opener-Policy") || 
-                            err.code === "auth/popup-blocked" ||
-                            err.code === "auth/cancelled-popup-request" ||
-                            message?.toUpperCase()?.includes("COOP") ||
-                            message?.toUpperCase()?.includes("POPUP-BLOCKED") ||
-                            message?.toUpperCase()?.includes("CLOSED-BY-USER");
-
-                          if (isCoopOrIframeIssue) {
-                            console.log("Coop/Popup blocked in iframe, attempting redirect fallback...");
-                            try {
-                              await signInWithRedirect(auth, googleProvider);
-                              return;
-                            } catch (redirectErr: any) {
-                              console.error("Redirect fallback error:", redirectErr);
-                              message = "Login terhalang kebijakan browser. Silakan gunakan Guest Account atau buka di tab baru.";
-                              setAuthLocalError(message);
-                              setIsAuthenticating(false);
-                              return;
-                            }
-                          }
-
                           if (err.code === "auth/unauthorized-domain") {
-                            message = `Gagal: Domain '${window.location.hostname}' belum diizinkan oleh Firebase Console Anda.`;
+                            message = `Akses Ditolak: Domain '${window.location.hostname}' belum didaftarkan di Firebase Console.`;
                           } else if (err.code === "auth/popup-blocked") {
                             message = "Gagal: Jendela pop-up login Google diblokir oleh browser.";
                           } else if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
                             message = "Login dibatalkan oleh pengguna.";
+                          } else if (message.includes("403") || message.includes("access_denied")) {
+                            message = "Gagal (403): Aplikasi ini dalam tahap testing (Google Cloud).";
                           }
                           setAuthLocalError(message);
                           setIsAuthenticating(false);
