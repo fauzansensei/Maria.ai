@@ -772,6 +772,13 @@ export default function App() {
         setMessages([]);
         setActiveThreadId("");
       }
+    }, (error) => {
+      console.error("Auth state observer error:", error);
+      if (isThirdPartyCookieBlocked || String(error.message).includes('storage') || String(error.message).includes('indexeddb')) {
+        handleAddSystemNotification("Browser Anda memblokir Akses Cookie Pihak Ketiga. Fitur Login Google mungkin tidak stabil.", "error");
+      } else {
+        handleAddSystemNotification(`Sesi login terputus atau gagal diverifikasi: ${error.message}`, "error");
+      }
     });
 
     return () => {

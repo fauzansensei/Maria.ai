@@ -17,8 +17,8 @@ try {
   
   // Always initialize so we don't break the SDK hooks entirely, but use a dummy project if invalid
   const configToUse = isFirebaseConfigValid ? firebaseConfig : { 
-    apiKey: "dummy-key", 
-    projectId: "dummy-maria-ai-project", 
+    apiKey: "dummy-key-for-ui-testing-only", 
+    projectId: "demo-maria-ai", 
     appId: "1:123456789:web:abcdef" 
   };
   
@@ -26,7 +26,11 @@ try {
 } catch (e) {
   console.error("Firebase critical fallback initialization bypassed:", e);
   // Guarantee an app instance exists to prevent destructive module evaluation failure
-  app = initializeApp({ apiKey: "dummy", projectId: "dummy" });
+  try {
+    app = getApps().length === 0 ? initializeApp({ apiKey: "dummy", projectId: "demo-dummy", appId: "1:1:web:1" }) : getApp();
+  } catch (err) {
+    console.error("Absolute fallback failed:", err);
+  }
 }
 
 // Initialize Firestore with long polling to prevent WebChannel/WebSocket drops in this environment
