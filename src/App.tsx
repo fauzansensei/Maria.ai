@@ -568,7 +568,7 @@ export default function App() {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     try {
-      if (useRedirect || isMobile) {
+      if (useRedirect) {
         await signInWithRedirect(auth, googleProvider);
         return; // Will redirect
       } else {

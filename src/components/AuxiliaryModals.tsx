@@ -434,31 +434,12 @@ export default function AuxiliaryModals({
                         setAuthLocalError(null);
                         setIsAuthenticating(true);
                         
-                        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-                        if (isMobile) {
-                          try {
-                            await signInWithRedirect(auth, googleProvider);
-                          } catch (err: any) {
-                            console.error("Redirect sign in error mobile:", err);
-                            setAuthLocalError(`Gagal redirect: ${err.message || err}`);
-                            setIsAuthenticating(false);
-                          }
-                          return;
-                        }
-
                         try {
                           const isWebview = /Instagram|FBAV|FBAN|Line|MicroMessenger|TikTok/i.test(navigator.userAgent);
                           if (isWebview) {
                             setAuthLocalError("Error 403: Browser internal aplikasi (seperti Instagram/TikTok) memblokir Login Google. Silakan buka website ini di Safari atau Chrome bawaan HP Anda.");
                             setIsAuthenticating(false);
                             return;
-                          }
-                          const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                          
-                          if (isMobile) {
-                             await signInWithRedirect(auth, googleProvider);
-                             return;
                           }
 
                           const result = await signInWithPopup(auth, googleProvider);
@@ -497,17 +478,17 @@ export default function AuxiliaryModals({
                               await signInWithRedirect(auth, googleProvider);
                               return;
                             } catch (redirectErr: any) {
-                               message = "Login diblokir. Gunakan Buka di Tab Baru atau Guest Account.";
+                               message = "Login diblokir oleh browser. Silakan klik 'Buka di Tab Baru' di sudut kanan atas AI Studio untuk login dengan aman.";
                             }
                           } else {
                             if (err.code === "auth/unauthorized-domain") {
                               message = `Akses Ditolak: Domain belum didaftarkan di Firebase Console.`;
                             } else if (err.code === "auth/popup-blocked") {
-                              message = "Gagal: Jendela pop-up login Google diblokir oleh browser.";
+                              message = "Gagal: Jendela pop-up login Google diblokir oleh browser. Silakan izinkan pop-up atau gunakan link alternatif di bawah.";
                             } else if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
-                              message = "Error 403 Google Oauth atau Login dibatalkan: Jika Anda melihat layar 403, pastikan email tes Anda sudah ditambahkan di Google Cloud OAuth Consent Screen.";
+                              message = "Login dibatalkan oleh user atau dicegah oleh browser. Silakan coba lagi.";
                             } else if (message.includes("403") || message.includes("access_denied")) {
-                              message = "Error 403: Pastikan email tes Anda sudah ditambahkan di Google Cloud OAuth Consent Screen (karena ini mode Testing).";
+                              message = "Error 403: Pastikan email Anda sudah ditambahkan di Google Cloud Console OAuth Consent Screen jika aplikasi masih dalam mode Testing.";
                             }
                           }
                           setAuthLocalError(message);
@@ -526,7 +507,27 @@ export default function AuxiliaryModals({
                           <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.08l3.66 2.82c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
                         </svg>
                       </div>
-                      <span>Masuk dengan Google</span>
+                      <span>Masuk dengan Google (Pop-up)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isAuthenticating}
+                      onClick={async () => {
+                        setSimulatedAuthActive(false);
+                        setAuthLocalError(null);
+                        setIsAuthenticating(true);
+                        try {
+                          await signInWithRedirect(auth, googleProvider);
+                        } catch (err: any) {
+                          console.error("Redirect sign in error custom click:", err);
+                          setAuthLocalError(`Gagal Login Redirect: ${err.message || err}`);
+                          setIsAuthenticating(false);
+                        }
+                      }}
+                      className="w-full max-w-[280px] h-9 flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white font-sans font-medium rounded-xl border border-slate-800 transition-all active:scale-975 cursor-pointer disabled:opacity-50 text-[10.5px]"
+                    >
+                      <span>🔄 Metode Alternatif (Pengalihan / Redirect)</span>
                     </button>
 
                     <button
