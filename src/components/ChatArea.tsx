@@ -1088,9 +1088,9 @@ const ChatInputForm = React.memo(function ChatInputForm({
         </div>
       )}
 
-      <form onSubmit={handleSend} className="relative flex items-center">
+      <form onSubmit={handleSend} className="w-full">
         {isRecordingVoice ? (
-          <div className="w-full bg-red-50 border border-red-100 rounded-xl py-3 px-4 flex items-center justify-between text-xs animate-pulse-slow">
+          <div className="w-full bg-red-50 border border-red-100 rounded-2xl py-3.5 px-4 flex items-center justify-between text-xs animate-pulse-slow">
             <div className="flex items-center gap-2 text-red-700 font-bold">
               <span className="w-2 h-2 bg-red-600 rounded-full animate-ping shrink-0" style={{ animationDuration: "1s" }}></span>
               <span>Merekam memo suara...</span>
@@ -1119,33 +1119,7 @@ const ChatInputForm = React.memo(function ChatInputForm({
             </div>
           </div>
         ) : (
-          <>
-            <div className="absolute left-3 flex items-center gap-0.5 z-10 bg-transparent border-none">
-              <label htmlFor="img-upload-chat" className="p-1.5 cursor-pointer text-slate-450 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-all" title="Unggah Gambar">
-                <Image className="w-[15px] h-[15px]" />
-                <input
-                  id="img-upload-chat"
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={handleImageUpload}
-                  disabled={isLoading}
-                />
-              </label>
-
-              <button
-                type="button"
-                onClick={startRecording}
-                disabled={isLoading}
-                aria-label="Rekam Memo Suara"
-                className="p-1.5 cursor-pointer text-slate-455 hover:text-red-500 hover:bg-slate-200/60 rounded-lg transition-all"
-                title="Rekam Memo Suara"
-              >
-                <Mic className="w-[15px] h-[15px]" />
-              </button>
-            </div>
-
+          <div className="w-full bg-slate-100 focus-within:bg-white focus-within:ring-1 focus-within:ring-slate-300 focus-within:border-slate-200 rounded-2xl border border-transparent transition-all duration-200 p-2 shadow-2xs">
             <textarea
               ref={textareaRef}
               placeholder={isLoading ? "Mohon tunggu, Maria sedang memproses..." : "Tanya Maria..."}
@@ -1155,49 +1129,81 @@ const ChatInputForm = React.memo(function ChatInputForm({
               disabled={isLoading}
               aria-label="Input Chat Utama"
               rows={1}
-              className="w-full bg-slate-100 border-none rounded-xl py-3 pl-[62px] pr-14 text-sm text-slate-800 font-medium focus:ring-1 focus:ring-slate-300 hover:bg-slate-200/50 focus:bg-white outline-none transition-all duration-200 placeholder:text-slate-500 overflow-y-auto resize-none leading-relaxed align-middle block min-h-[44px] max-h-[180px]"
+              className="w-full bg-transparent border-none text-sm text-slate-800 font-medium outline-none resize-none leading-relaxed px-2.5 pt-1.5 pb-1 placeholder:text-slate-400 overflow-y-auto block min-h-[44px] max-h-[180px]"
             />
-            <button
-              type="submit"
-              disabled={(!inputText.trim() && attachedImages.length === 0 && !voiceBase64) || isLoading}
-              aria-label="Kirim Pesan"
-              className={`absolute right-2.5 p-2 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 text-white ${
-                (inputText.trim() || attachedImages.length > 0 || voiceBase64) && !isLoading
-                  ? `${themeStyle.primary.split(" ")[0]} shadow-sm`
-                  : "bg-slate-200 text-slate-400 cursor-not-allowed"
-              }`}
-            >
-              <Send id="icon-send-b" className="w-3.5 h-3.5" />
-            </button>
-          </>
+            
+            <div className="flex items-center justify-between pt-1.5 px-1 bg-transparent border-none">
+              {/* Left Actions: Upload, Voice Note, and Deep Search Toggle */}
+              <div className="flex items-center gap-1 sm:gap-2">
+                <label htmlFor="img-upload-chat" className="p-1.5 cursor-pointer text-slate-450 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-all" title="Unggah Gambar">
+                  <Image className="w-[15px] h-[15px]" />
+                  <input
+                    id="img-upload-chat"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleImageUpload}
+                    disabled={isLoading}
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={startRecording}
+                  disabled={isLoading}
+                  aria-label="Rekam Memo Suara"
+                  className="p-1.5 cursor-pointer text-slate-455 hover:text-red-500 hover:bg-slate-200/60 rounded-lg transition-all"
+                  title="Rekam Memo Suara"
+                >
+                  <Mic className="w-[15px] h-[15px]" />
+                </button>
+
+                <div className="h-4 w-[1px] bg-slate-200 mx-1"></div>
+
+                {/* Integrated Deep Search Toggle */}
+                <button
+                  type="button"
+                  onClick={onToggleDeepSearch}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-[10.5px] font-sans font-bold transition-all cursor-pointer border ${
+                    deepSearchActive
+                      ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 active:scale-95"
+                      : "bg-white hover:bg-slate-50 text-slate-500 border-slate-200 active:scale-95"
+                  }`}
+                  title="Aktifkan pencarian Google Search real-time dan analisis mendalam"
+                >
+                  <Globe className={`w-3.5 h-3.5 ${deepSearchActive ? "animate-pulse text-emerald-600" : ""}`} />
+                  <span>Pencarian Mendalam</span>
+                  <span className={`w-1.5 h-1.5 rounded-full ${deepSearchActive ? "bg-emerald-600" : "bg-slate-300"}`}></span>
+                </button>
+              </div>
+
+              {/* Right Action: Send Button */}
+              <button
+                type="submit"
+                disabled={(!inputText.trim() && attachedImages.length === 0 && !voiceBase64) || isLoading}
+                aria-label="Kirim Pesan"
+                className={`p-2 rounded-xl flex items-center justify-center cursor-pointer transition-all duration-205 text-white ${
+                  (inputText.trim() || attachedImages.length > 0 || voiceBase64) && !isLoading
+                    ? `${themeStyle.primary.split(" ")[0]} shadow-sm hover:scale-105 active:scale-95`
+                    : "bg-slate-200 text-slate-450 cursor-not-allowed"
+                }`}
+              >
+                <Send id="icon-send-b" className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
         )}
       </form>
 
-      <div className="flex flex-col sm:flex-row items-center justify-between text-[10px] text-slate-500 px-2 mt-2 gap-2">
-        <span className="text-center sm:text-left font-mono uppercase tracking-tight font-medium">
+      <div className="flex flex-col sm:flex-row items-center justify-between text-[10px] text-slate-450 px-2 mt-2 gap-2">
+        <span className="text-center sm:text-left font-mono uppercase tracking-tight font-semibold">
           Maria adalah AI dapat melakukan kesalahan
         </span>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onToggleDeepSearch}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-sans font-semibold transition-all cursor-pointer border ${
-              deepSearchActive
-                ? "bg-emerald-50 hover:bg-emerald-100/65 text-emerald-700 border-emerald-200 shadow-3xs"
-                : "bg-slate-50 hover:bg-slate-100 text-slate-500 border-slate-200"
-            }`}
-            title="Aktifkan pencarian Google Search real-time dan analisis mendalam"
-          >
-            <Globe className={`w-3.5 h-3.5 ${deepSearchActive ? "animate-pulse text-emerald-600" : ""}`} />
-            <span>Pencarian Mendalam</span>
-            <span className={`w-1.5 h-1.5 rounded-full ${deepSearchActive ? "bg-emerald-600" : "bg-slate-300"}`}></span>
-          </button>
-
-          <span className="hidden sm:flex items-center gap-1 font-sans text-[9px] uppercase font-bold text-slate-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            Enter untuk kirim
-          </span>
-        </div>
+        <span className="hidden sm:flex items-center gap-1 font-sans text-[9px] uppercase font-bold text-slate-500 select-none">
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse"></span>
+          Enter untuk kirim
+        </span>
       </div>
     </div>
   );
