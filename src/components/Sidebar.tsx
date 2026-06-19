@@ -386,7 +386,7 @@ export default function Sidebar({
           {/* CHATS Section Header */}
           {sortedThreads.length > 0 && (
             <div className="space-y-1.5 pt-1">
-              <span className="block text-[10px] font-extrabold text-slate-350 uppercase tracking-widest pl-3 select-none">
+              <span className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest pl-3 select-none">
                 CHATS
               </span>
 
@@ -438,7 +438,7 @@ export default function Sidebar({
                             type="button"
                             onClick={() => setEditingId(null)}
                             aria-label="Batal ganti nama percakapan"
-                            className="p-1 text-rose-450 hover:bg-slate-800 rounded-md shrink-0 cursor-pointer"
+                            className="p-1 text-rose-400 hover:bg-slate-800 rounded-md shrink-0 cursor-pointer"
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -473,7 +473,7 @@ export default function Sidebar({
                                 setActiveMenuId(activeMenuId === thread.id ? null : thread.id);
                               }}
                               aria-label={`Menu opsi percakapan: ${thread.title}`}
-                              className={`p-1.5 rounded-full hover:bg-slate-800/85 text-slate-450 hover:text-white transition-opacity duration-150 cursor-pointer ${
+                              className={`p-1.5 rounded-full hover:bg-slate-800/85 text-slate-400 hover:text-white transition-opacity duration-150 cursor-pointer ${
                                 isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                               }`}
                               title="Menu Percakapan"
@@ -637,7 +637,7 @@ export default function Sidebar({
             )
           ) : (
             /* ChatGPT style guest prompt panel exactly like Screenshot 6 */
-            <div className="p-4 rounded-xl bg-[#15171d] border border-slate-800/80 hover:border-slate-800 transition-all duration-250 text-left space-y-3 shadow-inner">
+            <div className="p-4 rounded-xl bg-[#15171d] border border-slate-800/80 hover:border-slate-800 transition-all duration-200 text-left space-y-3 shadow-inner">
               <div>
                 <span className="block text-xs font-bold text-white tracking-tight leading-snug mb-1">
                   Dapatkan respons yang disesuaikan
@@ -940,7 +940,7 @@ export default function Sidebar({
                 </form>
 
                 <div className="text-center">
-                  <span className="text-[9px] text-slate-350 leading-normal block">
+                  <span className="text-[9px] text-slate-400 leading-normal block font-sans">
                     Metode pembayaran terenkripsi 250+ bit SSL aman. Batalkan langganan kapan saja dengan mudah.
                   </span>
                 </div>

@@ -705,7 +705,7 @@ function parseInlineStyles(
         index: codeMatch.index,
         length: codeMatch[0].length,
         render: () => (
-          <code key={`code-${keyCount++}`} className={`px-1.5 py-0.5 border rounded text-xs select-all font-mono ${isAi ? "bg-slate-150 border-slate-200 text-slate-800" : "bg-slate-950/25 border-white/10 text-amber-250 font-semibold"}`}>
+          <code key={`code-${keyCount++}`} className={`px-1.5 py-0.5 border rounded text-xs select-all font-mono ${isAi ? "bg-slate-100 border-slate-200 text-slate-800" : "bg-slate-950/25 border-white/10 text-amber-250 font-semibold"}`}>
             {codeMatch[1]}
           </code>
         )
@@ -1126,13 +1126,13 @@ const ChatInputForm = React.memo(function ChatInputForm({
       {(attachedImages.length > 0 || voiceBase64) && (
         <div className="flex flex-wrap items-center gap-3 p-2.5 bg-slate-50 border border-slate-200 border-b-0 rounded-t-xl animate-fade-in text-[11px]">
           {attachedImages.map((imgBase64, idx) => (
-            <div key={idx} className="relative group bg-white border border-slate-250 rounded-lg p-1 shadow-2xs shrink-0">
+            <div key={idx} className="relative group bg-white border border-slate-200 rounded-lg p-1 shadow-2xs shrink-0">
               <img src={imgBase64} alt={`Preview Lampiran ${idx + 1}`} className="w-12 h-12 object-cover rounded" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
               <button
                 type="button"
                 onClick={() => setAttachedImages(prev => prev.filter((_, i) => i !== idx))}
                 aria-label="Hapus Lampiran Gambar"
-                className="absolute -top-1.5 -right-1.5 bg-red-500 text-white p-0.5 rounded-full hover:bg-red-650 shadow-sm transition-colors cursor-pointer"
+                className="absolute -top-1.5 -right-1.5 bg-red-500 text-white p-0.5 rounded-full hover:bg-red-600 shadow-sm transition-colors cursor-pointer"
                 title="Hapus"
               >
                 <X className="w-2.5 h-2.5" />
@@ -1140,7 +1140,7 @@ const ChatInputForm = React.memo(function ChatInputForm({
             </div>
           ))}
           {voiceBase64 && (
-            <div className="relative group bg-white border border-slate-250 rounded-lg py-1.5 px-3 flex items-center gap-2 shadow-2xs font-medium text-slate-700">
+            <div className="relative group bg-white border border-slate-200 rounded-lg py-1.5 px-3 flex items-center gap-2 shadow-2xs font-medium text-slate-700">
               <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
               <span>Voice Memo Terkam ({recordingDuration > 0 ? `${recordingDuration}s` : "Simulasi"})</span>
               <button
@@ -1207,7 +1207,7 @@ const ChatInputForm = React.memo(function ChatInputForm({
             <div className="flex items-center justify-between pt-1.5 px-1 bg-transparent border-none">
               {/* Left Actions: Upload, Voice Note, and Deep Search Toggle */}
               <div className="flex items-center gap-1 sm:gap-2">
-                <label htmlFor="img-upload-chat" className="p-1.5 cursor-pointer text-slate-450 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-all" title="Unggah Gambar">
+                <label htmlFor="img-upload-chat" className="p-1.5 cursor-pointer text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-all" title="Unggah Gambar">
                   <Image className="w-[15px] h-[15px]" />
                   <input
                     id="img-upload-chat"
@@ -1225,7 +1225,7 @@ const ChatInputForm = React.memo(function ChatInputForm({
                   onClick={startRecording}
                   disabled={isLoading}
                   aria-label="Rekam Memo Suara"
-                  className="p-1.5 cursor-pointer text-slate-455 hover:text-red-500 hover:bg-slate-200/60 rounded-lg transition-all"
+                  className="p-1.5 cursor-pointer text-slate-400 hover:text-red-500 hover:bg-slate-200/60 rounded-lg transition-all"
                   title="Rekam Memo Suara"
                 >
                   <Mic className="w-[15px] h-[15px]" />
@@ -1258,7 +1258,7 @@ const ChatInputForm = React.memo(function ChatInputForm({
                 className={`p-2 rounded-xl flex items-center justify-center cursor-pointer transition-all duration-205 text-white ${
                   (inputText.trim() || attachedImages.length > 0 || voiceBase64) && !isLoading
                     ? `${themeStyle.primary.split(" ")[0]} shadow-sm hover:scale-105 active:scale-95`
-                    : "bg-slate-200 text-slate-450 cursor-not-allowed"
+                    : "bg-slate-200 text-slate-400 cursor-not-allowed"
                 }`}
               >
                 <Send id="icon-send-b" className="w-3.5 h-3.5" />
@@ -1587,7 +1587,7 @@ export default function ChatArea({
                             <button
                               type="button"
                               onClick={() => setEditingMessageId(null)}
-                              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-750 rounded-lg text-zinc-400 hover:text-white font-bold cursor-pointer transition-all"
+                              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-zinc-400 hover:text-white font-bold cursor-pointer transition-all"
                             >
                               Batal
                             </button>
@@ -1780,7 +1780,7 @@ export default function ChatArea({
                               className={`transition-all cursor-pointer px-1.5 py-0.5 rounded flex items-center gap-1 text-[9px] ${
                                 isPlayingAudio 
                                   ? "text-sky-500 bg-sky-500/10 border border-sky-500/15 font-bold animate-pulse" 
-                                  : "hover:text-sky-600 hover:bg-sky-500/5 text-slate-450"
+                                  : "hover:text-sky-600 hover:bg-sky-500/5 text-slate-400"
                               }`}
                               title={isPlayingAudio ? "Berhenti memutar suara" : "Dengarkan suara Maria"}
                             >
@@ -1905,7 +1905,7 @@ const GroundingSources = React.memo(function GroundingSources({
   }
 
   return (
-    <div className="mt-3.5 pt-3 border-t border-slate-205 text-xs text-slate-750 space-y-2.5">
+    <div className="mt-3.5 pt-3 border-t border-slate-200 text-xs text-slate-700 space-y-2.5">
       {/* Search Queries Tag Header */}
       {queries.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
@@ -1914,7 +1914,7 @@ const GroundingSources = React.memo(function GroundingSources({
             Pencarian Google:
           </span>
           {queries.map((q, idx) => (
-            <span key={idx} className="bg-slate-100 border border-slate-200 text-slate-750 px-2 py-0.5 rounded-md font-medium text-[10.5px]">
+            <span key={idx} className="bg-slate-100 border border-slate-200 text-slate-700 px-2 py-0.5 rounded-md font-medium text-[10.5px]">
               &ldquo;{q}&rdquo;
             </span>
           ))}
@@ -1947,7 +1947,7 @@ const GroundingSources = React.memo(function GroundingSources({
                   href={chunk.uri}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-start gap-2 p-2 bg-white/70 hover:bg-white border border-slate-205 hover:border-slate-300 rounded-xl hover:shadow-3xs active:scale-[0.98] transition-all group duration-150 text-left"
+                  className="flex items-start gap-2 p-2 bg-white/70 hover:bg-white border border-slate-200 hover:border-slate-300 rounded-xl hover:shadow-3xs active:scale-[0.98] transition-all group duration-150 text-left"
                 >
                   {/* Web Favicon Fetched Dynamically */}
                   <img

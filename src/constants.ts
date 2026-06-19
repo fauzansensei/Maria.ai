@@ -134,6 +134,6 @@ export const THEME_OPTIONS: ThemeOption[] = [
     name: "Monochrome Minimalist",
     primary: "bg-slate-900 text-white hover:bg-slate-800",
     primaryBg: "bg-slate-100 border-slate-200 text-slate-800",
-    bgGradient: "from-slate-800 via-slate-750 to-slate-900",
+    bgGradient: "from-slate-800 via-slate-700 to-slate-900",
   },
 ];

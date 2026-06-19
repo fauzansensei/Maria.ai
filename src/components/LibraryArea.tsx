@@ -362,7 +362,7 @@ export default function LibraryArea({
                     key={msg.id}
                     className="p-4 rounded-xl bg-[#14151b] border border-slate-800/80 hover:border-slate-700/80 transition-all text-left space-y-3 group"
                   >
-                    <div className="flex items-center justify-between text-[10px] text-slate-450">
+                    <div className="flex items-center justify-between text-[10px] text-slate-400">
                       <div className="flex items-center gap-2">
                         <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase ${
                           msg.role === "assistant" ? "bg-emerald-500/10 text-emerald-400" : "bg-blue-500/10 text-blue-400"
@@ -450,7 +450,7 @@ export default function LibraryArea({
                 {savedChats.map(chat => (
                   <div
                     key={chat.id}
-                    className="p-4 rounded-xl bg-[#14151b] border border-slate-800/85 hover:border-slate-750 transition-all text-left flex flex-col justify-between gap-4 group"
+                    className="p-4 rounded-xl bg-[#14151b] border border-slate-800/85 hover:border-slate-700 transition-all text-left flex flex-col justify-between gap-4 group"
                   >
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-[10px]">
@@ -579,7 +579,7 @@ export default function LibraryArea({
                   <button
                     type="button"
                     onClick={() => setIsPromptFormOpen(false)}
-                    className="px-3.5 py-1.5 bg-slate-900 border border-slate-800 hover:border-slate-750 text-slate-400 hover:text-white rounded-lg text-[10px] font-bold transition-all cursor-pointer"
+                    className="px-3.5 py-1.5 bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white rounded-lg text-[10px] font-bold transition-all cursor-pointer"
                   >
                     Batal
                   </button>
@@ -610,7 +610,7 @@ export default function LibraryArea({
                 {myPrompts.map(prompt => (
                   <div
                     key={prompt.id}
-                    className="p-4 rounded-xl bg-[#14151b] border border-slate-800/85 hover:border-slate-750 transition-all text-left flex flex-col justify-between gap-4 group"
+                    className="p-4 rounded-xl bg-[#14151b] border border-slate-800/85 hover:border-slate-700 transition-all text-left flex flex-col justify-between gap-4 group"
                   >
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-[10px]">
@@ -640,7 +640,7 @@ export default function LibraryArea({
 
                       <div className="space-y-1 text-left">
                         <span className="block text-xs font-bold text-white tracking-tight">{prompt.title}</span>
-                        <p className="text-[10.5px] text-slate-450 leading-relaxed italic line-clamp-3 bg-[#0a0b0f]/50 p-2.5 rounded-lg border border-slate-900 font-mono">
+                        <p className="text-[10.5px] text-slate-400 leading-relaxed italic line-clamp-3 bg-[#0a0b0f]/50 p-2.5 rounded-lg border border-slate-900 font-mono">
                           {prompt.formula}
                         </p>
                       </div>
@@ -715,7 +715,7 @@ export default function LibraryArea({
                             onUsePromptFormula(`Tolong bacakan dokumen rujukan saya berikut ini dan berikan review SWOT mendalam:\n\n[Isi dari ${file.name}]`);
                           }
                         }}
-                        className="p-1 px-2.5 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg text-slate-400 font-bold transition-all border border-slate-750/80 cursor-pointer flex items-center gap-1"
+                        className="p-1 px-2.5 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg text-slate-400 font-bold transition-all border border-slate-700/80 cursor-pointer flex items-center gap-1"
                         title="Buka lampiran"
                       >
                         <ExternalLink className="w-3 h-3 text-slate-500" />

@@ -16,6 +16,7 @@ export default defineConfig(() => {
       },
     },
     build: {
+      outDir: 'dist',
       modulePreload: {
         resolveDependencies: () => [] // Disable preload warnings/dependencies nesting
       },

@@ -168,7 +168,7 @@ export default function SettingsDashboard({
   const getAccentBgClass = () => {
     if (accentColor === "Hijau") return "bg-emerald-500 hover:bg-emerald-600";
     if (accentColor === "Ungu") return "bg-purple-500 hover:bg-purple-600";
-    if (accentColor === "Hitam") return "bg-zinc-650 hover:bg-zinc-700";
+    if (accentColor === "Hitam") return "bg-zinc-700 hover:bg-zinc-800";
     return "bg-blue-600 hover:bg-blue-700";
   };
 
@@ -361,7 +361,7 @@ export default function SettingsDashboard({
                         setUsername(val);
                         triggerSave({ username: val });
                       }}
-                      className="w-full bg-[#0d0d0e] border border-zinc-850 focus:border-zinc-650 rounded-lg px-3.5 py-2 text-zinc-200 text-[11px] outline-none transition-colors"
+                      className="w-full bg-[#0d0d0e] border border-zinc-800 focus:border-zinc-600 rounded-lg px-3.5 py-2 text-zinc-200 text-[11px] outline-none transition-colors"
                       placeholder="Masukkan nama Anda..."
                     />
                   </div>

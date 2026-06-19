@@ -185,7 +185,7 @@ export default function AuxiliaryModals({
                         })()}
                       </div>
                     ) : (
-                      <div className="w-[84px] h-[84px] rounded-full overflow-hidden border border-slate-750 shadow-lg bg-slate-900 transition-all duration-350 shrink-0">
+                      <div className="w-[84px] h-[84px] rounded-full overflow-hidden border border-slate-700 shadow-lg bg-slate-900 transition-all duration-350 shrink-0">
                         <img 
                           src={profileAvatarUrl} 
                           alt="Preview Foto Profil" 

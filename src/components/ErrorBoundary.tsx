@@ -117,7 +117,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
             <div className="flex flex-col sm:flex-row items-center gap-2 pt-2">
               <button
                 onClick={this.handleReload}
-                className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-750 text-white rounded-xl text-xs font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shadow-sm border border-slate-700/55"
+                className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shadow-sm border border-slate-700/55"
               >
                 <RefreshCw className="w-3.5 h-3.5 text-blue-400" />
                 Segarkan Halaman
