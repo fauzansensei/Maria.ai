@@ -272,8 +272,10 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
     // We prioritize gemini-3.5-flash for the best quality and search capabilities
     const modelsToTry = [
       "gemini-2.5-flash",
+      "gemini-2.0-flash",
       "gemini-3.1-flash-lite",
-      "gemini-3.5-flash"
+      "gemini-3.5-flash",
+      "gemini-flash-latest"
     ];
     let response = null;
     let fallbackUsed = "";
@@ -346,8 +348,9 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
         const errMsg = (err?.message || "").toUpperCase();
         
         if (errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED")) {
-          // If the API key is completely rate limited, do not fallback to other models instantly as they share the same key.
-          break;
+          console.warn(`[429 Quota Rate Limit] on model ${modelName}. Moving to next fallback model...`);
+          await sleep(500); 
+          continue; 
         }
 
         const shouldSkipToNextModel = 
@@ -388,7 +391,13 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
           }
         } catch (subErr: any) {
           lastError = subErr;
-          await sleep(200);
+          const subErrMsg = (subErr?.message || "").toUpperCase();
+          if (subErrMsg.includes("429") || subErrMsg.includes("RESOURCE_EXHAUSTED")) {
+            console.warn(`[429 Quota Rate Limit SubAttempt] on model ${modelName}. Moving to next fallback model...`);
+            await sleep(500);
+          } else {
+            await sleep(200);
+          }
         }
       }
     }
