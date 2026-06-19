@@ -258,6 +258,7 @@ export default function App() {
 
 
   const [messages, setMessages] = useState<Message[]>([]);
+  const [deepSearchActive, setDeepSearchActive] = useState<boolean>(false);
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string>("");
   const [savedChats, setSavedChats] = useState<any[]>([]);
@@ -815,7 +816,8 @@ export default function App() {
           feedback: msgData.feedback || null,
           image: msgData.image || undefined,
           images: msgData.images || undefined,
-          audio: msgData.audio || undefined
+          audio: msgData.audio || undefined,
+          groundingMetadata: msgData.groundingMetadata || undefined
         });
       });
       loadedMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -1029,7 +1031,8 @@ export default function App() {
             ...settings,
             username: isLoggedIn ? (profileDisplayName || settings.username || "User") : "User"
           },
-          memories: memories
+          memories: memories,
+          deepSearch: deepSearchActive
         }),
       });
 
@@ -1041,7 +1044,8 @@ export default function App() {
           role: "assistant",
           content: data.content,
           timestamp: data.timestamp || new Date().toISOString(),
-          isError: data.isRecoveredError || false
+          isError: data.isRecoveredError || false,
+          groundingMetadata: data.groundingMetadata || null
         };
 
         // Automate dynamic user memory update if returned from server
@@ -1067,7 +1071,8 @@ export default function App() {
             timestamp: assistantMsg.timestamp,
             isError: data.isRecoveredError || false,
             isEdited: false,
-            feedback: null
+            feedback: null,
+            ...(assistantMsg.groundingMetadata ? { groundingMetadata: assistantMsg.groundingMetadata } : {})
           }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${currentThreadId}/messages/${assistantMsg.id}`));
         }
         setMessages((prev) => prev.some(m => m.id === assistantMsg.id) ? prev : [...prev, assistantMsg]);
@@ -1183,7 +1188,8 @@ export default function App() {
             ...settings,
             username: isLoggedIn ? (profileDisplayName || settings.username || "User") : "User"
           },
-          memories: memories
+          memories: memories,
+          deepSearch: deepSearchActive
         }),
       });
 
@@ -1195,7 +1201,8 @@ export default function App() {
           role: "assistant",
           content: data.content,
           timestamp: data.timestamp || new Date().toISOString(),
-          isError: data.isRecoveredError || false
+          isError: data.isRecoveredError || false,
+          groundingMetadata: data.groundingMetadata || null
         };
 
         // Automate dynamic user memory update if returned from server
@@ -1221,7 +1228,8 @@ export default function App() {
             timestamp: assistantMsg.timestamp,
             isError: data.isRecoveredError || false,
             isEdited: false,
-            feedback: null
+            feedback: null,
+            ...(assistantMsg.groundingMetadata ? { groundingMetadata: assistantMsg.groundingMetadata } : {})
           }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${assistantMsg.id}`));
         }
         setMessages((prev) => prev.some(m => m.id === assistantMsg.id) ? prev : [...prev, assistantMsg]);
@@ -1349,7 +1357,8 @@ export default function App() {
             ...settings,
             username: isLoggedIn ? (profileDisplayName || settings.username || "User") : "User"
           },
-          memories: memories
+          memories: memories,
+          deepSearch: deepSearchActive
         }),
       });
 
@@ -1361,7 +1370,8 @@ export default function App() {
           role: "assistant",
           content: data.content,
           timestamp: data.timestamp || new Date().toISOString(),
-          isError: data.isRecoveredError || false
+          isError: data.isRecoveredError || false,
+          groundingMetadata: data.groundingMetadata || null
         };
 
         if (isLoggedIn && auth.currentUser && activeThreadId) {
@@ -1372,7 +1382,8 @@ export default function App() {
             timestamp: assistantMsg.timestamp,
             isError: data.isRecoveredError || false,
             isEdited: false,
-            feedback: null
+            feedback: null,
+            ...(assistantMsg.groundingMetadata ? { groundingMetadata: assistantMsg.groundingMetadata } : {})
           }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${assistantMsg.id}`));
         }
         setMessages((prev) => prev.some(m => m.id === assistantMsg.id) ? prev : [...prev, assistantMsg]);
@@ -1763,6 +1774,8 @@ export default function App() {
           {activeView === "chat" && (
             <ChatArea
               messages={messages}
+              deepSearchActive={deepSearchActive}
+              onToggleDeepSearch={() => setDeepSearchActive(!deepSearchActive)}
               isLoading={isLoading}
               onSendMessage={handleSendMessage}
               settings={settings}

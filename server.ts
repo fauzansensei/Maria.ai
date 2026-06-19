@@ -53,7 +53,8 @@ function getGeminiClient(): GoogleGenAI {
 // REST API for chat with Maria (Advanced NLP with Context and Sentiment adaptation)
 app.post("/api/chat", async (req, res) => {
   try {
-    const { messages, settings, memories } = req.body;
+    const { messages, settings, memories, deepSearch } = req.body;
+    const isDeepSearchActive = deepSearch || settings?.deepSearch || false;
 
     if (!messages || !Array.isArray(messages)) {
       res.status(400).json({ error: "Invalid messages format. Must be an array." });
@@ -161,6 +162,13 @@ Pastikan nama aplikasi/platform sangat ringkas, dan link URL-nya valid, lengkap 
 
     if (customPrompt) {
       systemInstruction += `\n- ATURAN KHUSUS tambahan dari pengguna (Patuhi dengan mutlak): "${customPrompt}"\n`;
+    }
+
+    if (isDeepSearchActive) {
+      systemInstruction += `\n- FITUR PENCARIAN MENDALAM (DEEP SEARCH) AKTIF:\n` +
+        `Pengguna secara khusus mengaktifkan Pencarian Mendalam (Deep Search) untuk pertanyaan ini.\n` +
+        `Anda wajib mengandalkan Google Search secara maksimal untuk mengumpulkan data, fakta terbaru, studi kasus, rincian peristiwa hangat, rute, atau referensi faktual.\n` +
+        `Sajikan jawaban yang sangat detail, analitis, tepercaya, komprehensif, dan tunjukkan kompetensi riset Anda secara optimal.\n`;
     }
 
     // Embed Long-term User Memories Synced Real-time from Firestore
@@ -452,7 +460,8 @@ Ingatan lama saat ini: "${existingMemoryStr}"`;
       content: text,
       timestamp: new Date().toISOString(),
       modelUsed: fallbackUsed,
-      updatedMemory: updatedMemory || undefined
+      updatedMemory: updatedMemory || undefined,
+      groundingMetadata: (response as any)?.candidates?.[0]?.groundingMetadata || undefined
     });
   } catch (error: any) {
     console.error("General API Error in /api/chat:", error);

@@ -41,6 +41,8 @@ import {
 
 interface ChatAreaProps {
   messages: Message[];
+  deepSearchActive?: boolean;
+  onToggleDeepSearch?: () => void;
   isLoading: boolean;
   onSendMessage: (text: string, images?: string[], audio?: string) => void;
   settings: UserSettings;
@@ -779,6 +781,8 @@ interface ChatInputFormProps {
   pendingPrompt?: string | null;
   onClearPendingPrompt?: () => void;
   themeStyle: any;
+  deepSearchActive: boolean;
+  onToggleDeepSearch?: () => void;
 }
 
 const ChatInputForm = React.memo(function ChatInputForm({
@@ -788,6 +792,8 @@ const ChatInputForm = React.memo(function ChatInputForm({
   pendingPrompt,
   onClearPendingPrompt,
   themeStyle,
+  deepSearchActive,
+  onToggleDeepSearch,
 }: ChatInputFormProps) {
   const [inputText, setInputText] = useState("");
   const [attachedImages, setAttachedImages] = useState<string[]>([]);
@@ -1167,12 +1173,31 @@ const ChatInputForm = React.memo(function ChatInputForm({
         )}
       </form>
 
-      <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-between text-[10px] text-slate-500 px-2 mt-2 font-mono uppercase tracking-tight font-medium gap-1">
-        <span className="text-center sm:text-left">Maria adalah AI dapat melakukan kesalahan</span>
-        <span className="hidden sm:flex items-center gap-1 font-sans text-[9px] uppercase font-bold text-slate-600">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-          Enter untuk kirim
+      <div className="flex flex-col sm:flex-row items-center justify-between text-[10px] text-slate-500 px-2 mt-2 gap-2">
+        <span className="text-center sm:text-left font-mono uppercase tracking-tight font-medium">
+          Maria adalah AI dapat melakukan kesalahan
         </span>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onToggleDeepSearch}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-sans font-semibold transition-all cursor-pointer border ${
+              deepSearchActive
+                ? "bg-emerald-50 hover:bg-emerald-100/65 text-emerald-700 border-emerald-200 shadow-3xs"
+                : "bg-slate-50 hover:bg-slate-100 text-slate-500 border-slate-200"
+            }`}
+            title="Aktifkan pencarian Google Search real-time dan analisis mendalam"
+          >
+            <Globe className={`w-3.5 h-3.5 ${deepSearchActive ? "animate-pulse text-emerald-600" : ""}`} />
+            <span>Pencarian Mendalam</span>
+            <span className={`w-1.5 h-1.5 rounded-full ${deepSearchActive ? "bg-emerald-600" : "bg-slate-300"}`}></span>
+          </button>
+
+          <span className="hidden sm:flex items-center gap-1 font-sans text-[9px] uppercase font-bold text-slate-600">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            Enter untuk kirim
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -1180,6 +1205,8 @@ const ChatInputForm = React.memo(function ChatInputForm({
 
 export default function ChatArea({
   messages,
+  deepSearchActive = false,
+  onToggleDeepSearch,
   isLoading,
   onSendMessage,
   settings,
@@ -1557,6 +1584,9 @@ export default function ChatArea({
                                   isAi={isAi}
                                 />
                               )}
+                              {isAi && m.groundingMetadata && (
+                                <GroundingSources metadata={m.groundingMetadata} />
+                              )}
                             </div>
                           )}
                         </div>
@@ -1745,6 +1775,8 @@ export default function ChatArea({
             pendingPrompt={pendingPrompt}
             onClearPendingPrompt={onClearPendingPrompt}
             themeStyle={themeStyle}
+            deepSearchActive={deepSearchActive}
+            onToggleDeepSearch={onToggleDeepSearch}
           />
         </div>
 
@@ -1753,3 +1785,117 @@ export default function ChatArea({
     </div>
   );
 }
+
+const GroundingSources = React.memo(function GroundingSources({
+  metadata
+}: {
+  metadata: {
+    webSearchQueries?: string[];
+    groundingChunks?: Array<{
+      web?: {
+        uri: string;
+        title: string;
+      };
+    }>;
+  };
+}) {
+  if (!metadata) return null;
+
+  const uniqueChunks: Array<{ uri: string; title: string }> = [];
+  const uris = new Set<string>();
+
+  if (metadata.groundingChunks && Array.isArray(metadata.groundingChunks)) {
+    for (const chunk of metadata.groundingChunks) {
+      if (chunk?.web?.uri && chunk?.web?.title) {
+        const uri = chunk.web.uri;
+        if (!uris.has(uri)) {
+          uris.add(uri);
+          uniqueChunks.push({
+            uri: chunk.web.uri,
+            title: chunk.web.title
+          });
+        }
+      }
+    }
+  }
+
+  const queries = metadata.webSearchQueries || [];
+
+  if (uniqueChunks.length === 0 && queries.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3.5 pt-3 border-t border-slate-205 text-xs text-slate-750 space-y-2.5">
+      {/* Search Queries Tag Header */}
+      {queries.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
+          <span className="font-bold flex items-center gap-1 font-sans text-slate-600 mr-1">
+            <Globe className="w-3 h-3 text-emerald-600 animate-pulse" />
+            Pencarian Google:
+          </span>
+          {queries.map((q, idx) => (
+            <span key={idx} className="bg-slate-100 border border-slate-200 text-slate-750 px-2 py-0.5 rounded-md font-medium text-[10.5px]">
+              &ldquo;{q}&rdquo;
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Grid of Citations Cards */}
+      {uniqueChunks.length > 0 && (
+        <div className="space-y-1.5">
+          <span className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1 font-sans">
+            Rujukan & Sumber Informasi ({uniqueChunks.length})
+          </span>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+            {uniqueChunks.map((chunk, idx) => {
+              const domain = (() => {
+                try {
+                  const p = new URL(chunk.uri);
+                  let host = p.hostname;
+                  if (host.startsWith("www.")) host = host.substring(4);
+                  return host;
+                } catch (_) {
+                  return "Sumber Web";
+                }
+              })();
+
+              return (
+                <a
+                  key={idx}
+                  href={chunk.uri}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-2 p-2 bg-white/70 hover:bg-white border border-slate-205 hover:border-slate-300 rounded-xl hover:shadow-3xs active:scale-[0.98] transition-all group duration-150 text-left"
+                >
+                  {/* Web Favicon Fetched Dynamically */}
+                  <img
+                    src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
+                    alt={domain}
+                    className="w-4 h-4 rounded-sm object-contain shrink-0 mt-0.5"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>';
+                    }}
+                  />
+                  
+                  <div className="min-w-0 space-y-0.5 flex-1 select-none">
+                    <p className="text-[10px] text-slate-500 font-bold tracking-tight uppercase truncate">
+                      {domain}
+                    </p>
+                    <p className="text-[11px] font-semibold text-slate-800 leading-tight truncate group-hover:text-blue-600 transition-colors" title={chunk.title}>
+                      {chunk.title}
+                    </p>
+                  </div>
+                  
+                  <ExternalLink className="w-2.5 h-2.5 text-slate-400 shrink-0 mt-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});

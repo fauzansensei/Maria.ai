@@ -41,6 +41,7 @@ export interface Message {
   audio?: string;
   feedback?: "like" | "dislike";
   isEdited?: boolean;
+  groundingMetadata?: any;
 }
 
 export interface PromptStarter {
