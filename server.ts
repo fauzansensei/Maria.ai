@@ -271,8 +271,9 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
     // Generate content with automated robust model fallback list in case of 503 or 429 overloads
     // We prioritize gemini-3.5-flash for the best quality and search capabilities
     const modelsToTry = [
-      "gemini-3.5-flash",
-      "gemini-2.5-flash"
+      "gemini-2.5-flash",
+      "gemini-3.1-flash-lite",
+      "gemini-3.5-flash"
     ];
     let response = null;
     let fallbackUsed = "";

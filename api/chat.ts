@@ -248,8 +248,9 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
     }
 
     const modelsToTry = [
-      "gemini-3.5-flash",
-      "gemini-2.5-flash"
+      "gemini-2.5-flash",
+      "gemini-3.1-flash-lite",
+      "gemini-3.5-flash"
     ];
     let response = null;
     let fallbackUsed = "";
