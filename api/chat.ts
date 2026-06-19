@@ -46,12 +46,14 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { messages, settings } = req.body;
+    const { messages, settings, memories, deepSearch } = req.body;
 
     if (!messages || !Array.isArray(messages)) {
       res.status(400).json({ error: "Invalid messages format. Must be an array." });
       return;
     }
+
+    const isDeepSearchActive = !!deepSearch;
 
     // Attempt to access the Gemini client
     let ai;
@@ -84,7 +86,7 @@ export default async function handler(req: any, res: any) {
     } else if (userText.includes("jelaskan") || userText.includes("bagaimana") || userText.includes("detail") || userText.includes("analisis")) {
       sentimentHint = "Pengguna meminta penjelasan mendalam. Berikan pembahasan terstruktur, sertakan contoh konkret, dan tanyakan apakah mereka memerlukan simulasi lanjutan.";
     } else if (userText.includes("terima kasih") || userText.includes("makasih") || userText.includes("hebat") || userText.includes("keren")) {
-      sentimentHint = "Pengguna sedang merasa puas atau berterima kasih. Berikan apresiasi balik dengan ramah dan katakan Anda selalu senang bisa mendampingi mereka.";
+      sentimentHint = "Pengguna sedang merasa puas or berterima kasih. Berikan apresiasi balik dengan ramah dan katakan Anda selalu senang bisa mendampingi mereka.";
     }
 
     // Extract settings for customization
@@ -140,6 +142,32 @@ Pastikan nama aplikasi/platform sangat ringkas, dan link URL-nya valid, lengkap 
 
     if (customPrompt) {
       systemInstruction += `\n- ATURAN KHUSUS tambahan dari pengguna (Patuhi dengan mutlak): "${customPrompt}"\n`;
+    }
+
+    if (isDeepSearchActive) {
+      systemInstruction += `\n- FITUR PENCARIAN MENDALAM (DEEP SEARCH) AKTIF & MENJADI PRIORITAS UTAMA:\n` +
+        `Pengguna telah mengaktifkan mode Pencarian Mendalam (Deep Search). Anda WAJIB menjawab pertanyaan secara sangat detail, analitis, komprehensif, dan mutakhir dengan mengandalkan Google Search.\n` +
+        `ATURAN RUJUKAN & CITATION (SANGAT PENTING):\n` +
+        `1. Ketika Anda menggunakan informasi dari hasil pencarian Google Search, Anda WAJIB menambahkan penanda rujukan berupa nomor rujukan dalam tanda kurung siku di akhir kalimat atau klausa terkait, seperti [1], [2], [3], dst.\n` +
+        `2. Letakkan tanda kurung rujukan ini tepat setelah kalimat atau frasa yang didasarkan pada informasi tersebut (contoh: "...suhu di Jakarta hari ini mencapai 32 derajat Celsius [1].").\n` +
+        `3. Pastikan indeks penanda rujukan sesuai dengan urutan atau indeks rujukan dari hasil penelusuran. Jangan pernah mengarang nomor atau membuat format citation yang tidak sinkron.\n` +
+        `4. Jawablah langsung dengan data riil dari Google Search. Hindari sama sekali membuat pernyataan bahwa Anda tidak memiliki akses internet, karena Anda SECARA NYATA memiliki akses penuh melalui Google Search ketika mode ini aktif.\n`;
+    } else {
+      systemInstruction += `\n- CATATAN LAYANAN DASAR: Saat ini Anda menjawab menggunakan basis pengetahuan internal tanpa pencarian web real-time langsung. Jika pengguna membutuhkan informasi yang benar-benar baru, mutakhir, atau cuaca realtime terbaru, sarankan mereka secara halus di akhir respons jika perlu untuk mengaktifkan fitur "Pencarian Mendalam" di bawah kotak obrolan.\n`;
+    }
+
+    // Embed Long-term User Memories Synced Real-time from Firestore
+    if (memories && Array.isArray(memories) && memories.length > 0) {
+      systemInstruction += `\n- MEMORI JANGKA PANJANG TENTANG PENGGUNA (Sinkronisasi Realtime Dari Firestore):
+Berikut adalah fakta-fakta penting yang telah Anda pelajari dan catat dalam database mengenai diri pengguna Anda (${username}) yang wajib Anda ketahui dan ingat selamanya dalam perbincangan ini:
+${memories.map((m: any, i: number) => {
+  const text = typeof m === "string" ? m : (m.text || "");
+  const cat = m && typeof m.category === "string" ? ` [Kategori: ${m.category}]` : "";
+  return `  ${i + 1}. ${text}${cat}`;
+}).join("\n")}
+Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan kehidupan, karir, preferensi kuliner, peliharaan, emosi, or riwayat pribadi mereka. Buat mereka terkesan secara emosional karena Anda mengingat detail tersebut dengan sangat akurat!`;
+    } else {
+      systemInstruction += `\n- CATATAN MEMORI: Saat ini basis memori fakta jangka panjang tentang Kak ${username} di database Firestore masih kosong. Beritahu mereka secara santun bahwa mereka bisa mendaftarkan atau mengedit hal-hal penting tentang diri mereka di menu 'Memori Maria' tab Pengaturan agar Anda terus mengingat hal tersebut tanpa terpengaruh batas riwayat chat!`;
     }
 
     // Model map helper
@@ -220,10 +248,8 @@ Pastikan nama aplikasi/platform sangat ringkas, dan link URL-nya valid, lengkap 
     }
 
     const modelsToTry = [
-      "gemini-2.5-flash",
-      "gemini-2.0-flash",
-      "gemini-flash-latest",
-      "gemini-pro-latest"
+      "gemini-3.5-flash",
+      "gemini-2.5-flash"
     ];
     let response = null;
     let fallbackUsed = "";
@@ -253,18 +279,16 @@ Pastikan nama aplikasi/platform sangat ringkas, dan link URL-nya valid, lengkap 
           const errMsg = (err?.message || (typeof err === "string" ? err : JSON.stringify(err)) || "").toUpperCase();
           console.warn(`[Vercel Attempt ${attempt}/${maxRetries}] Model ${modelName} call failed:`, err?.message || err);
           
-          const isOverloadedOrQuota = 
-            errMsg.includes("503") || 
-            errMsg.includes("UNAVAILABLE") || 
-            errMsg.includes("429") || 
-            errMsg.includes("RESOURCE_EXHAUSTED");
-            
-          if (isOverloadedOrQuota) {
-            break; 
+          if (errMsg.includes("404") || errMsg.includes("NOT_FOUND")) {
+             break; 
           }
 
           if (attempt < maxRetries) {
-            await sleep(350 * attempt);
+            let delay = 350 * attempt; 
+            if (errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED")) {
+              delay = 2000 * attempt;
+            }
+            await sleep(delay);
           }
         }
       }
@@ -279,6 +303,7 @@ Pastikan nama aplikasi/platform sangat ringkas, dan link URL-nya valid, lengkap 
           {
             systemInstruction,
             temperature: tone === "Creative" ? 1.0 : tone === "Minimalist" ? 0.35 : 0.7,
+            tools: isDeepSearchActive ? [{ googleSearch: {} }] : undefined
           },
           2
         );
@@ -290,13 +315,18 @@ Pastikan nama aplikasi/platform sangat ringkas, dan link URL-nya valid, lengkap 
       } catch (err: any) {
         lastError = err;
         const errMsg = (err?.message || (typeof err === "string" ? err : JSON.stringify(err)) || "").toUpperCase();
-        const isOverloadedOrQuota = 
-          errMsg.includes("503") || 
-          errMsg.includes("UNAVAILABLE") || 
-          errMsg.includes("429") || 
-          errMsg.includes("RESOURCE_EXHAUSTED");
+        
+        if (errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED")) {
+          break; 
+        }
 
-        if (isOverloadedOrQuota) {
+        const shouldSkipToNextModel = 
+          errMsg.includes("503") || 
+          errMsg.includes("UNAVAILABLE") ||
+          errMsg.includes("404") ||
+          errMsg.includes("NOT_FOUND");
+
+        if (shouldSkipToNextModel) {
           continue; 
         }
         
@@ -313,8 +343,9 @@ Pastikan nama aplikasi/platform sangat ringkas, dan link URL-nya valid, lengkap 
             modelName,
             singleShotPrompt,
             {
-              systemInstruction: systemInstruction + "\n- CATATAN KHUSUS: Layanan memori penuh sedang dialihkan ke batas hemat memori cadangan.",
+              systemInstruction: systemInstruction + "\n- CATATAN KHUSUS: Layanan memori penuh sedang dialihkan ke batas hemat memori cadangan. Berikan respons mandiri yang bermutu.",
               temperature: tone === "Creative" ? 1.0 : tone === "Minimalist" ? 0.35 : 0.7,
+              tools: isDeepSearchActive ? [{ googleSearch: {} }] : undefined
             },
             2
           );
@@ -345,11 +376,58 @@ Pastikan nama aplikasi/platform sangat ringkas, dan link URL-nya valid, lengkap 
 
     const text = response.text || "Maaf, saya tidak dapat menghasilkan respon untuk saat ini.";
 
+    // Real-time automatic user memory generator & synthesizer
+    let updatedMemory = "";
+    try {
+      const existingMemoryStr = memories && Array.isArray(memories) && memories.length > 0 
+        ? (typeof memories[0] === "string" ? memories[0] : (memories[0].text || ""))
+        : "";
+
+      const completeHistoryForMemory = [
+        ...balancedHistory,
+        {
+          role: "model",
+          parts: [{ text: text }]
+        }
+      ];
+
+      const memoryPromptSystem = `Anda adalah Mesin NLP Sintesis Memori Maria. Tugas Anda adalah membaca seluruh riwayat percakapan antara Maria dan pengguna (${username}), serta ingatan lama jika ada, lalu menuliskan kembali SATU PARAGRAF tunggal padat, hangat, dan alami (maksimal 4 kalimat) dalam Bahasa Indonesia yang merangkum keseluruhan ingatan, fakta pribadi, preferensi, riwayat, atau cita-cita yang berhasil dipelajari tentang diri Kak ${username}.
+
+Aturan Mutlak Sintesis Memori:
+1. Mulailah kalimat pertama dengan: "Kak ${username} adalah..." atau "Kak ${username} bekerja di..." atau sejenisnya.
+2. Ingatan baru Kakak harus mencakup semua detail penting yang valid dari riwayat percakapan (seperti hobi, bahasa favorit, cita-cita, peliharaan, alergi, minat personal, dsb), serta menggabungkan informasi dari ingatan lama jika masih relevan.
+3. JANGAN mengada-ada atau berhalusinasi. Jika tidak ada fakta pribadi baru yang disebutkan dalam riwayat chat terbaru, pertahankan ingatan lama secara utuh atau kemas dengan kalimat yang lebih rapi.
+4. Output harus berupa SATU PARAGRAF murni tanpa label, tanda kutip ekstra, salam, atau penjelasan lainnya.
+5. Jika riwayat percakapan tidak mengandung fakta personal atau detail spesifik sama sekali tentang pengguna, dan ingatan lama kosong, kembalikan string kosong "".
+
+Ingatan lama saat ini: "${existingMemoryStr}"`;
+
+      console.log("Synthesizing unified memory paragraph...");
+      const memoryResult = await ai.models.generateContent({
+        model: fallbackUsed ? fallbackUsed.split(" ")[0] : "gemini-2.5-flash",
+        contents: completeHistoryForMemory,
+        config: {
+          systemInstruction: memoryPromptSystem,
+          temperature: 0.2
+        }
+      });
+
+      if (memoryResult && memoryResult.text) {
+        updatedMemory = memoryResult.text.trim();
+        // Clean potential surrounding quotes or backticks
+        updatedMemory = updatedMemory.replace(/^["'`\s]+|["'`\s]+$/g, "");
+      }
+    } catch (memError: any) {
+      // Memory synthesis failed
+    }
+
     res.status(200).json({
       role: "assistant",
       content: text,
       timestamp: new Date().toISOString(),
       modelUsed: fallbackUsed,
+      updatedMemory: updatedMemory || undefined,
+      groundingMetadata: (response as any)?.candidates?.[0]?.groundingMetadata || undefined
     });
   } catch (error: any) {
     console.error("General API Error in Vercel serverless /api/chat:", error);
