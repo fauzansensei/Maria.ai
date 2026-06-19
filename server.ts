@@ -165,10 +165,15 @@ Pastikan nama aplikasi/platform sangat ringkas, dan link URL-nya valid, lengkap 
     }
 
     if (isDeepSearchActive) {
-      systemInstruction += `\n- FITUR PENCARIAN MENDALAM (DEEP SEARCH) AKTIF:\n` +
-        `Pengguna secara khusus mengaktifkan Pencarian Mendalam (Deep Search) untuk pertanyaan ini.\n` +
-        `Anda wajib mengandalkan Google Search secara maksimal untuk mengumpulkan data, fakta terbaru, studi kasus, rincian peristiwa hangat, rute, atau referensi faktual.\n` +
-        `Sajikan jawaban yang sangat detail, analitis, tepercaya, komprehensif, dan tunjukkan kompetensi riset Anda secara optimal.\n`;
+      systemInstruction += `\n- FITUR PENCARIAN MENDALAM (DEEP SEARCH) AKTIF & MENJADI PRIORITAS UTAMA:\n` +
+        `Pengguna telah mengaktifkan mode Pencarian Mendalam (Deep Search). Anda WAJIB menjawab pertanyaan secara sangat detail, analitis, komprehensif, dan mutakhir dengan mengandalkan Google Search.\n` +
+        `ATURAN RUJUKAN & CITATION (SANGAT PENTING):\n` +
+        `1. Ketika Anda menggunakan informasi dari hasil pencarian Google Search, Anda WAJIB menambahkan penanda rujukan berupa nomor rujukan dalam tanda kurung siku di akhir kalimat atau klausa terkait, seperti [1], [2], [3], dst.\n` +
+        `2. Letakkan tanda kurung rujukan ini tepat setelah kalimat atau frasa yang didasarkan pada informasi tersebut (contoh: "...suhu di Jakarta hari ini mencapai 32 derajat Celsius [1].").\n` +
+        `3. Pastikan indeks penanda rujukan sesuai dengan urutan atau indeks rujukan dari hasil penelusuran. Jangan pernah mengarang nomor atau membuat format citation yang tidak sinkron.\n` +
+        `4. Jawablah langsung dengan data riil dari Google Search. Hindari sama sekali membuat pernyataan bahwa Anda tidak memiliki akses internet, karena Anda SECARA NYATA memiliki akses penuh melalui Google Search ketika mode ini aktif.\n`;
+    } else {
+      systemInstruction += `\n- CATATAN LAYANAN DASAR: Saat ini Anda menjawab menggunakan basis pengetahuan internal tanpa pencarian web real-time langsung. Jika pengguna membutuhkan informasi yang benar-benar baru, mutakhir, atau cuaca realtime terbaru, sarankan mereka secara halus di akhir respons jika perlu untuk mengaktifkan fitur "Pencarian Mendalam" di bawah kotak obrolan.\n`;
     }
 
     // Embed Long-term User Memories Synced Real-time from Firestore
@@ -325,7 +330,7 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
           {
             systemInstruction,
             temperature: tone === "Creative" ? 1.0 : tone === "Minimalist" ? 0.35 : 0.7,
-            tools: [{ googleSearch: {} }]
+            tools: isDeepSearchActive ? [{ googleSearch: {} }] : undefined
           },
           2 // up to 2 retry attempts
         );
@@ -371,7 +376,7 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
             {
               systemInstruction: systemInstruction + "\n- CATATAN KHUSUS: Layanan memori penuh sedang dialihkan ke batas hemat memori cadangan. Berikan respons mandiri yang bermutu.",
               temperature: tone === "Creative" ? 1.0 : tone === "Minimalist" ? 0.35 : 0.7,
-              tools: [{ googleSearch: {} }]
+              tools: isDeepSearchActive ? [{ googleSearch: {} }] : undefined
             },
             2 // up to 2 retry attempts
           );

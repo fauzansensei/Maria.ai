@@ -282,7 +282,17 @@ const LinkOpenerCard = React.memo(function LinkOpenerCard({
 });
 
 // Helper to render formatting inside non-app-opener parts
-const FormattedSubPart = React.memo(function FormattedSubPart({ text, isAi = true }: { text: string; isAi?: boolean; key?: React.Key }) {
+const FormattedSubPart = React.memo(function FormattedSubPart({ 
+  text, 
+  isAi = true,
+  uniqueChunks = []
+}: { 
+  text: string; 
+  isAi?: boolean; 
+  uniqueChunks?: Array<{ uri: string; title: string }>;
+  key?: React.Key 
+}) {
+  const parseInline = (txt: string) => parseInlineStyles(txt, isAi, uniqueChunks);
   const parts = text.split(/(```[\s\S]*?```)/g);
 
   return (
@@ -452,7 +462,7 @@ const FormattedSubPart = React.memo(function FormattedSubPart({ text, isAi = tru
                   <ul key={bIdx} className={`list-disc pl-5 my-2 space-y-1 text-[13px] ${isAi ? "text-slate-700" : "text-white"}`}>
                     {block.items?.map((item, itemIdx) => (
                       <li key={itemIdx} className="leading-relaxed">
-                        {parseInlineStyles(item, isAi)}
+                        {parseInline(item)}
                       </li>
                     ))}
                   </ul>
@@ -463,7 +473,7 @@ const FormattedSubPart = React.memo(function FormattedSubPart({ text, isAi = tru
                   <ol key={bIdx} className={`list-decimal pl-5 my-2 space-y-1 text-[13px] ${isAi ? "text-slate-700" : "text-white"}`}>
                     {block.items?.map((item, itemIdx) => (
                       <li key={itemIdx} className="leading-relaxed">
-                        {parseInlineStyles(item, isAi)}
+                        {parseInline(item)}
                       </li>
                     ))}
                   </ol>
@@ -472,28 +482,28 @@ const FormattedSubPart = React.memo(function FormattedSubPart({ text, isAi = tru
               if (block.type === 'blockquote') {
                 return (
                   <blockquote key={bIdx} className={`border-l-4 border-blue-200 pl-3.5 py-1.5 my-2.5 rounded-r-md text-xs italic leading-relaxed ${isAi ? "bg-blue-50/20 text-slate-600" : "bg-white/10 text-white/90"}`}>
-                    {parseInlineStyles(block.text || "", isAi)}
+                    {parseInline(block.text || "")}
                   </blockquote>
                 );
               }
               if (block.type === 'h4') {
                 return (
                   <h4 key={bIdx} className={`font-display font-bold text-sm mt-3.5 mb-1.5 leading-snug ${isAi ? "text-slate-800" : "text-white"}`}>
-                    {parseInlineStyles(block.text || "", isAi)}
+                    {parseInline(block.text || "")}
                   </h4>
                 );
               }
               if (block.type === 'h3') {
                 return (
                   <h3 key={bIdx} className={`font-display font-bold text-base mt-4 mb-2 leading-snug ${isAi ? "text-slate-900" : "text-white"}`}>
-                    {parseInlineStyles(block.text || "", isAi)}
+                    {parseInline(block.text || "")}
                   </h3>
                 );
               }
               if (block.type === 'h2') {
                 return (
                   <h2 key={bIdx} className={`font-display font-bold text-lg mt-5 mb-2.5 leading-snug ${isAi ? "text-slate-900" : "text-white"}`}>
-                    {parseInlineStyles(block.text || "", isAi)}
+                    {parseInline(block.text || "")}
                   </h2>
                 );
               }
@@ -514,7 +524,7 @@ const FormattedSubPart = React.memo(function FormattedSubPart({ text, isAi = tru
                               key={cellIdx} 
                               className="px-4 py-2.5 text-left font-display font-semibold text-slate-800 tracking-tight"
                             >
-                              {parseInlineStyles(cell, isAi)}
+                              {parseInline(cell)}
                             </th>
                           ))}
                         </tr>
@@ -538,7 +548,7 @@ const FormattedSubPart = React.memo(function FormattedSubPart({ text, isAi = tru
                                 const cellVal = row.cells[cellIdx] || "";
                                 return (
                                   <td key={cellIdx} className="px-4 py-2.5 align-middle leading-normal">
-                                    {parseInlineStyles(cellVal, isAi)}
+                                    {parseInline(cellVal)}
                                   </td>
                                 );
                               })}
@@ -552,7 +562,7 @@ const FormattedSubPart = React.memo(function FormattedSubPart({ text, isAi = tru
               }
               return (
                 <p key={`p-${bIdx}`} className={`min-h-[1.25rem] text-[13px] leading-relaxed ${isAi ? "text-slate-700" : "text-white"}`}>
-                  {parseInlineStyles(block.text || "", isAi)}
+                  {parseInline(block.text || "")}
                 </p>
               );
             })}
@@ -569,14 +579,35 @@ const FormattedContent = React.memo(function FormattedContent({
   messageId, 
   messageTimestamp,
   isAi = true,
+  groundingMetadata = null
 }: { 
   text: string; 
   messageId?: string; 
   messageTimestamp?: string; 
   isAi?: boolean;
+  groundingMetadata?: any;
 }) {
   // First intercept [OPEN_APP:AppName|URL] tags to split normal sections from action cards
   const parts = text.split(/(\[OPEN_APP:[^\]]+\])/g);
+
+  // Parse unique chunks from groundingMetadata if any
+  const uniqueChunks: Array<{ uri: string; title: string }> = [];
+  const uris = new Set<string>();
+
+  if (groundingMetadata?.groundingChunks && Array.isArray(groundingMetadata.groundingChunks)) {
+    for (const chunk of groundingMetadata.groundingChunks) {
+      if (chunk?.web?.uri && chunk?.web?.title) {
+        const uri = chunk.web.uri;
+        if (!uris.has(uri)) {
+          uris.add(uri);
+          uniqueChunks.push({
+            uri: chunk.web.uri,
+            title: chunk.web.title
+          });
+        }
+      }
+    }
+  }
 
   return (
     <div className={`space-y-2 text-sm leading-relaxed font-sans ${isAi ? "text-slate-700" : "text-white"}`}>
@@ -597,15 +628,19 @@ const FormattedContent = React.memo(function FormattedContent({
           }
         }
         
-        // Otherwise parse normal formatting structures
-        return <FormattedSubPart key={index} text={part} isAi={isAi} />;
+        // Otherwise parse normal formatting structures with uniqueChunks
+        return <FormattedSubPart key={index} text={part} isAi={isAi} uniqueChunks={uniqueChunks} />;
       })}
     </div>
   );
 });
 
 // Sub-helper parsing bold/italic/links/bare URLs inline markdown inside FormattedContent
-function parseInlineStyles(text: string, isAi: boolean = true): React.ReactNode[] {
+function parseInlineStyles(
+  text: string, 
+  isAi: boolean = true,
+  uniqueChunks: Array<{ uri: string; title: string }> = []
+): React.ReactNode[] {
   if (!text) return [];
 
   let currentText = text;
@@ -625,6 +660,7 @@ function parseInlineStyles(text: string, isAi: boolean = true): React.ReactNode[
     const linkMatch = currentText.match(/\[([^\]]*?)\]\(([^)]*?)\)/);
     const bareUrlMatch = currentText.match(/(https?:\/\/[^\s()<>]+|www\.[^\s()<>]+)/);
     const strikethroughMatch = currentText.match(/~~([\s\S]*?)~~/);
+    const footnoteMatch = currentText.match(/\[([0-9]+)\]/);
 
     const candidates: Array<{ index: number; length: number; render: () => React.ReactNode }> = [];
 
@@ -737,6 +773,42 @@ function parseInlineStyles(text: string, isAi: boolean = true): React.ReactNode[
                 }`}
               >
                 {bareUrlMatch[1]}
+              </a>
+            );
+          }
+        });
+      }
+    }
+
+    // Footnote index parser
+    if (uniqueChunks && uniqueChunks.length > 0 && footnoteMatch && footnoteMatch.index !== undefined) {
+      const idxStr = footnoteMatch[1];
+      const chunkIdx = parseInt(idxStr, 10) - 1;
+      if (chunkIdx >= 0 && chunkIdx < uniqueChunks.length) {
+        const chunk = uniqueChunks[chunkIdx];
+        candidates.push({
+          index: footnoteMatch.index,
+          length: footnoteMatch[0].length,
+          render: () => {
+            let domain = "";
+            try {
+              const urlObj = new URL(chunk.uri);
+              domain = urlObj.hostname.replace("www.", "");
+            } catch (pErr) {
+              domain = "sumber";
+            }
+            return (
+              <a
+                key={`footnote-${keyCount++}`}
+                href={chunk.uri}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={chunk.title}
+                className="inline-flex items-center gap-1.5 px-2 py-0.5 mx-0.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-[10px] text-emerald-700 hover:text-emerald-800 border border-emerald-200/80 font-sans font-semibold transition-all hover:scale-105 active:scale-95 shadow-3xs"
+              >
+                <Globe className="w-2.5 h-2.5 text-emerald-600" />
+                <span>{domain}</span>
+                <span className="text-[8px] font-bold text-emerald-600 bg-emerald-200/50 px-1 rounded-sm">{idxStr}</span>
               </a>
             );
           }
@@ -1588,6 +1660,7 @@ export default function ChatArea({
                                   messageId={m.id} 
                                   messageTimestamp={m.timestamp} 
                                   isAi={isAi}
+                                  groundingMetadata={m.groundingMetadata}
                                 />
                               )}
                               {isAi && m.groundingMetadata && (
