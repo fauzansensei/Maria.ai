@@ -1930,16 +1930,33 @@ const GroundingSources = React.memo(function GroundingSources({
           
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
             {uniqueChunks.map((chunk, idx) => {
-              const domain = (() => {
-                try {
-                  const p = new URL(chunk.uri);
-                  let host = p.hostname;
-                  if (host.startsWith("www.")) host = host.substring(4);
-                  return host;
-                } catch (_) {
-                  return "Sumber Web";
+              // 1. Try to extract a clean domain name from chunk.title or other parameters
+              let extractedDomain = "";
+              
+              // Matches patterns like "domain.com", "sub.domain.co.id", etc.
+              const domainRegex = /(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,6}/;
+              const match = chunk.title.match(domainRegex);
+              if (match) {
+                extractedDomain = match[0].toLowerCase();
+              }
+
+              // 2. Try to fall back to the URL's hostname if it's not the internal redirect proxy
+              try {
+                const p = new URL(chunk.uri);
+                let host = p.hostname;
+                if (host.startsWith("www.")) host = host.substring(4);
+                if (host !== "vertexaisearch.cloud.google.com") {
+                  if (!extractedDomain) {
+                    extractedDomain = host;
+                  }
                 }
-              })();
+              } catch (_) {}
+
+              // 3. Set standard fallback or friendly display
+              const displayDomain = extractedDomain || "Sumber Web";
+              const faviconUrl = extractedDomain 
+                ? `https://www.google.com/s2/favicons?domain=${extractedDomain}&sz=32`
+                : `https://www.google.com/s2/favicons?domain=vertexaisearch.cloud.google.com&sz=32`;
 
               return (
                 <a
@@ -1951,8 +1968,8 @@ const GroundingSources = React.memo(function GroundingSources({
                 >
                   {/* Web Favicon Fetched Dynamically */}
                   <img
-                    src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
-                    alt={domain}
+                    src={faviconUrl}
+                    alt={displayDomain}
                     className="w-4 h-4 rounded-sm object-contain shrink-0 mt-0.5"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>';
@@ -1961,7 +1978,7 @@ const GroundingSources = React.memo(function GroundingSources({
                   
                   <div className="min-w-0 space-y-0.5 flex-1 select-none">
                     <p className="text-[10px] text-slate-500 font-bold tracking-tight uppercase truncate">
-                      {domain}
+                      {displayDomain}
                     </p>
                     <p className="text-[11px] font-semibold text-slate-800 leading-tight truncate group-hover:text-blue-600 transition-colors" title={chunk.title}>
                       {chunk.title}
