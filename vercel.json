@@ -1,5 +1,6 @@
 {
   "cleanUrls": true,
+  "outputDirectory": "dist",
   "headers": [
     {
       "source": "/assets/(.*)",
@@ -11,7 +12,7 @@
       ]
     },
     {
-      "source": "/(.*).(js|css|svg|png|jpg|jpeg|gif|ico|webp|woff|woff2|ttf)",
+      "source": "/(.*)\\.(js|css|svg|png|jpg|jpeg|gif|ico|webp|woff|woff2|ttf)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -35,7 +36,7 @@
       "destination": "/api/$1"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!assets/|favicon.svg|robots.txt|api/).*)",
       "destination": "/index.html"
     }
   ]
