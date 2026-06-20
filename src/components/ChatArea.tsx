@@ -1557,7 +1557,7 @@ export default function ChatArea({
                 Dari mana kita harus mulai?
               </h2>
               <p className="text-xs sm:text-[12.5px] text-slate-500 font-medium max-w-sm mx-auto leading-relaxed mt-1">
-                Tanyakan apa saja untuk mulai mendapat ide bisnis atau penjelasan interaktif tepercaya dari Maria AI.
+                Aplikasi asisten cerdas buatan yang membantu Anda menjadwalkan tugas, mencari ide kreatif, dan merangkum konsep pemrograman secara presisi. Mulailah percakapan dengan Maria-ai.
               </p>
             </div>
           ) : (
