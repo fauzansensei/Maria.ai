@@ -5,39 +5,87 @@ import { generateSpeech, playAudioBlob, stopSpeech } from "./services/elevenLabs
 import { safeStorage } from "./utils";
 
 import type { DiscoveryAgent } from "./components/DiscoverArea";
-import { 
-  auth, 
-  db, 
-  googleProvider, 
-  OperationType, 
-  handleFirestoreError,
-  setSimulatedAuthActive,
-  isSimulatedAuthActive,
-  isThirdPartyCookieBlocked
-} from "./firebase";
-import { 
-  onAuthStateChanged, 
-  signInWithPopup, 
-  signOut,
-  signInAnonymously,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signInWithRedirect,
-  getRedirectResult,
-  setPersistence,
-  browserLocalPersistence
-} from "firebase/auth";
-import { 
-  collection, 
-  doc, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  where, 
-  onSnapshot,
-  getDocs
-} from "firebase/firestore";
+// Define OperationType enum directly in this scope
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+let auth: any = null;
+let db: any = null;
+let googleProvider: any = null;
+let handleFirestoreError: any = null;
+let setSimulatedAuthActive: any = null;
+let isSimulatedAuthActive: any = null;
+let isThirdPartyCookieBlocked: any = null;
+
+let onAuthStateChanged: any = null;
+let signInWithPopup: any = null;
+let signOut: any = null;
+let signInAnonymously: any = null;
+let signInWithEmailAndPassword: any = null;
+let createUserWithEmailAndPassword: any = null;
+let signInWithRedirect: any = null;
+let getRedirectResult: any = null;
+let setPersistence: any = null;
+let browserLocalPersistence: any = null;
+
+let collection: any = null;
+let doc: any = null;
+let setDoc: any = null;
+let updateDoc: any = null;
+let deleteDoc: any = null;
+let query: any = null;
+let where: any = null;
+let onSnapshot: any = null;
+let getDocs: any = null;
+
+let firebasePromise: Promise<any> | null = null;
+const loadFirebase = () => {
+  if (!firebasePromise) {
+    firebasePromise = Promise.all([
+      import("./firebase"),
+      import("firebase/auth"),
+      import("firebase/firestore")
+    ]).then(([fb, authMod, firestoreMod]) => {
+      auth = fb.auth;
+      db = fb.db;
+      googleProvider = fb.googleProvider;
+      handleFirestoreError = fb.handleFirestoreError;
+      setSimulatedAuthActive = fb.setSimulatedAuthActive;
+      isSimulatedAuthActive = fb.isSimulatedAuthActive;
+      isThirdPartyCookieBlocked = fb.isThirdPartyCookieBlocked;
+
+      onAuthStateChanged = authMod.onAuthStateChanged;
+      signInWithPopup = authMod.signInWithPopup;
+      signOut = authMod.signOut;
+      signInAnonymously = authMod.signInAnonymously;
+      signInWithEmailAndPassword = authMod.signInWithEmailAndPassword;
+      createUserWithEmailAndPassword = authMod.createUserWithEmailAndPassword;
+      signInWithRedirect = authMod.signInWithRedirect;
+      getRedirectResult = authMod.getRedirectResult;
+      setPersistence = authMod.setPersistence;
+      browserLocalPersistence = authMod.browserLocalPersistence;
+
+      collection = firestoreMod.collection;
+      doc = firestoreMod.doc;
+      setDoc = firestoreMod.setDoc;
+      updateDoc = firestoreMod.updateDoc;
+      deleteDoc = firestoreMod.deleteDoc;
+      query = firestoreMod.query;
+      where = firestoreMod.where;
+      onSnapshot = firestoreMod.onSnapshot;
+      getDocs = firestoreMod.getDocs;
+
+      return { loaded: true };
+    });
+  }
+  return firebasePromise;
+};
 
 // Helper to dynamically load components with automatic page reload upon chunk loading errors (such as outdated chunk hashes)
 function lazyWithRetry(importFn: () => Promise<any>) {
@@ -123,6 +171,11 @@ const safeParseResponse = async (response: Response) => {
 };
 
 export default function App() {
+  const [fbLoadedCode, setFbLoadedCode] = useState<boolean>(false);
+  useEffect(() => {
+    loadFirebase().then(() => setFbLoadedCode(true));
+  }, []);
+
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [isIframe, setIsIframe] = useState<boolean>(false);
   useEffect(() => {
@@ -519,6 +572,7 @@ export default function App() {
 
   // Google Sign-In Redirect Handler (vital for mobile/iframe pop-up bypass)
   useEffect(() => {
+    if (!fbLoadedCode) return;
     getRedirectResult(auth)
       .then((result) => {
         if (result && result.user) {
@@ -553,7 +607,7 @@ export default function App() {
           );
         }
       });
-  }, []);
+  }, [fbLoadedCode]);
 
   const handleGoogleSignInDirect = async (useRedirect = false) => {
     setSimulatedAuthActive(false); // Reset simulation flag immediately for explicit Google Auth attempt
@@ -635,6 +689,7 @@ export default function App() {
 
   // 1. Firebase Auth and Profile real-time listener
   useEffect(() => {
+    if (!fbLoadedCode) return;
     let unsubscribeUser: (() => void) | null = null;
     let unsubscribeThreads: (() => void) | null = null;
 
@@ -786,14 +841,15 @@ export default function App() {
     });
 
     return () => {
-      unsubscribeAuth();
+      if (unsubscribeAuth) unsubscribeAuth();
       if (unsubscribeUser) unsubscribeUser();
       if (unsubscribeThreads) unsubscribeThreads();
     };
-  }, []);
+  }, [fbLoadedCode]);
 
   // 2. Real-time active chat thread messages listener
   useEffect(() => {
+    if (!fbLoadedCode) return;
     if (!activeThreadId || !isLoggedIn || !auth.currentUser) {
       return;
     }
@@ -828,7 +884,7 @@ export default function App() {
     });
 
     return () => unsubscribeMessages();
-  }, [activeThreadId, isLoggedIn]);
+  }, [activeThreadId, isLoggedIn, fbLoadedCode]);
 
   // Save settings when modified
   const handleSaveSettings = async (newSettings: UserSettings) => {
@@ -1699,6 +1755,15 @@ export default function App() {
 
   // Get active themed colors
   const activeColorTheme = THEME_OPTIONS.find(t => t.value === settings.theme) || THEME_OPTIONS[0];
+
+  if (!fbLoadedCode) {
+    return (
+      <div className="h-[100dvh] w-screen flex flex-col font-sans overflow-hidden items-center justify-center p-8 bg-[#0a0f18] text-slate-400 select-none">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500 mb-3" />
+        <p className="text-xs font-sans font-medium tracking-wide animate-pulse text-indigo-400">Menghubungkan Koneksi Aman...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="h-[100dvh] w-screen flex flex-col font-sans overflow-hidden bg-slate-50 text-slate-700 select-none">
