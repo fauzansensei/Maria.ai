@@ -1756,15 +1756,6 @@ export default function App() {
   // Get active themed colors
   const activeColorTheme = THEME_OPTIONS.find(t => t.value === settings.theme) || THEME_OPTIONS[0];
 
-  if (!fbLoadedCode) {
-    return (
-      <div className="h-[100dvh] w-screen flex flex-col font-sans overflow-hidden items-center justify-center p-8 bg-[#0a0f18] text-slate-400 select-none">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500 mb-3" />
-        <p className="text-xs font-sans font-medium tracking-wide animate-pulse text-indigo-400">Menghubungkan Koneksi Aman...</p>
-      </div>
-    );
-  }
-
   return (
     <div className="h-[100dvh] w-screen flex flex-col font-sans overflow-hidden bg-slate-50 text-slate-700 select-none">
       
