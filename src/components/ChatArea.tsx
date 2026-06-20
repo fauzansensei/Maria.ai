@@ -43,6 +43,8 @@ interface ChatAreaProps {
   messages: Message[];
   deepSearchActive?: boolean;
   onToggleDeepSearch?: () => void;
+  webSearchActive?: boolean;
+  onToggleWebSearch?: () => void;
   isLoading: boolean;
   onSendMessage: (text: string, images?: string[], audio?: string) => void;
   settings: UserSettings;
@@ -855,6 +857,8 @@ interface ChatInputFormProps {
   themeStyle: any;
   deepSearchActive: boolean;
   onToggleDeepSearch?: () => void;
+  webSearchActive: boolean;
+  onToggleWebSearch?: () => void;
 }
 
 const ChatInputForm = React.memo(function ChatInputForm({
@@ -866,6 +870,8 @@ const ChatInputForm = React.memo(function ChatInputForm({
   themeStyle,
   deepSearchActive,
   onToggleDeepSearch,
+  webSearchActive,
+  onToggleWebSearch,
 }: ChatInputFormProps) {
   const [inputText, setInputText] = useState("");
   const [attachedImages, setAttachedImages] = useState<string[]>([]);
@@ -1233,6 +1239,22 @@ const ChatInputForm = React.memo(function ChatInputForm({
 
                 <div className="h-4 w-[1px] bg-slate-200 mx-1"></div>
 
+                {/* Web Search Toggle */}
+                <button
+                  type="button"
+                  onClick={onToggleWebSearch}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-[10.5px] font-sans font-bold transition-all cursor-pointer border ${
+                    webSearchActive
+                      ? "bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 active:scale-95"
+                      : "bg-white hover:bg-slate-50 text-slate-500 border-slate-200 active:scale-95"
+                  }`}
+                  title="Aktifkan pencarian website Google Search real-time"
+                >
+                  <Globe className={`w-3.5 h-3.5 ${webSearchActive ? "animate-pulse text-blue-600" : ""}`} />
+                  <span>Pencarian Web</span>
+                  <span className={`w-1.5 h-1.5 rounded-full ${webSearchActive ? "bg-blue-600" : "bg-slate-300"}`}></span>
+                </button>
+
                 {/* Integrated Deep Search Toggle */}
                 <button
                   type="button"
@@ -1244,7 +1266,7 @@ const ChatInputForm = React.memo(function ChatInputForm({
                   }`}
                   title="Aktifkan pencarian Google Search real-time dan analisis mendalam"
                 >
-                  <Globe className={`w-3.5 h-3.5 ${deepSearchActive ? "animate-pulse text-emerald-600" : ""}`} />
+                  <Sparkles className={`w-3.5 h-3.5 ${deepSearchActive ? "animate-pulse text-emerald-600" : ""}`} />
                   <span>Pencarian Mendalam</span>
                   <span className={`w-1.5 h-1.5 rounded-full ${deepSearchActive ? "bg-emerald-600" : "bg-slate-300"}`}></span>
                 </button>
@@ -1285,6 +1307,8 @@ export default function ChatArea({
   messages,
   deepSearchActive = false,
   onToggleDeepSearch,
+  webSearchActive = false,
+  onToggleWebSearch,
   isLoading,
   onSendMessage,
   settings,
@@ -1856,6 +1880,8 @@ export default function ChatArea({
             themeStyle={themeStyle}
             deepSearchActive={deepSearchActive}
             onToggleDeepSearch={onToggleDeepSearch}
+            webSearchActive={webSearchActive}
+            onToggleWebSearch={onToggleWebSearch}
           />
         </div>
 

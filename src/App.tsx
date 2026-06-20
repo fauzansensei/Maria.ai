@@ -259,6 +259,7 @@ export default function App() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [deepSearchActive, setDeepSearchActive] = useState<boolean>(false);
+  const [webSearchActive, setWebSearchActive] = useState<boolean>(false);
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string>("");
   const [savedChats, setSavedChats] = useState<any[]>([]);
@@ -1032,7 +1033,8 @@ export default function App() {
             username: isLoggedIn ? (profileDisplayName || settings.username || "User") : "User"
           },
           memories: memories,
-          deepSearch: deepSearchActive
+          deepSearch: deepSearchActive,
+          webSearch: webSearchActive
         }),
       });
 
@@ -1189,7 +1191,8 @@ export default function App() {
             username: isLoggedIn ? (profileDisplayName || settings.username || "User") : "User"
           },
           memories: memories,
-          deepSearch: deepSearchActive
+          deepSearch: deepSearchActive,
+          webSearch: webSearchActive
         }),
       });
 
@@ -1358,7 +1361,8 @@ export default function App() {
             username: isLoggedIn ? (profileDisplayName || settings.username || "User") : "User"
           },
           memories: memories,
-          deepSearch: deepSearchActive
+          deepSearch: deepSearchActive,
+          webSearch: webSearchActive
         }),
       });
 
@@ -1775,7 +1779,23 @@ export default function App() {
             <ChatArea
               messages={messages}
               deepSearchActive={deepSearchActive}
-              onToggleDeepSearch={() => setDeepSearchActive(!deepSearchActive)}
+              onToggleDeepSearch={() => {
+                const newVal = !deepSearchActive;
+                setDeepSearchActive(newVal);
+                if (newVal) {
+                  // Turn on Web Search automatically if Deep Search is turned on
+                  setWebSearchActive(true);
+                }
+              }}
+              webSearchActive={webSearchActive}
+              onToggleWebSearch={() => {
+                const newVal = !webSearchActive;
+                setWebSearchActive(newVal);
+                if (!newVal) {
+                  // If web search is turned off, deep search must also be turned off
+                  setDeepSearchActive(false);
+                }
+              }}
               isLoading={isLoading}
               onSendMessage={handleSendMessage}
               settings={settings}

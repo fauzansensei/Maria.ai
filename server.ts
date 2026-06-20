@@ -53,8 +53,9 @@ function getGeminiClient(): GoogleGenAI {
 // REST API for chat with Maria (Advanced NLP with Context and Sentiment adaptation)
 app.post("/api/chat", async (req, res) => {
   try {
-    const { messages, settings, memories, deepSearch } = req.body;
+    const { messages, settings, memories, deepSearch, webSearch } = req.body;
     const isDeepSearchActive = deepSearch || settings?.deepSearch || false;
+    const isWebSearchActive = webSearch || false;
 
     if (!messages || !Array.isArray(messages)) {
       res.status(400).json({ error: "Invalid messages format. Must be an array." });
@@ -172,8 +173,16 @@ Pastikan nama aplikasi/platform sangat ringkas, dan link URL-nya valid, lengkap 
         `2. Letakkan tanda kurung rujukan ini tepat setelah kalimat atau frasa yang didasarkan pada informasi tersebut (contoh: "...suhu di Jakarta hari ini mencapai 32 derajat Celsius [1].").\n` +
         `3. Pastikan indeks penanda rujukan sesuai dengan urutan atau indeks rujukan dari hasil penelusuran. Jangan pernah mengarang nomor atau membuat format citation yang tidak sinkron.\n` +
         `4. Jawablah langsung dengan data riil dari Google Search. Hindari sama sekali membuat pernyataan bahwa Anda tidak memiliki akses internet, karena Anda SECARA NYATA memiliki akses penuh melalui Google Search ketika mode ini aktif.\n`;
+    } else if (isWebSearchActive) {
+      systemInstruction += `\n- FITUR PENCARIAN WEB (WEB SEARCH) AKTIF:\n` +
+        `Pengguna telah mengaktifkan mode Pencarian Web. Anda memiliki akses real-time ke web melalui Google Search. Gunakan penelusuran web untuk mencari info aktual, berita terbaru, atau fakta terkini jika pertanyaan pengguna membutuhkannya.\n` +
+        `ATURAN RUJUKAN & CITATION (SANGAT PENTING):\n` +
+        `1. Ketika Anda menggunakan informasi dari hasil pencarian Google Search, Anda WAJIB menambahkan penanda rujukan berupa nomor rujukan dalam tanda kurung siku di akhir kalimat atau klausa terkait, seperti [1], [2], [3], dst.\n` +
+        `2. Letakkan tanda kurung rujukan ini tepat setelah kalimat atau frasa yang didasarkan pada informasi tersebut (contoh: "...suhu di Jakarta hari ini mencapai 32 derajat Celsius [1].").\n` +
+        `3. Pastikan indeks penanda rujukan sesuai dengan urutan atau indeks rujukan dari hasil penelusuran. Jangan pernah mengarang nomor atau membuat format citation yang tidak sinkron.\n` +
+        `4. Jawablah langsung dengan data riil dari Google Search. Hindari sama sekali membuat pernyataan bahwa Anda tidak memiliki akses internet, karena Anda SECARA NYATA memiliki akses penuh melalui Google Search ketika mode ini aktif.\n`;
     } else {
-      systemInstruction += `\n- CATATAN LAYANAN DASAR: Saat ini Anda menjawab menggunakan basis pengetahuan internal tanpa pencarian web real-time langsung. Jika pengguna membutuhkan informasi yang benar-benar baru, mutakhir, atau cuaca realtime terbaru, sarankan mereka secara halus di akhir respons jika perlu untuk mengaktifkan fitur "Pencarian Mendalam" di bawah kotak obrolan.\n`;
+      systemInstruction += `\n- CATATAN LAYANAN DASAR: Saat ini Anda menjawab menggunakan basis pengetahuan internal tanpa pencarian web real-time langsung. Jika pengguna membutuhkan informasi yang benar-benar baru, mutakhir, atau cuaca realtime terbaru, sarankan mereka secara halus di akhir respons jika perlu untuk mengaktifkan fitur "Pencarian Web" atau "Pencarian Mendalam" di bawah kotak obrolan.\n`;
     }
 
     // Embed Long-term User Memories Synced Real-time from Firestore
@@ -333,7 +342,7 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
           {
             systemInstruction,
             temperature: tone === "Creative" ? 1.0 : tone === "Minimalist" ? 0.35 : 0.7,
-            tools: isDeepSearchActive ? [{ googleSearch: {} }] : undefined
+            tools: (isDeepSearchActive || isWebSearchActive) ? [{ googleSearch: {} }] : undefined
           },
           2 // up to 2 retry attempts
         );
@@ -380,7 +389,7 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
             {
               systemInstruction: systemInstruction + "\n- CATATAN KHUSUS: Layanan memori penuh sedang dialihkan ke batas hemat memori cadangan. Berikan respons mandiri yang bermutu.",
               temperature: tone === "Creative" ? 1.0 : tone === "Minimalist" ? 0.35 : 0.7,
-              tools: isDeepSearchActive ? [{ googleSearch: {} }] : undefined
+              tools: (isDeepSearchActive || isWebSearchActive) ? [{ googleSearch: {} }] : undefined
             },
             2 // up to 2 retry attempts
           );
