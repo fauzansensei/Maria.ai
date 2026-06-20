@@ -28,6 +28,7 @@ export default defineConfig(() => {
           manualChunks: {
             vendor: ['react', 'react-dom'],
             firebase: ['firebase/app', 'firebase/firestore', 'firebase/auth'],
+            icons: ['lucide-react'],
           },
         },
       },
