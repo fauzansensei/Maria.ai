@@ -469,13 +469,13 @@ export default function Sidebar({
       {!isCollapsed && (
         <div 
           onClick={onToggleCollapse}
-          className="fixed inset-0 z-40 bg-slate-950/80 transition-all duration-300 lg:hidden cursor-pointer"
+          className="fixed inset-0 z-40 bg-slate-950/80 transition-all duration-1000 lg:hidden cursor-pointer"
         />
       )}
 
       {/* 2. Sidebar box element */}
       <div 
-        className={`fixed inset-y-0 left-0 z-50 select-none font-sans flex flex-col justify-between bg-[#0e0f12] text-slate-300 border-r border-[#1e2025] transition-all duration-300 
+        className={`fixed inset-y-0 left-0 z-50 select-none font-sans flex flex-col justify-between bg-[#0e0f12] text-slate-300 border-r border-[#1e2025] transition-all duration-1000 
           lg:static lg:z-0 lg:h-full lg:translate-x-0
           ${isCollapsed 
             ? "-translate-x-full lg:translate-x-0 lg:w-0 lg:overflow-hidden lg:border-none" 
