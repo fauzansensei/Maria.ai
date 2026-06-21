@@ -173,7 +173,18 @@ const safeParseResponse = async (response: Response) => {
 export default function App() {
   const [fbLoadedCode, setFbLoadedCode] = useState<boolean>(false);
   useEffect(() => {
-    loadFirebase().then(() => setFbLoadedCode(true));
+    const deferLoad = () => {
+      if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+        (window as any).requestIdleCallback(() => {
+          loadFirebase().then(() => setFbLoadedCode(true));
+        }, { timeout: 2000 });
+      } else {
+        setTimeout(() => {
+          loadFirebase().then(() => setFbLoadedCode(true));
+        }, 1000);
+      }
+    };
+    deferLoad();
   }, []);
 
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
