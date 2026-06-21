@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { UserSettings, MariaTone, LanguageStyle, AppTheme, UserMemory } from "../types";
 import { safeLocalStorageSetItem, safeStorage } from "../utils";
 import { PRESET_VOICES, PRESET_MODELS } from "../services/elevenLabsService";
+import { THEME_OPTIONS } from "../constants";
 import CookiePolicyModal from "./CookiePolicyModal";
 import { 
   Settings, 
@@ -195,14 +196,15 @@ export default function SettingsDashboard({
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#0d0d0e] font-sans antialiased text-zinc-100 relative select-none">
+    <div className="flex flex-col h-full bg-slate-950/10 font-sans antialiased text-zinc-100 relative select-none">
       
       {/* Mobile Top Header (hidden on desktop) */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-900 shrink-0 md:hidden bg-[#0d0d0e]">
-        <h2 className="text-[13px] font-bold text-zinc-200">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] shrink-0 md:hidden bg-slate-950/30 backdrop-blur-md">
+        <h2 className="text-[13px] font-bold text-zinc-200 uppercase tracking-wider">
           {activeTab === "profile" && "Profil"}
           {activeTab === "appearance" && "Tampilan & Tema"}
           {activeTab === "behavior" && "Perilaku Asisten"}
+          {activeTab === "memories" && "Memori Maria"}
           {activeTab === "notifications" && "Notifikasi"}
           {activeTab === "billing" && "Langganan Plus"}
           {activeTab === "privacy" && "Privasi & Data"}
@@ -211,7 +213,7 @@ export default function SettingsDashboard({
           <button 
             type="button" 
             onClick={onClose} 
-            className="p-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors cursor-pointer"
+            className="p-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
             title="Tutup Pengaturan"
           >
             <X className="w-4 h-4" />
@@ -222,14 +224,14 @@ export default function SettingsDashboard({
       {/* Main Split Viewport */}
       <div className="flex flex-col md:flex-row flex-1 overflow-hidden h-full">
         {/* SIDEBAR FOR DESKTOP */}
-        <div className="hidden md:flex flex-col w-56 lg:w-64 bg-[#0d0d0e] border-r border-zinc-950 p-4 shrink-0 justify-between">
+        <div className="hidden md:flex flex-col w-56 lg:w-64 bg-slate-950/40 border-r border-white/[0.06] p-4 shrink-0 justify-between backdrop-blur-md">
           <div className="space-y-6">
             <div className="px-1 py-1">
               <h1 className="text-[15px] font-extrabold text-white flex items-center gap-2">
                 <Settings className={`w-4 h-4 ${getAccentTextClass()}`} />
                 <span>Pengaturan</span>
               </h1>
-              <p className="text-[9px] text-zinc-500 font-medium mt-0.5">Ringan, efisien & personal</p>
+              <p className="text-[9px] text-zinc-400 font-medium mt-0.5 uppercase tracking-wider opacity-80">Ringan, efisien & personal</p>
             </div>
             
             <nav className="space-y-1">
@@ -248,13 +250,13 @@ export default function SettingsDashboard({
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id as MenuTab)}
-                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all cursor-pointer border ${
+                    className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer border ${
                       activeTab === tab.id 
-                        ? "bg-zinc-900 border-zinc-800 text-white" 
-                        : "text-zinc-400 border-transparent hover:text-zinc-200 hover:bg-zinc-950/70"
+                        ? "bg-white/[0.06] border-white/[0.1] text-white shadow-xs" 
+                        : "text-zinc-400 border-transparent hover:text-zinc-200 hover:bg-white/[0.02]"
                     }`}
                   >
-                    <TabIcon className={`w-3.5 h-3.5 ${activeTab === tab.id ? getAccentTextClass() : "text-zinc-400"}`} />
+                    <TabIcon className={`w-3.5 h-3.5 ${activeTab === tab.id ? getAccentTextClass() : "text-zinc-500"}`} />
                     <span>{tab.label}</span>
                   </button>
                 );
@@ -262,14 +264,14 @@ export default function SettingsDashboard({
             </nav>
           </div>
 
-          <div className="px-2 py-1 text-[8.5px] font-mono text-zinc-600 border-t border-zinc-900/50 pt-2.5 leading-normal">
+          <div className="px-2 py-1 text-[8.5px] font-mono text-zinc-500 border-t border-white/[0.04] pt-2.5 leading-normal uppercase tracking-wider select-none">
             SISTEM v1.0.0<br />
             OPTIMASI RUNTIME AKTIF
           </div>
         </div>
 
         {/* MOBILE HORIZONTAL SCROLL BAR */}
-        <div className="flex md:hidden items-center gap-1.5 px-4 py-2 bg-[#0d0d0e] border-b border-zinc-950 overflow-x-auto no-scrollbar shrink-0">
+        <div className="flex md:hidden items-center gap-1.5 px-4 py-2 bg-slate-950/20 border-b border-white/[0.06] overflow-x-auto no-scrollbar shrink-0 backdrop-blur-md">
           {[
             { id: "profile", label: "Profil" },
             { id: "appearance", label: "Tampilan" },
@@ -283,10 +285,10 @@ export default function SettingsDashboard({
               key={item.id}
               type="button"
               onClick={() => setActiveTab(item.id as MenuTab)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold leading-none cursor-pointer transition-all shrink-0 border ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold leading-none cursor-pointer transition-all shrink-0 border ${
                 activeTab === item.id 
-                  ? "bg-zinc-900 border-zinc-800 text-white" 
-                  : "text-zinc-400 border-transparent hover:bg-zinc-950"
+                  ? "bg-white/[0.08] border-white/[0.1] text-white shadow-xs" 
+                  : "text-zinc-400 border-transparent hover:bg-white/[0.03]"
               }`}
             >
               <span>{item.label}</span>
@@ -294,11 +296,11 @@ export default function SettingsDashboard({
           ))}
         </div>
 
-        {/* CONTAINER FOR CONTENT PANEL */}
-        <div className="flex-1 flex flex-col h-full bg-[#111112] overflow-hidden">
+        {/* CONTAINER FOR CONTENT PANEL - Beautiful transparent/glass background layout */}
+        <div className="flex-1 flex flex-col h-full bg-slate-950/10 overflow-hidden">
           {/* Top Panel bar shown on Desktop */}
-          <div className="hidden md:flex items-center justify-between px-6 py-4 border-b border-zinc-950 shrink-0 bg-[#111112]">
-            <h2 className="text-[11.5px] font-extrabold text-zinc-400 tracking-wider uppercase">
+          <div className="hidden md:flex items-center justify-between px-6 py-4 border-b border-white/[0.04] shrink-0 bg-transparent">
+            <h2 className="text-[11px] font-extrabold text-zinc-350 tracking-widest uppercase">
               {activeTab === "profile" && "Manajemen Profil Saya"}
               {activeTab === "appearance" && "Kustomisasi Tema & Tampilan"}
               {activeTab === "behavior" && "Perilaku & Gaya Berbicara Maria-ai"}
@@ -311,7 +313,7 @@ export default function SettingsDashboard({
               <button 
                 type="button" 
                 onClick={onClose} 
-                className="p-1 px-3 bg-zinc-900 hover:bg-zinc-850 rounded-xl border border-zinc-800/80 text-zinc-400 hover:text-white transition-all cursor-pointer text-[10px] font-bold"
+                className="p-1.5 px-3.5 bg-white/[0.05] hover:bg-white/[0.1] rounded-xl border border-white/[0.08] text-zinc-300 hover:text-white transition-all cursor-pointer text-[10px] font-bold shadow-xs active:scale-95"
               >
                 Tutup
               </button>
@@ -319,36 +321,36 @@ export default function SettingsDashboard({
           </div>
 
           {/* Scrolling Content viewport */}
-          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4.5 no-scrollbar pb-16">
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5 no-scrollbar pb-16">
             
             {/* 1. PROFILE SECTION */}
             {activeTab === "profile" && (
               <div className="space-y-4 max-w-xl transition-all duration-150">
-                <h3 className="text-sm font-semibold text-zinc-200">Profil Pengguna</h3>
-                <div className="bg-[#161617] rounded-2xl p-5 border border-zinc-900/60 shadow-xs space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Profil Pengguna</h3>
+                <div className="bg-white/[0.03] backdrop-blur-md rounded-2xl p-6 border border-white/[0.06] shadow-[0_8px_32px_rgba(0,0,0,0.4)] space-y-5">
                   <div className="flex items-center gap-5">
                     {authProp?.currentUser?.photoURL ? (
                       <img 
                         src={authProp.currentUser.photoURL} 
                         alt={username} 
                         referrerPolicy="no-referrer"
-                        className="w-16 h-16 rounded-xl object-cover shadow-md border border-zinc-800"
+                        className="w-16 h-16 rounded-2xl object-cover shadow-md border border-white/[0.1]"
                       />
                     ) : (
-                      <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-xl font-bold uppercase text-white shadow-md">
+                      <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center text-xl font-black uppercase text-white shadow-md border border-white/[0.1]">
                         {username ? username.charAt(0) : "U"}
                       </div>
                     )}
                     <div className="space-y-1">
-                      <p className="text-base font-bold text-zinc-100">{username}</p>
-                      <p className="text-[10px] text-zinc-400 font-mono select-all">
+                      <p className="text-base font-bold text-zinc-100 tracking-tight">{username}</p>
+                      <p className="text-[10px] text-zinc-400 font-mono select-all select-none bg-black/20 px-2.5 py-1 rounded-md border border-white/[0.04]">
                         {authProp?.currentUser?.email || "contoh@email.com"}
                       </p>
-                      <p className="text-[9px] text-[#a855f7] font-semibold">ID Anggota Aktif • Sesi Terhubung</p>
+                      <p className="text-[9px] text-[#a855f7] font-semibold bg-[#a855f7]/10 border border-[#a855f7]/20 rounded-md px-2 py-0.5 inline-block uppercase tracking-wider">ID Anggota Aktif • Sesi Terhubung</p>
                     </div>
                   </div>
 
-                  <div className="h-[1.5px] bg-zinc-900/45 my-2" />
+                  <div className="h-[1px] bg-white/[0.04] my-2" />
 
                   <div className="space-y-2">
                     <label className="block text-[9.5px] font-bold text-zinc-400 uppercase tracking-wide">
@@ -362,7 +364,7 @@ export default function SettingsDashboard({
                         setUsername(val);
                         triggerSave({ username: val });
                       }}
-                      className="w-full bg-[#0d0d0e] border border-zinc-800 focus:border-zinc-600 rounded-lg px-3.5 py-2 text-zinc-200 text-[11px] outline-none transition-colors"
+                      className="w-full bg-slate-950/40 border border-white/[0.06] focus:border-indigo-500/50 rounded-xl px-4 py-2.5 text-zinc-100 text-[11px] outline-none transition-all shadow-inner focus:ring-1 focus:ring-indigo-500/20"
                       placeholder="Masukkan nama Anda..."
                     />
                   </div>
@@ -373,8 +375,8 @@ export default function SettingsDashboard({
             {/* 2. APPEARANCE SECTION */}
             {activeTab === "appearance" && (
               <div className="space-y-4 max-w-xl duration-150">
-                <h3 className="text-sm font-semibold text-zinc-200 font-sans">Kustomisasi Tampilan</h3>
-                <div className="bg-[#161617] rounded-2xl p-4.5 border border-zinc-900/60 space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Kustomisasi Tampilan</h3>
+                <div className="bg-white/[0.03] backdrop-blur-md rounded-2xl p-6 border border-white/[0.06] shadow-[0_8px_32px_rgba(0,0,0,0.4)] space-y-5">
                   {/* Accent selection */}
                   <div className="space-y-2.5">
                     <label className="block text-[9.5px] font-bold text-zinc-400 uppercase tracking-wide">
@@ -385,7 +387,7 @@ export default function SettingsDashboard({
                         { name: "Biru", color: "bg-blue-500" },
                         { name: "Hijau", color: "bg-emerald-500" },
                         { name: "Ungu", color: "bg-purple-500" },
-                        { name: "Hitam", color: "bg-zinc-600" }
+                        { name: "Hitam", color: "bg-zinc-650 border border-white/20" }
                       ].map((opt) => (
                         <button
                           key={opt.name}
@@ -394,10 +396,10 @@ export default function SettingsDashboard({
                             setAccentColor(opt.name);
                             triggerSave({ accentVal: opt.name });
                           }}
-                          className={`p-2 rounded-xl flex items-center justify-center gap-1.5 text-[10.5px] font-semibold border transition-all cursor-pointer ${
+                          className={`p-2.5 rounded-xl flex items-center justify-center gap-1.5 text-[10.5px] font-bold border transition-all cursor-pointer ${
                             accentColor === opt.name 
-                              ? "bg-zinc-900 border-zinc-700 text-white" 
-                              : "bg-[#0d0d0e]/60 border-transparent text-zinc-400 hover:bg-zinc-900/50"
+                              ? "bg-white/[0.08] border-white/[0.12] text-white shadow-xs" 
+                              : "bg-white/[0.02] border-transparent text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-200"
                           }`}
                         >
                           <span className={`w-2.5 h-2.5 rounded-full ${opt.color} shrink-0`} />
@@ -408,7 +410,7 @@ export default function SettingsDashboard({
                   </div>
 
                   {/* App language style selector */}
-                  <div className="space-y-2 pt-2 border-t border-zinc-900/20">
+                  <div className="space-y-2 pt-4 border-t border-white/[0.04]">
                     <label className="block text-[9.5px] font-bold text-zinc-400 uppercase tracking-wide">
                       Gaya Bahasa & Sifat Dialog
                     </label>
@@ -424,14 +426,14 @@ export default function SettingsDashboard({
                             setLangStyle(opt.value as LanguageStyle);
                             triggerSave({ languageStyle: opt.value as LanguageStyle });
                           }}
-                          className={`p-2 px-3 rounded-xl flex items-center justify-center gap-1.5 text-[10.5px] font-semibold border transition-all cursor-pointer ${
+                          className={`p-2.5 px-3 rounded-xl flex items-center justify-center gap-2 text-[10.5px] font-bold border transition-all cursor-pointer ${
                             langStyle === opt.value 
-                              ? "bg-zinc-900 border-zinc-750 text-white" 
-                              : "bg-[#0d0d0e]/60 border-transparent text-zinc-400 hover:bg-zinc-900/40"
+                              ? "bg-white/[0.08] border-white/[0.12] text-white shadow-xs" 
+                              : "bg-white/[0.02] border-transparent text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-200"
                           }`}
                         >
                           <span>{opt.label}</span>
-                          {langStyle === opt.value && <Check className="w-3 h-3 text-zinc-300" />}
+                          {langStyle === opt.value && <Check className="w-3.5 h-3.5 text-zinc-200" />}
                         </button>
                       ))}
                     </div>
@@ -698,19 +700,19 @@ export default function SettingsDashboard({
             {/* 6. PRIVACY & DATA */}
             {activeTab === "privacy" && (
               <div className="space-y-4 max-w-xl duration-150 font-sans">
-                <h3 className="text-sm font-semibold text-zinc-200 font-sans">Privasi & Bersihkan Data</h3>
-                <div className="bg-[#161617] rounded-2xl p-4.5 border border-zinc-900/60 space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Privasi & Bersihkan Data</h3>
+                <div className="bg-white/[0.03] backdrop-blur-md rounded-2xl p-6 border border-white/[0.06] shadow-[0_8px_32px_rgba(0,0,0,0.4)] space-y-4">
                   <div className="space-y-1">
-                    <p className="text-zinc-200 font-medium text-[11.5px]">Penyimpanan Data Lokal & Awan</p>
-                    <p className="text-[10px] text-zinc-500 leading-normal">
-                      Sesi obrolan dan preferensi Kakak disinkronkan secara aman ke database cloud. Jumlah pesan saat ini: <span className="text-zinc-300 font-bold">{messageCount}</span> pesan.
+                    <p className="text-zinc-100 font-bold text-[11.5px] tracking-tight">Penyimpanan Data Lokal & Awan</p>
+                    <p className="text-[10px] text-zinc-400 leading-normal">
+                      Sesi obrolan dan preferensi Kakak disinkronkan secara aman ke database cloud. Jumlah pesan saat ini: <span className="text-violet-400 font-mono font-bold bg-[#a855f7]/10 px-1.5 py-0.5 rounded border border-[#a855f7]/10">{messageCount}</span> pesan.
                     </p>
                   </div>
 
-                  <div className="pt-3 border-t border-zinc-900/40 flex items-center justify-between">
+                  <div className="pt-4 border-t border-white/[0.04] flex items-center justify-between gap-4">
                     <div className="space-y-0.5 max-w-[280px]">
-                      <span className="text-zinc-200 font-semibold text-[11px] block">Kebijakan Privasi (Privacy Policy)</span>
-                      <span className="text-[9.5px] text-zinc-400 block leading-tight">
+                      <span className="text-zinc-200 font-bold text-[11px] block">Kebijakan Privasi (Privacy Policy)</span>
+                      <span className="text-[9.5px] text-zinc-500 block leading-tight">
                         Pelajari bagaimana kami mengumpulkan, menggunakan, dan melindungi data pribadi Kakak di Maria-ai.
                       </span>
                     </div>
@@ -718,16 +720,16 @@ export default function SettingsDashboard({
                       href="/kebijakan-privasi.html"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 border border-zinc-800 rounded-xl text-[10.5px] font-bold cursor-pointer transition-colors shrink-0 inline-block text-center"
+                      className="px-3.5 py-1.5 bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 border border-white/[0.08] rounded-xl text-[10px] font-bold cursor-pointer transition-colors shrink-0 inline-block text-center active:scale-95"
                     >
                       Baca Privasi
                     </a>
                   </div>
 
-                  <div className="pt-3 border-t border-zinc-900/40 flex items-center justify-between">
+                  <div className="pt-4 border-t border-white/[0.04] flex items-center justify-between gap-4">
                     <div className="space-y-0.5 max-w-[280px]">
-                      <span className="text-zinc-200 font-semibold text-[11px] block">Kebijakan Cookies (Cookies Policy)</span>
-                      <span className="text-[9.5px] text-zinc-400 block leading-tight">
+                      <span className="text-zinc-200 font-bold text-[11px] block">Kebijakan Cookies (Cookies Policy)</span>
+                      <span className="text-[9.5px] text-zinc-500 block leading-tight">
                         Pelajari penggunaan file teks esensial, analisis data, dan opsi manajemen privasi Kakak di platform ini sesuai standar global.
                       </span>
                     </div>
@@ -735,16 +737,16 @@ export default function SettingsDashboard({
                       href="/kebijakan-cookies.html"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 border border-zinc-800 rounded-xl text-[10.5px] font-bold cursor-pointer transition-colors shrink-0 inline-block text-center"
+                      className="px-3.5 py-1.5 bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 border border-white/[0.08] rounded-xl text-[10px] font-bold cursor-pointer transition-colors shrink-0 inline-block text-center active:scale-95"
                     >
                       Baca Kebijakan
                     </a>
                   </div>
 
-                  <div className="pt-3 border-t border-zinc-900/40 flex items-center justify-between">
+                  <div className="pt-4 border-t border-white/[0.04] flex items-center justify-between gap-4">
                     <div className="space-y-0.5 max-w-[280px]">
-                      <span className="text-zinc-200 font-semibold text-[11px] block">Ketentuan Layanan (Terms of Service)</span>
-                      <span className="text-[9.5px] text-zinc-400 block leading-tight">
+                      <span className="text-zinc-200 font-bold text-[11px] block">Ketentuan Layanan (Terms of Service)</span>
+                      <span className="text-[9.5px] text-zinc-500 block leading-tight">
                         Syarat dan ketentuan dalam menggunakan layanan asisten cerdas Maria-ai.
                       </span>
                     </div>
@@ -752,16 +754,16 @@ export default function SettingsDashboard({
                       href="/ketentuan-layanan.html"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 border border-zinc-800 rounded-xl text-[10.5px] font-bold cursor-pointer transition-colors shrink-0 inline-block text-center"
+                      className="px-3.5 py-1.5 bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 border border-white/[0.08] rounded-xl text-[10px] font-bold cursor-pointer transition-colors shrink-0 inline-block text-center active:scale-95"
                     >
                       Baca TOS
                     </a>
                   </div>
 
-                  <div className="pt-3 border-t border-zinc-900/40 flex items-center justify-between">
+                  <div className="pt-4 border-t border-white/[0.04] flex items-center justify-between gap-4">
                     <div className="space-y-0.5 max-w-[280px]">
-                      <span className="text-zinc-200 font-semibold text-[11px] block">Pusat Bantuan (Help Center)</span>
-                      <span className="text-[9.5px] text-zinc-400 block leading-tight">
+                      <span className="text-zinc-200 font-bold text-[11px] block">Pusat Bantuan (Help Center)</span>
+                      <span className="text-[9.5px] text-zinc-500 block leading-tight">
                         Temukan FAQ dan informasi bantuan lainnya.
                       </span>
                     </div>
@@ -769,23 +771,23 @@ export default function SettingsDashboard({
                       href="/pusat-bantuan.html"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 border border-zinc-800 rounded-xl text-[10.5px] font-bold cursor-pointer transition-colors shrink-0 inline-block text-center"
+                      className="px-3.5 py-1.5 bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 border border-white/[0.08] rounded-xl text-[10px] font-bold cursor-pointer transition-colors shrink-0 inline-block text-center active:scale-95"
                     >
                       Buka Bantuan
                     </a>
                   </div>
 
-                  <div className="pt-3 border-t border-zinc-900/40 flex items-center justify-between">
+                  <div className="pt-4 border-t border-white/[0.04] flex items-center justify-between gap-4">
                     <div className="space-y-0.5 max-w-[280px]">
-                      <span className="text-zinc-200 font-semibold text-[11px] block">Hapus Semua Riwayat Obrolan</span>
-                      <span className="text-[9.5px] text-zinc-400 block leading-tight">Bersihkan semua thread chat dari Firestore.</span>
+                      <span className="text-zinc-200 font-bold text-[11px] block">Hapus Semua Riwayat Obrolan</span>
+                      <span className="text-[9.5px] text-zinc-550 block leading-tight">Bersihkan semua thread chat dari Firestore.</span>
                     </div>
 
                     {!isConfirmingClear ? (
                       <button
                         type="button"
                         onClick={() => setIsConfirmingClear(true)}
-                        className="px-3.5 py-1.5 bg-red-950/40 hover:bg-red-900/30 text-red-400 border border-red-500/15 rounded-xl text-[10.5px] font-bold cursor-pointer transition-colors"
+                        className="px-3.5 py-1.5 bg-red-950/40 hover:bg-red-900/30 text-red-400 border border-red-500/15 rounded-xl text-[10px] font-bold cursor-pointer transition-colors active:scale-95"
                       >
                         Hapus Obrolan
                       </button>
@@ -798,14 +800,14 @@ export default function SettingsDashboard({
                             setIsConfirmingClear(false);
                             if (onClose) onClose();
                           }}
-                          className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[10px] font-extrabold cursor-pointer"
+                          className="px-3.5 py-1.5 bg-red-650 hover:bg-red-700 text-white rounded-xl text-[10px] font-black cursor-pointer transition-all active:scale-95 shadow-sm"
                         >
                           Ya, Hapus
                         </button>
                         <button
                           type="button"
                           onClick={() => setIsConfirmingClear(false)}
-                          className="px-3 py-1.5 bg-zinc-900 text-zinc-400 rounded-lg text-[10px] font-semibold cursor-pointer"
+                          className="px-3.5 py-1.5 bg-white/[0.05] hover:bg-white/[0.1] text-zinc-400 hover:text-white rounded-xl text-[10px] font-bold cursor-pointer transition-all active:scale-95"
                         >
                           Batal
                         </button>
@@ -820,25 +822,25 @@ export default function SettingsDashboard({
             {activeTab === "memories" && (
               <div className="space-y-5 max-w-xl duration-150 font-sans">
                 <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-zinc-200 font-sans">Ingatan Jangka Panjang Terpadu</h3>
-                  <p className="text-[10px] text-zinc-500 leading-normal">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Ingatan Jangka Panjang Terpadu</h3>
+                  <p className="text-[10px] text-zinc-400 leading-normal">
                     Maria merekam secara otomatis hal penting tentang diri Kakak (seperti cita-cita, kepribadian, hobi, atau preferensi lainnya) langsung dari percakapan obrolan harian Anda dan menyimpannya dalam satu ingatan terpadu yang sinkron ke Firebase Cloud.
                   </p>
                 </div>
 
                 {memories.length === 0 || !memories[0]?.text ? (
-                  <div className="bg-[#161617]/40 rounded-2xl p-8 border border-dashed border-zinc-900/50 flex flex-col items-center justify-center text-center space-y-3">
-                    <Brain className="w-8 h-8 text-zinc-600 animate-pulse" />
-                    <p className="text-[11px] text-zinc-400 font-sans leading-relaxed max-w-sm">
+                  <div className="bg-white/[0.01] rounded-3xl p-8 border border-dashed border-white/[0.08] flex flex-col items-center justify-center text-center space-y-3">
+                    <Brain className="w-8 h-8 text-zinc-500 animate-pulse" />
+                    <p className="text-[11px] text-zinc-300 font-bold leading-relaxed max-w-sm">
                       Ingatannya Maria saat ini masih bersih & kosong.
                     </p>
-                    <p className="text-[9.5px] text-zinc-600 max-w-xs">
+                    <p className="text-[9.5px] text-zinc-550 max-w-xs leading-relaxed">
                       Silakan kirim pesan atau mengobrol santai dengannya! Maria akan menganalisis percakapan secara otomatis dan mulai mengabadikan ingatan terpadu tentang Kakak di sini.
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="bg-gradient-to-br from-[#12131a] to-[#161720] border border-zinc-800/60 rounded-2xl p-5 shadow-2xl relative overflow-hidden group">
+                    <div className="bg-gradient-to-br from-white/[0.02] to-white/[0.04] border border-white/[0.08] rounded-2xl p-6 shadow-2xl relative overflow-hidden group">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl" />
                       
                       <div className="flex items-center gap-2 mb-3">
@@ -846,11 +848,11 @@ export default function SettingsDashboard({
                         <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Memori Terpadu Maria</span>
                       </div>
 
-                      <div className="text-xs text-zinc-200 leading-relaxed italic bg-zinc-950/40 p-4 border border-zinc-900 rounded-xl font-sans">
+                      <div className="text-xs text-zinc-200 leading-relaxed italic bg-slate-950/40 p-4 border border-white/[0.04] rounded-xl font-sans">
                         &ldquo;{memories[0].text}&rdquo;
                       </div>
 
-                      <div className="flex items-center justify-between mt-3 text-[9px] text-zinc-500">
+                      <div className="flex items-center justify-between mt-4 text-[9px] text-zinc-500 pt-1">
                         <span>
                           Terakhir Diperbarui: {memories[0].timestamp ? new Date(memories[0].timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : "Baru saja"}
                         </span>
@@ -862,7 +864,7 @@ export default function SettingsDashboard({
                               if (onSaveMemories) onSaveMemories([]);
                             }
                           }}
-                          className="px-2.5 py-1 rounded bg-red-950/20 hover:bg-red-900/30 text-red-400 hover:text-white border border-red-900/10 font-bold transition-all cursor-pointer flex items-center gap-1"
+                          className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-white border border-red-500/20 font-bold text-[9px] transition-all cursor-pointer flex items-center gap-1 active:scale-95"
                         >
                           <Trash2 className="w-2.5 h-2.5" />
                           <span>Bersihkan Memori</span>
@@ -873,11 +875,11 @@ export default function SettingsDashboard({
                 )}
 
                 {/* SINKRONISASI BANNER */}
-                <div className="bg-[#161617]/30 border border-zinc-900/40 p-3.5 rounded-2xl flex items-center gap-3">
-                  <Database className="w-4 h-4 text-emerald-500 shrink-0" />
+                <div className="bg-white/[0.02] border border-white/[0.05] p-4 rounded-2xl flex items-center gap-3.5 shadow-xs">
+                  <Database className="w-4 h-4 text-emerald-400 shrink-0" />
                   <div className="space-y-0.5">
                     <span className="text-[10.5px] font-bold text-zinc-300 block">Autopilot Sinkronisasi Cloud Aktif</span>
-                    <span className="text-[9px] text-zinc-500 leading-tight block">Pembentukan ingatan terpadu Maria berjalan di belakang layar secara cerdas dan sinkron langsung ke database Firebase.</span>
+                    <span className="text-[9px] text-zinc-500 leading-relaxed block">Pembentukan ingatan terpadu Maria berjalan di belakang layar secara cerdas dan sinkron langsung ke database Firebase.</span>
                   </div>
                 </div>
 
@@ -893,7 +895,7 @@ export default function SettingsDashboard({
 
       {/* Persistent Save Status Notification Banner */}
       {saveBannerText && (
-        <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-xl bg-slate-900/95 text-[10px] font-bold text-white shadow-xl flex items-center gap-1.5 animate-fade-in z-50 border border-slate-800 ${getAccentBgClass()}`}>
+        <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-xl bg-slate-900/95 text-[10px] font-bold text-white shadow-xl flex items-center gap-1.5 animate-fade-in z-50 border border-white/[0.08] ${getAccentBgClass()}`}>
           <Check className="w-3 h-3 text-white" />
           <span>{saveBannerText}</span>
         </div>

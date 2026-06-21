@@ -1960,32 +1960,38 @@ export default function App() {
               onClick={() => setIsSettingsOpen(false)}
             />
             
-            {/* Modal centerpiece card container */}
-            <div className="relative w-full max-w-xl md:max-w-3xl lg:max-w-4xl bg-[#0d0d0e] rounded-3xl border border-zinc-900 shadow-2xl h-[85vh] max-h-[640px] flex flex-col overflow-hidden animate-fade-in z-55">
-              <React.Suspense fallback={
-                <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#171717] text-zinc-400">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-zinc-500 mb-3" />
-                  <p className="text-xs font-sans font-medium tracking-wide">Memuat Dasbor Pengaturan...</p>
-                </div>
-              }>
-                <SettingsDashboard
-                  settings={settings}
-                  onSaveSettings={(s) => {
-                    handleSaveSettings(s);
-                  }}
-                  onClearHistory={handleClearHistory}
-                  messageCount={messages.length}
-                  onClose={() => setIsSettingsOpen(false)}
-                  onAddSystemNotification={handleAddSystemNotification}
-                  onSimulateEmail={handleSimulateEmail}
-                  onSimulatePush={handleSimulatePush}
-                  isPlus={isPlus}
-                  setIsPlus={setIsPlus}
-                  memories={memories}
-                  onSaveMemories={handleSaveMemories}
-                  authProp={auth}
-                />
-              </React.Suspense>
+            {/* Modal centerpiece card container with ultra-premium glassmorphism and dynamic decorative glows */}
+            <div className="relative w-full max-w-xl md:max-w-3xl lg:max-w-4xl bg-slate-950/80 backdrop-blur-2xl rounded-3xl border border-white/[0.08] shadow-[0_0_60px_-15px_rgba(0,0,0,0.8)] h-[85vh] max-h-[640px] flex flex-col overflow-hidden animate-fade-in z-55">
+              {/* Absolute dynamic background glow spots based on active theme */}
+              <div className={`absolute -top-40 -left-40 w-96 h-96 rounded-full bg-gradient-to-br ${activeColorTheme.bgGradient} opacity-[0.14] blur-[100px] pointer-events-none z-0`} />
+              <div className="absolute -bottom-40 -right-40 w-96 h-96 rounded-full bg-indigo-600 opacity-[0.08] blur-[100px] pointer-events-none z-0" />
+              
+              <div className="relative z-10 flex flex-col h-full overflow-hidden">
+                <React.Suspense fallback={
+                  <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-950/40 text-zinc-400">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-500 mb-3" />
+                    <p className="text-xs font-sans font-medium tracking-wide">Memuat Dasbor Pengaturan...</p>
+                  </div>
+                }>
+                  <SettingsDashboard
+                    settings={settings}
+                    onSaveSettings={(s) => {
+                      handleSaveSettings(s);
+                    }}
+                    onClearHistory={handleClearHistory}
+                    messageCount={messages.length}
+                    onClose={() => setIsSettingsOpen(false)}
+                    onAddSystemNotification={handleAddSystemNotification}
+                    onSimulateEmail={handleSimulateEmail}
+                    onSimulatePush={handleSimulatePush}
+                    isPlus={isPlus}
+                    setIsPlus={setIsPlus}
+                    memories={memories}
+                    onSaveMemories={handleSaveMemories}
+                    authProp={auth}
+                  />
+                </React.Suspense>
+              </div>
             </div>
           </div>
         )}
