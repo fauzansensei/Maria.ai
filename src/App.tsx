@@ -122,8 +122,8 @@ function lazyWithRetry(importFn: () => Promise<any>) {
   });
 }
 
-const Sidebar = lazyWithRetry(() => import("./components/Sidebar"));
-const ChatArea = lazyWithRetry(() => import("./components/ChatArea"));
+import Sidebar from "./components/Sidebar";
+import ChatArea from "./components/ChatArea";
 const CookiePolicyModal = lazyWithRetry(() => import("./components/CookiePolicyModal"));
 const SettingsDashboard = lazyWithRetry(() => import("./components/SettingsDashboard"));
 const DiscoverArea = lazyWithRetry(() => import("./components/DiscoverArea"));
