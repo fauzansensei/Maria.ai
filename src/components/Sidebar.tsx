@@ -130,6 +130,228 @@ const MOCK_CHAT_HISTORIES: Record<string, { title: string; messages: Message[] }
   }
 };
 
+interface ThreadItemProps {
+  thread: ChatThread;
+  isActive: boolean;
+  isEditing: boolean;
+  editTitle: string;
+  setEditTitle: (val: string) => void;
+  setEditingId: (val: string | null) => void;
+  activeMenuId: string | null;
+  setActiveMenuId: (val: string | null) => void;
+  onSelectThread?: (id: string) => void;
+  onViewChange?: (view: "chat" | "library" | "discover") => void;
+  onToggleCollapse: () => void;
+  onShareThread?: (id: string) => void;
+  onArchiveThread?: (id: string) => void;
+  onPinThread?: (id: string) => void;
+  onRenameThread?: (id: string, newTitle: string) => void;
+  onDeleteThread?: (id: string) => void;
+}
+
+const ThreadItem = React.memo(function ThreadItem({
+  thread,
+  isActive,
+  isEditing,
+  editTitle,
+  setEditTitle,
+  setEditingId,
+  activeMenuId,
+  setActiveMenuId,
+  onSelectThread,
+  onViewChange,
+  onToggleCollapse,
+  onShareThread,
+  onArchiveThread,
+  onPinThread,
+  onRenameThread,
+  onDeleteThread,
+}: ThreadItemProps) {
+  return (
+    <div
+      className={`group relative w-full rounded-xl flex items-center justify-between text-[11px] font-medium leading-tight text-left transition-all duration-200 ${
+        isActive 
+          ? "bg-[#1c1e24] text-white font-semibold" 
+          : "text-slate-300 hover:text-white hover:bg-[#15171d]/60"
+      }`}
+    >
+      {isEditing ? (
+        <div className="flex-1 flex items-center gap-1.5 p-1 z-10 w-full">
+          <input
+            type="text"
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                if (onRenameThread) onRenameThread(thread.id, editTitle);
+                setEditingId(null);
+              } else if (e.key === "Escape") {
+                setEditingId(null);
+              }
+            }}
+            aria-label="Isi nama baru percakapan"
+            className="flex-grow bg-[#0f1013] border border-blue-500 rounded-lg px-2 py-1 text-white text-[11px] font-medium focus:outline-hidden"
+            autoFocus
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (onRenameThread) onRenameThread(thread.id, editTitle);
+              setEditingId(null);
+            }}
+            aria-label="Simpan nama percakapan baru"
+            className="p-1 text-emerald-400 hover:bg-slate-800 rounded-md shrink-0 cursor-pointer"
+          >
+            <Check className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditingId(null)}
+            aria-label="Batal ganti nama percakapan"
+            className="p-1 text-rose-400 hover:bg-slate-800 rounded-md shrink-0 cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* Thread Title Selection Click Target */}
+          <button
+            type="button"
+            onClick={() => {
+              if (onSelectThread) onSelectThread(thread.id);
+              if (onViewChange) onViewChange("chat");
+              onToggleCollapse();
+            }}
+            aria-label={`Pilih percakapan: ${thread.title}`}
+            className="flex-1 py-2.5 pl-3.5 pr-10 text-left truncate cursor-pointer flex items-center gap-2"
+          >
+            {thread.isPinned && (
+              <Pin className="w-3 h-3 text-cyan-400 shrink-0 transform -rotate-45" />
+            )}
+            <span className="truncate">{thread.title}</span>
+          </button>
+
+          {/* Dropdown Toggle More Options Button */}
+          <div className="absolute right-1.5 flex items-center gap-1">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveMenuId(activeMenuId === thread.id ? null : thread.id);
+              }}
+              aria-label={`Menu opsi percakapan: ${thread.title}`}
+              className={`p-1.5 rounded-full hover:bg-slate-800/85 text-slate-400 hover:text-white transition-opacity duration-150 cursor-pointer ${
+                isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              }`}
+              title="Menu Percakapan"
+            >
+              <MoreVertical className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          
+          {/* Relative Dropdown Popover container */}
+          {activeMenuId === thread.id && (
+            <>
+              {/* Backdrop overlay to click outside and dismiss dropdown */}
+              <div 
+                className="fixed inset-0 z-30 cursor-default" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveMenuId(null);
+                }}
+              />
+              
+              {/* Gemini Style Floating Menu Card */}
+              <div className="absolute top-8 right-2 z-45 w-48 py-1.5 rounded-xl bg-[#1b1d24] border border-[#2c2f37] shadow-2xl text-[11px] animate-fade-in text-slate-200">
+                
+                {/* Option: Share */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveMenuId(null);
+                    if (onShareThread) onShareThread(thread.id);
+                  }}
+                  aria-label="Bagikan percakapan"
+                  className="w-full px-3.5 py-2.5 text-left hover:bg-[#252831] flex items-center gap-2.5 transition-colors cursor-pointer text-slate-300 hover:text-white"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Bagikan percakapan</span>
+                </button>
+
+                {/* Option: Archive */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveMenuId(null);
+                    if (onArchiveThread) onArchiveThread(thread.id);
+                  }}
+                  aria-label="Arsipkan percakapan"
+                  className="w-full px-3.5 py-2.5 text-left hover:bg-[#252831] flex items-center gap-2.5 transition-colors cursor-pointer text-slate-300 hover:text-white"
+                >
+                  <Archive className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Arsipkan ke Pustaka</span>
+                </button>
+
+                {/* Option: Pin */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveMenuId(null);
+                    if (onPinThread) onPinThread(thread.id);
+                  }}
+                  aria-label={thread.isPinned ? "Lepaskan sematan percakapan" : "Sematkan percakapan"}
+                  className="w-full px-3.5 py-2.5 text-left hover:bg-[#252831] flex items-center gap-2.5 transition-colors cursor-pointer text-slate-300 hover:text-white"
+                >
+                  <Pin className="w-3.5 h-3.5 text-slate-400" />
+                  <span>{thread.isPinned ? "Lepaskan sematan" : "Sematkan"}</span>
+                </button>
+
+                {/* Option: Rename */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveMenuId(null);
+                    setEditingId(thread.id);
+                    setEditTitle(thread.title);
+                  }}
+                  aria-label="Ganti nama percakapan"
+                  className="w-full px-3.5 py-2.5 text-left hover:bg-[#252831] flex items-center gap-2.5 transition-colors cursor-pointer text-slate-300 hover:text-white"
+                >
+                  <Pencil className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Ganti nama</span>
+                </button>
+
+                {/* Separator */}
+                <div className="h-[1px] bg-[#2c2f37] my-1" />
+
+                {/* Option: Delete */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveMenuId(null);
+                    if (onDeleteThread) onDeleteThread(thread.id);
+                  }}
+                  aria-label="Hapus percakapan"
+                  className="w-full px-3.5 py-2.5 text-left hover:bg-rose-500/10 text-rose-400 hover:text-rose-300 flex items-center gap-2.5 transition-colors cursor-pointer font-medium"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Hapus</span>
+                </button>
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+});
+
 export default function Sidebar({
   settings,
   messages,
@@ -392,197 +614,27 @@ export default function Sidebar({
 
               {/* Presets/Dynamic chat list items */}
               <div className="space-y-1">
-                {sortedThreads.map((thread) => {
-                  const isActive = activeThreadId === thread.id;
-                  const isEditing = editingId === thread.id;
-                  
-                  return (
-                    <div
-                      key={thread.id}
-                      className={`group relative w-full rounded-xl flex items-center justify-between text-[11px] font-medium leading-tight text-left transition-all duration-200 ${
-                        isActive 
-                          ? "bg-[#1c1e24] text-white font-semibold" 
-                          : "text-slate-300 hover:text-white hover:bg-[#15171d]/60"
-                      }`}
-                    >
-                      {isEditing ? (
-                        <div className="flex-1 flex items-center gap-1.5 p-1 z-10 w-full">
-                          <input
-                            type="text"
-                            value={editTitle}
-                            onChange={(e) => setEditTitle(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                if (onRenameThread) onRenameThread(thread.id, editTitle);
-                                setEditingId(null);
-                              } else if (e.key === "Escape") {
-                                setEditingId(null);
-                              }
-                            }}
-                            aria-label="Isi nama baru percakapan"
-                            className="flex-grow bg-[#0f1013] border border-blue-500 rounded-lg px-2 py-1 text-white text-[11px] font-medium focus:outline-hidden"
-                            autoFocus
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (onRenameThread) onRenameThread(thread.id, editTitle);
-                              setEditingId(null);
-                            }}
-                            aria-label="Simpan nama percakapan baru"
-                            className="p-1 text-emerald-400 hover:bg-slate-800 rounded-md shrink-0 cursor-pointer"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditingId(null)}
-                            aria-label="Batal ganti nama percakapan"
-                            className="p-1 text-rose-400 hover:bg-slate-800 rounded-md shrink-0 cursor-pointer"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          {/* Thread Title Selection Click Target */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (onSelectThread) onSelectThread(thread.id);
-                              if (onViewChange) onViewChange("chat");
-                              if (window.innerWidth < 1024) {
-                                onToggleCollapse();
-                              }
-                            }}
-                            aria-label={`Pilih percakapan: ${thread.title}`}
-                            className="flex-1 py-2.5 pl-3.5 pr-10 text-left truncate cursor-pointer flex items-center gap-2"
-                          >
-                            {thread.isPinned && (
-                              <Pin className="w-3 h-3 text-cyan-400 shrink-0 transform -rotate-45" />
-                            )}
-                            <span className="truncate">{thread.title}</span>
-                          </button>
-
-                          {/* Dropdown Toggle More Options Button */}
-                          <div className="absolute right-1.5 flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveMenuId(activeMenuId === thread.id ? null : thread.id);
-                              }}
-                              aria-label={`Menu opsi percakapan: ${thread.title}`}
-                              className={`p-1.5 rounded-full hover:bg-slate-800/85 text-slate-400 hover:text-white transition-opacity duration-150 cursor-pointer ${
-                                isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                              }`}
-                              title="Menu Percakapan"
-                            >
-                              <MoreVertical className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                          
-                          {/* Relative Dropdown Popover container */}
-                          {activeMenuId === thread.id && (
-                            <>
-                              {/* Backdrop overlay to click outside and dismiss dropdown */}
-                              <div 
-                                className="fixed inset-0 z-30 cursor-default" 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setActiveMenuId(null);
-                                }}
-                              />
-                              
-                              {/* Gemini Style Floating Menu Card */}
-                              <div className="absolute top-8 right-2 z-45 w-48 py-1.5 rounded-xl bg-[#1b1d24] border border-[#2c2f37] shadow-2xl text-[11px] animate-fade-in text-slate-200">
-                                
-                                {/* Option: Share */}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveMenuId(null);
-                                    if (onShareThread) onShareThread(thread.id);
-                                  }}
-                                  aria-label="Bagikan percakapan"
-                                  className="w-full px-3.5 py-2.5 text-left hover:bg-[#252831] flex items-center gap-2.5 transition-colors cursor-pointer text-slate-300 hover:text-white"
-                                >
-                                  <Share2 className="w-3.5 h-3.5 text-slate-400" />
-                                  <span>Bagikan percakapan</span>
-                                </button>
-
-                                {/* Option: Archive */}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveMenuId(null);
-                                    if (onArchiveThread) onArchiveThread(thread.id);
-                                  }}
-                                  aria-label="Arsipkan percakapan"
-                                  className="w-full px-3.5 py-2.5 text-left hover:bg-[#252831] flex items-center gap-2.5 transition-colors cursor-pointer text-slate-300 hover:text-white"
-                                >
-                                  <Archive className="w-3.5 h-3.5 text-slate-400" />
-                                  <span>Arsipkan ke Pustaka</span>
-                                </button>
-
-                                {/* Option: Pin */}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveMenuId(null);
-                                    if (onPinThread) onPinThread(thread.id);
-                                  }}
-                                  aria-label={thread.isPinned ? "Lepaskan sematan percakapan" : "Sematkan percakapan"}
-                                  className="w-full px-3.5 py-2.5 text-left hover:bg-[#252831] flex items-center gap-2.5 transition-colors cursor-pointer text-slate-300 hover:text-white"
-                                >
-                                  <Pin className="w-3.5 h-3.5 text-slate-400" />
-                                  <span>{thread.isPinned ? "Lepaskan sematan" : "Sematkan"}</span>
-                                </button>
-
-                                {/* Option: Rename */}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveMenuId(null);
-                                    setEditingId(thread.id);
-                                    setEditTitle(thread.title);
-                                  }}
-                                  aria-label="Ganti nama percakapan"
-                                  className="w-full px-3.5 py-2.5 text-left hover:bg-[#252831] flex items-center gap-2.5 transition-colors cursor-pointer text-slate-300 hover:text-white"
-                                >
-                                  <Pencil className="w-3.5 h-3.5 text-slate-400" />
-                                  <span>Ganti nama</span>
-                                </button>
-
-                                {/* Separator */}
-                                <div className="h-[1px] bg-[#2c2f37] my-1" />
-
-                                {/* Option: Delete */}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveMenuId(null);
-                                    if (onDeleteThread) onDeleteThread(thread.id);
-                                  }}
-                                  aria-label="Hapus percakapan"
-                                  className="w-full px-3.5 py-2.5 text-left hover:bg-rose-500/10 text-rose-400 hover:text-rose-300 flex items-center gap-2.5 transition-colors cursor-pointer font-medium"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  <span>Hapus</span>
-                                </button>
-                              </div>
-                            </>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
+                {sortedThreads.map((thread) => (
+                  <ThreadItem
+                    key={thread.id}
+                    thread={thread}
+                    isActive={activeThreadId === thread.id}
+                    isEditing={editingId === thread.id}
+                    editTitle={editTitle}
+                    setEditTitle={setEditTitle}
+                    setEditingId={setEditingId}
+                    activeMenuId={activeMenuId}
+                    setActiveMenuId={setActiveMenuId}
+                    onSelectThread={onSelectThread}
+                    onViewChange={onViewChange}
+                    onToggleCollapse={onToggleCollapse}
+                    onShareThread={onShareThread}
+                    onArchiveThread={onArchiveThread}
+                    onPinThread={onPinThread}
+                    onRenameThread={onRenameThread}
+                    onDeleteThread={onDeleteThread}
+                  />
+                ))}
               </div>
             </div>
           )}

@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS, THEME_OPTIONS } from "./constants";
 import { generateSpeech, playAudioBlob, stopSpeech } from "./services/elevenLabsService";
 import { safeStorage } from "./utils";
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import { loadFirebase as loadFirebaseCore } from "./firebaseLazy";
 
 import type { DiscoveryAgent } from "./components/DiscoverArea";
 // Define OperationType enum directly in this scope
@@ -48,39 +49,35 @@ let getDocs: any = null;
 let firebasePromise: Promise<any> | null = null;
 const loadFirebase = () => {
   if (!firebasePromise) {
-    firebasePromise = Promise.all([
-      import("./firebase"),
-      import("firebase/auth"),
-      import("firebase/firestore")
-    ]).then(([fb, authMod, firestoreMod]) => {
-      auth = fb.auth;
-      db = fb.db;
-      googleProvider = fb.googleProvider;
-      handleFirestoreError = fb.handleFirestoreError;
-      setSimulatedAuthActive = fb.setSimulatedAuthActive;
-      isSimulatedAuthActive = fb.isSimulatedAuthActive;
-      isThirdPartyCookieBlocked = fb.isThirdPartyCookieBlocked;
+    firebasePromise = loadFirebaseCore().then((res) => {
+      auth = res.auth;
+      db = res.db;
+      googleProvider = res.googleProvider;
+      handleFirestoreError = res.handleFirestoreError;
+      setSimulatedAuthActive = res.setSimulatedAuthActive;
+      isSimulatedAuthActive = res.isSimulatedAuthActive;
+      isThirdPartyCookieBlocked = res.isThirdPartyCookieBlocked;
 
-      onAuthStateChanged = authMod.onAuthStateChanged;
-      signInWithPopup = authMod.signInWithPopup;
-      signOut = authMod.signOut;
-      signInAnonymously = authMod.signInAnonymously;
-      signInWithEmailAndPassword = authMod.signInWithEmailAndPassword;
-      createUserWithEmailAndPassword = authMod.createUserWithEmailAndPassword;
-      signInWithRedirect = authMod.signInWithRedirect;
-      getRedirectResult = authMod.getRedirectResult;
-      setPersistence = authMod.setPersistence;
-      browserLocalPersistence = authMod.browserLocalPersistence;
+      onAuthStateChanged = res.authFns.onAuthStateChanged;
+      signInWithPopup = res.authFns.signInWithPopup;
+      signOut = res.authFns.signOut;
+      signInAnonymously = res.authFns.signInAnonymously;
+      signInWithEmailAndPassword = res.authFns.signInWithEmailAndPassword;
+      createUserWithEmailAndPassword = res.authFns.createUserWithEmailAndPassword;
+      signInWithRedirect = res.authFns.signInWithRedirect;
+      getRedirectResult = res.authFns.getRedirectResult;
+      setPersistence = res.authFns.setPersistence;
+      browserLocalPersistence = res.authFns.browserLocalPersistence;
 
-      collection = firestoreMod.collection;
-      doc = firestoreMod.doc;
-      setDoc = firestoreMod.setDoc;
-      updateDoc = firestoreMod.updateDoc;
-      deleteDoc = firestoreMod.deleteDoc;
-      query = firestoreMod.query;
-      where = firestoreMod.where;
-      onSnapshot = firestoreMod.onSnapshot;
-      getDocs = firestoreMod.getDocs;
+      collection = res.fsFns.collection;
+      doc = res.fsFns.doc;
+      setDoc = res.fsFns.setDoc;
+      updateDoc = res.fsFns.updateDoc;
+      deleteDoc = res.fsFns.deleteDoc;
+      query = res.fsFns.query;
+      where = res.fsFns.where;
+      onSnapshot = res.fsFns.onSnapshot;
+      getDocs = res.fsFns.getDocs;
 
       return { loaded: true };
     });
