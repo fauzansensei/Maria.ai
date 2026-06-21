@@ -1400,6 +1400,20 @@ export default function ChatArea({
         {/* Dynamic Theme Banner Header */}
         <div className="sticky top-0 z-30 w-full flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-200 bg-white shadow-xs shrink-0">
           <div className="flex items-center gap-3">
+            {/* Hamburger Menu button that toggles open the Sidebar (placed beautifully on the left for standard mobile UX) */}
+            {onToggleSidebar && (
+              <button
+                type="button"
+                onClick={onToggleSidebar}
+                aria-label={isSidebarCollapsed ? "Tampilkan Menu Samping" : "Sembunyikan Menu Samping"}
+                className={`p-2 bg-slate-50 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg border border-slate-200 cursor-pointer transition-all flex items-center justify-center shadow-3xs min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 ${
+                  isSidebarCollapsed ? "block" : "block lg:hidden"
+                }`}
+                title={isSidebarCollapsed ? "Tampilkan Menu Samping" : "Sembunyikan Menu Samping"}
+              >
+                <Menu className="w-5 h-5 sm:w-4 sm:h-4" />
+              </button>
+            )}
 
             <div className="relative">
               {/* Maria AI Geometric Logo */}
@@ -1511,18 +1525,7 @@ export default function ChatArea({
               )}
             </div>
 
-            {/* Hamburger Menu button that toggles open the Sidebar */}
-            {onToggleSidebar && (
-              <button
-                type="button"
-                onClick={onToggleSidebar}
-                aria-label={isSidebarCollapsed ? "Tampilkan Menu Samping" : "Sembunyikan Menu Samping"}
-                className="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg border border-slate-200 cursor-pointer transition-all flex items-center justify-center shadow-3xs"
-                title={isSidebarCollapsed ? "Tampilkan Menu Samping" : "Sembunyikan Menu Samping"}
-              >
-                <Menu className="w-4 h-4" />
-              </button>
-            )}
+
 
             <div className="hidden lg:block text-[10px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md font-mono uppercase tracking-wider">
               {new Date().toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" })}

@@ -220,7 +220,9 @@ const ThreadItem = React.memo(function ThreadItem({
             onClick={() => {
               if (onSelectThread) onSelectThread(thread.id);
               if (onViewChange) onViewChange("chat");
-              onToggleCollapse();
+              if (window.innerWidth < 1024) {
+                onToggleCollapse();
+              }
             }}
             aria-label={`Pilih percakapan: ${thread.title}`}
             className="flex-1 py-2.5 pl-3.5 pr-10 text-left truncate cursor-pointer flex items-center gap-2"
@@ -507,10 +509,10 @@ export default function Sidebar({
             type="button"
             onClick={onToggleCollapse}
             aria-label="Sembunyikan Sidebar"
-            className="p-1.5 rounded-lg bg-transparent hover:bg-slate-800/60 text-slate-400 hover:text-white transition-all cursor-pointer"
+            className="p-2.5 sm:p-1.5 rounded-lg bg-transparent hover:bg-slate-800/60 text-slate-400 hover:text-white transition-all cursor-pointer flex items-center justify-center min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0"
             title="Sembunyikan Sidebar"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-5 h-5 sm:w-4 sm:h-4" />
           </button>
         </div>
 
