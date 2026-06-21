@@ -3,6 +3,7 @@ import { Message, UserSettings, AppNotification, ChatThread, AppTheme, UserMemor
 import { DEFAULT_SETTINGS, THEME_OPTIONS } from "./constants";
 import { generateSpeech, playAudioBlob, stopSpeech } from "./services/elevenLabsService";
 import { safeStorage } from "./utils";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 import type { DiscoveryAgent } from "./components/DiscoverArea";
 // Define OperationType enum directly in this scope
@@ -1769,6 +1770,7 @@ export default function App() {
 
   return (
     <div className="h-[100dvh] w-screen flex flex-col font-sans overflow-hidden bg-slate-50 text-slate-700 select-none">
+      <SpeedInsights />
       
       {/* Main Layout Container */}
       <div className="flex-grow flex overflow-hidden relative">
