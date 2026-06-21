@@ -45,6 +45,8 @@ let query: any = null;
 let where: any = null;
 let onSnapshot: any = null;
 let getDocs: any = null;
+let orderBy: any = null;
+let addDoc: any = null;
 
 let firebasePromise: Promise<any> | null = null;
 const loadFirebase = () => {
@@ -78,6 +80,8 @@ const loadFirebase = () => {
       where = res.fsFns.where;
       onSnapshot = res.fsFns.onSnapshot;
       getDocs = res.fsFns.getDocs;
+      orderBy = res.fsFns.orderBy;
+      addDoc = res.fsFns.addDoc;
 
       return { loaded: true };
     });
@@ -1804,6 +1808,7 @@ export default function App() {
           profileDisplayNameProp={profileDisplayName}
           isLoggedIn={isLoggedIn}
           isPlus={isPlus}
+          authProp={auth}
           onUpgradeSuccess={(planType) => {
             setIsPlus(true);
             const now = new Date();
@@ -1903,6 +1908,15 @@ export default function App() {
                 onUsePromptFormula={handleUsePromptFormula}
                 onRestoreSavedChat={handleRestoreSavedChat}
                 onExit={() => setActiveView("chat")}
+                firebaseCtx={{
+                  auth,
+                  db,
+                  doc,
+                  updateDoc,
+                  onSnapshot,
+                  handleFirestoreError,
+                  OperationType
+                }}
               />
             </React.Suspense>
           )}
@@ -1920,6 +1934,17 @@ export default function App() {
                 onSelectAgent={handleSelectAgent}
                 onUsePrompt={handleUsePromptFormula}
                 onExit={() => setActiveView("chat")}
+                firebaseCtx={{
+                  auth,
+                  db,
+                  collection,
+                  onSnapshot,
+                  query,
+                  orderBy,
+                  addDoc,
+                  deleteDoc,
+                  doc
+                }}
               />
             </React.Suspense>
           )}
@@ -1958,6 +1983,7 @@ export default function App() {
                   setIsPlus={setIsPlus}
                   memories={memories}
                   onSaveMemories={handleSaveMemories}
+                  authProp={auth}
                 />
               </React.Suspense>
             </div>
@@ -2017,6 +2043,22 @@ export default function App() {
               setSimulatedPush={setSimulatedPush}
               showGoogleGuide={showGoogleGuide}
               setShowGoogleGuide={setShowGoogleGuide}
+              firebaseCtx={{
+                auth,
+                db,
+                googleProvider,
+                OperationType,
+                handleFirestoreError,
+                setSimulatedAuthActive,
+                isSimulatedAuthActive,
+                doc,
+                updateDoc,
+                signOut,
+                signInWithRedirect,
+                signInWithPopup,
+                setPersistence,
+                browserLocalPersistence
+              }}
             />
           </React.Suspense>
         )}

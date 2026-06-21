@@ -24,8 +24,6 @@ import {
   HelpCircle
 } from "lucide-react";
 import { Message, UserSettings, ChatThread } from "../types";
-import { THEME_OPTIONS } from "../constants";
-import { auth } from "../firebase";
 
 // Theme specs matching Screenshot 1 (Voxa Dark Vibe)
 interface SidebarProps {
@@ -56,6 +54,7 @@ interface SidebarProps {
   isPlus?: boolean;
   onUpgradeSuccess?: (planType: "monthly" | "yearly") => void;
   onGoogleSignIn?: () => void;
+  authProp?: any;
 }
 
 // Preset Mock Chats matching Screenshot list exactly & loaded dynamically
@@ -379,9 +378,16 @@ export default function Sidebar({
   isLoggedIn = false,
   isPlus = false,
   onUpgradeSuccess,
-  onGoogleSignIn
+  onGoogleSignIn,
+  authProp
 }: SidebarProps) {
-  const currentTheme = THEME_OPTIONS.find(t => t.value === settings.theme) || THEME_OPTIONS[0];
+  const THEME_OPTIONS_LOCAL = [
+    { value: "classic-blue", label: "Classic Blue", bgGradient: "from-blue-600 to-indigo-700" },
+    { value: "emerald-green", label: "Emerald Green", bgGradient: "from-emerald-600 to-teal-700" },
+    { value: "cosmic-purple", label: "Cosmic Purple", bgGradient: "from-purple-600 to-pink-700" },
+    { value: "minimal-dark", label: "Minimal Dark", bgGradient: "from-zinc-800 to-zinc-900" }
+  ];
+  const currentTheme = THEME_OPTIONS_LOCAL.find(t => t.value === settings.theme) || THEME_OPTIONS_LOCAL[0];
 
   const getAccentTextClass = () => {
     if (currentTheme.value === "emerald-green") return "text-emerald-400";
@@ -414,18 +420,18 @@ export default function Sidebar({
   const [paymentMethod, setPaymentMethod] = useState<"gpay" | "qris" | "bank">("qris");
 
   // Load avatar and user properties precisely matching Settings / Props / Firebase
-  const userAvatar = profileAvatarProp !== undefined ? profileAvatarProp : (auth.currentUser?.photoURL || "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=360&h=360&fit=crop&q=60");
-  const userDisplayName = isLoggedIn ? (profileDisplayNameProp || settings.username || auth.currentUser?.displayName || "User") : "User";
-  const userEmail = isLoggedIn ? (auth.currentUser?.email || "user@example.com") : "user@example.com";
+  const userAvatar = profileAvatarProp !== undefined ? profileAvatarProp : (authProp?.currentUser?.photoURL || "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=360&h=360&fit=crop&q=60");
+  const userDisplayName = isLoggedIn ? (profileDisplayNameProp || settings.username || authProp?.currentUser?.displayName || "User") : "User";
+  const userEmail = isLoggedIn ? (authProp?.currentUser?.email || "user@example.com") : "user@example.com";
 
   const shouldShowInitialsAvatar = isLoggedIn 
-    ? (useInitialsAvatarProp !== undefined ? useInitialsAvatarProp : !auth.currentUser?.photoURL)
+    ? (useInitialsAvatarProp !== undefined ? useInitialsAvatarProp : !authProp?.currentUser?.photoURL)
     : true;
   const avatarBgColor = isLoggedIn 
     ? (profileAvatarBgProp !== undefined ? profileAvatarBgProp : "bg-[#064e3b]")
     : "bg-slate-600";
   const userHandle = isLoggedIn 
-    ? (profileUsernameHandleProp !== undefined ? profileUsernameHandleProp : ("@" + (auth.currentUser?.email ? auth.currentUser.email.split("@")[0] : "user")))
+    ? (profileUsernameHandleProp !== undefined ? profileUsernameHandleProp : ("@" + (authProp?.currentUser?.email ? authProp.currentUser.email.split("@")[0] : "user")))
     : "@user";
 
   const getInitials = (name: string) => {
@@ -977,7 +983,7 @@ export default function Sidebar({
                   <button
                     type="submit"
                     disabled={upgradeSuccess}
-                    className={`w-full py-3 px-4 bg-gradient-to-r ${currentTheme.bgGradient} hover:opacity-95 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-[0.985] flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer`}
+                    className={`w-full py-3 px-4 bg-gradient-to-r ${currentTheme.bgGradient} hover:opacity-95 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer`}
                   >
                     {upgradeSuccess ? (
                       "Sedang Memproses secara Aman..."

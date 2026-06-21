@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { UserSettings, MariaTone, LanguageStyle, AppTheme, UserMemory } from "../types";
 import { safeLocalStorageSetItem, safeStorage } from "../utils";
 import { PRESET_VOICES, PRESET_MODELS } from "../services/elevenLabsService";
-import { auth } from "../firebase";
 import CookiePolicyModal from "./CookiePolicyModal";
 import { 
   Settings, 
@@ -45,6 +44,7 @@ interface SettingsDashboardProps {
   setIsPlus?: (val: boolean) => void;
   memories?: UserMemory[];
   onSaveMemories?: (memories: UserMemory[]) => void;
+  authProp?: any;
 }
 
 type MenuTab = "profile" | "appearance" | "behavior" | "notifications" | "billing" | "privacy" | "memories";
@@ -61,7 +61,8 @@ export default function SettingsDashboard({
   isPlus = false,
   setIsPlus,
   memories = [],
-  onSaveMemories
+  onSaveMemories,
+  authProp
 }: SettingsDashboardProps) {
   const [activeTab, setActiveTab] = useState<MenuTab>("profile");
 
@@ -326,9 +327,9 @@ export default function SettingsDashboard({
                 <h3 className="text-sm font-semibold text-zinc-200">Profil Pengguna</h3>
                 <div className="bg-[#161617] rounded-2xl p-5 border border-zinc-900/60 shadow-xs space-y-4">
                   <div className="flex items-center gap-5">
-                    {auth.currentUser?.photoURL ? (
+                    {authProp?.currentUser?.photoURL ? (
                       <img 
-                        src={auth.currentUser.photoURL} 
+                        src={authProp.currentUser.photoURL} 
                         alt={username} 
                         referrerPolicy="no-referrer"
                         className="w-16 h-16 rounded-xl object-cover shadow-md border border-zinc-800"
@@ -341,7 +342,7 @@ export default function SettingsDashboard({
                     <div className="space-y-1">
                       <p className="text-base font-bold text-zinc-100">{username}</p>
                       <p className="text-[10px] text-zinc-400 font-mono select-all">
-                        {auth.currentUser?.email || "contoh@email.com"}
+                        {authProp?.currentUser?.email || "contoh@email.com"}
                       </p>
                       <p className="text-[9px] text-[#a855f7] font-semibold">ID Anggota Aktif • Sesi Terhubung</p>
                     </div>

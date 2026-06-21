@@ -366,8 +366,6 @@ const DISCOVER_PROMPTS: DiscoverPrompt[] = [
 ];
 
 import { useEffect } from "react";
-import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc } from "firebase/firestore";
-import { db, auth } from "../firebase";
 import { Plus, X, Trash2 } from "lucide-react";
 
 interface DiscoverAreaProps {
@@ -376,6 +374,7 @@ interface DiscoverAreaProps {
   onSelectAgent: (agent: DiscoveryAgent) => void;
   onUsePrompt: (promptText: string) => void;
   onExit: () => void;
+  firebaseCtx?: any;
 }
 
 export default function DiscoverArea({
@@ -383,8 +382,10 @@ export default function DiscoverArea({
   isLoggedIn,
   onSelectAgent,
   onUsePrompt,
-  onExit
+  onExit,
+  firebaseCtx
 }: DiscoverAreaProps) {
+  const { auth, db, collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc } = firebaseCtx || {};
   const currentTheme = THEME_OPTIONS.find(t => t.value === settings.theme) || THEME_OPTIONS[0];
   const [activeCategory, setActiveCategory] = useState<"all" | "learning" | "creative" | "tech" | "productivity" | "lifestyle" | "entertainment" | "family" | "specialist">("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -405,6 +406,8 @@ export default function DiscoverArea({
   const [agentTheme, setAgentTheme] = useState<"classic-blue" | "emerald-green" | "cosmic-purple" | "minimal-dark">("classic-blue");
 
   useEffect(() => {
+    if (!db || !query || !collection || !onSnapshot || !orderBy) return;
+
     // Real-time listener for custom AI agents created by users
     const q = query(collection(db, "custom_agents"), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -432,7 +435,7 @@ export default function DiscoverArea({
       console.error("Gagal memuat agen kustom dari Firestore:", error);
     });
     return () => unsubscribe();
-  }, []);
+  }, [firebaseCtx]);
 
   const getPhotoByCategory = (cat: string) => {
     switch (cat) {
@@ -466,11 +469,14 @@ export default function DiscoverArea({
         systemPrompt: agentSystemPrompt.trim(),
         theme: agentTheme,
         popularity: "Rancangan Komunitas",
-        userId: auth.currentUser?.uid || "guest",
+        userId: auth?.currentUser?.uid || "guest",
         avatar: generatedAvatar,
         createdAt: new Date().toISOString()
       };
 
+      if (!db || !collection || !addDoc) {
+        throw new Error("Sistem Firestore tidak siap.");
+      }
       await addDoc(collection(db, "custom_agents"), newAgentPayload);
       
       // Reset form
@@ -497,6 +503,9 @@ export default function DiscoverArea({
       return;
     }
     try {
+      if (!db || !doc || !deleteDoc) {
+        throw new Error("Sistem Firestore tidak siap.");
+      }
       await deleteDoc(doc(db, "custom_agents", id));
     } catch (err) {
       console.error("Gagal menghapus agen kustom:", err);
@@ -615,7 +624,7 @@ export default function DiscoverArea({
           {/* Grid list of Agents */}
           <div id="discover-agents-grid" className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredAgents.map(agent => {
-              const isCreator = agent.id !== "maria-default" && agent.userId === auth.currentUser?.uid;
+              const isCreator = agent.id !== "maria-default" && agent.userId === auth?.currentUser?.uid;
               return (
                 <div 
                   key={agent.id}

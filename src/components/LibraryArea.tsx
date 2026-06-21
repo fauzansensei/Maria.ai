@@ -22,8 +22,6 @@ import {
 } from "lucide-react";
 import { Message, UserSettings } from "../types";
 import { THEME_OPTIONS } from "../constants";
-import { auth, db, handleFirestoreError, OperationType } from "../firebase";
-import { doc, updateDoc, onSnapshot } from "firebase/firestore";
 
 export interface CustomPromptFormula {
   id: string;
@@ -40,6 +38,7 @@ interface LibraryAreaProps {
   onUsePromptFormula: (formula: string) => void;
   onRestoreSavedChat?: (savedChat: any) => void;
   onExit: () => void;
+  firebaseCtx?: any;
 }
 
 export default function LibraryArea({
@@ -48,8 +47,10 @@ export default function LibraryArea({
   onToggleBookmark,
   onUsePromptFormula,
   onRestoreSavedChat,
-  onExit
+  onExit,
+  firebaseCtx
 }: LibraryAreaProps) {
+  const { auth, db, doc, updateDoc, onSnapshot, handleFirestoreError, OperationType } = firebaseCtx || {};
   const currentTheme = THEME_OPTIONS.find(t => t.value === settings.theme) || THEME_OPTIONS[0];
   const [activeTab, setActiveTab] = useState<"bookmarks" | "saved-chats" | "my-prompts" | "my-docs">("bookmarks");
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -83,7 +84,7 @@ export default function LibraryArea({
 
   // Synchronize custom prompts & saved chats with Firestore if logged in
   useEffect(() => {
-    if (!auth.currentUser) return;
+    if (!auth || !auth.currentUser || !db || !doc || !onSnapshot) return;
     
     const userRef = doc(db, "users", auth.currentUser.uid);
     const unsub = onSnapshot(userRef, (snapshot) => {
@@ -97,20 +98,26 @@ export default function LibraryArea({
         }
       }
     }, (err) => {
-      handleFirestoreError(err, OperationType.GET, `users/${auth.currentUser?.uid}`);
+      if (handleFirestoreError) {
+        handleFirestoreError(err, OperationType?.GET || "get", `users/${auth.currentUser?.uid}`);
+      }
     });
 
     return () => unsub();
-  }, []);
+  }, [firebaseCtx]);
 
   // Save changes to Firestore for saved_chats
   const saveSavedChats = async (updated: any[]) => {
     setSavedChats(updated);
-    if (auth.currentUser) {
+    if (auth && auth.currentUser && db && doc && updateDoc) {
       const userRef = doc(db, "users", auth.currentUser.uid);
       await updateDoc(userRef, {
         savedChats: updated
-      }).catch(err => handleFirestoreError(err, OperationType.UPDATE, `users/${auth.currentUser?.uid}`));
+      }).catch(err => {
+        if (handleFirestoreError) {
+          handleFirestoreError(err, OperationType?.UPDATE || "update", `users/${auth.currentUser?.uid}`);
+        }
+      });
     }
   };
 
@@ -148,11 +155,15 @@ export default function LibraryArea({
 
   const saveMyPromptsToStorage = async (updated: CustomPromptFormula[]) => {
     setMyPrompts(updated);
-    if (auth.currentUser) {
+    if (auth && auth.currentUser && db && doc && updateDoc) {
       const userRef = doc(db, "users", auth.currentUser.uid);
       await updateDoc(userRef, {
         myPrompts: updated
-      }).catch(err => handleFirestoreError(err, OperationType.UPDATE, `users/${auth.currentUser?.uid}`));
+      }).catch(err => {
+        if (handleFirestoreError) {
+          handleFirestoreError(err, OperationType?.UPDATE || "update", `users/${auth.currentUser?.uid}`);
+        }
+      });
     }
   };
 

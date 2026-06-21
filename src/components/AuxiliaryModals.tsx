@@ -1,9 +1,6 @@
 import React, { useRef, useEffect } from "react";
 import { X, AlertCircle, Inbox, Bell, ChevronRight, ChevronDown, Info, RefreshCw } from "lucide-react";
 import { UserSettings } from "../types";
-import { doc, updateDoc } from "firebase/firestore";
-import { signOut, signInWithRedirect, signInWithPopup, setPersistence, browserLocalPersistence } from "firebase/auth";
-import { auth, db, googleProvider, OperationType, handleFirestoreError, setSimulatedAuthActive, isSimulatedAuthActive } from "../firebase";
 
 interface AuxiliaryModalsProps {
   // Profile settings
@@ -64,6 +61,7 @@ interface AuxiliaryModalsProps {
   setSimulatedPush: (push: any) => void;
   showGoogleGuide: boolean;
   setShowGoogleGuide: (show: boolean) => void;
+  firebaseCtx?: any;
 }
 
 export default function AuxiliaryModals({
@@ -118,8 +116,25 @@ export default function AuxiliaryModals({
   simulatedPush,
   setSimulatedPush,
   showGoogleGuide,
-  setShowGoogleGuide
+  setShowGoogleGuide,
+  firebaseCtx
 }: AuxiliaryModalsProps) {
+  const {
+    auth,
+    db,
+    googleProvider,
+    OperationType,
+    handleFirestoreError,
+    setSimulatedAuthActive,
+    isSimulatedAuthActive,
+    doc,
+    updateDoc,
+    signOut,
+    signInWithRedirect,
+    signInWithPopup,
+    setPersistence,
+    browserLocalPersistence
+  } = firebaseCtx || {};
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -324,7 +339,7 @@ export default function AuxiliaryModals({
                         type="text"
                         readOnly
                         disabled
-                        value={auth.currentUser?.email || "contoh@email.com"}
+                        value={auth?.currentUser?.email || "contoh@email.com"}
                         className="w-full bg-[#12151b] border border-slate-800 rounded-xl px-3.5 py-2.5 text-slate-400 text-[12.5px] cursor-not-allowed font-medium font-sans select-all"
                       />
                     </div>
@@ -339,8 +354,8 @@ export default function AuxiliaryModals({
                   <button
                     type="button"
                     onClick={async () => {
-                      setSimulatedAuthActive(false);
-                      await signOut(auth).catch(() => {});
+                      if (setSimulatedAuthActive) setSimulatedAuthActive(false);
+                      if (signOut && auth) await signOut(auth).catch(() => {});
                       setIsLoggedIn(false);
                       setIsProfileOpen(false);
                       setShowColorSelector(false);
@@ -376,14 +391,18 @@ export default function AuxiliaryModals({
                       };
                       setSettings(updatedSettings);
 
-                      if (isLoggedIn && auth.currentUser) {
+                      if (isLoggedIn && auth?.currentUser && doc && db && updateDoc) {
                         const userRef = doc(db, "users", auth.currentUser.uid);
                         await updateDoc(userRef, {
                           displayName: finalDisplayName,
                           username: finalUsername,
                           avatarUrl: profileAvatarUrl,
                           settings: updatedSettings
-                        }).catch(err => handleFirestoreError(err, OperationType.UPDATE, `users/${auth.currentUser?.uid}`));
+                        }).catch(err => {
+                          if (handleFirestoreError) {
+                            handleFirestoreError(err, OperationType?.UPDATE || "update", `users/${auth.currentUser?.uid}`);
+                          }
+                        });
                       }
 
                       setIsProfileOpen(false);
@@ -430,7 +449,7 @@ export default function AuxiliaryModals({
                       type="button"
                       disabled={isAuthenticating}
                       onClick={async () => {
-                        setSimulatedAuthActive(false); // Disable simulated session backup so actual login registers!
+                        if (setSimulatedAuthActive) setSimulatedAuthActive(false); // Disable simulated session backup so actual login registers!
                         setAuthLocalError(null);
                         setIsAuthenticating(true);
                         
@@ -442,6 +461,9 @@ export default function AuxiliaryModals({
                             return;
                           }
 
+                          if (!signInWithPopup || !auth || !googleProvider) {
+                            throw new Error("Authentikasi Google belum siap.");
+                          }
                           const result = await signInWithPopup(auth, googleProvider);
                           if (result && result.user) {
                             const user = result.user;
@@ -475,7 +497,11 @@ export default function AuxiliaryModals({
                           if (isCoopOrIframeIssue) {
                             console.log("Coop/Popup blocked, attempting redirect...");
                             try {
-                              await signInWithRedirect(auth, googleProvider);
+                              if (signInWithRedirect && auth && googleProvider) {
+                                await signInWithRedirect(auth, googleProvider);
+                              } else {
+                                throw new Error("Redirect auth belum siap.");
+                              }
                               return;
                             } catch (redirectErr: any) {
                                message = "Login diblokir oleh browser. Silakan klik 'Buka di Tab Baru' di sudut kanan atas AI Studio untuk login dengan aman.";
@@ -514,10 +540,13 @@ export default function AuxiliaryModals({
                       type="button"
                       disabled={isAuthenticating}
                       onClick={async () => {
-                        setSimulatedAuthActive(false);
+                        if (setSimulatedAuthActive) setSimulatedAuthActive(false);
                         setAuthLocalError(null);
                         setIsAuthenticating(true);
                         try {
+                          if (!signInWithRedirect || !auth || !googleProvider) {
+                            throw new Error("Authentikasi Google Redirect belum siap.");
+                          }
                           await signInWithRedirect(auth, googleProvider);
                         } catch (err: any) {
                           console.error("Redirect sign in error custom click:", err);
