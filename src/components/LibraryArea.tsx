@@ -225,7 +225,7 @@ export default function LibraryArea({
       type: "txt",
       size: "1.8 KB",
       date: "Mei 2026",
-      description: "Hasil ramalan Maria-ai mengenani SWOT analysis model bisnis coffeeshop nol sampah."
+      description: "Hasil ramalan Maria.ai mengenai SWOT analysis model bisnis coffeeshop nol sampah."
     },
     {
       id: "f-3",

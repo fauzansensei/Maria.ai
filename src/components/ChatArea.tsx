@@ -1292,7 +1292,7 @@ const ChatInputForm = React.memo(function ChatInputForm({
 
       <div className="flex flex-col sm:flex-row items-center justify-between text-[10px] text-slate-450 px-2 mt-2 gap-2">
         <span className="text-center sm:text-left font-mono uppercase tracking-tight font-semibold">
-          Maria adalah AI dapat melakukan kesalahan
+          Maria adalah AI yang dapat melakukan kesalahan
         </span>
         <span className="hidden sm:flex items-center gap-1 font-sans text-[9px] uppercase font-bold text-slate-500 select-none">
           <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse"></span>
@@ -1557,7 +1557,7 @@ export default function ChatArea({
                 Dari mana kita harus mulai?
               </h2>
               <p className="text-xs sm:text-[12.5px] text-slate-500 font-medium max-w-sm mx-auto leading-relaxed mt-1">
-                Aplikasi asisten cerdas buatan yang membantu Anda menjadwalkan tugas, mencari ide kreatif, dan merangkum konsep pemrograman secara presisi. Mulailah percakapan dengan Maria-ai.
+                Aplikasi asisten cerdas buatan yang membantu Anda menjadwalkan tugas, mencari ide kreatif, dan merangkum konsep pemrograman secara presisi. Mulailah percakapan dengan Maria.ai.
               </p>
             </div>
           ) : (
