@@ -325,7 +325,7 @@ export default function App() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [deepSearchActive, setDeepSearchActive] = useState<boolean>(false);
-  const [webSearchActive, setWebSearchActive] = useState<boolean>(false);
+  const [webSearchActive, setWebSearchActive] = useState<boolean>(true);
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string>("");
   const [savedChats, setSavedChats] = useState<any[]>([]);
