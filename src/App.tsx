@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Message, UserSettings, AppNotification, ChatThread, AppTheme, UserMemory } from "./types";
 import { DEFAULT_SETTINGS, THEME_OPTIONS } from "./constants";
 import { generateSpeech, playAudioBlob, stopSpeech } from "./services/elevenLabsService";
@@ -297,7 +297,67 @@ export default function App() {
   const [memories, setMemories] = useState<UserMemory[]>([]);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
-  const speakMessage = (text: string) => {
+  // Play polite system chime when actions succeed
+  const playNotificationChime = () => {
+    if (!settings.notifications?.soundEnabled) return;
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (audioCtx.state === "suspended") {
+        // Close it immediately if the browser suspended it to avoid printing noisy warning lines
+        audioCtx.close();
+        return;
+      }
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      oscillator.type = "sine";
+      // Play a lovely double chime note (D5 followed by G5)
+      oscillator.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+      oscillator.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.12); // G5
+
+      gainNode.gain.setValueAtTime(0.04, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.35);
+    } catch (e) {
+      // Quietly consume and ignore any browser autoplay/security warnings
+    }
+  };
+
+  const [notifications, setNotifications] = useState<AppNotification[]>([
+    {
+      id: "not-init",
+      title: "Sistem Aktif",
+      body: "Asisten pintar Maria Anda diaktifkan dan terhubung.",
+      type: "success",
+      timestamp: new Date().toISOString(),
+      read: false,
+    }
+  ]);
+
+  // Trigger system notification
+  const handleAddSystemNotification = useCallback((
+    title: string, 
+    body: string, 
+    type: "info" | "success" | "reminder" | "message"
+  ) => {
+    const newNotification: AppNotification = {
+      id: "not-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4),
+      title,
+      body,
+      type,
+      timestamp: new Date().toISOString(),
+      read: false,
+    };
+    setNotifications(prev => [newNotification, ...prev].slice(0, 25)); // keep log ceiling to 25 items
+    playNotificationChime();
+  }, [settings]); // Needs settings since playNotificationChime depends on settings
+
+  const speakMessage = useCallback((text: string) => {
     const keyToUse = settings?.elevenlabsApiKey?.trim() || "";
     if (!settings?.voiceEnabled || !keyToUse || !text) return;
     
@@ -320,7 +380,7 @@ export default function App() {
           "info"
         );
       });
-  };
+  }, [settings, handleAddSystemNotification]);
 
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -329,16 +389,6 @@ export default function App() {
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string>("");
   const [savedChats, setSavedChats] = useState<any[]>([]);
-  const [notifications, setNotifications] = useState<AppNotification[]>([
-    {
-      id: "not-init",
-      title: "Sistem Aktif",
-      body: "Asisten pintar Maria Anda diaktifkan dan terhubung.",
-      type: "success",
-      timestamp: new Date().toISOString(),
-      read: false,
-    }
-  ]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false); // Controls responsive drawer tracker
@@ -478,7 +528,7 @@ export default function App() {
     return () => clearInterval(timer);
   }, [isPlus, settings, isLoggedIn]);
 
-  const handleToggleBookmark = async (msg: Message) => {
+  const handleToggleBookmark = useCallback(async (msg: Message) => {
     let nextBookmarks: Message[] = [];
     const exists = bookmarkedMessages.some(b => b.id === msg.id);
     if (exists) {
@@ -505,7 +555,7 @@ export default function App() {
         bookmarks: nextBookmarks
       }).catch(err => handleFirestoreError(err, OperationType.UPDATE, `users/${auth.currentUser?.uid}`));
     }
-  };
+  }, [bookmarkedMessages, isLoggedIn, handleAddSystemNotification]);
 
   const handleSelectAgent = (agent: DiscoveryAgent) => {
     const newThreadId = "thread-" + Date.now();
@@ -557,6 +607,42 @@ export default function App() {
   };
 
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
+
+  const handleToggleDeepSearch = useCallback(() => {
+    setDeepSearchActive(prev => {
+      const newVal = !prev;
+      if (newVal) {
+        setWebSearchActive(true);
+      }
+      return newVal;
+    });
+  }, []);
+
+  const handleToggleWebSearch = useCallback(() => {
+    setWebSearchActive(prev => {
+      const newVal = !prev;
+      if (!newVal) {
+        setDeepSearchActive(false);
+      }
+      return newVal;
+    });
+  }, []);
+
+  const handleClearPendingPrompt = useCallback(() => {
+    setPendingPrompt(null);
+  }, []);
+
+  const handleToggleSidebar = useCallback(() => {
+    setIsSidebarCollapsed(prev => !prev);
+  }, []);
+
+  const handleOpenLogin = useCallback(() => {
+    setIsProfileOpen(true);
+  }, []);
+
+  const handleToggleSettings = useCallback(() => {
+    setIsSettingsOpen(prev => !prev);
+  }, []);
 
   const handleUsePromptFormula = (formulaText: string) => {
     setPendingPrompt(formulaText);
@@ -941,54 +1027,7 @@ export default function App() {
     }
   }, [messages, activeThreadId, isLoggedIn]);
 
-  // Play polite system chime when actions succeed
-  const playNotificationChime = () => {
-    if (!settings.notifications?.soundEnabled) return;
-    try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      if (audioCtx.state === "suspended") {
-        // Close it immediately if the browser suspended it to avoid printing noisy warning lines
-        audioCtx.close();
-        return;
-      }
-      const oscillator = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
 
-      oscillator.type = "sine";
-      // Play a lovely double chime note (D5 followed by G5)
-      oscillator.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
-      oscillator.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.12); // G5
-
-      gainNode.gain.setValueAtTime(0.04, audioCtx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
-
-      oscillator.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-
-      oscillator.start();
-      oscillator.stop(audioCtx.currentTime + 0.35);
-    } catch (e) {
-      // Quietly consume and ignore any browser autoplay/security warnings
-    }
-  };
-
-  // Trigger system notification
-  const handleAddSystemNotification = (
-    title: string, 
-    body: string, 
-    type: "info" | "success" | "reminder" | "message"
-  ) => {
-    const newNotification: AppNotification = {
-      id: "not-" + Date.now() + "-" + Math.random().toString(36).substr(2, 4),
-      title,
-      body,
-      type,
-      timestamp: new Date().toISOString(),
-      read: false,
-    };
-    setNotifications(prev => [newNotification, ...prev].slice(0, 25)); // keep log ceiling to 25 items
-    playNotificationChime();
-  };
 
   const handleSimulateEmail = (subject: string, body: string, category: string) => {
     setSimulatedEmail({
@@ -1021,16 +1060,16 @@ export default function App() {
     }
   };
 
-  const handleMarkNotificationRead = (id: string) => {
+  const handleMarkNotificationRead = useCallback((id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  };
+  }, []);
 
-  const handleClearNotifications = () => {
+  const handleClearNotifications = useCallback(() => {
     setNotifications([]);
-  };
+  }, []);
 
   // Handles sending messages to the Express backend proxy endpoint
-  const handleSendMessage = async (text: string, images?: string[], audio?: string) => {
+  const handleSendMessage = useCallback(async (text: string, images?: string[], audio?: string) => {
     if (isLoading) return;
     setIsLoading(true);
 
@@ -1217,10 +1256,10 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isLoading, activeThreadId, isLoggedIn, messages, settings, profileDisplayName, memories, deepSearchActive, webSearchActive, handleAddSystemNotification, speakMessage]);
 
   // Regenerates a specific assistant message
-  const handleRegenerateResponse = async (messageId: string) => {
+  const handleRegenerateResponse = useCallback(async (messageId: string) => {
     if (isLoading) return;
     setIsLoading(true);
 
@@ -1361,10 +1400,10 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isLoading, messages, isLoggedIn, activeThreadId, settings, profileDisplayName, memories, deepSearchActive, webSearchActive, speakMessage, handleAddSystemNotification]);
 
   // Sets feedback status (like/dislike) for a message
-  const handleSetFeedback = async (messageId: string, feedback: "like" | "dislike") => {
+  const handleSetFeedback = useCallback(async (messageId: string, feedback: "like" | "dislike") => {
     if (isLoggedIn && auth.currentUser && activeThreadId) {
       await updateDoc(doc(db, "threads", activeThreadId, "messages", messageId), {
         feedback
@@ -1374,10 +1413,10 @@ export default function App() {
         prev.map((m) => (m.id === messageId ? { ...m, feedback } : m))
       );
     }
-  };
+  }, [isLoggedIn, activeThreadId]);
 
   // Edits a user's previous message and triggers a response rebuild
-  const handleEditUserMessage = async (messageId: string, newContent: string) => {
+  const handleEditUserMessage = useCallback(async (messageId: string, newContent: string) => {
     if (isLoading || !newContent.trim()) return;
     setIsLoading(true);
 
@@ -1517,7 +1556,7 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isLoading, messages, isLoggedIn, activeThreadId, settings, profileDisplayName, memories, deepSearchActive, webSearchActive, speakMessage, handleAddSystemNotification]);
 
   // Select active thread
   const handleSelectThread = async (id: string) => {
@@ -1851,23 +1890,9 @@ export default function App() {
             <ChatArea
               messages={messages}
               deepSearchActive={deepSearchActive}
-              onToggleDeepSearch={() => {
-                const newVal = !deepSearchActive;
-                setDeepSearchActive(newVal);
-                if (newVal) {
-                  // Turn on Web Search automatically if Deep Search is turned on
-                  setWebSearchActive(true);
-                }
-              }}
+              onToggleDeepSearch={handleToggleDeepSearch}
               webSearchActive={webSearchActive}
-              onToggleWebSearch={() => {
-                const newVal = !webSearchActive;
-                setWebSearchActive(newVal);
-                if (!newVal) {
-                  // If web search is turned off, deep search must also be turned off
-                  setDeepSearchActive(false);
-                }
-              }}
+              onToggleWebSearch={handleToggleWebSearch}
               isLoading={isLoading}
               onSendMessage={handleSendMessage}
               settings={settings}
@@ -1876,8 +1901,8 @@ export default function App() {
               onClearNotifications={handleClearNotifications}
               onAddSystemNotification={handleAddSystemNotification}
               isSidebarCollapsed={isSidebarCollapsed}
-              onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              onToggleSettings={() => setIsSettingsOpen(!isSettingsOpen)}
+              onToggleSidebar={handleToggleSidebar}
+              onToggleSettings={handleToggleSettings}
               onRegenerateResponse={handleRegenerateResponse}
               onSetFeedback={handleSetFeedback}
               onEditUserMessage={handleEditUserMessage}
@@ -1885,9 +1910,9 @@ export default function App() {
               bookmarkedMessages={bookmarkedMessages}
               isLoggedIn={isLoggedIn}
               profileDisplayNameProp={profileDisplayName}
-              onOpenLogin={() => setIsProfileOpen(true)}
+              onOpenLogin={handleOpenLogin}
               pendingPrompt={pendingPrompt}
-              onClearPendingPrompt={() => setPendingPrompt(null)}
+              onClearPendingPrompt={handleClearPendingPrompt}
               isPlus={isPlus}
               speakMessage={speakMessage}
               isPlayingAudio={isPlayingAudio}

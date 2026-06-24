@@ -885,25 +885,7 @@ const ChatInputForm = React.memo(function ChatInputForm({
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Auto-grow textarea height on content change (layout-optimized to eliminate layout thrashing lag during typing)
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
 
-    if (!inputText) {
-      textarea.style.height = "44px"; // Reset to default style height instantly without reading layouts
-      return;
-    }
-
-    // Run measurement and styling updates off-thread inside an animation frame
-    const frameId = requestAnimationFrame(() => {
-      textarea.style.height = "auto";
-      const measuredHeight = textarea.scrollHeight;
-      textarea.style.height = `${Math.min(measuredHeight, 180)}px`;
-    });
-
-    return () => cancelAnimationFrame(frameId);
-  }, [inputText]);
 
   // Clean recording interval on unmount
   useEffect(() => {
@@ -918,6 +900,13 @@ const ChatInputForm = React.memo(function ChatInputForm({
   useEffect(() => {
     if (pendingPrompt) {
       setInputText(pendingPrompt);
+      if (textareaRef.current) {
+        const el = textareaRef.current;
+        requestAnimationFrame(() => {
+          el.style.height = "44px";
+          el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
+        });
+      }
       onClearPendingPrompt?.();
     }
   }, [pendingPrompt, onClearPendingPrompt]);
@@ -1017,6 +1006,7 @@ const ChatInputForm = React.memo(function ChatInputForm({
             onSendMessage(textToSend, attachedImages.length > 0 ? attachedImages : undefined, voiceData);
             
             setInputText("");
+            if (textareaRef.current) textareaRef.current.style.height = "44px";
             setAttachedImages([]);
             setVoiceBase64(null);
             setVoiceBlob(null);
@@ -1071,6 +1061,7 @@ const ChatInputForm = React.memo(function ChatInputForm({
       onSendMessage(textToSend, attachedImages.length > 0 ? attachedImages : undefined, mockWav);
       
       setInputText("");
+      if (textareaRef.current) textareaRef.current.style.height = "44px";
       setAttachedImages([]);
       setVoiceBase64(null);
       setVoiceBlob(null);
@@ -1122,6 +1113,7 @@ const ChatInputForm = React.memo(function ChatInputForm({
     onSendMessage(textToSend, attachedImages.length > 0 ? attachedImages : undefined, voiceBase64 || undefined);
     
     setInputText("");
+    if (textareaRef.current) textareaRef.current.style.height = "44px";
     setAttachedImages([]);
     setVoiceBase64(null);
     setVoiceBlob(null);
@@ -1202,7 +1194,14 @@ const ChatInputForm = React.memo(function ChatInputForm({
               ref={textareaRef}
               placeholder={isLoading ? "Mohon tunggu, Maria sedang memproses..." : "Tanya Maria..."}
               value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
+              onChange={(e) => {
+                setInputText(e.target.value);
+                const el = e.target;
+                requestAnimationFrame(() => {
+                  el.style.height = "44px";
+                  el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
+                });
+              }}
               onKeyDown={handleKeyDown}
               disabled={isLoading}
               aria-label="Input Chat Utama"
