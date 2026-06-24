@@ -277,6 +277,16 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
       });
     }
 
+    // Check if there is any multimodal content (images/audio) in the message parts
+    const hasMultimodal = balancedHistory.some((msg: any) => 
+      msg.parts && msg.parts.some((part: any) => part.inlineData)
+    );
+
+    let finalSystemInstruction = systemInstruction;
+    if (hasMultimodal && (isDeepSearchActive || isWebSearchActive)) {
+      finalSystemInstruction += `\n- CATATAN MULTIMODAL & PENCARIAN WEB: Pengguna telah mengunggah lampiran gambar atau audio. Karena batasan teknis dari Google Gemini API, fitur Google Search dinonaktifkan sementara khusus untuk pesan ini agar gambar/audio dapat diproses dengan sukses. Beritahu pengguna secara ramah tentang hal ini jika mereka secara spesifik menanyakan informasi eksternal real-time yang membutuhkan penelusuran internet.\n`;
+    }
+
     // Generate content with automated robust model fallback list in case of 503 or 429 overloads
     // We prioritize gemini-3.5-flash for the best quality and search capabilities
     const modelsToTry = [
@@ -340,9 +350,9 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
           modelName,
           balancedHistory,
           {
-            systemInstruction,
+            systemInstruction: finalSystemInstruction,
             temperature: tone === "Creative" ? 1.0 : tone === "Minimalist" ? 0.35 : 0.7,
-            tools: (isDeepSearchActive || isWebSearchActive) ? [{ googleSearch: {} }] : undefined
+            tools: (isDeepSearchActive || isWebSearchActive) && !hasMultimodal ? [{ googleSearch: {} }] : undefined
           },
           2 // up to 2 retry attempts
         );
@@ -387,9 +397,9 @@ Patuhi dan gunakan fakta-fakta di atas untuk menyelaraskan percakapan dengan keh
             modelName,
             singleShotPrompt,
             {
-              systemInstruction: systemInstruction + "\n- CATATAN KHUSUS: Layanan memori penuh sedang dialihkan ke batas hemat memori cadangan. Berikan respons mandiri yang bermutu.",
+              systemInstruction: finalSystemInstruction + "\n- CATATAN KHUSUS: Layanan memori penuh sedang dialihkan ke batas hemat memori cadangan. Berikan respons mandiri yang bermutu.",
               temperature: tone === "Creative" ? 1.0 : tone === "Minimalist" ? 0.35 : 0.7,
-              tools: (isDeepSearchActive || isWebSearchActive) ? [{ googleSearch: {} }] : undefined
+              tools: (isDeepSearchActive || isWebSearchActive) && !hasMultimodal ? [{ googleSearch: {} }] : undefined
             },
             2 // up to 2 retry attempts
           );

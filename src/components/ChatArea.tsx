@@ -1655,6 +1655,17 @@ export default function ChatArea({
                               <p className="text-xs text-red-650 leading-relaxed">
                                 {m.content}
                               </p>
+                              {onRegenerateResponse && (
+                                <button
+                                  type="button"
+                                  onClick={() => onRegenerateResponse(m.id)}
+                                  disabled={isLoading}
+                                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-100/80 hover:bg-red-200/90 text-red-750 transition-colors cursor-pointer border border-red-200/50 disabled:opacity-50 disabled:cursor-not-allowed select-none"
+                                >
+                                  <RefreshCcw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                                  <span>Coba Kirim Ulang</span>
+                                </button>
+                              )}
                             </div>
                           ) : (
                             <div className="space-y-2.5">

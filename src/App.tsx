@@ -1411,6 +1411,7 @@ export default function App() {
         isEdited: true,
         feedback: null,
         ...(updatedUserMsg.image ? { image: updatedUserMsg.image } : {}),
+        ...(updatedUserMsg.images && updatedUserMsg.images.length > 0 ? { images: updatedUserMsg.images } : {}),
         ...(updatedUserMsg.audio ? { audio: updatedUserMsg.audio } : {})
       }).catch(err => handleFirestoreError(err, OperationType.CREATE, `threads/${activeThreadId}/messages/${updatedUserMsg.id}`));
     }
