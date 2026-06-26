@@ -7,25 +7,98 @@
       if (typeof window !== "undefined") {
         window.__maria_ai_prod__ = true;
 
+        // Monkey-patch console methods to completely ignore HMR and websocket noise
+        const suppressLog = function(args, originalFn) {
+          try {
+            const joined = args.map(arg => {
+              if (typeof arg === 'string') return arg;
+              try { 
+                if (arg instanceof Event || (arg && arg.constructor && arg.constructor.name === 'CloseEvent')) {
+                  return 'websocket closeevent';
+                }
+                return JSON.stringify(arg); 
+              } catch(e) { 
+                return String(arg); 
+              }
+            }).join(' ').toLowerCase();
+
+            if (
+              joined.includes('websocket') || 
+              joined.includes('web socket') || 
+              joined.includes('failed to connect') || 
+              joined.includes('hmr') ||
+              joined.includes('closed without opened') ||
+              joined.includes('connection refused') ||
+              joined.includes('closeevent')
+            ) {
+              return; // Silently discard
+            }
+          } catch(e) {}
+          originalFn.apply(console, args);
+        };
+
+        const originalWarn = console.warn;
+        console.warn = function(...args) {
+          suppressLog(args, originalWarn);
+        };
+
+        const originalError = console.error;
+        console.error = function(...args) {
+          suppressLog(args, originalError);
+        };
+
         // Catch global unhandled promise rejections specifically for Vite websocket HMR disconnects
         window.addEventListener('unhandledrejection', function(event) {
-          const reason = event.reason;
-          const msg = (reason && (reason.message || reason.description || reason.toString())) || '';
-          if (msg.toLowerCase().includes('websocket') || msg.toLowerCase().includes('web socket') || msg.toLowerCase().includes('failed to connect')) {
-            event.preventDefault();
-            event.stopPropagation();
-            console.warn('Suppressed benign unhandled rejection:', msg);
-          }
+          try {
+            const reason = event.reason;
+            if (!reason) return;
+
+            // Check if it's a CloseEvent or Event from a WebSocket
+            const isWebSocketEvent = 
+              (reason instanceof Event && (reason.type === 'error' || reason.type === 'close')) ||
+              (reason.target && (reason.target instanceof WebSocket || (reason.target.constructor && reason.target.constructor.name === 'WebSocket'))) ||
+              (reason.constructor && (reason.constructor.name === 'CloseEvent' || reason.constructor.name === 'WebSocket'));
+
+            const msg = (reason.message || reason.description || String(reason) || '').toLowerCase();
+            const isWebSocketText = 
+              msg.includes('websocket') || 
+              msg.includes('web socket') || 
+              msg.includes('failed to connect') ||
+              msg.includes('closed without opened') ||
+              msg.includes('closeevent') ||
+              msg.includes('close event') ||
+              msg.includes('connection refused');
+
+            if (isWebSocketEvent || isWebSocketText) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+          } catch (e) {}
         }, true);
 
         // Catch global error events for websocket issues
         window.addEventListener('error', function(event) {
-          const msg = event.message || '';
-          if (msg.toLowerCase().includes('websocket') || msg.toLowerCase().includes('web socket')) {
-            event.preventDefault();
-            event.stopPropagation();
-            console.warn('Suppressed benign error:', msg);
-          }
+          try {
+            const error = event.error || event;
+            const isWebSocketEvent = 
+              (event.target && (event.target instanceof WebSocket || (event.target.constructor && event.target.constructor.name === 'WebSocket'))) ||
+              (error && error.constructor && (error.constructor.name === 'CloseEvent' || error.constructor.name === 'WebSocket'));
+
+            const msg = (event.message || (error && error.message) || String(error) || '').toLowerCase();
+            const isWebSocketText = 
+              msg.includes('websocket') || 
+              msg.includes('web socket') || 
+              msg.includes('failed to connect') ||
+              msg.includes('closed without opened') ||
+              msg.includes('closeevent') ||
+              msg.includes('close event') ||
+              msg.includes('connection refused');
+
+            if (isWebSocketEvent || isWebSocketText) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+          } catch(e) {}
         }, true);
 
         // Proxy WebSocket constructor to automatically catch and suppress connection error events
@@ -39,7 +112,6 @@
               });
               return ws;
             } catch (err) {
-              console.warn('Suppressed WebSocket construction error:', err);
               // Return a mock object if instantiation fails completely to avoid crashing the caller
               return {
                 addEventListener: function() {},
