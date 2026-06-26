@@ -501,7 +501,7 @@ export default function Sidebar({
               </svg>
             </div>
             <span className="font-display font-medium text-[17px] tracking-tight text-white flex items-center">
-              Maria-ai
+              Maria AI
             </span>
           </div>
 
