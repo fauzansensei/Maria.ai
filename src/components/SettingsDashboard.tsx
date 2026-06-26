@@ -303,8 +303,8 @@ export default function SettingsDashboard({
             <h2 className="text-[11px] font-extrabold text-zinc-350 tracking-widest uppercase">
               {activeTab === "profile" && "Manajemen Profil Saya"}
               {activeTab === "appearance" && "Kustomisasi Tema & Tampilan"}
-              {activeTab === "behavior" && "Perilaku & Gaya Berbicara Maria-ai"}
-              {activeTab === "memories" && "Memori Jangka Panjang Maria-ai"}
+              {activeTab === "behavior" && "Perilaku & Gaya Berbicara Maria AI"}
+              {activeTab === "memories" && "Memori Jangka Panjang Maria AI"}
               {activeTab === "notifications" && "Pengaturan & Simulasi Notifikasi"}
               {activeTab === "billing" && "Kelola Paket Maria Plus"}
               {activeTab === "privacy" && "Kerahasiaan & Kontrol Database"}
@@ -713,7 +713,7 @@ export default function SettingsDashboard({
                     <div className="space-y-0.5 max-w-[280px]">
                       <span className="text-zinc-200 font-bold text-[11px] block">Kebijakan Privasi (Privacy Policy)</span>
                       <span className="text-[9.5px] text-zinc-500 block leading-tight">
-                        Pelajari bagaimana kami mengumpulkan, menggunakan, dan melindungi data pribadi Kakak di Maria-ai.
+                        Pelajari bagaimana kami mengumpulkan, menggunakan, dan melindungi data pribadi Kakak di Maria AI.
                       </span>
                     </div>
                     <a
@@ -747,7 +747,7 @@ export default function SettingsDashboard({
                     <div className="space-y-0.5 max-w-[280px]">
                       <span className="text-zinc-200 font-bold text-[11px] block">Ketentuan Layanan (Terms of Service)</span>
                       <span className="text-[9.5px] text-zinc-500 block leading-tight">
-                        Syarat dan ketentuan dalam menggunakan layanan asisten cerdas Maria-ai.
+                        Syarat dan ketentuan dalam menggunakan layanan asisten cerdas Maria AI.
                       </span>
                     </div>
                     <a

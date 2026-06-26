@@ -6,7 +6,7 @@ export interface ElevenLabsVoice {
 }
 
 export const PRESET_VOICES: ElevenLabsVoice[] = [
-  { id: "EXAVITQu4vr4xnSDxMaL", name: "Maria-ai (Bella)", description: "Suara wanita lembut, ramah, dan bersahabat.", gender: "female" },
+  { id: "EXAVITQu4vr4xnSDxMaL", name: "Maria AI (Bella)", description: "Suara wanita lembut, ramah, dan bersahabat.", gender: "female" },
   { id: "21m05zct5ul7625L108I", name: "Rachel (Sweet)", description: "Suara wanita manis, tenang, cocok untuk asisten hangat.", gender: "female" },
   { id: "piTKgcLEGmPEe24W6339", name: "Nicole (Whisper)", description: "Suara wanita tenang, berbisik, cocok untuk meditasi.", gender: "female" },
   { id: "29vD33N1CtxCmqQRPOHJ", name: "Drew (News)", description: "Suara pria profesional cocok untuk berita atau diskusi teknis.", gender: "male" },

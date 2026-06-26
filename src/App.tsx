@@ -233,7 +233,7 @@ export default function App() {
         setIsProfileOpen(false);
         handleAddSystemNotification(
           "Masuk Berhasil",
-          `Selamat datang kembali di Maria-ai! Akun: ${user.email}`,
+          `Selamat datang kembali di Maria AI! Akun: ${user.email}`,
           "success"
         );
       }
@@ -689,7 +689,7 @@ export default function App() {
 
           handleAddSystemNotification(
             "Berhasil Masuk Akun",
-            `Sesi dipulihkan! Selamat datang ${finalDisplayName} @ Maria-ai (${finalEmail}).`,
+            `Sesi dipulihkan! Selamat datang ${finalDisplayName} @ Maria AI (${finalEmail}).`,
             "success"
           );
         }
@@ -743,7 +743,7 @@ export default function App() {
 
           handleAddSystemNotification(
             "Berhasil Masuk Akun",
-            `Selamat datang ${finalDisplayName} @ Maria-ai (${finalEmail})!`,
+            `Selamat datang ${finalDisplayName} @ Maria AI (${finalEmail})!`,
             "success"
           );
         }
@@ -1818,7 +1818,7 @@ export default function App() {
         <React.Suspense fallback={
           <div className="flex-grow flex flex-col items-center justify-center p-8 bg-[#0a0f18] text-slate-400">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500 mb-3" />
-            <p className="text-xs font-sans font-medium tracking-wide">Memuat Sistem Maria-ai...</p>
+            <p className="text-xs font-sans font-medium tracking-wide">Memuat Sistem Maria AI...</p>
           </div>
         }>
           {/* Far Left Sidebar: Beautiful Dark Maria Sidebar Vibe */}
@@ -2104,7 +2104,7 @@ export default function App() {
                 <div className="space-y-1">
                   <strong className="block text-[13px] font-bold text-zinc-50 tracking-tight leading-tight">Persetujuan Cookies & Privasi</strong>
                   <p className="text-[11px] text-zinc-300 leading-relaxed font-sans">
-                    Kami menggunakan cookies esensial untuk menyimpan sesi obrolan Anda dan meningkatkan keandalan navigasi di Maria-ai. Kakak dapat membaca selengkapnya pada draf <a href="/kebijakan-cookies.html" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline font-bold cursor-pointer transition-colors decoration-blue-400/40 hover:decoration-blue-300">Kebijakan Cookies</a> kami.
+                    Kami menggunakan cookies esensial untuk menyimpan sesi obrolan Anda dan meningkatkan keandalan navigasi di Maria AI. Kakak dapat membaca selengkapnya pada draf <a href="/kebijakan-cookies.html" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline font-bold cursor-pointer transition-colors decoration-blue-400/40 hover:decoration-blue-300">Kebijakan Cookies</a> kami.
                   </p>
                 </div>
               </div>

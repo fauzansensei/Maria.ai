@@ -425,7 +425,7 @@ export default function AuxiliaryModals({
                 <div className="p-6 flex flex-col space-y-5 w-full items-center text-center">
                   <div className="space-y-2 max-w-[280px] select-none">
                     <h4 className="font-sans font-extrabold text-white text-[15px] tracking-tight">
-                      Masuk ke Maria-ai
+                      Masuk ke Maria AI
                     </h4>
                     <p className="text-[11.5px] text-slate-400 font-medium leading-relaxed font-sans">
                       Masuk menggunakan akun Google Anda untuk menyimpan riwayat obrolan, preferensi asisten, dan asuransi memori secara otomatis.

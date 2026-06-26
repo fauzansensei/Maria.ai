@@ -362,7 +362,7 @@ export default function LibraryArea({
                 <div className="space-y-1">
                   <h4 className="text-xs font-bold text-white">Belum Ada Pesan Ditandai</h4>
                   <p className="text-[10px] text-[#64748b] leading-normal">
-                    Saat mengobrol dengan Maria-ai di ruang pesan, klik ikon <strong className="text-slate-300">Penanda</strong> di bawah balon chat jawaban Maria untuk menyimpannya di sini.
+                    Saat mengobrol dengan Maria AI di ruang pesan, klik ikon <strong className="text-slate-300">Penanda</strong> di bawah balon chat jawaban Maria untuk menyimpannya di sini.
                   </p>
                 </div>
               </div>
@@ -378,7 +378,7 @@ export default function LibraryArea({
                         <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase ${
                           msg.role === "assistant" ? "bg-emerald-500/10 text-emerald-400" : "bg-blue-500/10 text-blue-400"
                         }`}>
-                          {msg.role === "assistant" ? "Maria-ai" : "Anda"}
+                          {msg.role === "assistant" ? "Maria AI" : "Anda"}
                         </span>
                         <span className="text-slate-500 font-bold font-mono">ID: {msg.id.slice(0, 8)}</span>
                       </div>
@@ -721,7 +721,7 @@ export default function LibraryArea({
                         type="button"
                         onClick={() => {
                           if (isImage) {
-                            alert("Berkas Gambar Anda siap diakses. Sampaikan keluhan atau rujukan visual kapan saja di forum chat Maria-ai ✨");
+                            alert("Berkas Gambar Anda siap diakses. Sampaikan keluhan atau rujukan visual kapan saja di forum chat Maria AI ✨");
                           } else {
                             onUsePromptFormula(`Tolong bacakan dokumen rujukan saya berikut ini dan berikan review SWOT mendalam:\n\n[Isi dari ${file.name}]`);
                           }
