@@ -1558,7 +1558,7 @@ export default function ChatArea({
               <h2 className="font-sans font-bold text-slate-800 text-2xl sm:text-3xl tracking-tight leading-tight select-text mb-2">
                 Dari mana kita harus mulai?
               </h2>
-              <p className="text-xs sm:text-[12.5px] text-slate-500 font-medium max-w-sm mx-auto leading-relaxed mt-1">
+              <p className="text-xs sm:text-sm text-slate-500 font-normal max-w-sm mx-auto leading-relaxed mt-2 tracking-normal select-text">
                 Aplikasi asisten cerdas buatan yang membantu Anda menjadwalkan tugas, mencari ide kreatif, dan merangkum konsep pemrograman secara presisi. Mulailah percakapan dengan Maria.ai.
               </p>
             </div>
