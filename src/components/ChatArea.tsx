@@ -36,7 +36,8 @@ import {
   Twitter,
   Globe,
   ExternalLink,
-  Laptop
+  Laptop,
+  Square
 } from "lucide-react";
 
 interface ChatAreaProps {
@@ -69,6 +70,7 @@ interface ChatAreaProps {
   speakMessage?: (text: string) => void;
   isPlayingAudio?: boolean;
   stopSpeech?: () => void;
+  onStopGeneration?: () => void;
 }
 
 // Config lists for resolving color schema & icons for requested external web apps
@@ -859,6 +861,7 @@ interface ChatInputFormProps {
   onToggleDeepSearch?: () => void;
   webSearchActive: boolean;
   onToggleWebSearch?: () => void;
+  onStopGeneration?: () => void;
 }
 
 const ChatInputForm = React.memo(function ChatInputForm({
@@ -872,6 +875,7 @@ const ChatInputForm = React.memo(function ChatInputForm({
   onToggleDeepSearch,
   webSearchActive,
   onToggleWebSearch,
+  onStopGeneration,
 }: ChatInputFormProps) {
   const [inputText, setInputText] = useState("");
   const [attachedImages, setAttachedImages] = useState<string[]>([]);
@@ -1272,18 +1276,33 @@ const ChatInputForm = React.memo(function ChatInputForm({
               </div>
 
               {/* Right Action: Send Button */}
-              <button
-                type="submit"
-                disabled={(!inputText.trim() && attachedImages.length === 0 && !voiceBase64) || isLoading}
-                aria-label="Kirim Pesan"
-                className={`p-2 rounded-xl flex items-center justify-center cursor-pointer transition-all duration-205 text-white ${
-                  (inputText.trim() || attachedImages.length > 0 || voiceBase64) && !isLoading
-                    ? `${themeStyle.primary.split(" ")[0]} shadow-sm hover:scale-105 active:scale-95`
-                    : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                }`}
-              >
-                <Send id="icon-send-b" className="w-3.5 h-3.5" />
-              </button>
+              {isLoading ? (
+                <button
+                  type="button"
+                  onClick={onStopGeneration}
+                  aria-label="Hentikan Respons"
+                  className="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer transition-all duration-205 text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/50 active:scale-95 shadow-sm relative shrink-0"
+                  title="Hentikan generasi respon"
+                >
+                  {/* Rotating loader ring */}
+                  <div className="absolute inset-1 rounded-lg border-2 border-rose-600/20 border-t-rose-600 animate-spin"></div>
+                  {/* Stop Square icon inside */}
+                  <Square className="w-3 h-3 fill-rose-600 stroke-rose-600 z-10" />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={(!inputText.trim() && attachedImages.length === 0 && !voiceBase64)}
+                  aria-label="Kirim Pesan"
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-205 text-white shrink-0 ${
+                    (inputText.trim() || attachedImages.length > 0 || voiceBase64)
+                      ? `${themeStyle.primary.split(" ")[0]} shadow-sm hover:scale-105 active:scale-95 cursor-pointer`
+                      : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                  }`}
+                >
+                  <Send id="icon-send-b" className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -1332,6 +1351,7 @@ export default function ChatArea({
   speakMessage,
   isPlayingAudio,
   stopSpeech,
+  onStopGeneration,
 }: ChatAreaProps) {
   const [isCopiedId, setIsCopiedId] = useState<string | null>(null);
   const [isWidgetPanelExpanded, setIsWidgetPanelExpanded] = useState(true);
@@ -1895,6 +1915,7 @@ export default function ChatArea({
             onToggleDeepSearch={onToggleDeepSearch}
             webSearchActive={webSearchActive}
             onToggleWebSearch={onToggleWebSearch}
+            onStopGeneration={onStopGeneration}
           />
         </div>
 

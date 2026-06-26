@@ -391,6 +391,7 @@ export default function App() {
   const [savedChats, setSavedChats] = useState<any[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
+  const abortControllerRef = React.useRef<AbortController | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false); // Controls responsive drawer tracker
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isCookieConsentVisible, setIsCookieConsentVisible] = useState<boolean>(false);
@@ -1068,6 +1069,14 @@ export default function App() {
     setNotifications([]);
   }, []);
 
+  const handleStopGeneration = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsLoading(false);
+  }, []);
+
   // Handles sending messages to the Express backend proxy endpoint
   const handleSendMessage = useCallback(async (text: string, images?: string[], audio?: string) => {
     if (isLoading) return;
@@ -1129,11 +1138,15 @@ export default function App() {
     }
 
     try {
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        signal: controller.signal,
         body: JSON.stringify({
           messages: postMessages,
           settings: {
@@ -1226,6 +1239,10 @@ export default function App() {
         );
       }
     } catch (networkError: any) {
+      if (networkError.name === "AbortError") {
+        console.log("Response generation aborted by user.");
+        return;
+      }
       console.error("Network Error:", networkError);
       const errorMsg: Message = {
         id: "msg-" + Date.now() + "-error",
@@ -1255,6 +1272,7 @@ export default function App() {
       );
     } finally {
       setIsLoading(false);
+      abortControllerRef.current = null;
     }
   }, [isLoading, activeThreadId, isLoggedIn, messages, settings, profileDisplayName, memories, deepSearchActive, webSearchActive, handleAddSystemNotification, speakMessage]);
 
@@ -1287,11 +1305,15 @@ export default function App() {
     setMessages(precedingMessages);
 
     try {
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        signal: controller.signal,
         body: JSON.stringify({
           messages: precedingMessages,
           settings: {
@@ -1376,6 +1398,10 @@ export default function App() {
         setMessages((prev) => prev.some(m => m.id === errorMsg.id) ? prev : [...prev, errorMsg]);
       }
     } catch (networkError: any) {
+      if (networkError.name === "AbortError") {
+        console.log("Regeneration aborted by user.");
+        return;
+      }
       console.error("Regenerate Error:", networkError);
       const errorMsg: Message = {
         id: "msg-" + Date.now() + "-error",
@@ -1399,6 +1425,7 @@ export default function App() {
       setMessages((prev) => prev.some(m => m.id === errorMsg.id) ? prev : [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
+      abortControllerRef.current = null;
     }
   }, [isLoading, messages, isLoggedIn, activeThreadId, settings, profileDisplayName, memories, deepSearchActive, webSearchActive, speakMessage, handleAddSystemNotification]);
 
@@ -1458,11 +1485,15 @@ export default function App() {
     setMessages(nextMessages);
 
     try {
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        signal: controller.signal,
         body: JSON.stringify({
           messages: nextMessages,
           settings: {
@@ -1532,6 +1563,10 @@ export default function App() {
         setMessages((prev) => prev.some(m => m.id === errorMsg.id) ? prev : [...prev, errorMsg]);
       }
     } catch (networkError: any) {
+      if (networkError.name === "AbortError") {
+        console.log("Edit message generation aborted by user.");
+        return;
+      }
       console.error("Edit Message Error:", networkError);
       const errorMsg: Message = {
         id: "msg-" + Date.now() + "-error",
@@ -1555,6 +1590,7 @@ export default function App() {
       setMessages((prev) => prev.some(m => m.id === errorMsg.id) ? prev : [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
+      abortControllerRef.current = null;
     }
   }, [isLoading, messages, isLoggedIn, activeThreadId, settings, profileDisplayName, memories, deepSearchActive, webSearchActive, speakMessage, handleAddSystemNotification]);
 
@@ -1917,6 +1953,7 @@ export default function App() {
               speakMessage={speakMessage}
               isPlayingAudio={isPlayingAudio}
               stopSpeech={stopSpeech}
+              onStopGeneration={handleStopGeneration}
             />
           )}
 
