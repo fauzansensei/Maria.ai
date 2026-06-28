@@ -1410,6 +1410,9 @@ export default function ChatArea({
   // Count unread notifications
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  const VISIBLE_LIMIT = 30;
+  const visibleMessages = messages.slice(-VISIBLE_LIMIT);
+
   return (
     <div className="flex h-full bg-slate-50 relative overflow-hidden select-none font-sans">
       
@@ -1586,7 +1589,7 @@ export default function ChatArea({
             
             // Conversation active logs rendering
             <div className="max-w-3xl mx-auto space-y-6">
-              {messages.map((m) => {
+              {visibleMessages.map((m) => {
                 const isAi = m.role === "assistant";
                 return (
                   <div
