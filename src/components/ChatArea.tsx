@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useMemo } from "react";
 import { Message, PromptStarter, UserSettings, AppNotification } from "../types";
 import { PROMPT_STARTERS, THEME_OPTIONS } from "../constants";
 import { compressImage } from "../utils";
@@ -1405,7 +1405,10 @@ export default function ChatArea({
   const greetingName = isLoggedIn ? (profileDisplayNameProp || settings.username || "User") : "User";
 
   // Resolve active theme style
-  const themeStyle = THEME_OPTIONS.find(t => t.value === settings.theme) || THEME_OPTIONS[0];
+  const themeStyle = useMemo(() => 
+    THEME_OPTIONS.find(t => t.value === settings.theme) || THEME_OPTIONS[0],
+    [settings.theme]
+  );
 
   // Count unread notifications
   const unreadCount = notifications.filter(n => !n.read).length;
