@@ -1,0 +1,6 @@
+{
+  "name": "AuraAI - Asisten AI Cerdas",
+  "description": "Asisten AI modern dan interaktif dengan percakapan cerdas, penalaran mendalam, pencarian Google real-time, Google Maps, analisis sains, dan penyimpanan riwayat obrolan aman dengan Firebase.",
+  "requestFramePermissions": ["geolocation", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

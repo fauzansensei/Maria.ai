@@ -1,0 +1,146 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default Deny All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Connection Health Verification Probe
+    match /test/{testId} {
+      allow get: if true;
+    }
+
+    // Security Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // User Profile Validation
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['userId', 'email']) &&
+             data.keys().hasOnly(['userId', 'displayName', 'email', 'photoURL', 'theme', 'createdAt', 'updatedAt']) &&
+             data.userId == request.auth.uid &&
+             data.email is string && data.email.size() <= 150 &&
+             (!('displayName' in data) || data.displayName == null || (data.displayName is string && data.displayName.size() <= 100)) &&
+             (!('photoURL' in data) || data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 500)) &&
+             (!('theme' in data) || data.theme == null || (data.theme in ['light', 'dark', 'system']));
+    }
+
+    // Conversation Validation
+    function isValidConversation(data) {
+      return data.keys().hasAll(['id', 'userId', 'title']) &&
+             data.keys().hasOnly(['id', 'userId', 'title', 'model', 'mode', 'createdAt', 'updatedAt']) &&
+             data.userId == request.auth.uid &&
+             data.id is string && data.id.size() <= 128 &&
+             data.title is string && data.title.size() <= 200 &&
+             (!('model' in data) || data.model == null || (data.model is string && data.model.size() <= 100)) &&
+             (!('mode' in data) || data.mode == null || (data.mode is string && data.mode.size() <= 50));
+    }
+
+    // Message Validation
+    function isValidMessage(data) {
+      return data.keys().hasAll(['id', 'conversationId', 'userId', 'role', 'content']) &&
+             data.keys().hasOnly(['id', 'conversationId', 'userId', 'role', 'content', 'model', 'mode', 'imageUri', 'thinkingProcess', 'groundingLinks', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.id is string && data.id.size() <= 128 &&
+             data.conversationId is string && data.conversationId.size() <= 128 &&
+             data.role in ['user', 'model', 'system'] &&
+             data.content is string && data.content.size() <= 50000 &&
+             (!('model' in data) || data.model == null || (data.model is string && data.model.size() <= 100)) &&
+             (!('mode' in data) || data.mode == null || (data.mode is string && data.mode.size() <= 50)) &&
+             (!('thinkingProcess' in data) || data.thinkingProcess == null || (data.thinkingProcess is string && data.thinkingProcess.size() <= 50000)) &&
+             (!('imageUri' in data) || data.imageUri == null || (data.imageUri is string && data.imageUri.size() <= 5000));
+    }
+
+    // 1. User Profiles Collection
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming());
+      
+      allow update: if isOwner(userId) && isValidId(userId) &&
+                    isValidUserProfile(incoming()) &&
+                    incoming().userId == existing().userId &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'theme', 'updatedAt']);
+                    
+      allow delete: if isOwner(userId) && isValidId(userId);
+    }
+
+    // 2. Conversations Collection
+    match /conversations/{conversationId} {
+      allow get: if isSignedIn() && isValidId(conversationId) && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn() && isValidId(conversationId) &&
+                    isValidConversation(incoming()) &&
+                    incoming().userId == request.auth.uid &&
+                    incoming().id == conversationId;
+                    
+      allow update: if isSignedIn() && isValidId(conversationId) &&
+                    resource.data.userId == request.auth.uid &&
+                    isValidConversation(incoming()) &&
+                    incoming().userId == existing().userId &&
+                    incoming().id == existing().id &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['title', 'mode', 'model', 'updatedAt']);
+                    
+      allow delete: if isSignedIn() && isValidId(conversationId) &&
+                    (resource == null || resource.data.userId == request.auth.uid);
+
+      // 3. Messages Sub-Collection
+      match /messages/{messageId} {
+        allow get: if isSignedIn() && isValidId(conversationId) && isValidId(messageId) &&
+                   (
+                     (resource != null && resource.data.userId == request.auth.uid) ||
+                     (exists(/databases/$(database)/documents/conversations/$(conversationId)) &&
+                      get(/databases/$(database)/documents/conversations/$(conversationId)).data.userId == request.auth.uid)
+                   );
+                   
+        allow list: if isSignedIn() && isValidId(conversationId) &&
+                    (
+                      (resource != null && resource.data.userId == request.auth.uid) ||
+                      (exists(/databases/$(database)/documents/conversations/$(conversationId)) &&
+                       get(/databases/$(database)/documents/conversations/$(conversationId)).data.userId == request.auth.uid)
+                    );
+                    
+        allow create: if isSignedIn() && isValidId(conversationId) && isValidId(messageId) &&
+                      isValidMessage(incoming()) &&
+                      incoming().conversationId == conversationId &&
+                      incoming().id == messageId &&
+                      incoming().userId == request.auth.uid &&
+                      (
+                        !exists(/databases/$(database)/documents/conversations/$(conversationId)) ||
+                        get(/databases/$(database)/documents/conversations/$(conversationId)).data.userId == request.auth.uid
+                      );
+                      
+        allow update: if false; // Messages are immutable
+        
+        allow delete: if isSignedIn() && isValidId(conversationId) && isValidId(messageId) &&
+                      (
+                        resource == null ||
+                        resource.data.userId == request.auth.uid ||
+                        (exists(/databases/$(database)/documents/conversations/$(conversationId)) &&
+                         get(/databases/$(database)/documents/conversations/$(conversationId)).data.userId == request.auth.uid)
+                      );
+      }
+    }
+  }
+}

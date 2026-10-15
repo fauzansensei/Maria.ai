@@ -1,0 +1,6 @@
+{
+  "summary": "Rencana implementasi perombakan visual dan fungsional Maria AI agar 100% presisi dan selaras dengan tata letak screenshot acuan (Screenshot_20261015-150322.jpg) dan kode sumber referensi:\n- Mengadopsi struktur Sidebar gelap modern (#0e0f12) dengan logo M, tombol 'New Chat' hijau emerald, menu navigasi Library, Discover, dan Pengaturan.\n- Menambahkan popover menu titik-tiga pada riwayat chat (Bagikan, Arsipkan, Sematkan, Ganti nama, Hapus).\n- Mengintegrasikan kartu promosi/status 'MARIA Plus Aktif' dan cell profil akun pengguna di bagian bawah sidebar.\n- Menambahkan footer link resmi: Keamanan, Privasi, Ketentuan.\n- Menyediakan seluruh tampilan halaman pendukung: Library Media & File, Discover Hub Agen AI, Settings Dashboard 7-tab, serta badge DEFCON 5 di header chat.\n- Memastikan integrasi data Firebase Firestore tetap persisten dan terhubung dengan aman.",
+  "updatedAt": "2026-10-15T08:10:48.742307847Z",
+  "requestFeedback": true,
+  "userFacing": true
+}

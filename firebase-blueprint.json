@@ -1,0 +1,157 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account settings and profile details",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The unique Firebase Auth UID"
+        },
+        "displayName": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "The user's display name"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 150,
+          "description": "The user's registered email"
+        },
+        "photoURL": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Avatar photo URL"
+        },
+        "theme": {
+          "type": "string",
+          "enum": ["light", "dark", "system"],
+          "description": "Selected theme mode"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last update"
+        }
+      },
+      "required": ["userId", "email", "createdAt", "updatedAt"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "A chat thread containing multiple turns",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique conversation ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner user UID"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Title or summary of conversation"
+        },
+        "model": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "The primary Gemini model used"
+        },
+        "mode": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Conversation mode (general, thinking, fast, search, maps, image, science)"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when conversation began"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of most recent activity"
+        }
+      },
+      "required": ["id", "userId", "title", "createdAt", "updatedAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A single prompt or response turn in a conversation",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique message ID"
+        },
+        "conversationId": {
+          "type": "string",
+          "description": "Parent conversation ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Sender UID or owner UID"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["user", "model", "system"],
+          "description": "Message role"
+        },
+        "content": {
+          "type": "string",
+          "maxLength": 50000,
+          "description": "Text content of the message"
+        },
+        "model": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Model used for model turns"
+        },
+        "mode": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Mode of the turn"
+        },
+        "imageUri": {
+          "type": "string",
+          "maxLength": 5000,
+          "description": "Optional generated image or uploaded image"
+        },
+        "thinkingProcess": {
+          "type": "string",
+          "maxLength": 50000,
+          "description": "Model internal reasoning thinking trace"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp message was sent"
+        }
+      },
+      "required": ["id", "conversationId", "userId", "role", "content", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Private user profile records"
+    },
+    "/conversations/{conversationId}": {
+      "schema": "Conversation",
+      "description": "Conversations stored per user"
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Chat messages within a conversation"
+    }
+  }
+}

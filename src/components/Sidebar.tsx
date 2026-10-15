@@ -1,0 +1,433 @@
+import React, { useState } from 'react';
+import {
+  MessageSquarePlus,
+  Compass,
+  Bookmark,
+  Settings,
+  Search,
+  MoreHorizontal,
+  ChevronLeft,
+  ChevronsUpDown,
+  Sparkles,
+  Pin,
+  X,
+  LogIn,
+  LogOut,
+  ShieldCheck,
+  Check,
+} from 'lucide-react';
+import { Conversation } from '../types/index.ts';
+import { useAuth } from '../context/AuthContext.tsx';
+import { MariaLogo } from './MariaLogo.tsx';
+import { ChatPopover } from './ChatPopover.tsx';
+
+interface SidebarProps {
+  conversations: Conversation[];
+  activeConvId: string | null;
+  onSelectConversation: (id: string) => void;
+  onNewConversation: () => void;
+  onDeleteConversation: (id: string) => void;
+  onRenameConversation: (id: string, newTitle: string) => void;
+  onTogglePinConversation: (id: string) => void;
+  onArchiveConversation: (id: string) => void;
+  isOpen: boolean;
+  onClose: () => void;
+  activeView: 'chat' | 'library' | 'discover';
+  onNavigateView: (view: 'chat' | 'library' | 'discover') => void;
+  onOpenSettings: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({
+  conversations,
+  activeConvId,
+  onSelectConversation,
+  onNewConversation,
+  onDeleteConversation,
+  onRenameConversation,
+  onTogglePinConversation,
+  onArchiveConversation,
+  isOpen,
+  onClose,
+  activeView,
+  onNavigateView,
+  onOpenSettings,
+}) => {
+  const { user, signIn, signOut } = useAuth();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Floating Popover State
+  const [popoverTarget, setPopoverTarget] = useState<{
+    id: string;
+    isPinned: boolean;
+    pos: { top: number; left: number };
+  } | null>(null);
+
+  // Renaming inline state
+  const [editingConvId, setEditingConvId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+
+  // Account menu toggle
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
+
+  const filteredConversations = conversations.filter((c) =>
+    c.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleOpenPopover = (
+    e: React.MouseEvent,
+    convId: string,
+    isPinned = false
+  ) => {
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setPopoverTarget({
+      id: convId,
+      isPinned,
+      pos: { top: rect.bottom + 4, left: rect.left - 150 },
+    });
+  };
+
+  const handleStartRename = (convId: string, currentTitle: string) => {
+    setEditingConvId(convId);
+    setEditTitle(currentTitle);
+  };
+
+  const handleSaveRename = (convId: string) => {
+    if (editTitle.trim()) {
+      onRenameConversation(convId, editTitle.trim());
+    }
+    setEditingConvId(null);
+  };
+
+  const handleShare = (conv: Conversation) => {
+    if (navigator.share) {
+      navigator.share({
+        title: conv.title,
+        text: `Lihat percakapan ini di Maria AI: "${conv.title}"`,
+        url: window.location.href,
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(
+        `Maria AI Percakapan: "${conv.title}"\n${window.location.href}`
+      );
+      alert('Tautan percakapan berhasil disalin ke papan klip!');
+    }
+  };
+
+  return (
+    <>
+      {/* Mobile Backdrop */}
+      {isOpen && (
+        <div
+          onClick={onClose}
+          className="fixed inset-0 z-40 bg-black/75 backdrop-blur-xs lg:hidden transition-opacity"
+        />
+      )}
+
+      {/* Sidebar Container */}
+      <aside
+        className={`fixed lg:static inset-y-0 left-0 z-40 w-72 sm:w-80 bg-[#0e0f12] text-neutral-200 border-r border-[#1e202a] flex flex-col transition-transform duration-300 ease-in-out select-none shadow-2xl lg:shadow-none ${
+          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
+      >
+        {/* Header Atas: [M] Maria AI + Arrow Left */}
+        <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#1b1c26] bg-[#111218]">
+          <div className="flex items-center gap-2.5">
+            <MariaLogo size="sm" glow={true} />
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h1 className="font-bold text-sm tracking-tight text-white">Maria AI</h1>
+                <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-[#20a66a]/15 text-[#34d399] border border-[#20a66a]/30">
+                  v3.8
+                </span>
+              </div>
+              <p className="text-[10px] text-neutral-400">Intelligent Companion</p>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            title="Tutup / Lipat Sidebar"
+            className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-[#1f212f] transition-colors lg:flex"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Action Button: Emerald Green "New Chat" */}
+        <div className="p-3.5 space-y-2 bg-[#0e0f12]">
+          <button
+            onClick={() => {
+              onNewConversation();
+              onNavigateView('chat');
+              if (window.innerWidth < 1024) onClose();
+            }}
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#20a66a] hover:bg-[#1a8c59] text-white font-bold text-xs tracking-wide shadow-lg shadow-[#20a66a]/25 transition-all duration-200 active:scale-[0.98]"
+          >
+            <MessageSquarePlus className="w-4 h-4" />
+            <span>New Chat</span>
+          </button>
+
+          {/* Primary Navigation: Library, Discover, Pengaturan */}
+          <div className="space-y-1 pt-1">
+            <button
+              onClick={() => {
+                onNavigateView('library');
+                if (window.innerWidth < 1024) onClose();
+              }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+                activeView === 'library'
+                  ? 'bg-[#1c1e2a] text-[#34d399] font-semibold border border-[#292c3d]'
+                  : 'text-neutral-300 hover:bg-[#161722] hover:text-white'
+              }`}
+            >
+              <Bookmark className="w-4 h-4 text-emerald-400" />
+              <span>Library</span>
+            </button>
+
+            <button
+              onClick={() => {
+                onNavigateView('discover');
+                if (window.innerWidth < 1024) onClose();
+              }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+                activeView === 'discover'
+                  ? 'bg-[#1c1e2a] text-purple-300 font-semibold border border-[#292c3d]'
+                  : 'text-neutral-300 hover:bg-[#161722] hover:text-white'
+              }`}
+            >
+              <Compass className="w-4 h-4 text-purple-400" />
+              <span>Discover</span>
+            </button>
+
+            <button
+              onClick={() => {
+                onOpenSettings();
+              }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-neutral-300 hover:bg-[#161722] hover:text-white transition-all"
+            >
+              <Settings className="w-4 h-4 text-neutral-400" />
+              <span>Pengaturan</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Riwayat Chat Header & Search */}
+        <div className="px-3.5 pb-2 space-y-2">
+          <div className="flex items-center justify-between text-[11px] font-bold tracking-wider text-neutral-400 uppercase pt-2">
+            <span>RIWAYAT CHAT</span>
+            <span className="text-[10px] bg-[#1a1c27] px-2 py-0.5 rounded-full text-neutral-400 border border-[#262838]">
+              {conversations.length}
+            </span>
+          </div>
+
+          {/* Search Box */}
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari riwayat percakapan..."
+              className="w-full pl-9 pr-7 py-2 bg-[#14151e] border border-[#222432] rounded-xl text-xs text-neutral-100 placeholder-neutral-500 focus:outline-none focus:border-[#20a66a] transition-all"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Conversation List */}
+        <div className="flex-1 overflow-y-auto px-2.5 space-y-1">
+          {filteredConversations.length === 0 ? (
+            <div className="py-12 text-center text-xs text-neutral-500 px-4 leading-relaxed">
+              {searchQuery
+                ? 'Tidak ada riwayat percakapan yang cocok dengan pencarian.'
+                : 'Belum ada obrolan. Mulai percakapan pertama Anda!'}
+            </div>
+          ) : (
+            filteredConversations.map((conv) => {
+              const isActive = conv.id === activeConvId && activeView === 'chat';
+              const isEditing = editingConvId === conv.id;
+
+              return (
+                <div
+                  key={conv.id}
+                  onClick={() => {
+                    onSelectConversation(conv.id);
+                    onNavigateView('chat');
+                    if (window.innerWidth < 1024) onClose();
+                  }}
+                  className={`group relative flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl cursor-pointer text-xs transition-all ${
+                    isActive
+                      ? 'bg-[#181a25] text-white font-medium border border-[#2c2f42] shadow-sm'
+                      : 'text-neutral-400 hover:bg-[#14151e] hover:text-neutral-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-[#20a66a]/60 group-hover:bg-[#20a66a]" />
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editTitle}
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        onBlur={() => handleSaveRename(conv.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveRename(conv.id);
+                          if (e.key === 'Escape') setEditingConvId(null);
+                        }}
+                        className="bg-black border border-[#20a66a] px-1.5 py-0.5 rounded text-xs text-white outline-none w-full"
+                      />
+                    ) : (
+                      <span className="truncate">{conv.title}</span>
+                    )}
+                  </div>
+
+                  {/* Three-dots Menu Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => handleOpenPopover(e, conv.id, false)}
+                    title="Opsi obrolan"
+                    className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-white rounded hover:bg-[#222536] transition-all shrink-0"
+                  >
+                    <MoreHorizontal className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Sticky Footer: MARIA Plus Banner & Account Cell */}
+        <div className="p-3 border-t border-[#1b1c26] bg-[#111218] space-y-2.5">
+          {/* MARIA Plus Card Banner */}
+          <div className="p-3 rounded-2xl bg-gradient-to-r from-[#201235] via-[#2a1746] to-[#18112b] border border-[#53268e]/50 shadow-md">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-bold text-[#d8b4fe] flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-[#c084fc]" />
+                MARIA Plus Aktif
+              </span>
+              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-[#7c3aed]/30 text-[#e9d5ff]">
+                PRO
+              </span>
+            </div>
+            <p className="text-[11px] text-neutral-300 leading-tight">
+              Anda menikmati akses prioritas tinggi tanpa batas.
+            </p>
+          </div>
+
+          {/* User Account Cell with dropdown */}
+          <div className="relative">
+            <div
+              onClick={() => setShowAccountMenu((prev) => !prev)}
+              className="flex items-center justify-between p-2 rounded-xl bg-[#151722] hover:bg-[#1a1c2b] border border-[#26283a] cursor-pointer transition-colors"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                {user?.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt={user.displayName || 'User'}
+                    className="w-8 h-8 rounded-lg object-cover ring-1 ring-[#20a66a]/40 shrink-0"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#20a66a] to-[#10b981] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-inner">
+                    {(user?.displayName || user?.email || 'Basit')[0].toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-white truncate">
+                    {user?.displayName || 'basit fauzan'}
+                  </div>
+                  <div className="text-[10px] text-neutral-400 truncate">
+                    {user?.email || 'basitfauzan42@gmail.com'}
+                  </div>
+                </div>
+              </div>
+
+              <ChevronsUpDown className="w-4 h-4 text-neutral-400 shrink-0" />
+            </div>
+
+            {/* Account Quick Menu Popover */}
+            {showAccountMenu && (
+              <div className="absolute bottom-full left-0 right-0 mb-2 bg-[#171924] border border-[#2b2d40] rounded-xl shadow-2xl p-1.5 text-xs text-neutral-200 space-y-1 z-50">
+                <div className="px-3 py-1.5 text-[11px] text-neutral-400 border-b border-[#252737]">
+                  Status: <span className="text-[#34d399] font-medium">Cloud Firestore Terhubung</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowAccountMenu(false);
+                    onOpenSettings();
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#232537] text-left transition-colors"
+                >
+                  <Settings className="w-3.5 h-3.5 text-neutral-400" />
+                  <span>Pengaturan Akun</span>
+                </button>
+                {user ? (
+                  <button
+                    onClick={() => {
+                      setShowAccountMenu(false);
+                      signOut();
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-rose-500/15 text-rose-400 text-left transition-colors"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Keluar Akun</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setShowAccountMenu(false);
+                      signIn();
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#20a66a]/20 text-[#34d399] text-left transition-colors"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    <span>Masuk dengan Google</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Legal and Security Footer Links */}
+          <div className="text-[10px] text-neutral-500 text-center flex items-center justify-center gap-2 pt-0.5">
+            <span className="hover:text-neutral-400 cursor-pointer">Keamanan</span>
+            <span>•</span>
+            <span className="hover:text-neutral-400 cursor-pointer">Privasi</span>
+            <span>•</span>
+            <span className="hover:text-neutral-400 cursor-pointer">Ketentuan</span>
+          </div>
+        </div>
+      </aside>
+
+      {/* Floating Popover on Conversation */}
+      {popoverTarget && (
+        <ChatPopover
+          isOpen={true}
+          position={popoverTarget.pos}
+          isPinned={popoverTarget.isPinned}
+          onClose={() => setPopoverTarget(null)}
+          onShare={() => {
+            const conv = conversations.find((c) => c.id === popoverTarget.id);
+            if (conv) handleShare(conv);
+          }}
+          onArchive={() => onArchiveConversation(popoverTarget.id)}
+          onTogglePin={() => onTogglePinConversation(popoverTarget.id)}
+          onRename={() => {
+            const conv = conversations.find((c) => c.id === popoverTarget.id);
+            if (conv) handleStartRename(conv.id, conv.title);
+          }}
+          onDelete={() => onDeleteConversation(popoverTarget.id)}
+        />
+      )}
+    </>
+  );
+};
