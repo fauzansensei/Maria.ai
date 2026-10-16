@@ -4,12 +4,14 @@ interface MariaLogoProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'hero';
   className?: string;
   glow?: boolean;
+  withOnlineDot?: boolean;
 }
 
 export const MariaLogo: React.FC<MariaLogoProps> = ({
   size = 'md',
   className = '',
   glow = false,
+  withOnlineDot = false,
 }) => {
   const sizeMap = {
     xs: 'w-6 h-6',
@@ -17,7 +19,7 @@ export const MariaLogo: React.FC<MariaLogoProps> = ({
     md: 'w-10 h-10',
     lg: 'w-12 h-12',
     xl: 'w-16 h-16',
-    hero: 'w-24 h-24 sm:w-28 sm:h-28',
+    hero: 'w-20 h-20 sm:w-24 sm:h-24',
   };
 
   const currentSize = sizeMap[size];
@@ -25,7 +27,7 @@ export const MariaLogo: React.FC<MariaLogoProps> = ({
   return (
     <div
       className={`relative inline-flex items-center justify-center shrink-0 ${currentSize} ${className} ${
-        glow ? 'drop-shadow-[0_0_15px_rgba(32,166,106,0.35)]' : ''
+        glow ? 'drop-shadow-[0_4px_16px_rgba(20,24,38,0.25)]' : ''
       }`}
     >
       <svg
@@ -35,56 +37,64 @@ export const MariaLogo: React.FC<MariaLogoProps> = ({
         className="w-full h-full"
       >
         <defs>
-          <linearGradient id="maria-bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#1e222d" />
-            <stop offset="50%" stopColor="#141720" />
-            <stop offset="100%" stopColor="#0d0f14" />
-          </linearGradient>
-          <linearGradient id="maria-emerald" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#34d399" />
-            <stop offset="50%" stopColor="#20a66a" />
-            <stop offset="100%" stopColor="#059669" />
-          </linearGradient>
-          <linearGradient id="maria-accent" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="100%" stopColor="#a7f3d0" />
+          <linearGradient id="maria-tile-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1e2538" />
+            <stop offset="50%" stopColor="#151b2c" />
+            <stop offset="100%" stopColor="#0f1422" />
           </linearGradient>
         </defs>
 
-        {/* Outer Rounded Geometric Tile */}
+        {/* Outer Rounded Dark Squircle Tile */}
         <rect
-          x="4"
-          y="4"
-          width="92"
-          height="92"
-          rx="24"
-          fill="url(#maria-bg-grad)"
-          stroke="#2a303f"
-          strokeWidth="2.5"
+          x="3"
+          y="3"
+          width="94"
+          height="94"
+          rx="26"
+          fill="url(#maria-tile-bg)"
         />
 
-        {/* Geometric Stylized "M" with High Precision */}
-        {/* Left pillar */}
+        {/* Inner Circle Ring */}
+        <circle
+          cx="50"
+          cy="50"
+          r="30"
+          stroke="#ffffff"
+          strokeWidth="2.2"
+          strokeOpacity="0.88"
+        />
+
+        {/* Diagonal Ray cutting through */}
+        <line
+          x1="22"
+          y1="76"
+          x2="78"
+          y2="24"
+          stroke="#ffffff"
+          strokeWidth="1.2"
+          strokeOpacity="0.75"
+        />
+
+        {/* Top-Right Star Sparkle on the ray */}
         <path
-          d="M24 72V30L38 48V72H24Z"
-          fill="url(#maria-emerald)"
+          d="M78 24L80 20L82 24L86 26L82 28L80 32L78 28L74 26Z"
+          fill="#ffffff"
         />
 
-        {/* Center vertex chevron */}
+        {/* Stylized Capital Letter "M" */}
         <path
-          d="M38 48L50 63L62 48L50 33L38 48Z"
-          fill="url(#maria-accent)"
+          d="M33 65V35L42 50L50 62L58 50L67 35V65"
+          stroke="#ffffff"
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         />
-
-        {/* Right pillar */}
-        <path
-          d="M76 72V30L62 48V72H76Z"
-          fill="url(#maria-emerald)"
-        />
-
-        {/* Top geometric crown vertex */}
-        <circle cx="50" cy="23" r="3.5" fill="#34d399" />
       </svg>
+
+      {/* Online indicator dot on the corner */}
+      {withOnlineDot && (
+        <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#10b981] ring-2 ring-white dark:ring-[#111218]" />
+      )}
     </div>
   );
 };

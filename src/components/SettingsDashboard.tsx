@@ -24,7 +24,7 @@ import {
 import { useAuth } from '../context/AuthContext.tsx';
 import { useTheme } from '../context/ThemeContext.tsx';
 import { UserSettings } from '../types.ts';
-import { DEFAULT_SETTINGS, TONE_OPTIONS } from '../constants.ts';
+import { DEFAULT_SETTINGS, TONE_OPTIONS, VOICE_PERSONAS } from '../constants.ts';
 import { speechService, SpeechState } from '../lib/speechService.ts';
 
 interface SettingsDashboardProps {
@@ -335,34 +335,79 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                 </div>
               </div>
 
-              {/* Voice Persona (For AI Engine) */}
+              {/* Model Karakter & Gender Suara AI (Pria, Wanita, Anak-anak, Remaja) */}
               {(settings.voiceEngine || 'gemini') === 'gemini' && (
                 <div>
-                  <label className="text-xs font-semibold text-neutral-300 block mb-1.5">
-                    Karakter Suara Maria AI
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {[
-                      { id: 'Kore', label: 'Kore', desc: 'Lembut & Ramah (Default)' },
-                      { id: 'Aoede', label: 'Aoede', desc: 'Ekspresif & Hangat' },
-                      { id: 'Puck', label: 'Puck', desc: 'Ceria & Lincah' },
-                      { id: 'Fenrir', label: 'Fenrir', desc: 'Tenang & Berwibawa' },
-                      { id: 'Zephyr', label: 'Zephyr', desc: 'Santai & Kasual' },
-                    ].map((v) => (
-                      <button
-                        key={v.id}
-                        type="button"
-                        onClick={() => handleUpdate('geminiVoice', v.id as any)}
-                        className={`p-2.5 rounded-xl border text-left transition-all ${
-                          (settings.geminiVoice || 'Kore') === v.id
-                            ? 'bg-[#20a66a]/20 border-[#20a66a] text-white'
-                            : 'bg-[#181a24] border-[#27293a] text-neutral-400 hover:text-white'
-                        }`}
-                      >
-                        <div className="text-xs font-bold text-white">{v.label}</div>
-                        <div className="text-[10px] text-neutral-300 mt-0.5">{v.desc}</div>
-                      </button>
-                    ))}
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-semibold text-neutral-300">
+                      Pilihan Model Gender & Usia Suara AI
+                    </label>
+                    <span className="text-[10px] text-emerald-400 font-medium">
+                      6 Model Suara Tersedia
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {VOICE_PERSONAS.map((persona) => {
+                      const isSelected = (settings.voicePersona || 'wanita') === persona.id;
+
+                      return (
+                        <div
+                          key={persona.id}
+                          className={`p-3 rounded-2xl border transition-all ${
+                            isSelected
+                              ? 'bg-emerald-500/15 border-emerald-500 text-white shadow-sm ring-1 ring-emerald-500/30'
+                              : 'bg-[#181a24] border-[#27293a] text-neutral-300 hover:border-neutral-700'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleUpdate('voicePersona', persona.id);
+                                handleUpdate('geminiVoice', persona.geminiVoice);
+                              }}
+                              className="flex items-center gap-2.5 flex-1 text-left"
+                            >
+                              <div className="text-2xl p-1 rounded-xl bg-neutral-800/60 shrink-0">
+                                {persona.emoji}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-xs font-bold text-white">
+                                    {persona.label}
+                                  </span>
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium bg-neutral-800 text-neutral-300 border border-neutral-700">
+                                    {persona.category}
+                                  </span>
+                                </div>
+                                <div className="text-[10px] text-neutral-400 mt-0.5 line-clamp-1">
+                                  {persona.description}
+                                </div>
+                              </div>
+                            </button>
+
+                            {/* Tes Suara Sample Button */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                speechService.unlockAudio();
+                                speechService.speak(persona.sampleText, {
+                                  voiceName: persona.geminiVoice,
+                                  personaId: persona.id,
+                                  speed: settings.speechSpeed || '1x',
+                                });
+                              }}
+                              title="Dengarkan contoh suara"
+                              className="p-1.5 rounded-xl bg-neutral-800/80 hover:bg-emerald-600 hover:text-white text-neutral-300 transition-colors shrink-0 flex items-center gap-1 text-[10px] font-semibold"
+                            >
+                              <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+                              <span className="hidden xs:inline">Tes</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

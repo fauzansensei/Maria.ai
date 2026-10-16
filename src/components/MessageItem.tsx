@@ -71,10 +71,23 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     if (isThisSpeaking || isThisLoading) {
       speechService.stopSpeaking();
     } else {
+      let personaId = 'wanita';
+      let voiceName = 'Aoede';
+      try {
+        const saved = localStorage.getItem('maria_settings');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.voicePersona) personaId = parsed.voicePersona;
+          if (parsed.geminiVoice) voiceName = parsed.geminiVoice;
+        }
+      } catch {}
+
       speechService.speak(message.content, {
         messageId: message.id,
         speed: speechSpeed,
-        voiceName: 'Kore',
+        voiceName,
+        personaId,
+        preloadedAudioUrl: message.audioUri,
       });
     }
   };

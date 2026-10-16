@@ -19,10 +19,10 @@ const ThemeContext = createContext<ThemeContextType>({
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<Theme>(() => {
     const saved = localStorage.getItem('maria_theme') as Theme;
-    return saved || 'dark'; // Default to sleek OLED dark mode
+    return saved || 'light'; // Clean minimalist light aesthetic matching user screenshot
   });
 
-  const [isDark, setIsDark] = useState<boolean>(true);
+  const [isDark, setIsDark] = useState<boolean>(false);
 
   useEffect(() => {
     const root = document.documentElement;

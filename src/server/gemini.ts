@@ -35,11 +35,13 @@ export interface GenerateOptions {
   mode?: 'general' | 'thinking' | 'fast' | 'search' | 'maps' | 'science';
   systemInstruction?: string;
   location?: { latitude: number; longitude: number };
+  withVoice?: boolean;
+  voiceName?: string;
 }
 
 export async function generateChatResponse(options: GenerateOptions) {
   const ai = getGeminiClient();
-  const { messages, mode = 'general', systemInstruction, location } = options;
+  const { messages, mode = 'general', systemInstruction, location, withVoice, voiceName } = options;
 
   const hasMedia = messages.some((m) => m.attachments && m.attachments.length > 0);
   let modelName = hasMedia ? 'gemini-2.5-flash' : 'gemini-3.5-flash';
@@ -142,10 +144,25 @@ export async function generateChatResponse(options: GenerateOptions) {
     }
   }
 
+  let audioUrl: string | undefined;
+  let audioVoice: string | undefined;
+
+  if (withVoice && responseText) {
+    try {
+      const speechRes = await generateSpeechAudio(responseText, voiceName || 'Aoede');
+      audioUrl = speechRes.audioUrl;
+      audioVoice = speechRes.voice;
+    } catch (err: any) {
+      console.warn('Concurrent voice generation note:', err?.message || err);
+    }
+  }
+
   return {
     text: responseText,
     model: modelName,
     groundingLinks: groundingLinks.length > 0 ? groundingLinks : undefined,
+    audioUrl,
+    audioVoice,
   };
 }
 
@@ -308,7 +325,7 @@ export async function generateAiImage(options: GenerateImageOptions) {
   throw new Error('Gagal menghasilkan gambar dari model AI.');
 }
 
-export async function generateSpeechAudio(text: string, voiceName: string = 'Kore') {
+export async function generateSpeechAudio(text: string, voiceName: string = 'Aoede') {
   const ai = getGeminiClient();
 
   // Clean text of markdown before TTS
@@ -322,28 +339,36 @@ export async function generateSpeechAudio(text: string, voiceName: string = 'Kor
     .replace(/\s+/g, ' ')
     .trim();
 
-  // Low Latency Optimization:
-  // Synthesize conversational opening (up to 280-320 chars sentence-bounded)
-  // so the AI voice responds in ~400ms rather than lagging seconds behind the text!
-  if (cleanText.length > 280) {
+  if (!cleanText) {
+    throw new Error('Teks kosong untuk suara.');
+  }
+
+  // Read full paragraphs and comprehensive answers completely without cutting off halfway
+  if (cleanText.length > 2500) {
     const sentences = cleanText.split(/(?<=[.!?])\s+/);
     let spokenSnippet = '';
     for (const s of sentences) {
-      if ((spokenSnippet + ' ' + s).trim().length <= 300) {
+      if ((spokenSnippet + ' ' + s).trim().length <= 2500) {
         spokenSnippet = (spokenSnippet + ' ' + s).trim();
       } else {
         break;
       }
     }
-    cleanText = spokenSnippet || cleanText.slice(0, 280);
+    cleanText = spokenSnippet || cleanText.slice(0, 2500);
   }
 
-  const validVoices = ['Kore', 'Aoede', 'Puck', 'Fenrir', 'Zephyr'];
-  const selectedVoice = validVoices.includes(voiceName) ? voiceName : 'Kore';
+  const validVoices = ['Aoede', 'Kore', 'Puck', 'Fenrir', 'Zephyr'];
+  const selectedVoice = validVoices.includes(voiceName) ? voiceName : 'Aoede';
 
-  // Primary: gemini-3.8-flash-tts (High fidelity Voice Design, expressive AI voice)
-  // Fallback: gemini-3.8-flash-lite-tts
-  const modelsToTry = ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts'];
+  // High performance, unexhausted AI Voice models:
+  // Primary: gemini-3.1-flash-tts-preview (expressive AI neural engine, blazing speed)
+  // Fallbacks: gemini-2.5-flash-preview-tts, gemini-3.8-flash-tts, gemini-3.8-flash-lite-tts
+  const modelsToTry = [
+    'gemini-3.1-flash-tts-preview',
+    'gemini-2.5-flash-preview-tts',
+    'gemini-3.8-flash-tts',
+    'gemini-3.8-flash-lite-tts',
+  ];
   let lastError: any = null;
 
   for (const model of modelsToTry) {

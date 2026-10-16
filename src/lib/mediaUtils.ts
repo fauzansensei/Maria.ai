@@ -29,6 +29,50 @@ export function extractBase64(dataUrl: string): string {
   return parts.length > 1 ? parts[1] : dataUrl;
 }
 
+// Generate compressed lightweight thumbnail for image preview (< 25 KB)
+export function generateImageThumbnail(file: File, maxDimension: number = 320): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = Math.round((height * maxDimension) / width);
+              width = maxDimension;
+            } else {
+              width = Math.round((width * maxDimension) / height);
+              height = maxDimension;
+            }
+          }
+
+          canvas.width = Math.max(1, width);
+          canvas.height = Math.max(1, height);
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const thumbUrl = canvas.toDataURL('image/jpeg', 0.72);
+            resolve(thumbUrl);
+            return;
+          }
+        } catch {
+          // Fallback to raw data url if canvas security blocks it
+        }
+        resolve(reader.result as string);
+      };
+      img.onerror = () => resolve(reader.result as string);
+      img.src = reader.result as string;
+    };
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
+}
+
 // Generate thumbnail for video preview from the first video frame
 export function generateVideoThumbnail(file: File): Promise<string> {
   return new Promise((resolve) => {

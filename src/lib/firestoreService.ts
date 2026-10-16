@@ -212,10 +212,12 @@ export async function addMessage(
     role: 'user' | 'model' | 'system';
     content: string;
     model?: string;
+    mode?: string;
     imageUri?: string;
     attachments?: any[];
     groundingLinks?: any[];
     thinkingProcess?: string;
+    audioUri?: string;
   }
 ): Promise<string> {
   const messageId = generateId('msg');
@@ -228,17 +230,43 @@ export async function addMessage(
       conversationId: convId,
       userId,
       role: message.role,
-      content: message.content.slice(0, 48000), // Enforce schema limit
+      content: (message.content || '').slice(0, 48000), // Enforce schema limit
       createdAt: serverTimestamp(),
     };
+
     if (message.model) {
-      dataToSave.model = message.model;
+      dataToSave.model = message.model.slice(0, 100);
+    }
+    if (message.mode) {
+      dataToSave.mode = message.mode.slice(0, 50);
     }
     if (message.imageUri) {
-      dataToSave.imageUri = message.imageUri;
+      dataToSave.imageUri = message.imageUri.slice(0, 5000);
     }
-    if (message.attachments) {
-      dataToSave.attachments = message.attachments;
+    if (message.thinkingProcess) {
+      dataToSave.thinkingProcess = message.thinkingProcess.slice(0, 48000);
+    }
+    if (message.audioUri) {
+      dataToSave.audioUri = message.audioUri.slice(0, 48000);
+    }
+
+    if (message.attachments && Array.isArray(message.attachments) && message.attachments.length > 0) {
+      // Sanitize attachments: only store lightweight metadata and thumbnail to never breach 1MB document limit
+      dataToSave.attachments = message.attachments.slice(0, 10).map((a) => ({
+        id: String(a.id || generateId('att')).slice(0, 64),
+        name: String(a.name || 'Berkas').slice(0, 128),
+        size: typeof a.size === 'number' ? a.size : 0,
+        mimeType: String(a.mimeType || 'image/jpeg').slice(0, 64),
+        type: String(a.type || 'image').slice(0, 20),
+        previewUrl: typeof a.previewUrl === 'string' ? a.previewUrl.slice(0, 35000) : '',
+      }));
+    }
+
+    if (message.groundingLinks && Array.isArray(message.groundingLinks) && message.groundingLinks.length > 0) {
+      dataToSave.groundingLinks = message.groundingLinks.slice(0, 20).map((g) => ({
+        title: String(g.title || '').slice(0, 200),
+        uri: String(g.uri || '').slice(0, 1000),
+      }));
     }
 
     await setDoc(docRef, dataToSave);

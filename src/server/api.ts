@@ -33,7 +33,7 @@ apiRouter.get('/health', (_req: Request, res: Response) => {
 // Chat Completion
 apiRouter.post('/chat', async (req: Request, res: Response) => {
   try {
-    const { messages, mode, systemInstruction, location } = req.body || {};
+    const { messages, mode, systemInstruction, location, withVoice, voiceName } = req.body || {};
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       sendJson(res, 400, { error: 'Daftar pesan tidak boleh kosong.' });
@@ -45,6 +45,8 @@ apiRouter.post('/chat', async (req: Request, res: Response) => {
       mode,
       systemInstruction,
       location,
+      withVoice: Boolean(withVoice),
+      voiceName,
     });
 
     sendJson(res, 200, result);

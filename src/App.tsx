@@ -9,7 +9,7 @@ import { ScienceScoutModal } from './components/ScienceScoutModal.tsx';
 import { SettingsDashboard } from './components/SettingsDashboard.tsx';
 import { TwoFactorModal } from './components/TwoFactorModal.tsx';
 import { Conversation, Message, AiMode, UserSettings, MediaAttachment } from './types/index.ts';
-import { DEFAULT_SETTINGS } from './constants.ts';
+import { DEFAULT_SETTINGS, VOICE_PERSONAS } from './constants.ts';
 import { speechService } from './lib/speechService.ts';
 import {
   subscribeConversations,
@@ -373,6 +373,10 @@ function AppContent() {
         })),
       });
 
+      const isVoiceAuto = Boolean(settings.voiceEnabled || settings.voiceResponses);
+      const personaObj = VOICE_PERSONAS.find((p) => p.id === (settings.voicePersona || 'wanita'));
+      const activeVoiceName = personaObj?.geminiVoice || settings.geminiVoice || 'Aoede';
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -380,6 +384,8 @@ function AppContent() {
           messages: historyTurns,
           mode,
           location: userLocation,
+          withVoice: isVoiceAuto,
+          voiceName: activeVoiceName,
         }),
       });
 
@@ -403,6 +409,7 @@ function AppContent() {
         model: data.model,
         mode,
         groundingLinks: data.groundingLinks,
+        audioUri: data.audioUrl,
         createdAt: new Date(),
       };
 
@@ -412,20 +419,29 @@ function AppContent() {
           content: modelMessageObj.content,
           model: modelMessageObj.model,
           groundingLinks: modelMessageObj.groundingLinks,
+          audioUri: modelMessageObj.audioUri,
         });
       } else {
         setGuestMessages((prev) => [...prev, modelMessageObj]);
       }
 
-      // Auto TTS voice readout if enabled
-      const isVoiceAuto = Boolean(settings.voiceEnabled || settings.voiceResponses);
+      // Auto TTS voice readout if enabled (plays instantly with 0ms delay if audioUrl is returned!)
       if (isVoiceAuto && modelMessageObj.content) {
-        speechService.speak(modelMessageObj.content, {
-          messageId: modelMessageObj.id,
-          speed: settings.speechSpeed || '1x',
-          voiceName: settings.geminiVoice || 'Kore',
-          preferEngine: settings.voiceEngine || 'gemini',
-        });
+        if (data.audioUrl) {
+          speechService.playAudioDirectly(data.audioUrl, {
+            messageId: modelMessageObj.id,
+            speed: settings.speechSpeed || '1x',
+            personaId: settings.voicePersona || 'wanita',
+          });
+        } else {
+          speechService.speak(modelMessageObj.content, {
+            messageId: modelMessageObj.id,
+            speed: settings.speechSpeed || '1x',
+            voiceName: activeVoiceName,
+            personaId: settings.voicePersona || 'wanita',
+            preferEngine: settings.voiceEngine || 'gemini',
+          });
+        }
       }
     } catch (err: any) {
       console.error('Error during message exchange:', err);
@@ -452,7 +468,7 @@ function AppContent() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#0e0f12] font-sans">
+    <div className="flex h-screen w-screen overflow-hidden bg-white dark:bg-[#0e0f12] font-sans">
       {/* Navigation Sidebar */}
       <Sidebar
         conversations={conversations}
@@ -474,7 +490,7 @@ function AppContent() {
       />
 
       {/* Main Workspace: Chat, Library, or Discover View */}
-      <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[#0e0f12]">
+      <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-white dark:bg-[#0e0f12]">
         {activeView === 'chat' && (
           <ChatArea
             activeConversation={activeConversation}
@@ -487,6 +503,13 @@ function AppContent() {
             onOpenScienceScout={() => setIsScienceScoutOpen(true)}
             onOpenSettings={() => setIsSettingsOpen(true)}
             speechSpeed={settings.speechSpeed || '1x'}
+            voicePersona={settings.voicePersona || 'wanita'}
+            onSelectVoicePersona={(p) => {
+              const newSettings = { ...settings, voicePersona: p };
+              setSettings(newSettings);
+              localStorage.setItem('maria_settings', JSON.stringify(newSettings));
+              window.dispatchEvent(new CustomEvent('maria_settings_changed', { detail: newSettings }));
+            }}
             userPhoto={user?.photoURL}
             userName={user?.displayName}
           />

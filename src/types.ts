@@ -18,6 +18,14 @@ export interface WidgetLayout {
 
 export type DefconLevel = "DEFCON 5" | "DEFCON 4" | "DEFCON 3" | "DEFCON 2" | "DEFCON 1";
 
+export type VoicePersonaGender =
+  | 'wanita'
+  | 'pria'
+  | 'anak-perempuan'
+  | 'anak-laki'
+  | 'remaja-perempuan'
+  | 'remaja-laki';
+
 export interface UserSettings {
   username: string;
   tone: MariaTone;
@@ -35,6 +43,7 @@ export interface UserSettings {
   speechSpeed?: "0.75x" | "1x" | "1.25x" | "1.5x";
   voiceEngine?: "gemini" | "browser";
   geminiVoice?: "Kore" | "Aoede" | "Puck" | "Fenrir" | "Zephyr";
+  voicePersona?: VoicePersonaGender;
   saveChatHistory?: boolean;
   enterToSend?: boolean;
   windowsOpen?: boolean;

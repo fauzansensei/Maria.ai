@@ -122,24 +122,46 @@ class MariaSpeechService {
     });
   }
 
+  public async playAudioDirectly(
+    audioUrl: string,
+    options?: {
+      messageId?: string;
+      speed?: string;
+      personaId?: string;
+    }
+  ): Promise<boolean> {
+    this.stopSpeaking();
+    const speedMultiplier = this.parseSpeed(options?.speed);
+    const messageId = options?.messageId || null;
+    return this.playAudioUrl(audioUrl, speedMultiplier, messageId, options?.personaId);
+  }
+
   public async speak(
     rawText: string,
     options?: {
       messageId?: string;
       speed?: string;
       voiceName?: string;
+      personaId?: string;
       preferEngine?: 'gemini' | 'browser';
+      preloadedAudioUrl?: string;
     }
   ): Promise<boolean> {
     this.stopSpeaking();
 
-    const cleanText = this.cleanTextForSpeech(rawText);
-    if (!cleanText) return false;
-
     const messageId = options?.messageId || null;
     const speedMultiplier = this.parseSpeed(options?.speed);
-    const voiceName = options?.voiceName || 'Kore';
+    const personaId = options?.personaId || 'wanita';
+    const voiceName = options?.voiceName || 'Aoede';
     const preferEngine = options?.preferEngine || 'gemini';
+
+    // If preloaded audio already exists, play immediately without network latency!
+    if (options?.preloadedAudioUrl) {
+      return this.playAudioUrl(options.preloadedAudioUrl, speedMultiplier, messageId, personaId);
+    }
+
+    const cleanText = this.cleanTextForSpeech(rawText);
+    if (!cleanText) return false;
 
     this.setState({
       isLoading: true,
@@ -155,21 +177,21 @@ class MariaSpeechService {
 
     // Default & Primary: Gemini AI Neural Voice Engine
     try {
-      const cacheKey = `${voiceName}:${cleanText.slice(0, 300)}`;
+      const cacheKey = `${voiceName}:${personaId}:${cleanText.slice(0, 300)}`;
       if (this.ttsCache.has(cacheKey)) {
         const cachedUrl = this.ttsCache.get(cacheKey)!;
-        const played = await this.playAudioUrl(cachedUrl, speedMultiplier, messageId);
+        const played = await this.playAudioUrl(cachedUrl, speedMultiplier, messageId, personaId);
         if (played) return true;
       }
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          text: cleanText.slice(0, 400),
+          text: cleanText.slice(0, 2500),
           voiceName,
         }),
         signal: controller.signal,
@@ -181,7 +203,7 @@ class MariaSpeechService {
         const data = await res.json();
         if (data?.audioUrl) {
           this.ttsCache.set(cacheKey, data.audioUrl);
-          const played = await this.playAudioUrl(data.audioUrl, speedMultiplier, messageId);
+          const played = await this.playAudioUrl(data.audioUrl, speedMultiplier, messageId, personaId);
           if (played) return true;
         }
       } else {
@@ -203,13 +225,48 @@ class MariaSpeechService {
     return false;
   }
 
-  private playAudioUrl(audioUrl: string, speed: number, messageId: string | null): Promise<boolean> {
+  private playAudioUrl(
+    audioUrl: string,
+    speed: number,
+    messageId: string | null,
+    personaId?: string
+  ): Promise<boolean> {
     return new Promise((resolve) => {
       try {
         const audio = new Audio();
         this.currentAudio = audio;
         audio.src = audioUrl;
-        audio.playbackRate = speed;
+
+        // Modulate pitch and speed for persona (e.g. anak perempuan/laki-laki, pria, remaja)
+        let pitchMultiplier = 1.0;
+        let speedBoost = 1.0;
+
+        if (personaId === 'anak-perempuan') {
+          pitchMultiplier = 1.25;
+          speedBoost = 1.08;
+        } else if (personaId === 'anak-laki') {
+          pitchMultiplier = 1.22;
+          speedBoost = 1.08;
+        } else if (personaId === 'remaja-perempuan') {
+          pitchMultiplier = 1.06;
+          speedBoost = 1.03;
+        } else if (personaId === 'remaja-laki') {
+          pitchMultiplier = 1.03;
+          speedBoost = 1.03;
+        } else if (personaId === 'pria') {
+          pitchMultiplier = 0.95;
+          speedBoost = 0.98;
+        }
+
+        audio.playbackRate = Math.min(2.0, Math.max(0.5, speed * speedBoost * (pitchMultiplier !== 1.0 ? pitchMultiplier : 1.0)));
+
+        if (pitchMultiplier !== 1.0) {
+          try {
+            (audio as any).preservesPitch = false;
+            (audio as any).webkitPreservesPitch = false;
+            (audio as any).mozPreservesPitch = false;
+          } catch {}
+        }
 
         audio.onplay = () => {
           this.setState({

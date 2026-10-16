@@ -47,12 +47,108 @@ export const DEFAULT_SETTINGS: UserSettings = {
   voiceEnabled: false,
   voiceResponses: false,
   voiceEngine: "gemini",
-  geminiVoice: "Kore",
+  geminiVoice: "Aoede",
+  voicePersona: "wanita",
   speechSpeed: "1x",
   cyberModeEnabled: true,
   defconLevel: "DEFCON 5",
   autonomousSelfHealing: true,
 };
+
+export interface VoicePersonaOption {
+  id: "wanita" | "pria" | "anak-perempuan" | "anak-laki" | "remaja-perempuan" | "remaja-laki";
+  name: string;
+  label: string;
+  category: "Dewasa" | "Remaja" | "Anak-anak";
+  gender: "Wanita" | "Pria";
+  geminiVoice: "Aoede" | "Fenrir" | "Kore" | "Puck" | "Zephyr";
+  pitch: number;
+  speed: number;
+  description: string;
+  emoji: string;
+  sampleText: string;
+}
+
+export const VOICE_PERSONAS: VoicePersonaOption[] = [
+  {
+    id: "wanita",
+    name: "Maria (Wanita Dewasa)",
+    label: "Wanita Dewasa",
+    category: "Dewasa",
+    gender: "Wanita",
+    geminiVoice: "Aoede",
+    pitch: 1.0,
+    speed: 1.0,
+    description: "Hangat, ramah, anggun, dan ekspresif",
+    emoji: "👩",
+    sampleText: "Halo, saya Maria. Senang sekali bisa membantu Anda hari ini.",
+  },
+  {
+    id: "pria",
+    name: "Mario (Pria Dewasa)",
+    label: "Pria Dewasa",
+    category: "Dewasa",
+    gender: "Pria",
+    geminiVoice: "Fenrir",
+    pitch: 0.95,
+    speed: 1.0,
+    description: "Berwibawa, tenang, mantap, dan terpercaya",
+    emoji: "👨",
+    sampleText: "Halo, saya Mario. Siap membantu analisis dan tugas Anda.",
+  },
+  {
+    id: "remaja-perempuan",
+    name: "Maya (Remaja Perempuan)",
+    label: "Remaja Perempuan",
+    category: "Remaja",
+    gender: "Wanita",
+    geminiVoice: "Kore",
+    pitch: 1.08,
+    speed: 1.03,
+    description: "Ceria, santai, lincah, dan bersahabat",
+    emoji: "👱‍♀️",
+    sampleText: "Hai! Aku Maya. Yuk bahas hal seru bareng hari ini!",
+  },
+  {
+    id: "remaja-laki",
+    name: "Max (Remaja Laki-laki)",
+    label: "Remaja Laki-laki",
+    category: "Remaja",
+    gender: "Pria",
+    geminiVoice: "Puck",
+    pitch: 1.03,
+    speed: 1.03,
+    description: "Enerjik, dinamis, kasual, dan asyik",
+    emoji: "👱‍♂️",
+    sampleText: "Halo bro! Gue Max. Ada ide keren apa yang mau kita buat?",
+  },
+  {
+    id: "anak-perempuan",
+    name: "Mia (Anak Perempuan)",
+    label: "Anak Perempuan",
+    category: "Anak-anak",
+    gender: "Wanita",
+    geminiVoice: "Zephyr",
+    pitch: 1.25,
+    speed: 1.08,
+    description: "Manis, riang, polos, dan ceria",
+    emoji: "👧",
+    sampleText: "Halo kakak! Aku Mia, yuk kita belajar dan main sambil cerita!",
+  },
+  {
+    id: "anak-laki",
+    name: "Milo (Anak Laki-laki)",
+    label: "Anak Laki-laki",
+    category: "Anak-anak",
+    gender: "Pria",
+    geminiVoice: "Puck",
+    pitch: 1.22,
+    speed: 1.08,
+    description: "Ceria, lincah, ingin tahu, penuh rasa penasaran",
+    emoji: "👦",
+    sampleText: "Halo! Aku Milo! Aku punya banyak pertanyaan seru buat kakak!",
+  },
+];
 
 export const PROMPT_STARTERS: PromptStarter[] = [
   {

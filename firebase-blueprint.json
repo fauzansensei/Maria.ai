@@ -131,6 +131,19 @@
           "maxLength": 50000,
           "description": "Model internal reasoning thinking trace"
         },
+        "attachments": {
+          "type": "array",
+          "description": "List of user-uploaded media attachments metadata with lightweight thumbnail"
+        },
+        "groundingLinks": {
+          "type": "array",
+          "description": "Grounding links or references returned by tools"
+        },
+        "audioUri": {
+          "type": "string",
+          "maxLength": 50000,
+          "description": "Generated speech audio data URI or URL"
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time",

@@ -58,7 +58,7 @@ service cloud.firestore {
     // Message Validation
     function isValidMessage(data) {
       return data.keys().hasAll(['id', 'conversationId', 'userId', 'role', 'content']) &&
-             data.keys().hasOnly(['id', 'conversationId', 'userId', 'role', 'content', 'model', 'mode', 'imageUri', 'thinkingProcess', 'groundingLinks', 'createdAt']) &&
+             data.keys().hasOnly(['id', 'conversationId', 'userId', 'role', 'content', 'model', 'mode', 'imageUri', 'thinkingProcess', 'groundingLinks', 'attachments', 'audioUri', 'createdAt']) &&
              data.userId == request.auth.uid &&
              data.id is string && data.id.size() <= 128 &&
              data.conversationId is string && data.conversationId.size() <= 128 &&
@@ -67,7 +67,10 @@ service cloud.firestore {
              (!('model' in data) || data.model == null || (data.model is string && data.model.size() <= 100)) &&
              (!('mode' in data) || data.mode == null || (data.mode is string && data.mode.size() <= 50)) &&
              (!('thinkingProcess' in data) || data.thinkingProcess == null || (data.thinkingProcess is string && data.thinkingProcess.size() <= 50000)) &&
-             (!('imageUri' in data) || data.imageUri == null || (data.imageUri is string && data.imageUri.size() <= 5000));
+             (!('imageUri' in data) || data.imageUri == null || (data.imageUri is string && data.imageUri.size() <= 5000)) &&
+             (!('audioUri' in data) || data.audioUri == null || (data.audioUri is string && data.audioUri.size() <= 50000)) &&
+             (!('attachments' in data) || data.attachments == null || (data.attachments is list && data.attachments.size() <= 10)) &&
+             (!('groundingLinks' in data) || data.groundingLinks == null || (data.groundingLinks is list && data.groundingLinks.size() <= 20));
     }
 
     // 1. User Profiles Collection
