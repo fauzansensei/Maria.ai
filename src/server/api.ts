@@ -33,7 +33,7 @@ apiRouter.get('/health', (_req: Request, res: Response) => {
 // Chat Completion
 apiRouter.post('/chat', async (req: Request, res: Response) => {
   try {
-    const { messages, mode, systemInstruction, location, withVoice, voiceName } = req.body || {};
+    const { messages, mode, systemInstruction, location, withVoice, voiceName, personaId } = req.body || {};
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       sendJson(res, 400, { error: 'Daftar pesan tidak boleh kosong.' });
@@ -47,6 +47,7 @@ apiRouter.post('/chat', async (req: Request, res: Response) => {
       location,
       withVoice: Boolean(withVoice),
       voiceName,
+      personaId,
     });
 
     sendJson(res, 200, result);
@@ -86,19 +87,19 @@ apiRouter.post('/generate-image', async (req: Request, res: Response) => {
 // Text-to-Speech (TTS)
 apiRouter.post('/tts', async (req: Request, res: Response) => {
   try {
-    const { text, voiceName } = req.body || {};
+    const { text, voiceName, personaId } = req.body || {};
 
     if (!text || typeof text !== 'string') {
       sendJson(res, 400, { error: 'Teks untuk suara wajib diisi.' });
       return;
     }
 
-    const result = await generateSpeechAudio(text, voiceName);
+    const result = await generateSpeechAudio(text, voiceName, personaId);
     sendJson(res, 200, result);
   } catch (error: any) {
-    console.warn('TTS request error:', error?.message || error);
+    console.error('TTS endpoint error:', error);
     sendJson(res, 500, {
-      error: error.message || 'Gagal memproses suara AI.',
+      error: error?.message || 'Gagal memproses suara AI.',
     });
   }
 });

@@ -31,6 +31,8 @@ interface SettingsDashboardProps {
   isOpen: boolean;
   onClose: () => void;
   onClearHistoryRequest: () => void;
+  settings?: UserSettings;
+  onUpdateSettings?: (patch: Partial<UserSettings>) => void;
 }
 
 type TabType = 'general' | 'ai-memory' | 'voice' | 'chat' | 'privacy' | 'integrations' | 'account';
@@ -39,13 +41,15 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
   isOpen,
   onClose,
   onClearHistoryRequest,
+  settings: propSettings,
+  onUpdateSettings,
 }) => {
   const { user, signIn, signOut } = useAuth();
   const { theme, setTheme, isDark } = useTheme();
 
   const [activeTab, setActiveTab] = useState<TabType>('general');
   const [speechState, setSpeechState] = useState<SpeechState>(() => speechService.getState());
-  const [settings, setSettings] = useState<UserSettings>(() => {
+  const [localSettings, setLocalSettings] = useState<UserSettings>(() => {
     try {
       const saved = localStorage.getItem('maria_settings');
       return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
@@ -53,6 +57,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
       return DEFAULT_SETTINGS;
     }
   });
+
+  const settings = propSettings || localSettings;
 
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -64,16 +70,30 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
 
   if (!isOpen) return null;
 
-  const handleUpdate = <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
-    const updated = { ...settings, [key]: value };
-    if (key === 'voiceEnabled') {
-      updated.voiceResponses = Boolean(value);
+  const handleUpdate = <K extends keyof UserSettings>(
+    keyOrPatch: K | Partial<UserSettings>,
+    value?: UserSettings[K]
+  ) => {
+    const patch =
+      typeof keyOrPatch === 'string'
+        ? ({ [keyOrPatch]: value } as Partial<UserSettings>)
+        : keyOrPatch;
+
+    if (onUpdateSettings) {
+      onUpdateSettings(patch);
+    } else {
+      setLocalSettings((prev) => {
+        const updated = { ...prev, ...patch };
+        if ('voiceEnabled' in patch) {
+          updated.voiceResponses = Boolean(patch.voiceEnabled);
+        }
+        try {
+          localStorage.setItem('maria_settings', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
     }
-    setSettings(updated);
-    try {
-      localStorage.setItem('maria_settings', JSON.stringify(updated));
-      window.dispatchEvent(new CustomEvent('maria_settings_changed', { detail: updated }));
-    } catch {}
+
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 2000);
   };
@@ -215,8 +235,12 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                           : 'bg-[#181a24] border-[#262838] text-neutral-300 hover:border-neutral-700'
                       }`}
                     >
-                      <div className="text-lg mb-1">{tone.emoji}</div>
-                      <div className="text-xs font-semibold">{tone.label}</div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-semibold">{tone.label}</span>
+                        {settings.tone === tone.value && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#34d399]" />
+                        )}
+                      </div>
                       <div className="text-[10px] text-neutral-400 line-clamp-2 mt-0.5">{tone.description}</div>
                     </button>
                   ))}
@@ -337,77 +361,121 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
 
               {/* Model Karakter & Gender Suara AI (Pria, Wanita, Anak-anak, Remaja) */}
               {(settings.voiceEngine || 'gemini') === 'gemini' && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-semibold text-neutral-300">
-                      Pilihan Model Gender & Usia Suara AI
-                    </label>
-                    <span className="text-[10px] text-emerald-400 font-medium">
-                      6 Model Suara Tersedia
-                    </span>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-semibold text-neutral-300">
+                        Pilihan Model Gender & Usia Suara AI
+                      </label>
+                      <span className="text-[10px] text-emerald-400 font-medium">
+                        6 Model Suara Tersedia
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {VOICE_PERSONAS.map((persona) => {
+                        const isSelected = (settings.voicePersona || 'wanita') === persona.id;
+
+                        return (
+                          <div
+                            key={persona.id}
+                            onClick={() => {
+                              handleUpdate({
+                                voicePersona: persona.id,
+                                geminiVoice: persona.geminiVoice,
+                              });
+                            }}
+                            className={`cursor-pointer p-3 rounded-2xl border transition-all ${
+                              isSelected
+                                ? 'bg-emerald-500/15 border-emerald-500 text-white shadow-sm ring-1 ring-emerald-500/30'
+                                : 'bg-[#181a24] border-[#27293a] text-neutral-300 hover:border-neutral-600 hover:bg-[#1c1e2b]'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-2.5 flex-1 text-left min-w-0">
+                                <div className={`w-8 h-8 rounded-xl border flex items-center justify-center font-bold text-xs shrink-0 ${
+                                  isSelected
+                                    ? 'bg-emerald-500/20 border-emerald-500/60 text-emerald-400'
+                                    : 'bg-neutral-800/80 border-neutral-700/60 text-neutral-400'
+                                }`}>
+                                  {persona.name.slice(0, 2).toUpperCase()}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-xs font-bold text-white">
+                                      {persona.label}
+                                    </span>
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium bg-neutral-800 text-neutral-300 border border-neutral-700">
+                                      {persona.category} • {persona.gender}
+                                    </span>
+                                    {isSelected && (
+                                      <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                    )}
+                                  </div>
+                                  <div className="text-[10px] text-neutral-400 mt-0.5 line-clamp-1">
+                                    {persona.description}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Tes Suara Sample Button */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  speechService.unlockAudio();
+                                  speechService.speak(persona.sampleText, {
+                                    voiceName: persona.geminiVoice,
+                                    personaId: persona.id,
+                                    speed: settings.speechSpeed || '1x',
+                                  });
+                                }}
+                                title="Dengarkan contoh suara"
+                                className="p-1.5 px-2.5 rounded-xl bg-neutral-800/90 hover:bg-emerald-600 hover:text-white text-neutral-300 transition-colors shrink-0 flex items-center gap-1 text-[10px] font-semibold"
+                              >
+                                <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+                                <span>Tes</span>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {VOICE_PERSONAS.map((persona) => {
-                      const isSelected = (settings.voicePersona || 'wanita') === persona.id;
-
-                      return (
-                        <div
-                          key={persona.id}
-                          className={`p-3 rounded-2xl border transition-all ${
-                            isSelected
-                              ? 'bg-emerald-500/15 border-emerald-500 text-white shadow-sm ring-1 ring-emerald-500/30'
-                              : 'bg-[#181a24] border-[#27293a] text-neutral-300 hover:border-neutral-700'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                handleUpdate('voicePersona', persona.id);
-                                handleUpdate('geminiVoice', persona.geminiVoice);
-                              }}
-                              className="flex items-center gap-2.5 flex-1 text-left"
-                            >
-                              <div className="text-2xl p-1 rounded-xl bg-neutral-800/60 shrink-0">
-                                {persona.emoji}
-                              </div>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="text-xs font-bold text-white">
-                                    {persona.label}
-                                  </span>
-                                  <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium bg-neutral-800 text-neutral-300 border border-neutral-700">
-                                    {persona.category}
-                                  </span>
-                                </div>
-                                <div className="text-[10px] text-neutral-400 mt-0.5 line-clamp-1">
-                                  {persona.description}
-                                </div>
-                              </div>
-                            </button>
-
-                            {/* Tes Suara Sample Button */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                speechService.unlockAudio();
-                                speechService.speak(persona.sampleText, {
-                                  voiceName: persona.geminiVoice,
-                                  personaId: persona.id,
-                                  speed: settings.speechSpeed || '1x',
-                                });
-                              }}
-                              title="Dengarkan contoh suara"
-                              className="p-1.5 rounded-xl bg-neutral-800/80 hover:bg-emerald-600 hover:text-white text-neutral-300 transition-colors shrink-0 flex items-center gap-1 text-[10px] font-semibold"
-                            >
-                              <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
-                              <span className="hidden xs:inline">Tes</span>
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                  {/* Gemini AI Voice Timbre Fine-Tuner */}
+                  <div>
+                    <label className="text-xs font-semibold text-neutral-300 block mb-1.5 flex items-center justify-between">
+                      <span>Timbre Vokal AI Engine (Gemini Voice Timbre)</span>
+                      <span className="text-[10px] text-emerald-400">Aktif: {settings.geminiVoice || 'Aoede'}</span>
+                    </label>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                      {[
+                        { id: 'Aoede', label: 'Aoede', desc: 'Wanita • Elegan' },
+                        { id: 'Kore', label: 'Kore', desc: 'Wanita • Lembut' },
+                        { id: 'Zephyr', label: 'Zephyr', desc: 'Wanita • Ceria' },
+                        { id: 'Fenrir', label: 'Fenrir', desc: 'Pria • Mantap' },
+                        { id: 'Puck', label: 'Puck', desc: 'Pria • Dinamis' },
+                        { id: 'Charon', label: 'Charon', desc: 'Pria • Tenang' },
+                      ].map((v) => {
+                        const isVoiceSelected = (settings.geminiVoice || 'Aoede') === v.id;
+                        return (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => handleUpdate('geminiVoice', v.id as any)}
+                            className={`p-2 rounded-xl border text-center transition-all ${
+                              isVoiceSelected
+                                ? 'bg-emerald-500/20 border-emerald-500 text-white font-bold ring-1 ring-emerald-500/50'
+                                : 'bg-[#181a24] border-[#27293a] text-neutral-400 hover:text-white hover:border-neutral-700'
+                            }`}
+                          >
+                            <div className="text-xs font-bold">{v.label}</div>
+                            <div className="text-[9px] text-neutral-400 mt-0.5">{v.desc}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               )}
@@ -434,58 +502,67 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
               </div>
 
               {/* Test Voice Button */}
-              <div className="p-4 rounded-2xl bg-[#131520] border border-[#232537] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div>
-                  <div className="text-xs font-semibold text-white flex items-center gap-1.5">
-                    <Volume2 className="w-3.5 h-3.5 text-[#34d399]" />
-                    <span>Uji Suara Maria AI (Model Voice Engine)</span>
-                  </div>
-                  <div className="text-[11px] text-neutral-400 mt-0.5">
-                    Dengarkan audio langsung dari model AI neural voice Maria
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    speechService.unlockAudio();
-                    if (speechState.isSpeaking && speechState.activeMessageId === 'settings_test') {
-                      speechService.stopSpeaking();
-                    } else {
-                      speechService.speak(
-                        'Halo! Saya Maria AI. Ini adalah suara alami asli saya menggunakan model AI voice engine.',
-                        {
-                          messageId: 'settings_test',
-                          speed: settings.speechSpeed || '1x',
-                          voiceName: settings.geminiVoice || 'Kore',
-                          preferEngine: settings.voiceEngine || 'gemini',
+              {(() => {
+                const activePersona =
+                  VOICE_PERSONAS.find((p) => p.id === (settings.voicePersona || 'wanita')) ||
+                  VOICE_PERSONAS[0];
+
+                return (
+                  <div className="p-4 rounded-2xl bg-[#131520] border border-[#232537] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-semibold text-white flex items-center gap-1.5">
+                        <Volume2 className="w-3.5 h-3.5 text-[#34d399]" />
+                        <span>Uji Suara Model AI: {activePersona.name} ({activePersona.label})</span>
+                      </div>
+                      <div className="text-[11px] text-neutral-400 mt-0.5">
+                        Dengarkan contoh suara model {activePersona.category} {activePersona.gender} ({settings.geminiVoice || activePersona.geminiVoice})
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        speechService.unlockAudio();
+                        if (speechState.isSpeaking && speechState.activeMessageId === 'settings_test') {
+                          speechService.stopSpeaking();
+                        } else {
+                          const testText =
+                            activePersona.sampleText ||
+                            `Halo! Saya ${activePersona.name}. Ini adalah suara asli model AI ${activePersona.label}.`;
+                          speechService.speak(testText, {
+                            messageId: 'settings_test',
+                            speed: settings.speechSpeed || '1x',
+                            voiceName: settings.geminiVoice || activePersona.geminiVoice,
+                            personaId: activePersona.id,
+                            preferEngine: settings.voiceEngine || 'gemini',
+                          });
                         }
-                      );
-                    }
-                  }}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all shrink-0 ${
-                    speechState.isSpeaking && speechState.activeMessageId === 'settings_test'
-                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30'
-                      : 'bg-[#20a66a] text-white hover:bg-[#1b8c59] shadow-lg shadow-[#20a66a]/20'
-                  }`}
-                >
-                  {speechState.isLoading && speechState.activeMessageId === 'settings_test' ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Memproses Suara AI...</span>
-                    </>
-                  ) : speechState.isSpeaking && speechState.activeMessageId === 'settings_test' ? (
-                    <>
-                      <VolumeX className="w-3.5 h-3.5 animate-pulse" />
-                      <span>Hentikan Suara</span>
-                    </>
-                  ) : (
-                    <>
-                      <Volume2 className="w-3.5 h-3.5" />
-                      <span>Tes Suara Model AI</span>
-                    </>
-                  )}
-                </button>
-              </div>
+                      }}
+                      className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all shrink-0 ${
+                        speechState.isSpeaking && speechState.activeMessageId === 'settings_test'
+                          ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30'
+                          : 'bg-[#20a66a] text-white hover:bg-[#1b8c59] shadow-lg shadow-[#20a66a]/20'
+                      }`}
+                    >
+                      {speechState.isLoading && speechState.activeMessageId === 'settings_test' ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Menyiapkan Suara...</span>
+                        </>
+                      ) : speechState.isSpeaking && speechState.activeMessageId === 'settings_test' ? (
+                        <>
+                          <VolumeX className="w-3.5 h-3.5 animate-pulse" />
+                          <span>Hentikan Suara</span>
+                        </>
+                      ) : (
+                        <>
+                          <Volume2 className="w-3.5 h-3.5" />
+                          <span>Tes Suara {activePersona.name}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
           )}
 

@@ -21,6 +21,10 @@ import {
   FileText,
   Maximize2,
   Eye,
+  Pencil,
+  X,
+  RotateCcw,
+  Send,
 } from 'lucide-react';
 import { Message, MediaAttachment } from '../types/index.ts';
 import { MariaLogo } from './MariaLogo.tsx';
@@ -33,6 +37,8 @@ interface MessageItemProps {
   userPhoto?: string | null;
   userName?: string | null;
   speechSpeed?: string;
+  onEditMessage?: (messageId: string, newContent: string, resend: boolean) => void;
+  onLoadToInput?: (text: string) => void;
 }
 
 export const MessageItem: React.FC<MessageItemProps> = ({
@@ -40,11 +46,21 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   userPhoto,
   userName,
   speechSpeed = '1x',
+  onEditMessage,
+  onLoadToInput,
 }) => {
   const [copied, setCopied] = useState(false);
   const [speechState, setSpeechState] = useState<SpeechState>(() => speechService.getState());
   const [showThought, setShowThought] = useState(false);
   const [lightboxMedia, setLightboxMedia] = useState<LightboxMedia | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(message.content);
+  const [resendAfterEdit, setResendAfterEdit] = useState(true);
+
+  // Sync editContent when message prop changes
+  useEffect(() => {
+    setEditContent(message.content);
+  }, [message.content]);
 
   const isModel = message.role === 'model';
   const isThisSpeaking = speechState.isSpeaking && speechState.activeMessageId === message.id;
@@ -164,7 +180,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             )}
           </div>
 
-          {/* Action buttons (copy, voice readout) */}
+          {/* Action buttons (copy, edit, voice readout) */}
           <div className="flex items-center gap-1 opacity-80 sm:opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               onClick={handleCopyText}
@@ -173,6 +189,31 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             >
               {copied ? <Check className="w-3.5 h-3.5 text-[#34d399]" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
+
+            {!isModel && onEditMessage && (
+              <button
+                onClick={() => {
+                  setEditContent(message.content);
+                  setIsEditing(true);
+                }}
+                title="Edit teks (perbaiki typo/salah ketik)"
+                className="p-1.5 rounded-lg text-neutral-400 hover:text-emerald-400 hover:bg-[#1f2130] transition-colors flex items-center gap-1 text-[11px]"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Edit</span>
+              </button>
+            )}
+
+            {!isModel && onLoadToInput && (
+              <button
+                onClick={() => onLoadToInput(message.content)}
+                title="Muat teks ke input bawah"
+                className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-[#1f2130] transition-colors flex items-center gap-1 text-[11px]"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            )}
+
             {isModel && (
               <button
                 onClick={handlePlayTTS}
@@ -416,67 +457,147 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           </div>
         )}
 
-        {/* Body Text / Markdown */}
-        <div className="prose prose-invert prose-sm max-w-none break-words leading-relaxed text-neutral-200">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              code({ node, inline, className, children, ...props }: any) {
-                const match = /language-(\w+)/.exec(className || '');
-                return !inline ? (
-                  <div className="my-3 rounded-xl overflow-hidden border border-[#2b2e42] bg-[#0c0d12] text-neutral-100 shadow-lg">
-                    <div className="flex items-center justify-between px-3.5 py-1.5 bg-[#141620] border-b border-[#25283a] text-[11px] font-mono text-neutral-400">
-                      <span className="text-[#34d399] font-semibold">{match ? match[1] : 'code'}</span>
-                      <button
-                        onClick={() => navigator.clipboard.writeText(String(children).replace(/\n$/, ''))}
-                        className="hover:text-white transition-colors"
-                      >
-                        Salin Kode
-                      </button>
+        {/* Body Text / Inline Edit Mode */}
+        {isEditing ? (
+          <div className="my-2 space-y-2.5 p-3.5 rounded-2xl bg-neutral-900/90 border border-emerald-500/50 shadow-xl ring-1 ring-emerald-500/20 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between text-xs text-emerald-400 font-semibold">
+              <span className="flex items-center gap-1.5">
+                <Pencil className="w-3.5 h-3.5" /> Edit Pesan (Perbaiki Typo / Salah Ketik)
+              </span>
+              <span className="text-[10px] text-neutral-400 font-normal">
+                Shift + Enter untuk baris baru
+              </span>
+            </div>
+
+            <textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  const trimmed = editContent.trim();
+                  if (trimmed) {
+                    onEditMessage?.(message.id, trimmed, resendAfterEdit);
+                    setIsEditing(false);
+                  }
+                } else if (e.key === 'Escape') {
+                  setEditContent(message.content);
+                  setIsEditing(false);
+                }
+              }}
+              rows={Math.min(8, Math.max(2, editContent.split('\n').length))}
+              className="w-full p-3 rounded-xl bg-[#0c0d12] border border-[#2b2e42] text-xs text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 font-sans leading-relaxed resize-y"
+              placeholder="Tulis pesan yang sudah diperbaiki..."
+              autoFocus
+            />
+
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-neutral-300">
+                <input
+                  type="checkbox"
+                  checked={resendAfterEdit}
+                  onChange={(e) => setResendAfterEdit(e.target.checked)}
+                  className="w-4 h-4 accent-[#20a66a] rounded"
+                />
+                <span>Kirim ulang ke Maria AI untuk jawaban baru</span>
+              </label>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditContent(message.content);
+                    setIsEditing(false);
+                  }}
+                  className="px-3 py-1.5 rounded-xl border border-[#2e3144] text-neutral-300 hover:text-white hover:bg-neutral-800 text-xs font-medium transition-colors"
+                >
+                  Batal
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const trimmed = editContent.trim();
+                    if (!trimmed) return;
+                    onEditMessage?.(message.id, trimmed, resendAfterEdit);
+                    setIsEditing(false);
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl bg-[#20a66a] hover:bg-[#1a8c59] text-white text-xs font-semibold shadow-md transition-colors flex items-center gap-1.5"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{resendAfterEdit ? 'Simpan & Kirim Ulang' : 'Simpan Saja'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="prose prose-invert prose-sm max-w-none break-words leading-relaxed text-neutral-200">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                code({ node, inline, className, children, ...props }: any) {
+                  const match = /language-(\w+)/.exec(className || '');
+                  return !inline ? (
+                    <div className="my-3 rounded-xl overflow-hidden border border-[#2b2e42] bg-[#0c0d12] text-neutral-100 shadow-lg">
+                      <div className="flex items-center justify-between px-3.5 py-1.5 bg-[#141620] border-b border-[#25283a] text-[11px] font-mono text-neutral-400">
+                        <span className="text-[#34d399] font-semibold">{match ? match[1] : 'code'}</span>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(String(children).replace(/\n$/, ''))}
+                          className="hover:text-white transition-colors"
+                        >
+                          Salin Kode
+                        </button>
+                      </div>
+                      <pre className="p-3.5 text-xs font-mono overflow-x-auto m-0 bg-[#0c0d12]">
+                        <code className={className} {...props}>
+                          {children}
+                        </code>
+                      </pre>
                     </div>
-                    <pre className="p-3.5 text-xs font-mono overflow-x-auto m-0 bg-[#0c0d12]">
-                      <code className={className} {...props}>
-                        {children}
-                      </code>
-                    </pre>
-                  </div>
-                ) : (
-                  <code
-                    className="px-1.5 py-0.5 rounded-md font-mono text-xs bg-[#1f2231] text-[#34d399]"
-                    {...props}
-                  >
-                    {children}
-                  </code>
-                );
-              },
-              table({ children }: any) {
-                return (
-                  <div className="overflow-x-auto my-3 border border-[#2b2e42] rounded-xl">
-                    <table className="min-w-full divide-y divide-[#26283a] text-xs">
+                  ) : (
+                    <code
+                      className="px-1.5 py-0.5 rounded-md font-mono text-xs bg-[#1f2231] text-[#34d399]"
+                      {...props}
+                    >
                       {children}
-                    </table>
-                  </div>
-                );
-              },
-              th({ children }: any) {
-                return (
-                  <th className="px-3 py-2 bg-[#151722] text-left font-semibold text-neutral-200">
-                    {children}
-                  </th>
-                );
-              },
-              td({ children }: any) {
-                return (
-                  <td className="px-3 py-2 border-t border-[#232536] text-neutral-300">
-                    {children}
-                  </td>
-                );
-              },
-            }}
-          >
-            {message.content}
-          </ReactMarkdown>
-        </div>
+                    </code>
+                  );
+                },
+                table({ children }: any) {
+                  return (
+                    <div className="overflow-x-auto my-3 border border-[#2b2e42] rounded-xl">
+                      <table className="min-w-full divide-y divide-[#26283a] text-xs">
+                        {children}
+                      </table>
+                    </div>
+                  );
+                },
+                th({ children }: any) {
+                  return (
+                    <th className="px-3 py-2 bg-[#151722] text-left font-semibold text-neutral-200">
+                      {children}
+                    </th>
+                  );
+                },
+                td({ children }: any) {
+                  return (
+                    <td className="px-3 py-2 border-t border-[#232536] text-neutral-300">
+                      {children}
+                    </td>
+                  );
+                },
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+
+            {message.editedAt && (
+              <span className="text-[10px] text-neutral-500 italic inline-block mt-1">
+                (diedit)
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Grounding Source Links (Search or Maps) */}
         {message.groundingLinks && message.groundingLinks.length > 0 && (

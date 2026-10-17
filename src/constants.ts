@@ -65,14 +65,13 @@ export interface VoicePersonaOption {
   pitch: number;
   speed: number;
   description: string;
-  emoji: string;
   sampleText: string;
 }
 
 export const VOICE_PERSONAS: VoicePersonaOption[] = [
   {
     id: "wanita",
-    name: "Maria (Wanita Dewasa)",
+    name: "Maria",
     label: "Wanita Dewasa",
     category: "Dewasa",
     gender: "Wanita",
@@ -80,12 +79,11 @@ export const VOICE_PERSONAS: VoicePersonaOption[] = [
     pitch: 1.0,
     speed: 1.0,
     description: "Hangat, ramah, anggun, dan ekspresif",
-    emoji: "👩",
     sampleText: "Halo, saya Maria. Senang sekali bisa membantu Anda hari ini.",
   },
   {
     id: "pria",
-    name: "Mario (Pria Dewasa)",
+    name: "Mario",
     label: "Pria Dewasa",
     category: "Dewasa",
     gender: "Pria",
@@ -93,12 +91,11 @@ export const VOICE_PERSONAS: VoicePersonaOption[] = [
     pitch: 0.95,
     speed: 1.0,
     description: "Berwibawa, tenang, mantap, dan terpercaya",
-    emoji: "👨",
     sampleText: "Halo, saya Mario. Siap membantu analisis dan tugas Anda.",
   },
   {
     id: "remaja-perempuan",
-    name: "Maya (Remaja Perempuan)",
+    name: "Maya",
     label: "Remaja Perempuan",
     category: "Remaja",
     gender: "Wanita",
@@ -106,12 +103,11 @@ export const VOICE_PERSONAS: VoicePersonaOption[] = [
     pitch: 1.08,
     speed: 1.03,
     description: "Ceria, santai, lincah, dan bersahabat",
-    emoji: "👱‍♀️",
     sampleText: "Hai! Aku Maya. Yuk bahas hal seru bareng hari ini!",
   },
   {
     id: "remaja-laki",
-    name: "Max (Remaja Laki-laki)",
+    name: "Max",
     label: "Remaja Laki-laki",
     category: "Remaja",
     gender: "Pria",
@@ -119,12 +115,11 @@ export const VOICE_PERSONAS: VoicePersonaOption[] = [
     pitch: 1.03,
     speed: 1.03,
     description: "Enerjik, dinamis, kasual, dan asyik",
-    emoji: "👱‍♂️",
-    sampleText: "Halo bro! Gue Max. Ada ide keren apa yang mau kita buat?",
+    sampleText: "Halo! Saya Max. Ada topik menarik apa yang mau kita diskusikan?",
   },
   {
     id: "anak-perempuan",
-    name: "Mia (Anak Perempuan)",
+    name: "Mia",
     label: "Anak Perempuan",
     category: "Anak-anak",
     gender: "Wanita",
@@ -132,12 +127,11 @@ export const VOICE_PERSONAS: VoicePersonaOption[] = [
     pitch: 1.25,
     speed: 1.08,
     description: "Manis, riang, polos, dan ceria",
-    emoji: "👧",
-    sampleText: "Halo kakak! Aku Mia, yuk kita belajar dan main sambil cerita!",
+    sampleText: "Halo kakak! Aku Mia, yuk kita belajar dan cerita bersama!",
   },
   {
     id: "anak-laki",
-    name: "Milo (Anak Laki-laki)",
+    name: "Milo",
     label: "Anak Laki-laki",
     category: "Anak-anak",
     gender: "Pria",
@@ -145,7 +139,6 @@ export const VOICE_PERSONAS: VoicePersonaOption[] = [
     pitch: 1.22,
     speed: 1.08,
     description: "Ceria, lincah, ingin tahu, penuh rasa penasaran",
-    emoji: "👦",
     sampleText: "Halo! Aku Milo! Aku punya banyak pertanyaan seru buat kakak!",
   },
 ];
@@ -190,35 +183,35 @@ export const TONE_OPTIONS: ToneOption[] = [
     value: "Professional",
     label: "Profesional & Formal",
     description: "Bahasa rapi, sopan, santun, dan sangat terstruktur cocok untuk pekerjaan.",
-    emoji: "💼",
+    emoji: "",
     badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
   },
   {
     value: "Warm",
     label: "Ramah & Hangat",
     description: "Sarat empati, bersahabat, penuh perhatian, dan menenangkan.",
-    emoji: "🌸",
+    emoji: "",
     badgeColor: "bg-rose-50 text-rose-700 border-rose-200",
   },
   {
     value: "Creative",
     label: "Kreatif & Berenergi",
     description: "Penuh ide segar, menggunakan analogi unik, ekspresif dan bersemangat.",
-    emoji: "🎨",
+    emoji: "",
     badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
   },
   {
     value: "Technical",
     label: "Teknis & Presisi",
     description: "Sangat logis, saintifik, fokus pada data, kode, atau fakta teknis.",
-    emoji: "⚡",
+    emoji: "",
     badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
   },
   {
     value: "Minimalist",
     label: "Minimalis & Padat",
     description: "Jawaban super ringkas, langsung ke intinya, hemat kata.",
-    emoji: "🎯",
+    emoji: "",
     badgeColor: "bg-slate-50 text-slate-700 border-slate-200",
   },
 ];

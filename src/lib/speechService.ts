@@ -53,7 +53,7 @@ class MariaSpeechService {
     return { ...this.state };
   }
 
-  // Cleans markdown formatting, links, and code blocks for fluid speech
+  // Cleans markdown formatting, links, and code blocks for fluid speech, without any emojis
   public cleanTextForSpeech(text: string): string {
     if (!text) return '';
     return text
@@ -64,6 +64,7 @@ class MariaSpeechService {
       .replace(/https?:\/\/\S+/g, '')
       .replace(/[#*_~>•]/g, ' ')
       .replace(/\|[^\n]+\|/g, ' ')
+      .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{200D}\u{FE0F}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{1F3FB}-\u{1F3FF}]/gu, '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -193,6 +194,7 @@ class MariaSpeechService {
         body: JSON.stringify({
           text: cleanText.slice(0, 2500),
           voiceName,
+          personaId,
         }),
         signal: controller.signal,
       });
@@ -206,21 +208,21 @@ class MariaSpeechService {
           const played = await this.playAudioUrl(data.audioUrl, speedMultiplier, messageId, personaId);
           if (played) return true;
         }
-      } else {
-        const errJson = await res.json().catch(() => ({}));
-        console.warn('AI Voice Engine response error:', errJson?.error);
+      } else if (res.status === 429) {
+        // Daily free tier quota reached: smoothly continue speaking with persona pitch modulation
+        return this.speakWithWebSpeech(cleanText, speedMultiplier, messageId, personaId);
       }
-    } catch (err: any) {
-      console.warn('AI Voice Engine request error:', err?.message);
+    } catch {
+      // In case of network interruption, fallback smoothly
+      return this.speakWithWebSpeech(cleanText, speedMultiplier, messageId, personaId);
     }
 
-    // Do NOT silently revert to robotic Google browser voice when AI Voice Engine is selected
     this.setState({
       isSpeaking: false,
       isLoading: false,
       activeMessageId: null,
       currentEngine: null,
-      error: 'Audio model AI sedang diproses. Silakan coba lagi.',
+      error: null,
     });
     return false;
   }
@@ -237,36 +239,13 @@ class MariaSpeechService {
         this.currentAudio = audio;
         audio.src = audioUrl;
 
-        // Modulate pitch and speed for persona (e.g. anak perempuan/laki-laki, pria, remaja)
-        let pitchMultiplier = 1.0;
-        let speedBoost = 1.0;
-
-        if (personaId === 'anak-perempuan') {
-          pitchMultiplier = 1.25;
-          speedBoost = 1.08;
-        } else if (personaId === 'anak-laki') {
-          pitchMultiplier = 1.22;
-          speedBoost = 1.08;
-        } else if (personaId === 'remaja-perempuan') {
-          pitchMultiplier = 1.06;
-          speedBoost = 1.03;
-        } else if (personaId === 'remaja-laki') {
-          pitchMultiplier = 1.03;
-          speedBoost = 1.03;
-        } else if (personaId === 'pria') {
-          pitchMultiplier = 0.95;
-          speedBoost = 0.98;
-        }
-
-        audio.playbackRate = Math.min(2.0, Math.max(0.5, speed * speedBoost * (pitchMultiplier !== 1.0 ? pitchMultiplier : 1.0)));
-
-        if (pitchMultiplier !== 1.0) {
-          try {
-            (audio as any).preservesPitch = false;
-            (audio as any).webkitPreservesPitch = false;
-            (audio as any).mozPreservesPitch = false;
-          } catch {}
-        }
+        // Apply clean playback rate chosen by user (0.75x, 1x, 1.25x, 1.5x)
+        audio.playbackRate = Math.min(2.0, Math.max(0.5, speed));
+        try {
+          (audio as any).preservesPitch = true;
+          (audio as any).webkitPreservesPitch = true;
+          (audio as any).mozPreservesPitch = true;
+        } catch {}
 
         audio.onplay = () => {
           this.setState({
@@ -319,7 +298,12 @@ class MariaSpeechService {
     });
   }
 
-  private speakWithWebSpeech(text: string, speed: number, messageId: string | null): boolean {
+  private speakWithWebSpeech(
+    text: string,
+    speed: number,
+    messageId: string | null,
+    personaId?: string
+  ): boolean {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       this.setState({
         isLoading: false,
@@ -334,8 +318,27 @@ class MariaSpeechService {
 
       const utterance = new SpeechSynthesisUtterance(text);
       this.currentUtterance = utterance;
-      utterance.rate = speed;
-      utterance.pitch = 1.05;
+
+      // Adjust pitch & cadence for the selected gender/age persona
+      if (personaId === 'pria') {
+        utterance.pitch = 0.85;
+        utterance.rate = speed * 0.95;
+      } else if (personaId === 'anak-perempuan') {
+        utterance.pitch = 1.45;
+        utterance.rate = speed * 1.08;
+      } else if (personaId === 'anak-laki') {
+        utterance.pitch = 1.35;
+        utterance.rate = speed * 1.08;
+      } else if (personaId === 'remaja-perempuan') {
+        utterance.pitch = 1.18;
+        utterance.rate = speed * 1.05;
+      } else if (personaId === 'remaja-laki') {
+        utterance.pitch = 1.05;
+        utterance.rate = speed * 1.05;
+      } else {
+        utterance.pitch = 1.05;
+        utterance.rate = speed;
+      }
 
       const voices = window.speechSynthesis.getVoices();
       const idVoice = voices.find(

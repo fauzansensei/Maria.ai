@@ -58,7 +58,7 @@ service cloud.firestore {
     // Message Validation
     function isValidMessage(data) {
       return data.keys().hasAll(['id', 'conversationId', 'userId', 'role', 'content']) &&
-             data.keys().hasOnly(['id', 'conversationId', 'userId', 'role', 'content', 'model', 'mode', 'imageUri', 'thinkingProcess', 'groundingLinks', 'attachments', 'audioUri', 'createdAt']) &&
+             data.keys().hasOnly(['id', 'conversationId', 'userId', 'role', 'content', 'model', 'mode', 'imageUri', 'thinkingProcess', 'groundingLinks', 'attachments', 'audioUri', 'createdAt', 'editedAt']) &&
              data.userId == request.auth.uid &&
              data.id is string && data.id.size() <= 128 &&
              data.conversationId is string && data.conversationId.size() <= 128 &&
@@ -134,7 +134,13 @@ service cloud.firestore {
                         get(/databases/$(database)/documents/conversations/$(conversationId)).data.userId == request.auth.uid
                       );
                       
-        allow update: if false; // Messages are immutable
+        allow update: if isSignedIn() && isValidId(conversationId) && isValidId(messageId) &&
+                      resource != null && resource.data.userId == request.auth.uid &&
+                      isValidMessage(incoming()) &&
+                      incoming().userId == existing().userId &&
+                      incoming().conversationId == existing().conversationId &&
+                      incoming().id == existing().id &&
+                      incoming().diff(existing()).affectedKeys().hasOnly(['content', 'editedAt']);
         
         allow delete: if isSignedIn() && isValidId(conversationId) && isValidId(messageId) &&
                       (

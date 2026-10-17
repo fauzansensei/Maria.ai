@@ -1,4 +1,5 @@
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
+import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 
 // Initialize Gemini Client strictly on server-side
 export function getGeminiClient(): GoogleGenAI {
@@ -37,11 +38,20 @@ export interface GenerateOptions {
   location?: { latitude: number; longitude: number };
   withVoice?: boolean;
   voiceName?: string;
+  personaId?: string;
+}
+
+// Helper to strip any emoji characters completely from text
+export function stripEmojis(str: string): string {
+  if (!str) return '';
+  return str
+    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{200D}\u{FE0F}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{1F3FB}-\u{1F3FF}]/gu, '')
+    .replace(/  +/g, ' ');
 }
 
 export async function generateChatResponse(options: GenerateOptions) {
   const ai = getGeminiClient();
-  const { messages, mode = 'general', systemInstruction, location, withVoice, voiceName } = options;
+  const { messages, mode = 'general', systemInstruction, location, withVoice, voiceName, personaId } = options;
 
   const hasMedia = messages.some((m) => m.attachments && m.attachments.length > 0);
   let modelName = hasMedia ? 'gemini-2.5-flash' : 'gemini-3.5-flash';
@@ -49,7 +59,7 @@ export async function generateChatResponse(options: GenerateOptions) {
 
   // System persona for Maria AI
   let defaultSystemInstruction =
-    'Anda adalah Maria AI, asisten kecerdasan buatan serba bisa yang cerdas, santun, ramah, dan terstruktur rapi. Jawablah dalam bahasa Indonesia secara alami, rapi, enak dibaca, dan gunakan format Markdown yang bersih (sub-judul, poin-poin, tabel teratur, atau blok kode beranotasi). Bila pengguna melampirkan gambar atau video, amati dengan teliti setiap objek, teks, adegan, dan berikan analisis yang tajam dan akurat.';
+    'Anda adalah Maria AI, asisten kecerdasan buatan serba bisa yang cerdas, santun, ramah, dan terstruktur rapi. Jawablah dalam bahasa Indonesia secara alami, rapi, enak dibaca, dan gunakan format Markdown yang bersih (sub-judul, poin-poin, tabel teratur, atau blok kode beranotasi). ATURAN MUTLAK: DILARANG KERAS MENGGUNAKAN EMOJI SAMA SEKALI. Jangan pernah menyertakan emotikon, karakter emoji, atau simbol grafis apa pun dalam seluruh respon Anda. Gunakan teks murni yang bersih, elegan, dan profesional. Bila pengguna melampirkan gambar atau video, amati dengan teliti setiap objek, teks, adegan, dan berikan analisis yang tajam dan akurat.';
 
   if (mode === 'thinking') {
     modelName = 'gemini-3.1-pro-preview';
@@ -85,7 +95,9 @@ export async function generateChatResponse(options: GenerateOptions) {
       'Anda adalah Maria AI Spesialis Sains & Bioinformatika (Google DeepMind Science Specialist). Anda ahli dalam biologi molekuler, struktur protein (AlphaFold, RCSB PDB, UniProt), genetika & genomik (ClinVar, gnomAD, dbSNP), kimia obat (PubChem, ChEMBL), jalur biologis (Reactome, STRING), dan literatur ilmiah (PubMed). Jelaskan konsep sains secara mendalam, akurat secara akademis, dan sebutkan data struktur/gen bila relevan.';
   }
 
-  config.systemInstruction = systemInstruction || defaultSystemInstruction;
+  config.systemInstruction =
+    (systemInstruction || defaultSystemInstruction) +
+    '\n\nATURAN MUTLAK: DILARANG KERAS MENGGUNAKAN KARAKTER EMOJI ATAU EMOTIKON APAPUN dalam seluruh respon jawaban Anda.';
 
   // Format contents for multi-turn chat with full multimodal parts support
   const contents = messages.map((m) => {
@@ -122,7 +134,8 @@ export async function generateChatResponse(options: GenerateOptions) {
     config,
   });
 
-  const responseText = response.text || '';
+  const rawText = response.text || '';
+  const responseText = stripEmojis(rawText).replace(/  +/g, ' ').trim();
 
   // Extract grounding information (Search or Maps)
   const groundingChunks =
@@ -149,7 +162,7 @@ export async function generateChatResponse(options: GenerateOptions) {
 
   if (withVoice && responseText) {
     try {
-      const speechRes = await generateSpeechAudio(responseText, voiceName || 'Aoede');
+      const speechRes = await generateSpeechAudio(responseText, voiceName || 'Aoede', personaId);
       audioUrl = speechRes.audioUrl;
       audioVoice = speechRes.voice;
     } catch (err: any) {
@@ -325,17 +338,21 @@ export async function generateAiImage(options: GenerateImageOptions) {
   throw new Error('Gagal menghasilkan gambar dari model AI.');
 }
 
-export async function generateSpeechAudio(text: string, voiceName: string = 'Aoede') {
-  const ai = getGeminiClient();
-
-  // Clean text of markdown before TTS
-  let cleanText = text
-    .replace(/```[\s\S]*?```/g, ' bagian kode dilewati ')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/https?:\/\/\S+/g, '')
-    .replace(/[#*_~>•]/g, ' ')
+export async function generateSpeechAudio(
+  text: string,
+  voiceName: string = 'Aoede',
+  personaId?: string
+) {
+  // Clean text of markdown and strip all emojis before TTS
+  let cleanText = stripEmojis(
+    text
+      .replace(/```[\s\S]*?```/g, ' bagian kode dilewati ')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/!\[([^\]]*)\]\([^)]+\)/g, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/https?:\/\/\S+/g, '')
+      .replace(/[#*_~>•]/g, ' ')
+  )
     .replace(/\s+/g, ' ')
     .trim();
 
@@ -343,7 +360,7 @@ export async function generateSpeechAudio(text: string, voiceName: string = 'Aoe
     throw new Error('Teks kosong untuk suara.');
   }
 
-  // Read full paragraphs and comprehensive answers completely without cutting off halfway
+  // Read full answers up to 2500 characters cleanly
   if (cleanText.length > 2500) {
     const sentences = cleanText.split(/(?<=[.!?])\s+/);
     let spokenSnippet = '';
@@ -357,63 +374,112 @@ export async function generateSpeechAudio(text: string, voiceName: string = 'Aoe
     cleanText = spokenSnippet || cleanText.slice(0, 2500);
   }
 
-  const validVoices = ['Aoede', 'Kore', 'Puck', 'Fenrir', 'Zephyr'];
+  const validVoices = ['Aoede', 'Kore', 'Puck', 'Fenrir', 'Zephyr', 'Charon'];
   const selectedVoice = validVoices.includes(voiceName) ? voiceName : 'Aoede';
 
-  // High performance, unexhausted AI Voice models:
-  // Primary: gemini-3.1-flash-tts-preview (expressive AI neural engine, blazing speed)
-  // Fallbacks: gemini-2.5-flash-preview-tts, gemini-3.8-flash-tts, gemini-3.8-flash-lite-tts
-  const modelsToTry = [
-    'gemini-3.1-flash-tts-preview',
-    'gemini-2.5-flash-preview-tts',
-    'gemini-3.8-flash-tts',
-    'gemini-3.8-flash-lite-tts',
-  ];
-  let lastError: any = null;
+  // 1. PRIMARY: High-Fidelity Indonesian Neural AI Voice Engine (MsEdgeTTS)
+  // Perfectly matches each gender & age persona with native Indonesian natural inflection:
+  // - Wanita Dewasa: id-ID-GadisNeural (Pitch: +0Hz, Rate: 1.0)
+  // - Pria Dewasa: id-ID-ArdiNeural (Pitch: -2Hz, Rate: 0.98)
+  // - Remaja Perempuan: id-ID-GadisNeural (Pitch: +12Hz, Rate: 1.04)
+  // - Remaja Laki-laki: id-ID-ArdiNeural (Pitch: +10Hz, Rate: 1.04)
+  // - Anak Perempuan: id-ID-GadisNeural (Pitch: +28Hz, Rate: 1.10)
+  // - Anak Laki-laki: id-ID-ArdiNeural (Pitch: +26Hz, Rate: 1.10)
+  try {
+    const isMale =
+      personaId === 'pria' || personaId === 'remaja-laki' || personaId === 'anak-laki';
+    const edgeVoice = isMale ? 'id-ID-ArdiNeural' : 'id-ID-GadisNeural';
 
-  for (const model of modelsToTry) {
-    try {
-      const response = await ai.models.generateContent({
-        model,
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              {
-                text: cleanText,
-                speechMetadata: {
-                  style: 'Clear, polite, friendly, warm, expressive Indonesian female assistant voice with natural human intonation',
-                },
-              },
-            ],
-          },
-        ],
-        config: {
-          responseModalities: ['AUDIO'],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: selectedVoice },
-            },
-          },
-        },
-      });
-
-      const base64Audio =
-        response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-
-      if (base64Audio) {
-        return {
-          audioUrl: `data:audio/wav;base64,${base64Audio}`,
-          model,
-          voice: selectedVoice,
-        };
-      }
-    } catch (err: any) {
-      lastError = err;
-      // Continue to next model if available
+    let pitch = '+0Hz';
+    let rate = 1.0;
+    if (personaId === 'anak-perempuan') {
+      pitch = '+28Hz';
+      rate = 1.10;
+    } else if (personaId === 'anak-laki') {
+      pitch = '+26Hz';
+      rate = 1.10;
+    } else if (personaId === 'remaja-perempuan') {
+      pitch = '+12Hz';
+      rate = 1.04;
+    } else if (personaId === 'remaja-laki') {
+      pitch = '+10Hz';
+      rate = 1.04;
+    } else if (personaId === 'pria') {
+      pitch = '-2Hz';
+      rate = 0.98;
     }
+
+    const tts = new MsEdgeTTS();
+    await tts.setMetadata(edgeVoice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+    const { audioStream } = tts.toStream(cleanText, { pitch, rate });
+    const chunks: Buffer[] = [];
+    audioStream.on('data', (c: Buffer) => chunks.push(c));
+    await new Promise<void>((resolve, reject) => {
+      audioStream.on('end', () => resolve());
+      audioStream.on('error', (err: any) => reject(err));
+    });
+    tts.close();
+
+    const buffer = Buffer.concat(chunks);
+    if (buffer.length > 0) {
+      return {
+        audioUrl: `data:audio/mp3;base64,${buffer.toString('base64')}`,
+        model: `neural-${personaId || 'wanita'}`,
+        voice: edgeVoice,
+      };
+    }
+  } catch (edgeErr: any) {
+    console.warn('Neural voice primary engine note, trying fallback:', edgeErr?.message || edgeErr);
   }
 
-  throw lastError || new Error('Tidak ada output audio yang dihasilkan dari model AI.');
+  // 2. FALLBACK: Gemini Flash Lite TTS
+  const modelsToTry = [
+    'gemini-3.8-flash-lite-tts',
+    'gemini-3.8-flash-tts',
+    'gemini-3.1-flash-tts-preview',
+    'gemini-2.5-flash-preview-tts',
+  ];
+
+  try {
+    const ai = getGeminiClient();
+    for (const model of modelsToTry) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: cleanText }],
+            },
+          ],
+          config: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: selectedVoice },
+              },
+            },
+          },
+        });
+
+        const base64Audio =
+          response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+
+        if (base64Audio) {
+          return {
+            audioUrl: `data:audio/wav;base64,${base64Audio}`,
+            model,
+            voice: selectedVoice,
+          };
+        }
+      } catch (err: any) {
+        // Continue
+      }
+    }
+  } catch (initErr: any) {
+    console.warn('Gemini TTS fallback note:', initErr?.message || initErr);
+  }
+
+  throw new Error('Tidak ada output audio yang dapat dihasilkan dari model suara AI.');
 }
 

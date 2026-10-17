@@ -38,6 +38,8 @@ interface ChatInputProps {
   activeMode: AiMode;
   onModeChange: (mode: AiMode) => void;
   onOpenScienceScout?: () => void;
+  loadedText?: string;
+  onClearLoadedText?: () => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -46,6 +48,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   activeMode,
   onModeChange,
   onOpenScienceScout,
+  loadedText,
+  onClearLoadedText,
 }) => {
   const [text, setText] = useState('');
   const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
@@ -56,6 +60,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [lightboxMedia, setLightboxMedia] = useState<LightboxMedia | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (loadedText) {
+      setText(loadedText);
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
+      onClearLoadedText?.();
+    }
+  }, [loadedText, onClearLoadedText]);
   const recognitionRef = useRef<any>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);

@@ -282,3 +282,22 @@ export async function addMessage(
     return messageId;
   }
 }
+
+// Update a message content (e.g. edit text when typo/salah ketik)
+export async function updateMessage(
+  convId: string,
+  messageId: string,
+  newContent: string
+): Promise<void> {
+  const path = `conversations/${convId}/messages/${messageId}`;
+  try {
+    const docRef = doc(db, 'conversations', convId, 'messages', messageId);
+    await updateDoc(docRef, {
+      content: (newContent || '').slice(0, 48000),
+      editedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+

@@ -36,6 +36,7 @@ interface ChatAreaProps {
   speechSpeed?: string;
   voicePersona?: VoicePersonaGender;
   onSelectVoicePersona?: (p: VoicePersonaGender) => void;
+  onEditMessage?: (messageId: string, newContent: string, resend: boolean) => void;
   userPhoto?: string | null;
   userName?: string | null;
 }
@@ -60,6 +61,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   speechSpeed = '1x',
   voicePersona = 'wanita',
   onSelectVoicePersona,
+  onEditMessage,
   userPhoto,
   userName,
 }) => {
@@ -67,6 +69,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const [speechState, setSpeechState] = useState<SpeechState>(() => speechService.getState());
   const [showNotifications, setShowNotifications] = useState(false);
   const [showVoicePopover, setShowVoicePopover] = useState(false);
+  const [loadedInputText, setLoadedInputText] = useState('');
 
   useEffect(() => {
     return speechService.subscribe((state) => {
@@ -143,92 +146,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           </div>
         )}
 
-        {/* Right: Quick Voice Model Selector, DEFCON 5 Status Shield Badge & Notifications Bell */}
+        {/* Right: DEFCON 5 Status Shield Badge & Notifications Bell (Exact Screenshot Match) */}
         <div className="flex items-center gap-2">
-          {/* Quick Voice Model Picker (Pria, Wanita, Anak-anak, Remaja) */}
-          <div className="relative">
-            <button
-              onClick={() => setShowVoicePopover((prev) => !prev)}
-              title="Ganti Model Suara AI"
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-gray-200 dark:border-[#2a2d3d] bg-gray-50/90 dark:bg-[#181a26] text-gray-700 dark:text-neutral-200 text-xs font-semibold hover:border-emerald-500 transition-colors shadow-xs"
-            >
-              <span>{currentPersona.emoji}</span>
-              <span className="hidden sm:inline text-[11px] font-bold">{currentPersona.label}</span>
-              <ChevronDown className="w-3 h-3 text-gray-400" />
-            </button>
-
-            {/* Voice Model Dropdown Popover */}
-            {showVoicePopover && (
-              <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#151722] border border-gray-200 dark:border-[#27293a] rounded-2xl shadow-2xl p-2.5 z-50 text-xs animate-in fade-in zoom-in-95">
-                <div className="flex items-center justify-between pb-2 mb-1.5 border-b border-gray-100 dark:border-[#212332] px-1">
-                  <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5 text-xs">
-                    <Volume2 className="w-3.5 h-3.5 text-emerald-500" /> Pilihan Suara AI
-                  </span>
-                  <span className="text-[10px] text-gray-400 font-medium">6 Karakter</span>
-                </div>
-
-                <div className="space-y-1 max-h-72 overflow-y-auto">
-                  {VOICE_PERSONAS.map((p) => {
-                    const isSelected = p.id === voicePersona;
-                    return (
-                      <div
-                        key={p.id}
-                        className={`flex items-center justify-between p-2 rounded-xl border transition-all ${
-                          isSelected
-                            ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-600/50 text-emerald-900 dark:text-white'
-                            : 'bg-white dark:bg-[#1a1c29] border-transparent text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-[#202334]'
-                        }`}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onSelectVoicePersona?.(p.id);
-                            setShowVoicePopover(false);
-                            // Brief sample test
-                            speechService.unlockAudio();
-                            speechService.speak(p.sampleText, {
-                              voiceName: p.geminiVoice,
-                              personaId: p.id,
-                              speed: speechSpeed,
-                            });
-                          }}
-                          className="flex items-center gap-2 flex-1 text-left"
-                        >
-                          <span className="text-lg">{p.emoji}</span>
-                          <div className="min-w-0">
-                            <div className="font-bold text-xs flex items-center gap-1">
-                              <span>{p.label}</span>
-                              {isSelected && <Check className="w-3 h-3 text-emerald-600 dark:text-[#34d399]" />}
-                            </div>
-                            <div className="text-[10px] text-gray-400 dark:text-neutral-400 truncate">
-                              {p.description}
-                            </div>
-                          </div>
-                        </button>
-
-                        <button
-                          type="button"
-                          title="Dengar contoh suara"
-                          onClick={() => {
-                            speechService.unlockAudio();
-                            speechService.speak(p.sampleText, {
-                              voiceName: p.geminiVoice,
-                              personaId: p.id,
-                              speed: speechSpeed,
-                            });
-                          }}
-                          className="p-1 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-gray-400 hover:text-emerald-600 transition-colors shrink-0"
-                        >
-                          <Volume2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
           {/* DEFCON 5 Status Shield Badge */}
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-emerald-300/80 dark:border-emerald-500/30 bg-emerald-50/90 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-xs font-bold shadow-sm">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -291,6 +210,19 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             )}
           </div>
 
+          {/* Quick Voice Persona Indicator Button */}
+          <button
+            onClick={onOpenSettings}
+            title={`Model Suara AI: ${currentPersona.name} (${currentPersona.label}) - Klik untuk ganti model suara`}
+            className="h-9 px-2.5 rounded-xl border border-emerald-300/60 dark:border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5 hover:bg-emerald-100/50 dark:hover:bg-emerald-950/40 transition-colors text-xs font-semibold"
+          >
+            <Volume2 className="w-3.5 h-3.5 text-emerald-500" />
+            <span className="hidden xs:inline">{currentPersona.name}</span>
+            <span className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70 hidden sm:inline">
+              ({currentPersona.category})
+            </span>
+          </button>
+
           {/* Settings button */}
           <button
             onClick={onOpenSettings}
@@ -327,6 +259,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 userPhoto={userPhoto}
                 userName={userName}
                 speechSpeed={speechSpeed}
+                onEditMessage={onEditMessage}
+                onLoadToInput={(txt) => setLoadedInputText(txt)}
               />
             ))}
 
@@ -361,8 +295,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   {speechState.isLoading ? 'Menyiapkan Suara Maria AI...' : `${currentPersona.label} sedang berbicara`}
                 </span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-[#20a66a]/20 text-emerald-700 dark:text-[#34d399] font-medium flex items-center gap-1">
-                  <span>{currentPersona.emoji}</span>
-                  <span>{speechState.currentEngine === 'gemini' ? 'AI Voice Engine' : 'Audio'}</span>
+                  <span>AI Voice Engine</span>
                 </span>
               </div>
             </div>
@@ -385,6 +318,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           activeMode={activeMode}
           onModeChange={onModeChange}
           onOpenScienceScout={onOpenScienceScout}
+          loadedText={loadedInputText}
+          onClearLoadedText={() => setLoadedInputText('')}
         />
       </div>
     </div>

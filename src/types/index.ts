@@ -30,6 +30,7 @@ export interface Message {
   groundingLinks?: GroundingLink[];
   thinkingProcess?: string;
   audioUri?: string;
+  editedAt?: any;
   createdAt: any;
 }
 

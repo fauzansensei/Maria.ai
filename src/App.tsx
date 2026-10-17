@@ -16,6 +16,7 @@ import {
   subscribeMessages,
   createConversation,
   addMessage,
+  updateMessage,
   deleteConversation,
   updateConversation,
   getUserProfile,
@@ -51,23 +52,31 @@ function AppContent() {
     }
   });
 
-  // Keep settings synchronized across all updates
+  const handleUpdateSettings = (patch: Partial<UserSettings>) => {
+    setSettings((prev) => {
+      const updated = { ...prev, ...patch };
+      if ('voiceEnabled' in patch) {
+        updated.voiceResponses = Boolean(patch.voiceEnabled);
+      }
+      try {
+        localStorage.setItem('maria_settings', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  // Keep settings synchronized across external browser tabs
   useEffect(() => {
-    const handleSettingsUpdate = (e: any) => {
-      if (e?.detail) {
-        setSettings(e.detail);
-      } else {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'maria_settings' && e.newValue) {
         try {
-          const saved = localStorage.getItem('maria_settings');
-          if (saved) setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(saved) });
+          setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(e.newValue) });
         } catch {}
       }
     };
-    window.addEventListener('maria_settings_changed', handleSettingsUpdate);
-    window.addEventListener('storage', handleSettingsUpdate);
+    window.addEventListener('storage', handleStorage);
     return () => {
-      window.removeEventListener('maria_settings_changed', handleSettingsUpdate);
-      window.removeEventListener('storage', handleSettingsUpdate);
+      window.removeEventListener('storage', handleStorage);
     };
   }, []);
 
@@ -206,6 +215,31 @@ function AppContent() {
       alert('Seluruh riwayat percakapan berhasil dihapus secara aman.');
     } catch (err) {
       console.error('Error purging history:', err);
+    }
+  };
+
+  // Handler: Edit Message (Fix typo / wrong text)
+  const handleEditMessage = async (messageId: string, newContent: string, resend: boolean) => {
+    // 1. Update Firestore if logged in with active conversation
+    if (user && activeConvId) {
+      await updateMessage(activeConvId, messageId, newContent);
+    } else {
+      setGuestMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId ? { ...m, content: newContent, editedAt: new Date() } : m
+        )
+      );
+    }
+
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId ? { ...m, content: newContent, editedAt: new Date() } : m
+      )
+    );
+
+    // 2. If resend is requested, re-trigger Maria AI response with the corrected text
+    if (resend) {
+      handleSendMessage(newContent, activeMode);
     }
   };
 
@@ -386,6 +420,7 @@ function AppContent() {
           location: userLocation,
           withVoice: isVoiceAuto,
           voiceName: activeVoiceName,
+          personaId: settings.voicePersona || 'wanita',
         }),
       });
 
@@ -505,11 +540,13 @@ function AppContent() {
             speechSpeed={settings.speechSpeed || '1x'}
             voicePersona={settings.voicePersona || 'wanita'}
             onSelectVoicePersona={(p) => {
-              const newSettings = { ...settings, voicePersona: p };
-              setSettings(newSettings);
-              localStorage.setItem('maria_settings', JSON.stringify(newSettings));
-              window.dispatchEvent(new CustomEvent('maria_settings_changed', { detail: newSettings }));
+              const personaObj = VOICE_PERSONAS.find((item) => item.id === p);
+              handleUpdateSettings({
+                voicePersona: p,
+                ...(personaObj?.geminiVoice ? { geminiVoice: personaObj.geminiVoice } : {}),
+              });
             }}
+            onEditMessage={handleEditMessage}
             userPhoto={user?.photoURL}
             userName={user?.displayName}
           />
@@ -553,6 +590,8 @@ function AppContent() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         onClearHistoryRequest={() => setIs2FAOpen(true)}
+        settings={settings}
+        onUpdateSettings={handleUpdateSettings}
       />
 
       {/* 2FA Security Modal for Purging History */}
