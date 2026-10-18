@@ -29,8 +29,23 @@ export function extractBase64(dataUrl: string): string {
   return parts.length > 1 ? parts[1] : dataUrl;
 }
 
-// Generate compressed lightweight thumbnail for image preview (< 25 KB)
-export function generateImageThumbnail(file: File, maxDimension: number = 320): Promise<string> {
+// In-memory store for 100% original uncompressed media data URLs during session
+const originalMediaCache = new Map<string, string>();
+
+export function storeOriginalMedia(id: string, dataUrl: string) {
+  if (originalMediaCache.size > 200) {
+    const firstKey = originalMediaCache.keys().next().value;
+    if (firstKey) originalMediaCache.delete(firstKey);
+  }
+  originalMediaCache.set(id, dataUrl);
+}
+
+export function getOriginalMedia(id: string): string | undefined {
+  return originalMediaCache.get(id);
+}
+
+// Generate high-fidelity thumbnail for image preview (sharp and clear up to 1280px)
+export function generateImageThumbnail(file: File, maxDimension: number = 1280, quality: number = 0.88): Promise<string> {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -41,6 +56,7 @@ export function generateImageThumbnail(file: File, maxDimension: number = 320): 
           let width = img.width;
           let height = img.height;
 
+          // Only downscale if the image exceeds maxDimension (e.g. 1280px)
           if (width > maxDimension || height > maxDimension) {
             if (width > height) {
               height = Math.round((height * maxDimension) / width);
@@ -55,13 +71,17 @@ export function generateImageThumbnail(file: File, maxDimension: number = 320): 
           canvas.height = Math.max(1, height);
           const ctx = canvas.getContext('2d');
           if (ctx) {
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
             ctx.drawImage(img, 0, 0, width, height);
-            const thumbUrl = canvas.toDataURL('image/jpeg', 0.72);
+
+            // Prefer WebP or clean high-quality JPEG
+            const thumbUrl = canvas.toDataURL('image/jpeg', quality);
             resolve(thumbUrl);
             return;
           }
         } catch {
-          // Fallback to raw data url if canvas security blocks it
+          // Fallback to raw data url
         }
         resolve(reader.result as string);
       };

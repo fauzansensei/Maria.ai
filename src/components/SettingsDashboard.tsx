@@ -306,62 +306,63 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                 />
               </div>
 
-              {/* Voice Engine Selector */}
+              {/* Gemini AI Voice Engine Model Selector */}
               <div>
                 <label className="text-xs font-semibold text-neutral-300 block mb-1.5 flex items-center justify-between">
-                  <span>Engine Suara (TTS Engine)</span>
-                  <span className="text-[10px] text-[#34d399] font-normal">AI Neural Voice Engine Aktif</span>
+                  <span>Model AI Voice Engine (Gemini TTS)</span>
+                  <span className="text-[10px] text-[#34d399] font-medium flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-[#34d399]" /> Gemini AI Audio Terkini
+                  </span>
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => handleUpdate('voiceEngine', 'gemini')}
+                    onClick={() => handleUpdate('ttsModel', 'gemini-3.8-flash-lite-tts')}
                     className={`p-3 rounded-2xl border text-left transition-all ${
-                      (settings.voiceEngine || 'gemini') === 'gemini'
-                        ? 'bg-[#20a66a]/15 border-[#20a66a] text-white shadow-sm'
+                      (settings.ttsModel || 'gemini-3.8-flash-lite-tts') === 'gemini-3.8-flash-lite-tts'
+                        ? 'bg-[#20a66a]/15 border-[#20a66a] text-white shadow-sm ring-1 ring-[#20a66a]/30'
                         : 'bg-[#181a24] border-[#27293a] text-neutral-400 hover:text-white'
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-[#34d399]" /> Model AI Voice Engine
+                        <Sparkles className="w-3.5 h-3.5 text-[#34d399]" /> Gemini 3.8 Flash Lite TTS
                       </span>
-                      {(settings.voiceEngine || 'gemini') === 'gemini' && (
+                      {(settings.ttsModel || 'gemini-3.8-flash-lite-tts') === 'gemini-3.8-flash-lite-tts' && (
                         <Check className="w-3.5 h-3.5 text-[#34d399]" />
                       )}
                     </div>
                     <p className="text-[11px] text-neutral-300 mt-1">
-                      Suara studio alami, ekspresif, hangat dan tidak kaku (Gemini Neural Voice).
+                      Model suara terkencang, responsif, latensi ultra rendah, dan nada bicara sangat alami.
                     </p>
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => handleUpdate('voiceEngine', 'browser')}
+                    onClick={() => handleUpdate('ttsModel', 'gemini-3.8-flash-tts')}
                     className={`p-3 rounded-2xl border text-left transition-all ${
-                      settings.voiceEngine === 'browser'
-                        ? 'bg-[#20a66a]/15 border-[#20a66a] text-white shadow-sm'
+                      settings.ttsModel === 'gemini-3.8-flash-tts'
+                        ? 'bg-[#20a66a]/15 border-[#20a66a] text-white shadow-sm ring-1 ring-[#20a66a]/30'
                         : 'bg-[#181a24] border-[#27293a] text-neutral-400 hover:text-white'
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <Laptop className="w-3.5 h-3.5 text-neutral-400" /> Peramban Lokal (Browser)
+                        <Sparkles className="w-3.5 h-3.5 text-purple-400" /> Gemini 3.8 Flash TTS
                       </span>
-                      {settings.voiceEngine === 'browser' && (
+                      {settings.ttsModel === 'gemini-3.8-flash-tts' && (
                         <Check className="w-3.5 h-3.5 text-[#34d399]" />
                       )}
                     </div>
-                    <p className="text-[11px] text-neutral-400 mt-1">
-                      Sintesis suara bawaan peramban (Web Speech API).
+                    <p className="text-[11px] text-neutral-300 mt-1">
+                      Model audio unggulan dengan artikulasi tinggi, modulasi emosional kaya, dan vokal studio.
                     </p>
                   </button>
                 </div>
               </div>
 
               {/* Model Karakter & Gender Suara AI (Pria, Wanita, Anak-anak, Remaja) */}
-              {(settings.voiceEngine || 'gemini') === 'gemini' && (
-                <div className="space-y-4">
+              <div className="space-y-4">
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-xs font-semibold text-neutral-300">
@@ -428,6 +429,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                                     voiceName: persona.geminiVoice,
                                     personaId: persona.id,
                                     speed: settings.speechSpeed || '1x',
+                                    ttsModel: settings.ttsModel || 'gemini-3.8-flash-lite-tts',
                                   });
                                 }}
                                 title="Dengarkan contoh suara"
@@ -478,7 +480,6 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     </div>
                   </div>
                 </div>
-              )}
 
               {/* Speed */}
               <div>
@@ -533,7 +534,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                             speed: settings.speechSpeed || '1x',
                             voiceName: settings.geminiVoice || activePersona.geminiVoice,
                             personaId: activePersona.id,
-                            preferEngine: settings.voiceEngine || 'gemini',
+                            ttsModel: settings.ttsModel || 'gemini-3.8-flash-lite-tts',
                           });
                         }
                       }}

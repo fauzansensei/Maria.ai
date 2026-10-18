@@ -301,3 +301,18 @@ export async function updateMessage(
   }
 }
 
+// Delete a single message from Firestore
+export async function deleteMessage(
+  convId: string,
+  messageId: string
+): Promise<void> {
+  const path = `conversations/${convId}/messages/${messageId}`;
+  try {
+    const docRef = doc(db, 'conversations', convId, 'messages', messageId);
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+

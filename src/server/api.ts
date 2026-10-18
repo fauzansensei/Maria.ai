@@ -87,14 +87,14 @@ apiRouter.post('/generate-image', async (req: Request, res: Response) => {
 // Text-to-Speech (TTS)
 apiRouter.post('/tts', async (req: Request, res: Response) => {
   try {
-    const { text, voiceName, personaId } = req.body || {};
+    const { text, voiceName, personaId, model } = req.body || {};
 
     if (!text || typeof text !== 'string') {
       sendJson(res, 400, { error: 'Teks untuk suara wajib diisi.' });
       return;
     }
 
-    const result = await generateSpeechAudio(text, voiceName, personaId);
+    const result = await generateSpeechAudio(text, voiceName, personaId, model);
     sendJson(res, 200, result);
   } catch (error: any) {
     console.error('TTS endpoint error:', error);

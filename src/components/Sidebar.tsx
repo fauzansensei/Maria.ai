@@ -398,12 +398,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           {/* Legal and Security Footer Links */}
-          <div className="text-[10px] text-neutral-500 text-center flex items-center justify-center gap-2 pt-0.5">
-            <span className="hover:text-neutral-400 cursor-pointer">Keamanan</span>
+          <div className="text-[10px] text-neutral-500 text-center flex flex-wrap items-center justify-center gap-x-2 gap-y-1 pt-0.5">
+            <a href="/help.html" className="hover:text-neutral-300 transition-colors">Bantuan</a>
             <span>•</span>
-            <span className="hover:text-neutral-400 cursor-pointer">Privasi</span>
+            <a href="/privacy.html" className="hover:text-neutral-300 transition-colors">Privasi</a>
             <span>•</span>
-            <span className="hover:text-neutral-400 cursor-pointer">Ketentuan</span>
+            <a href="/terms.html" className="hover:text-neutral-300 transition-colors">Ketentuan</a>
+            <span>•</span>
+            <a href="/cookies.html" className="hover:text-neutral-300 transition-colors">Cookies</a>
           </div>
         </div>
       </aside>

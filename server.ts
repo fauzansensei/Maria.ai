@@ -15,9 +15,27 @@ const port = process.env.PORT || 3000;
 // Mount API app
 app.use(apiApp);
 
-// Serve static assets from Vite build output
+// Serve static assets from Vite build output and public folder
 const distPath = path.join(__dirname, 'dist');
+const publicPath = path.join(__dirname, 'public');
 app.use(express.static(distPath));
+app.use(express.static(publicPath));
+
+app.get(['/cookies', '/kebijakan-cookies'], (_req, res) => {
+  res.sendFile(path.join(publicPath, 'cookies.html'));
+});
+
+app.get(['/terms', '/ketentuan-layanan', '/tos'], (_req, res) => {
+  res.sendFile(path.join(publicPath, 'terms.html'));
+});
+
+app.get(['/help', '/bantuan', '/faq'], (_req, res) => {
+  res.sendFile(path.join(publicPath, 'help.html'));
+});
+
+app.get(['/privacy', '/kebijakan-privasi'], (_req, res) => {
+  res.sendFile(path.join(publicPath, 'privacy.html'));
+});
 
 app.get('*', (_req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));

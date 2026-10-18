@@ -14,19 +14,25 @@ import {
   getDocFromServer,
   serverTimestamp,
   setDoc,
+  setLogLevel,
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
+
+// Silence verbose internal Firestore offline/retry warnings
+try {
+  setLogLevel('silent');
+} catch {}
 
 // Initialize Firebase App
 const app = initializeApp(firebaseConfig);
 
-// Initialize with in-memory cache and Long-Polling to avoid iframe stream disconnections and IndexedDB lockouts
+// Initialize with in-memory cache and auto-detecting transport
 try {
   initializeFirestore(
     app,
     {
       localCache: memoryLocalCache(),
-      experimentalForceLongPolling: true,
+      experimentalAutoDetectLongPolling: true,
     },
     firebaseConfig.firestoreDatabaseId
   );
@@ -101,14 +107,14 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
-// CRITICAL CONSTRAINT: Test connection on app boot
+// Test connection on app boot
 export async function testConnection() {
   try {
-    await getDocFromServer(doc(db, 'test', 'connection')).catch((error) => {
-      console.warn('Firestore operating in offline mode / backend transiently unreachable:', error?.message || error);
+    await getDocFromServer(doc(db, 'test', 'connection')).catch(() => {
+      // Client operates in offline cache mode until backend is reached
     });
-  } catch (error) {
-    console.warn('Firestore test connection notice:', error);
+  } catch {
+    // Client operates in offline cache mode until backend is reached
   }
 }
 testConnection();

@@ -47,6 +47,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   voiceEnabled: false,
   voiceResponses: false,
   voiceEngine: "gemini",
+  ttsModel: "gemini-3.8-flash-lite-tts",
   geminiVoice: "Aoede",
   voicePersona: "wanita",
   speechSpeed: "1x",
@@ -61,7 +62,7 @@ export interface VoicePersonaOption {
   label: string;
   category: "Dewasa" | "Remaja" | "Anak-anak";
   gender: "Wanita" | "Pria";
-  geminiVoice: "Aoede" | "Fenrir" | "Kore" | "Puck" | "Zephyr";
+  geminiVoice: "Aoede" | "Fenrir" | "Kore" | "Puck" | "Zephyr" | "Charon";
   pitch: number;
   speed: number;
   description: string;
@@ -135,7 +136,7 @@ export const VOICE_PERSONAS: VoicePersonaOption[] = [
     label: "Anak Laki-laki",
     category: "Anak-anak",
     gender: "Pria",
-    geminiVoice: "Puck",
+    geminiVoice: "Charon",
     pitch: 1.22,
     speed: 1.08,
     description: "Ceria, lincah, ingin tahu, penuh rasa penasaran",

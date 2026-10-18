@@ -1,11 +1,12 @@
 // Maria AI Unified Speech & TTS Service
-// Powers high-fidelity AI Neural Voice (Gemini AI Voice Engine) as primary voice model
+// Exclusively powered by Gemini AI Voice Engine (gemini-3.8-flash-lite-tts & gemini-3.8-flash-tts)
 
 export interface SpeechState {
   isSpeaking: boolean;
   isLoading: boolean;
   activeMessageId: string | null;
-  currentEngine: 'gemini' | 'browser' | null;
+  currentEngine: 'gemini' | null;
+  activeModel?: string | null;
   error: string | null;
 }
 
@@ -13,7 +14,6 @@ type SpeechListener = (state: SpeechState) => void;
 
 class MariaSpeechService {
   private currentAudio: HTMLAudioElement | null = null;
-  private currentUtterance: SpeechSynthesisUtterance | null = null;
   private listeners: Set<SpeechListener> = new Set();
   private ttsCache: Map<string, string> = new Map();
   private state: SpeechState = {
@@ -21,17 +21,12 @@ class MariaSpeechService {
     isLoading: false,
     activeMessageId: null,
     currentEngine: null,
+    activeModel: null,
     error: null,
   };
 
   constructor() {
-    if (typeof window !== 'undefined') {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.onvoiceschanged = () => {
-          // Preload voices
-        };
-      }
-    }
+    // No browser speech synthesis (Google voice) initialized
   }
 
   public subscribe(listener: SpeechListener): () => void {
@@ -73,7 +68,6 @@ class MariaSpeechService {
   public unlockAudio() {
     try {
       if (typeof window !== 'undefined') {
-        // Unlock HTML5 Audio playback in browser
         const silentAudio = new Audio(
           'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=='
         );
@@ -88,9 +82,6 @@ class MariaSpeechService {
           if (ctx.state === 'suspended') {
             ctx.resume().catch(() => {});
           }
-        }
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.resume();
         }
       }
     } catch {
@@ -107,18 +98,12 @@ class MariaSpeechService {
       this.currentAudio = null;
     }
 
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      try {
-        window.speechSynthesis.cancel();
-      } catch {}
-      this.currentUtterance = null;
-    }
-
     this.setState({
       isSpeaking: false,
       isLoading: false,
       activeMessageId: null,
       currentEngine: null,
+      activeModel: null,
       error: null,
     });
   }
@@ -129,12 +114,13 @@ class MariaSpeechService {
       messageId?: string;
       speed?: string;
       personaId?: string;
+      model?: string;
     }
   ): Promise<boolean> {
     this.stopSpeaking();
     const speedMultiplier = this.parseSpeed(options?.speed);
     const messageId = options?.messageId || null;
-    return this.playAudioUrl(audioUrl, speedMultiplier, messageId, options?.personaId);
+    return this.playAudioUrl(audioUrl, speedMultiplier, messageId, options?.personaId, options?.model);
   }
 
   public async speak(
@@ -144,7 +130,8 @@ class MariaSpeechService {
       speed?: string;
       voiceName?: string;
       personaId?: string;
-      preferEngine?: 'gemini' | 'browser';
+      ttsModel?: 'gemini-3.8-flash-lite-tts' | 'gemini-3.8-flash-tts';
+      preferEngine?: 'gemini';
       preloadedAudioUrl?: string;
     }
   ): Promise<boolean> {
@@ -154,11 +141,11 @@ class MariaSpeechService {
     const speedMultiplier = this.parseSpeed(options?.speed);
     const personaId = options?.personaId || 'wanita';
     const voiceName = options?.voiceName || 'Aoede';
-    const preferEngine = options?.preferEngine || 'gemini';
+    const ttsModel = options?.ttsModel || 'gemini-3.8-flash-lite-tts';
 
-    // If preloaded audio already exists, play immediately without network latency!
+    // If preloaded audio already exists, play immediately
     if (options?.preloadedAudioUrl) {
-      return this.playAudioUrl(options.preloadedAudioUrl, speedMultiplier, messageId, personaId);
+      return this.playAudioUrl(options.preloadedAudioUrl, speedMultiplier, messageId, personaId, ttsModel);
     }
 
     const cleanText = this.cleanTextForSpeech(rawText);
@@ -167,26 +154,21 @@ class MariaSpeechService {
     this.setState({
       isLoading: true,
       activeMessageId: messageId,
-      currentEngine: preferEngine === 'browser' ? 'browser' : 'gemini',
+      currentEngine: 'gemini',
+      activeModel: ttsModel,
       error: null,
     });
 
-    // If browser speech is explicitly requested by user
-    if (preferEngine === 'browser') {
-      return this.speakWithWebSpeech(cleanText, speedMultiplier, messageId);
-    }
-
-    // Default & Primary: Gemini AI Neural Voice Engine
     try {
-      const cacheKey = `${voiceName}:${personaId}:${cleanText.slice(0, 300)}`;
+      const cacheKey = `${ttsModel}:${voiceName}:${personaId}:${cleanText.slice(0, 300)}`;
       if (this.ttsCache.has(cacheKey)) {
         const cachedUrl = this.ttsCache.get(cacheKey)!;
-        const played = await this.playAudioUrl(cachedUrl, speedMultiplier, messageId, personaId);
+        const played = await this.playAudioUrl(cachedUrl, speedMultiplier, messageId, personaId, ttsModel);
         if (played) return true;
       }
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      const timeoutId = setTimeout(() => controller.abort(), 35000);
 
       const res = await fetch('/api/tts', {
         method: 'POST',
@@ -195,6 +177,7 @@ class MariaSpeechService {
           text: cleanText.slice(0, 2500),
           voiceName,
           personaId,
+          model: ttsModel,
         }),
         signal: controller.signal,
       });
@@ -205,16 +188,41 @@ class MariaSpeechService {
         const data = await res.json();
         if (data?.audioUrl) {
           this.ttsCache.set(cacheKey, data.audioUrl);
-          const played = await this.playAudioUrl(data.audioUrl, speedMultiplier, messageId, personaId);
+          const played = await this.playAudioUrl(data.audioUrl, speedMultiplier, messageId, personaId, data.model || ttsModel);
           if (played) return true;
+        } else if (data?.notice) {
+          this.setState({
+            isSpeaking: false,
+            isLoading: false,
+            activeMessageId: null,
+            currentEngine: null,
+            activeModel: null,
+            error: data.notice,
+          });
+          return false;
         }
-      } else if (res.status === 429) {
-        // Daily free tier quota reached: smoothly continue speaking with persona pitch modulation
-        return this.speakWithWebSpeech(cleanText, speedMultiplier, messageId, personaId);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        this.setState({
+          isSpeaking: false,
+          isLoading: false,
+          activeMessageId: null,
+          currentEngine: null,
+          activeModel: null,
+          error: errData?.error || 'Gemini AI Voice Engine sedang sibuk. Silakan coba sebentar lagi.',
+        });
+        return false;
       }
     } catch {
-      // In case of network interruption, fallback smoothly
-      return this.speakWithWebSpeech(cleanText, speedMultiplier, messageId, personaId);
+      this.setState({
+        isSpeaking: false,
+        isLoading: false,
+        activeMessageId: null,
+        currentEngine: null,
+        activeModel: null,
+        error: 'Koneksi ke Gemini AI Voice Engine sedang sibuk.',
+      });
+      return false;
     }
 
     this.setState({
@@ -222,6 +230,7 @@ class MariaSpeechService {
       isLoading: false,
       activeMessageId: null,
       currentEngine: null,
+      activeModel: null,
       error: null,
     });
     return false;
@@ -231,7 +240,8 @@ class MariaSpeechService {
     audioUrl: string,
     speed: number,
     messageId: string | null,
-    personaId?: string
+    _personaId?: string,
+    modelName?: string
   ): Promise<boolean> {
     return new Promise((resolve) => {
       try {
@@ -253,6 +263,7 @@ class MariaSpeechService {
             isSpeaking: true,
             activeMessageId: messageId,
             currentEngine: 'gemini',
+            activeModel: modelName || 'gemini-3.8-flash-lite-tts',
             error: null,
           });
         };
@@ -263,6 +274,7 @@ class MariaSpeechService {
             isLoading: false,
             activeMessageId: null,
             currentEngine: null,
+            activeModel: null,
           });
           resolve(true);
         };
@@ -275,7 +287,8 @@ class MariaSpeechService {
             isLoading: false,
             activeMessageId: null,
             currentEngine: null,
-            error: 'Gagal memutar audio model AI.',
+            activeModel: null,
+            error: 'Gagal memutar audio model Gemini AI.',
           });
           resolve(false);
         };
@@ -288,110 +301,15 @@ class MariaSpeechService {
             isLoading: false,
             activeMessageId: null,
             currentEngine: null,
+            activeModel: null,
             error: 'Pemutaran audio otomatis ditahan oleh peramban.',
           });
           resolve(false);
         });
-      } catch (err: any) {
+      } catch {
         resolve(false);
       }
     });
-  }
-
-  private speakWithWebSpeech(
-    text: string,
-    speed: number,
-    messageId: string | null,
-    personaId?: string
-  ): boolean {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      this.setState({
-        isLoading: false,
-        isSpeaking: false,
-        error: 'Sintesis suara tidak didukung di peramban ini.',
-      });
-      return false;
-    }
-
-    try {
-      window.speechSynthesis.cancel();
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      this.currentUtterance = utterance;
-
-      // Adjust pitch & cadence for the selected gender/age persona
-      if (personaId === 'pria') {
-        utterance.pitch = 0.85;
-        utterance.rate = speed * 0.95;
-      } else if (personaId === 'anak-perempuan') {
-        utterance.pitch = 1.45;
-        utterance.rate = speed * 1.08;
-      } else if (personaId === 'anak-laki') {
-        utterance.pitch = 1.35;
-        utterance.rate = speed * 1.08;
-      } else if (personaId === 'remaja-perempuan') {
-        utterance.pitch = 1.18;
-        utterance.rate = speed * 1.05;
-      } else if (personaId === 'remaja-laki') {
-        utterance.pitch = 1.05;
-        utterance.rate = speed * 1.05;
-      } else {
-        utterance.pitch = 1.05;
-        utterance.rate = speed;
-      }
-
-      const voices = window.speechSynthesis.getVoices();
-      const idVoice = voices.find(
-        (v) =>
-          v.lang.toLowerCase().startsWith('id') ||
-          v.name.toLowerCase().includes('indonesia') ||
-          v.name.toLowerCase().includes('maria') ||
-          v.name.toLowerCase().includes('gadis')
-      );
-
-      if (idVoice) {
-        utterance.voice = idVoice;
-      }
-
-      utterance.onstart = () => {
-        this.setState({
-          isLoading: false,
-          isSpeaking: true,
-          activeMessageId: messageId,
-          currentEngine: 'browser',
-        });
-      };
-
-      utterance.onend = () => {
-        this.setState({
-          isSpeaking: false,
-          isLoading: false,
-          activeMessageId: null,
-          currentEngine: null,
-        });
-      };
-
-      utterance.onerror = (e) => {
-        console.warn('Speech synthesis utterance error:', e);
-        this.setState({
-          isSpeaking: false,
-          isLoading: false,
-          activeMessageId: null,
-          currentEngine: null,
-        });
-      };
-
-      window.speechSynthesis.speak(utterance);
-      return true;
-    } catch (err: any) {
-      console.warn('Failed to speak with Web Speech API:', err);
-      this.setState({
-        isLoading: false,
-        isSpeaking: false,
-        error: err.message,
-      });
-      return false;
-    }
   }
 
   private parseSpeed(speedStr?: string): number {

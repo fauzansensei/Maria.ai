@@ -12,6 +12,7 @@ export interface MediaAttachment {
   mimeType: string;
   type: 'image' | 'video' | 'file';
   previewUrl: string;
+  originalUrl?: string;
   base64Data: string;
   duration?: number;
 }

@@ -41,8 +41,9 @@ export interface UserSettings {
   language?: "Indonesia" | "English";
   voiceResponses?: boolean;
   speechSpeed?: "0.75x" | "1x" | "1.25x" | "1.5x";
-  voiceEngine?: "gemini" | "browser";
-  geminiVoice?: "Kore" | "Aoede" | "Puck" | "Fenrir" | "Zephyr";
+  voiceEngine?: "gemini";
+  ttsModel?: "gemini-3.8-flash-lite-tts" | "gemini-3.8-flash-tts";
+  geminiVoice?: "Kore" | "Aoede" | "Puck" | "Fenrir" | "Zephyr" | "Charon";
   voicePersona?: VoicePersonaGender;
   saveChatHistory?: boolean;
   enterToSend?: boolean;

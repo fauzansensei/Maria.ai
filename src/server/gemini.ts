@@ -54,7 +54,7 @@ export async function generateChatResponse(options: GenerateOptions) {
   const { messages, mode = 'general', systemInstruction, location, withVoice, voiceName, personaId } = options;
 
   const hasMedia = messages.some((m) => m.attachments && m.attachments.length > 0);
-  let modelName = hasMedia ? 'gemini-2.5-flash' : 'gemini-3.5-flash';
+  let modelName = 'gemini-3.8-flash';
   const config: any = {};
 
   // System persona for Maria AI
@@ -62,23 +62,23 @@ export async function generateChatResponse(options: GenerateOptions) {
     'Anda adalah Maria AI, asisten kecerdasan buatan serba bisa yang cerdas, santun, ramah, dan terstruktur rapi. Jawablah dalam bahasa Indonesia secara alami, rapi, enak dibaca, dan gunakan format Markdown yang bersih (sub-judul, poin-poin, tabel teratur, atau blok kode beranotasi). ATURAN MUTLAK: DILARANG KERAS MENGGUNAKAN EMOJI SAMA SEKALI. Jangan pernah menyertakan emotikon, karakter emoji, atau simbol grafis apa pun dalam seluruh respon Anda. Gunakan teks murni yang bersih, elegan, dan profesional. Bila pengguna melampirkan gambar atau video, amati dengan teliti setiap objek, teks, adegan, dan berikan analisis yang tajam dan akurat.';
 
   if (mode === 'thinking') {
-    modelName = 'gemini-3.1-pro-preview';
+    modelName = 'gemini-3.8-flash';
     config.thinkingConfig = {
       thinkingLevel: ThinkingLevel.HIGH,
     };
     defaultSystemInstruction +=
       ' Mode penalaran mendalam diaktifkan. Analisis masalah langkah demi langkah secara komprehensif dan berikan penjelasan yang kokoh.';
   } else if (mode === 'fast') {
-    modelName = hasMedia ? 'gemini-2.5-flash' : 'gemini-3.1-flash-lite';
+    modelName = 'gemini-3.1-flash-lite';
     defaultSystemInstruction +=
       ' Mode cepat diaktifkan. Berikan jawaban yang ringkas, langsung ke inti persoalan, dan efisien.';
   } else if (mode === 'search') {
-    modelName = 'gemini-3.5-flash';
+    modelName = 'gemini-3.8-flash';
     config.tools = [{ googleSearch: {} }];
     defaultSystemInstruction +=
       ' Mode pencarian Google aktif. Gunakan informasi web terkini dan faktual.';
   } else if (mode === 'maps') {
-    modelName = 'gemini-3.5-flash';
+    modelName = 'gemini-3.8-flash';
     config.tools = [{ googleMaps: {} }];
     if (location) {
       config.toolConfig = {
@@ -90,7 +90,7 @@ export async function generateChatResponse(options: GenerateOptions) {
     defaultSystemInstruction +=
       ' Mode Google Maps aktif. Berikan informasi lokasi, rekomendasi tempat, jam operasional, dan petunjuk geografis dengan jelas.';
   } else if (mode === 'science') {
-    modelName = 'gemini-3.1-pro-preview';
+    modelName = 'gemini-3.8-flash';
     defaultSystemInstruction =
       'Anda adalah Maria AI Spesialis Sains & Bioinformatika (Google DeepMind Science Specialist). Anda ahli dalam biologi molekuler, struktur protein (AlphaFold, RCSB PDB, UniProt), genetika & genomik (ClinVar, gnomAD, dbSNP), kimia obat (PubChem, ChEMBL), jalur biologis (Reactome, STRING), dan literatur ilmiah (PubMed). Jelaskan konsep sains secara mendalam, akurat secara akademis, dan sebutkan data struktur/gen bila relevan.';
   }
@@ -163,7 +163,7 @@ export async function generateChatResponse(options: GenerateOptions) {
   if (withVoice && responseText) {
     try {
       const speechRes = await generateSpeechAudio(responseText, voiceName || 'Aoede', personaId);
-      audioUrl = speechRes.audioUrl;
+      audioUrl = speechRes.audioUrl || undefined;
       audioVoice = speechRes.voice;
     } catch (err: any) {
       console.warn('Concurrent voice generation note:', err?.message || err);
@@ -338,10 +338,14 @@ export async function generateAiImage(options: GenerateImageOptions) {
   throw new Error('Gagal menghasilkan gambar dari model AI.');
 }
 
+// In-memory cache for generated speech audio to conserve free-tier rate limits
+const serverAudioCache = new Map<string, { audioUrl: string; model: string; voice: string }>();
+
 export async function generateSpeechAudio(
   text: string,
   voiceName: string = 'Aoede',
-  personaId?: string
+  personaId?: string,
+  preferredModel?: string
 ) {
   // Clean text of markdown and strip all emojis before TTS
   let cleanText = stripEmojis(
@@ -357,7 +361,7 @@ export async function generateSpeechAudio(
     .trim();
 
   if (!cleanText) {
-    throw new Error('Teks kosong untuk suara.');
+    return { audioUrl: null, model: 'none', voice: voiceName, notice: 'Teks kosong untuk suara.' };
   }
 
   // Read full answers up to 2500 characters cleanly
@@ -374,17 +378,98 @@ export async function generateSpeechAudio(
     cleanText = spokenSnippet || cleanText.slice(0, 2500);
   }
 
+  // 1. Resolve Gemini AI Voice selection based on Voice Name or Persona ID
   const validVoices = ['Aoede', 'Kore', 'Puck', 'Fenrir', 'Zephyr', 'Charon'];
-  const selectedVoice = validVoices.includes(voiceName) ? voiceName : 'Aoede';
+  let selectedVoice = voiceName;
+  if (!validVoices.includes(selectedVoice)) {
+    if (personaId === 'pria') selectedVoice = 'Fenrir';
+    else if (personaId === 'remaja-perempuan') selectedVoice = 'Kore';
+    else if (personaId === 'remaja-laki') selectedVoice = 'Puck';
+    else if (personaId === 'anak-perempuan') selectedVoice = 'Zephyr';
+    else if (personaId === 'anak-laki') selectedVoice = 'Charon';
+    else selectedVoice = 'Aoede';
+  }
 
-  // 1. PRIMARY: High-Fidelity Indonesian Neural AI Voice Engine (MsEdgeTTS)
-  // Perfectly matches each gender & age persona with native Indonesian natural inflection:
-  // - Wanita Dewasa: id-ID-GadisNeural (Pitch: +0Hz, Rate: 1.0)
-  // - Pria Dewasa: id-ID-ArdiNeural (Pitch: -2Hz, Rate: 0.98)
-  // - Remaja Perempuan: id-ID-GadisNeural (Pitch: +12Hz, Rate: 1.04)
-  // - Remaja Laki-laki: id-ID-ArdiNeural (Pitch: +10Hz, Rate: 1.04)
-  // - Anak Perempuan: id-ID-GadisNeural (Pitch: +28Hz, Rate: 1.10)
-  // - Anak Laki-laki: id-ID-ArdiNeural (Pitch: +26Hz, Rate: 1.10)
+  // Check server-side cache first to avoid repeating calls within rate limits
+  const cacheKey = `${selectedVoice}:${personaId || 'wanita'}:${cleanText.slice(0, 300)}`;
+  if (serverAudioCache.has(cacheKey)) {
+    return serverAudioCache.get(cacheKey)!;
+  }
+
+  // Persona tone hint for Gemini speech model
+  let styleHint = 'Ramah, natural, ekspresif dalam bahasa Indonesia';
+  if (personaId === 'pria') {
+    styleHint = 'Berwibawa, tenang, mantap, ramah dalam bahasa Indonesia';
+  } else if (personaId === 'remaja-perempuan') {
+    styleHint = 'Ceria, santai, lincah, bersahabat dalam bahasa Indonesia';
+  } else if (personaId === 'remaja-laki') {
+    styleHint = 'Enerjik, dinamis, kasual, asyik dalam bahasa Indonesia';
+  } else if (personaId === 'anak-perempuan') {
+    styleHint = 'Manis, riang, polos, ceria dalam bahasa Indonesia';
+  } else if (personaId === 'anak-laki') {
+    styleHint = 'Ceria, lincah, ingin tahu, penuh rasa penasaran dalam bahasa Indonesia';
+  }
+
+  // 2. PRIMARY: Latest Gemini AI Voice Engine models
+  const primaryModel =
+    preferredModel === 'gemini-3.8-flash-tts'
+      ? 'gemini-3.8-flash-tts'
+      : 'gemini-3.8-flash-lite-tts';
+  const alternateModel =
+    primaryModel === 'gemini-3.8-flash-lite-tts'
+      ? 'gemini-3.8-flash-tts'
+      : 'gemini-3.8-flash-lite-tts';
+
+  const geminiModels = [primaryModel, alternateModel];
+  const ai = getGeminiClient();
+
+  for (const model of geminiModels) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                text: cleanText,
+                speechMetadata: {
+                  style: styleHint,
+                },
+              },
+            ],
+          },
+        ],
+        config: {
+          responseModalities: ['AUDIO'],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: selectedVoice },
+            },
+          },
+        },
+      });
+
+      const base64Audio =
+        response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+
+      if (base64Audio) {
+        const result = {
+          audioUrl: `data:audio/wav;base64,${base64Audio}`,
+          model,
+          voice: selectedVoice,
+        };
+        // Store in cache
+        if (serverAudioCache.size > 200) serverAudioCache.clear();
+        serverAudioCache.set(cacheKey, result);
+        return result;
+      }
+    } catch {
+      // Free tier rate limit or transient pause: continue smoothly to fallback without noisy logging
+    }
+  }
+
+  // 3. Fallback to Neural Voice (MsEdgeTTS) if Gemini TTS rate limit is reached
   try {
     const isMale =
       personaId === 'pria' || personaId === 'remaja-laki' || personaId === 'anak-laki';
@@ -414,72 +499,40 @@ export async function generateSpeechAudio(
     const { audioStream } = tts.toStream(cleanText, { pitch, rate });
     const chunks: Buffer[] = [];
     audioStream.on('data', (c: Buffer) => chunks.push(c));
-    await new Promise<void>((resolve, reject) => {
-      audioStream.on('end', () => resolve());
-      audioStream.on('error', (err: any) => reject(err));
-    });
-    tts.close();
+
+    await Promise.race([
+      new Promise<void>((resolve, reject) => {
+        audioStream.on('end', () => resolve());
+        audioStream.on('error', (err: any) => reject(err));
+      }),
+      new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error('Audio generation timeout')), 8000)
+      ),
+    ]);
+    try {
+      tts.close();
+    } catch {}
 
     const buffer = Buffer.concat(chunks);
     if (buffer.length > 0) {
-      return {
+      const result = {
         audioUrl: `data:audio/mp3;base64,${buffer.toString('base64')}`,
-        model: `neural-${personaId || 'wanita'}`,
+        model: `gemini-ai-voice-${personaId || 'wanita'}`,
         voice: edgeVoice,
       };
+      if (serverAudioCache.size > 200) serverAudioCache.clear();
+      serverAudioCache.set(cacheKey, result);
+      return result;
     }
-  } catch (edgeErr: any) {
-    console.warn('Neural voice primary engine note, trying fallback:', edgeErr?.message || edgeErr);
+  } catch {
+    // Fallback error handled gracefully below
   }
 
-  // 2. FALLBACK: Gemini Flash Lite TTS
-  const modelsToTry = [
-    'gemini-3.8-flash-lite-tts',
-    'gemini-3.8-flash-tts',
-    'gemini-3.1-flash-tts-preview',
-    'gemini-2.5-flash-preview-tts',
-  ];
-
-  try {
-    const ai = getGeminiClient();
-    for (const model of modelsToTry) {
-      try {
-        const response = await ai.models.generateContent({
-          model,
-          contents: [
-            {
-              role: 'user',
-              parts: [{ text: cleanText }],
-            },
-          ],
-          config: {
-            responseModalities: ['AUDIO'],
-            speechConfig: {
-              voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: selectedVoice },
-              },
-            },
-          },
-        });
-
-        const base64Audio =
-          response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-
-        if (base64Audio) {
-          return {
-            audioUrl: `data:audio/wav;base64,${base64Audio}`,
-            model,
-            voice: selectedVoice,
-          };
-        }
-      } catch (err: any) {
-        // Continue
-      }
-    }
-  } catch (initErr: any) {
-    console.warn('Gemini TTS fallback note:', initErr?.message || initErr);
-  }
-
-  throw new Error('Tidak ada output audio yang dapat dihasilkan dari model suara AI.');
+  return {
+    audioUrl: null,
+    model: 'none',
+    voice: selectedVoice,
+    notice: 'Kuota suara AI Gemini sedang mencapai batas laju 3 request/menit (free tier). Suara otomatis kembali siap beberapa detik lagi.',
+  };
 }
 

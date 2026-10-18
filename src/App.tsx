@@ -17,6 +17,7 @@ import {
   createConversation,
   addMessage,
   updateMessage,
+  deleteMessage,
   deleteConversation,
   updateConversation,
   getUserProfile,
@@ -218,28 +219,146 @@ function AppContent() {
     }
   };
 
-  // Handler: Edit Message (Fix typo / wrong text)
+  // Handler: Edit Message (Fix typo / wrong text without duplicating turns)
   const handleEditMessage = async (messageId: string, newContent: string, resend: boolean) => {
-    // 1. Update Firestore if logged in with active conversation
-    if (user && activeConvId) {
-      await updateMessage(activeConvId, messageId, newContent);
-    } else {
+    const currentList = user ? messages : guestMessages;
+    const targetIdx = currentList.findIndex((m) => m.id === messageId);
+    if (targetIdx === -1) return;
+
+    const targetMessage = currentList[targetIdx];
+    const updatedTarget: Message = {
+      ...targetMessage,
+      content: newContent,
+      editedAt: new Date(),
+    };
+
+    // If user only wanted to save in place without requesting a new AI reply
+    if (!resend) {
+      if (user && activeConvId) {
+        await updateMessage(activeConvId, messageId, newContent);
+      }
       setGuestMessages((prev) =>
-        prev.map((m) =>
-          m.id === messageId ? { ...m, content: newContent, editedAt: new Date() } : m
-        )
+        prev.map((m) => (m.id === messageId ? updatedTarget : m))
       );
+      setMessages((prev) =>
+        prev.map((m) => (m.id === messageId ? updatedTarget : m))
+      );
+      return;
     }
 
-    setMessages((prev) =>
-      prev.map((m) =>
-        m.id === messageId ? { ...m, content: newContent, editedAt: new Date() } : m
-      )
-    );
+    // RESEND REQUESTED:
+    // Truncate previous subsequent turns following this user message to avoid duplicate messages & duplicate AI replies
+    speechService.unlockAudio();
+    setIsLoading(true);
 
-    // 2. If resend is requested, re-trigger Maria AI response with the corrected text
-    if (resend) {
-      handleSendMessage(newContent, activeMode);
+    const prunedList = [
+      ...currentList.slice(0, targetIdx),
+      updatedTarget,
+    ];
+
+    // In state, replace message list up to this edited user turn
+    setGuestMessages(prunedList);
+    setMessages(prunedList);
+
+    // If logged in with active conversation, prune subsequent messages in Firestore and update the edited message
+    if (user && activeConvId) {
+      const subsequentMessages = currentList.slice(targetIdx + 1);
+      for (const m of subsequentMessages) {
+        await deleteMessage(activeConvId, m.id).catch(() => {});
+      }
+      await updateMessage(activeConvId, messageId, newContent);
+    }
+
+    try {
+      // Prepare conversation history up to the edited user message
+      const historyTurns = prunedList.map((m) => ({
+        role: m.role as 'user' | 'model',
+        content: m.content,
+        attachments: m.attachments?.map((a) => ({
+          type: a.type,
+          mimeType: a.mimeType,
+          data: a.base64Data,
+          name: a.name,
+          size: a.size,
+        })),
+      }));
+
+      const isVoiceAuto = Boolean(settings.voiceEnabled || settings.voiceResponses);
+      const personaObj = VOICE_PERSONAS.find((p) => p.id === (settings.voicePersona || 'wanita'));
+      const activeVoiceName = personaObj?.geminiVoice || settings.geminiVoice || 'Aoede';
+
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: historyTurns,
+          mode: targetMessage.mode || activeMode,
+          location: undefined,
+          withVoice: isVoiceAuto,
+          voiceName: activeVoiceName,
+          personaId: settings.voicePersona || 'wanita',
+        }),
+      });
+
+      if (!response.ok) {
+        let errMessage = 'Gagal mengambil jawaban AI.';
+        try {
+          const errData = await response.json();
+          if (errData.error) errMessage = errData.error;
+        } catch {}
+        throw new Error(errMessage);
+      }
+
+      const data = await response.json();
+
+      const modelMessageObj: Message = {
+        id: `ai_${Date.now()}`,
+        conversationId: activeConvId || 'guest_conv',
+        userId: user ? user.uid : 'guest',
+        role: 'model',
+        content: data.text || 'Tidak ada teks yang dihasilkan.',
+        model: data.model,
+        mode: targetMessage.mode || activeMode,
+        groundingLinks: data.groundingLinks,
+        audioUri: data.audioUrl,
+        createdAt: new Date(),
+      };
+
+      if (user && activeConvId) {
+        await addMessage(activeConvId, user.uid, {
+          role: 'model',
+          content: modelMessageObj.content,
+          model: modelMessageObj.model,
+          groundingLinks: modelMessageObj.groundingLinks,
+          audioUri: modelMessageObj.audioUri,
+        });
+      } else {
+        setGuestMessages((prev) => [...prev, modelMessageObj]);
+      }
+      setMessages((prev) => [...prev, modelMessageObj]);
+
+      // Auto TTS voice readout if enabled
+      if (isVoiceAuto && modelMessageObj.content) {
+        if (data.audioUrl) {
+          speechService.playAudioDirectly(data.audioUrl, {
+            messageId: modelMessageObj.id,
+            speed: settings.speechSpeed || '1x',
+            personaId: settings.voicePersona || 'wanita',
+          });
+        } else {
+          speechService.speak(modelMessageObj.content, {
+            messageId: modelMessageObj.id,
+            speed: settings.speechSpeed || '1x',
+            voiceName: activeVoiceName,
+            personaId: settings.voicePersona || 'wanita',
+            ttsModel: settings.ttsModel || 'gemini-3.8-flash-lite-tts',
+          });
+        }
+      }
+    } catch (err: any) {
+      console.error('Error generating response for edited message:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -355,7 +474,7 @@ function AppContent() {
             messageId: modelMessageObj.id,
             speed: settings.speechSpeed || '1x',
             voiceName: settings.geminiVoice || 'Kore',
-            preferEngine: settings.voiceEngine || 'gemini',
+            ttsModel: settings.ttsModel || 'gemini-3.8-flash-lite-tts',
           });
         }
 
@@ -474,7 +593,7 @@ function AppContent() {
             speed: settings.speechSpeed || '1x',
             voiceName: activeVoiceName,
             personaId: settings.voicePersona || 'wanita',
-            preferEngine: settings.voiceEngine || 'gemini',
+            ttsModel: settings.ttsModel || 'gemini-3.8-flash-lite-tts',
           });
         }
       }

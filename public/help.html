@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="/favicon.svg?v=3" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
+    <link rel="apple-touch-icon" href="/favicon.svg?v=3" />
+    <title>Saran dan jawaban dari Tim Maria AI - Bantuan Maria AI</title>
+    <style>
+        :root {
+            --primary: #10a37f;
+            --header-bg: #000000;
+            --text-main: #2d3136;
+            --text-muted: #6e7781;
+            --border: #e1e4e8;
+            --bg: #ffffff;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+        }
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
+        }
+        .header-bg {
+            background-color: var(--header-bg);
+            padding-bottom: 40px;
+        }
+        header {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 24px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .logo-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background-color: transparent;
+        }
+        .go-to-app {
+            color: #b3b3b3;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+        .go-to-app:hover {
+            color: white;
+        }
+        .hero {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px 20px 40px;
+            text-align: center;
+        }
+        .hero h1 {
+            color: white;
+            font-size: 38px;
+            font-weight: 600;
+            margin-bottom: 40px;
+            letter-spacing: -0.5px;
+        }
+        .search-container {
+            max-width: 640px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .search-container input {
+            width: 100%;
+            padding: 16px 20px 16px 50px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            outline: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .search-icon {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            width: 20px;
+            height: 20px;
+        }
+        .main-content {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px 100px;
+            background-color: var(--bg);
+        }
+        .breadcrumb {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 40px;
+        }
+        .breadcrumb a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        .collection-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+        .collection-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        .collection-info h2 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #000;
+        }
+        .collection-info p {
+            color: var(--text-muted);
+            font-size: 16px;
+            line-height: 1.6;
+            max-width: 600px;
+        }
+        .article-count {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .article-list {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .article-wrapper {
+            border-bottom: 1px solid var(--border);
+        }
+        .article-wrapper:last-child {
+            border-bottom: none;
+        }
+        .article-item {
+            display: flex;
+            align-items: center;
+            padding: 20px 24px;
+            cursor: pointer;
+            text-decoration: none;
+            color: var(--text-main);
+            transition: background-color 0.2s;
+            user-select: none;
+        }
+        .article-item:hover {
+            background-color: #f9f9f9;
+        }
+        .article-content {
+            display: none;
+            padding: 0 24px 20px 58px;
+            color: #444;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        .article-content p, .article-content ul {
+            margin-bottom: 12px;
+        }
+        .article-content ul {
+            padding-left: 20px;
+        }
+        .article-wrapper.active .article-content {
+            display: block;
+        }
+        .article-wrapper.active .article-item {
+            background-color: #f9f9f9;
+        }
+        .article-icon {
+            color: var(--primary);
+            margin-right: 16px;
+            display: flex;
+            align-items: center;
+        }
+        .article-title {
+            flex-grow: 1;
+            font-size: 15px;
+            font-weight: 400;
+            color: #333;
+        }
+        .article-arrow {
+            color: #ccc;
+            display: flex;
+            align-items: center;
+            transition: transform 0.2s;
+        }
+        .article-wrapper.active .article-arrow {
+            transform: rotate(90deg);
+        }
+        .support-section {
+            margin-top: 60px;
+        }
+        .support-section h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-main);
+        }
+        .support-section p {
+            color: var(--text-muted);
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+        .contact-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .contact-btn {
+            display: inline-block;
+            background-color: var(--primary);
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            margin-top: 8px;
+            transition: opacity 0.2s;
+        }
+        .contact-btn:hover {
+            opacity: 0.9;
+        }
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+        @media (max-width: 640px) {
+            .hero h1 {
+                font-size: 28px;
+            }
+            .collection-header {
+                flex-direction: column;
+                gap: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header-bg">
+        <header>
+            <a href="/" class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 512 512" fill="none" style="width:100%; height:100%;" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="512" height="512" fill="#171f36"/>
+                        <circle cx="256" cy="256" r="160" stroke="#bcc6d4" stroke-width="12"/>
+                        <g stroke="#f6acad" stroke-width="14" stroke-linecap="round">
+                            <line x1="160" y1="390" x2="240" y2="278"/>
+                            <line x1="286" y1="214" x2="352" y2="122"/>
+                        </g>
+                        <text x="256" y="325" font-family="'Inter', sans-serif" font-weight="900" font-size="220" fill="white" text-anchor="middle">M</text>
+                        <path d="M400 120 C 400 132, 408 140, 420 140 C 408 140, 400 148, 400 160 C 400 148, 392 140, 380 140 C 392 140, 400 132, 400 120 Z" fill="#f6acad"/>
+                    </svg>
+                </div>
+                Maria AI
+            </a>
+            <a href="/" class="go-to-app">Go to Maria AI</a>
+        </header>
+
+        <section class="hero">
+            <h1>Saran dan jawaban dari Tim Maria AI</h1>
+            <div class="search-container">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" placeholder="Cari artikel...">
+            </div>
+        </section>
+    </div>
+
+    <main class="main-content">
+        <div class="breadcrumb">
+            <a href="#">Semua Koleksi</a> &gt; Maria AI
+        </div>
+
+        <div class="collection-header">
+            <div class="collection-icon">
+                <svg viewBox="0 0 512 512" fill="none" style="width:100%; height:100%;" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="512" height="512" fill="#171f36"/>
+                    <circle cx="256" cy="256" r="160" stroke="#bcc6d4" stroke-width="12"/>
+                    <g stroke="#f6acad" stroke-width="14" stroke-linecap="round">
+                        <line x1="160" y1="390" x2="240" y2="278"/>
+                        <line x1="286" y1="214" x2="352" y2="122"/>
+                    </g>
+                    <text x="256" y="325" font-family="'Inter', sans-serif" font-weight="900" font-size="220" fill="white" text-anchor="middle">M</text>
+                    <path d="M400 120 C 400 132, 408 140, 420 140 C 408 140, 400 148, 400 160 C 400 148, 392 140, 380 140 C 392 140, 400 132, 400 120 Z" fill="#f6acad"/>
+                </svg>
+            </div>
+            <div class="collection-info">
+                <h2>Maria AI</h2>
+                <p>Panduan umum dan FAQ berkaitan dengan interaksi, riwayat obrolan, dan fitur kustomisasi di Maria AI.</p>
+            </div>
+        </div>
+
+        <div class="article-count">5 ARTIKEL</div>
+
+        <div class="article-list">
+            <div class="article-wrapper">
+                <div class="article-item" onclick="this.parentElement.classList.toggle('active')">
+                    <div class="article-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="article-title">FAQ Maria AI &amp; Penggunaan Dasar</div>
+                    <div class="article-arrow">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </div>
+                </div>
+                <div class="article-content">
+                    <p>Maria AI adalah asisten pintar yang ditenagai oleh kecerdasan buatan dari Google Gemini. Anda dapat menggunakannya untuk berbagai keperluan seperti merencanakan jadwal, mencari informasi, atau hanya sekadar mengobrol.</p>
+                    <p><strong>Bagaimana cara menyimpannya?</strong> Percakapan Anda disimpan secara lokal di dalam memori peramban Anda. Karena itu, percakapan tersebut tidak akan bisa diakses dari perangkat lain dengan akun yang sama kecuali Anda memiliki layanan Maria Plus yang menyinkronkannya ke awan.</p>
+                </div>
+            </div>
+
+            <div class="article-wrapper">
+                <div class="article-item" onclick="this.parentElement.classList.toggle('active')">
+                    <div class="article-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="article-title">Bagaimana cara mengubah tema atau tampilan Maria?</div>
+                    <div class="article-arrow">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </div>
+                </div>
+                <div class="article-content">
+                    <p>Secara bawaan, Maria AI memiliki tema gelap untuk menjaga mata Anda tetap nyaman. Namun Anda selalu bisa mengubahnya ke tampilan yang lebih personal:</p>
+                    <ul>
+                        <li>Buka menu <strong>Pengaturan</strong> (ikon Settings) di panel menu bagian bawah layer kiri.</li>
+                        <li>Masuk ke dalam bagian <strong>Appearance</strong> (Tampilan).</li>
+                        <li>Pilih tema warna, gaya interaksi, serta opsi latar belakang UI lainnya sesuai dengan keinginan Anda.</li>
+                    </ul>
+                </div>
+            </div>
+
+             <div class="article-wrapper">
+                <div class="article-item" onclick="this.parentElement.classList.toggle('active')">
+                    <div class="article-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="article-title">Mengakses riwayat obrolan dan Library</div>
+                    <div class="article-arrow">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </div>
+                </div>
+                <div class="article-content">
+                    <p>Maria AI menyimpan semua riwayat obrolan Anda sebelumnya di menu samping (Sidebar) sebelah kiri. Buka panel Sidebar, klik pada kumpulan <strong>Chats</strong> untuk melanjutkan sesi diskusi.</p>
+                    <p>Anda juga bisa menyimpan balasan favorit (sebagai <em>Bookmarks</em>) atau berkas referensi ke menu utama yang disebut sebagai <strong>Library</strong>. Buka tautan Library untuk melihat semua obrolan yang ditandai atau catatan-catatan khusus secara lebih lengkap.</p>
+                </div>
+            </div>
+
+            <div class="article-wrapper">
+                <div class="article-item" onclick="this.parentElement.classList.toggle('active')">
+                    <div class="article-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="article-title">Kenapa pesan suara / TTS saya tidak berfungsi?</div>
+                    <div class="article-arrow">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </div>
+                </div>
+                <div class="article-content">
+                    <p>Maria menggunakan Gemini AI Voice Engine dengan model terbaru Gemini 3.8 Flash Lite TTS dan Gemini 3.8 Flash TTS. Apabila suara tidak terdengar:</p>
+                    <ul>
+                        <li>Pastikan volume perangkat Anda cukup terdengar dan tidak dalam mode Mute/Silent.</li>
+                        <li>Pastikan izin pemutaran audio diizinkan di peramban Anda.</li>
+                        <li>Pilih model suara atau karakter vokal yang diinginkan di Pengaturan &gt; Voice.</li>
+                    </ul>
+                </div>
+            </div>
+
+             <div class="article-wrapper">
+                <div class="article-item" onclick="this.parentElement.classList.toggle('active')">
+                    <div class="article-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="article-title">Apa benefit dari Maria Plus?</div>
+                    <div class="article-arrow">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </div>
+                </div>
+                <div class="article-content">
+                    <p>Layanan <strong>Maria Plus</strong> memberikan akses ke model penalaran Gemini tingkat lanjut, kecepatan respon maksimal, serta fitur kustomisasi visual lengkap.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="support-section">
+            <div class="contact-card">
+                <h3>Melaporkan Masalah Teknis</h3>
+                <p>Jika Anda mengalami kendala atau pertanyaan teknis, Anda dapat menghubungi tim pengembang melalui email.</p>
+            </div>
+            
+            <div class="contact-card">
+                <h3>Hubungi Dukungan</h3>
+                <p>Masih memiliki pertanyaan atau membutuhkan bantuan langsung dari pengembang?</p>
+                <p>Silakan kirimkan pesan pengajuan keluhan atau laporan Anda melalui Email.</p>
+                <a href="mailto:basitfauzan42@gmail.com" class="contact-btn">Kirim Pesan Pengajuan</a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2026 Maria AI</p>
+    </footer>
+</body>
+</html>
