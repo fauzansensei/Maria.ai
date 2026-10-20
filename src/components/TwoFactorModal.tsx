@@ -90,7 +90,7 @@ export const TwoFactorModal: React.FC<TwoFactorModalProps> = ({
                 value={digit}
                 onChange={(e) => handleChange(idx, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(idx, e)}
-                className="w-10 h-12 text-center text-lg font-bold bg-[#1a1c27] border border-[#2f3246] focus:border-[#20a66a] focus:ring-1 focus:ring-[#20a66a] rounded-xl text-white outline-none transition-all"
+                className="w-10 h-12 text-center text-lg font-bold bg-[#0e172e] border border-[#1e2d4d] focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 rounded-xl text-white outline-none transition-all"
               />
             ))}
           </div>
@@ -100,7 +100,7 @@ export const TwoFactorModal: React.FC<TwoFactorModalProps> = ({
               <span>Masukkan 6 digit kode keamanan</span>
             </div>
           )}
-          <p className="text-[10px] text-neutral-500 text-center">
+          <p className="text-[10px] text-slate-400 text-center">
             Gunakan PIN otentikasi Anda atau masukkan 6 digit bebas untuk konfirmasi.
           </p>
         </div>
@@ -108,13 +108,13 @@ export const TwoFactorModal: React.FC<TwoFactorModalProps> = ({
         <div className="flex items-center gap-2 pt-2">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 px-3 rounded-xl bg-[#1c1e2b] hover:bg-[#25283a] text-neutral-300 text-xs font-medium transition-colors"
+            className="flex-1 py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-[#15223e] hover:bg-slate-200 dark:hover:bg-[#1e2d4d] text-slate-700 dark:text-slate-300 text-xs font-medium transition-colors"
           >
             Batal
           </button>
           <button
             onClick={handleVerify}
-            className="flex-1 py-2.5 px-3 rounded-xl bg-[#20a66a] hover:bg-[#1a8c59] text-white text-xs font-semibold shadow-lg shadow-[#20a66a]/20 transition-all flex items-center justify-center gap-1.5"
+            className="flex-1 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold shadow-lg shadow-blue-900/20 transition-all flex items-center justify-center gap-1.5"
           >
             <Check className="w-4 h-4" />
             <span>Konfirmasi</span>

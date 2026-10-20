@@ -114,14 +114,14 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
         {/* Top Header */}
         <div className="flex items-center justify-between px-6 py-4.5 border-b border-[#212332] bg-[#151620]">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#20a66a]/15 text-[#34d399] border border-[#20a66a]/25 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-[#2563eb]/15 text-[#60a5fa] border border-[#2563eb]/25 flex items-center justify-center">
               <Settings className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-white tracking-tight">Pengaturan Maria AI</h3>
                 {savedSuccess && (
-                  <span className="text-[10px] font-semibold text-[#34d399] bg-[#20a66a]/20 px-2 py-0.5 rounded-full border border-[#20a66a]/30 flex items-center gap-1">
+                  <span className="text-[10px] font-semibold text-[#60a5fa] bg-[#2563eb]/20 px-2 py-0.5 rounded-full border border-[#2563eb]/30 flex items-center gap-1">
                     <Check className="w-3 h-3" /> Tersimpan
                   </span>
                 )}
@@ -148,7 +148,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
                   isActive
-                    ? 'bg-[#20a66a] text-white shadow-sm font-semibold'
+                    ? 'bg-[#2563eb] text-white shadow-sm font-semibold'
                     : 'text-neutral-400 hover:text-white hover:bg-[#1c1e2a]'
                 }`}
               >
@@ -171,7 +171,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   value={settings.username}
                   onChange={(e) => handleUpdate('username', e.target.value)}
                   placeholder="Contoh: Basit"
-                  className="w-full px-3.5 py-2.5 bg-[#181a24] border border-[#292c3d] rounded-xl text-xs text-white focus:outline-none focus:border-[#20a66a]"
+                  className="w-full px-3.5 py-2.5 bg-[#181a24] border border-[#292c3d] rounded-xl text-xs text-white focus:outline-none focus:border-[#2563eb]"
                 />
               </div>
 
@@ -182,7 +182,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     onClick={() => setTheme('dark')}
                     className={`p-3.5 rounded-2xl border text-xs font-medium flex flex-col items-center gap-2 transition-all ${
                       isDark
-                        ? 'bg-[#20a66a]/15 border-[#20a66a] text-[#34d399]'
+                        ? 'bg-[#2563eb]/15 border-[#2563eb] text-[#60a5fa]'
                         : 'bg-[#181a24] border-[#292c3d] text-neutral-400'
                     }`}
                   >
@@ -194,7 +194,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     onClick={() => setTheme('light')}
                     className={`p-3.5 rounded-2xl border text-xs font-medium flex flex-col items-center gap-2 transition-all ${
                       !isDark
-                        ? 'bg-[#20a66a]/15 border-[#20a66a] text-[#34d399]'
+                        ? 'bg-[#2563eb]/15 border-[#2563eb] text-[#60a5fa]'
                         : 'bg-[#181a24] border-[#292c3d] text-neutral-400'
                     }`}
                   >
@@ -210,7 +210,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                 <select
                   value={settings.language || 'Indonesia'}
                   onChange={(e) => handleUpdate('language', e.target.value as any)}
-                  className="w-full px-3.5 py-2.5 bg-[#181a24] border border-[#292c3d] rounded-xl text-xs text-white focus:outline-none focus:border-[#20a66a]"
+                  className="w-full px-3.5 py-2.5 bg-[#181a24] border border-[#292c3d] rounded-xl text-xs text-white focus:outline-none focus:border-[#2563eb]"
                 >
                   <option value="Indonesia">Bahasa Indonesia</option>
                   <option value="English">English (US)</option>
@@ -231,14 +231,14 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                       onClick={() => handleUpdate('tone', tone.value)}
                       className={`p-3 rounded-xl border text-left transition-all ${
                         settings.tone === tone.value
-                          ? 'bg-[#20a66a]/15 border-[#20a66a] text-white'
+                          ? 'bg-[#2563eb]/15 border-[#2563eb] text-white'
                           : 'bg-[#181a24] border-[#262838] text-neutral-300 hover:border-neutral-700'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-semibold">{tone.label}</span>
                         {settings.tone === tone.value && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#34d399]" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#60a5fa]" />
                         )}
                       </div>
                       <div className="text-[10px] text-neutral-400 line-clamp-2 mt-0.5">{tone.description}</div>
@@ -254,7 +254,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   value={settings.customPrompt}
                   onChange={(e) => handleUpdate('customPrompt', e.target.value)}
                   placeholder="Instruksikan cara Maria merespons (contoh: selalu berikan ringkasan poin utama)..."
-                  className="w-full px-3.5 py-2 bg-[#181a24] border border-[#292c3d] rounded-xl text-xs text-white focus:outline-none focus:border-[#20a66a]"
+                  className="w-full px-3.5 py-2 bg-[#181a24] border border-[#292c3d] rounded-xl text-xs text-white focus:outline-none focus:border-[#2563eb]"
                 />
               </div>
 
@@ -267,7 +267,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   type="checkbox"
                   checked={settings.memoryEnabled}
                   onChange={(e) => handleUpdate('memoryEnabled', e.target.checked)}
-                  className="w-4 h-4 accent-[#20a66a] rounded"
+                  className="w-4 h-4 accent-[#2563eb] rounded"
                 />
               </div>
             </div>
@@ -282,7 +282,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold text-white">Respon Suara AI Otomatis (TTS)</span>
                     {settings.voiceEnabled ? (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#20a66a]/20 text-[#34d399] font-medium border border-[#20a66a]/40">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#2563eb]/20 text-[#60a5fa] font-medium border border-[#2563eb]/40">
                         Aktif
                       </span>
                     ) : (
@@ -302,7 +302,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     speechService.unlockAudio();
                     handleUpdate('voiceEnabled', e.target.checked);
                   }}
-                  className="w-5 h-5 accent-[#20a66a] rounded cursor-pointer"
+                  className="w-5 h-5 accent-[#2563eb] rounded cursor-pointer"
                 />
               </div>
 
@@ -310,8 +310,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
               <div>
                 <label className="text-xs font-semibold text-neutral-300 block mb-1.5 flex items-center justify-between">
                   <span>Model AI Voice Engine (Gemini TTS)</span>
-                  <span className="text-[10px] text-[#34d399] font-medium flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-[#34d399]" /> Gemini AI Audio Terkini
+                  <span className="text-[10px] text-[#60a5fa] font-medium flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-[#60a5fa]" /> Gemini AI Audio Terkini
                   </span>
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -320,16 +320,16 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     onClick={() => handleUpdate('ttsModel', 'gemini-3.8-flash-lite-tts')}
                     className={`p-3 rounded-2xl border text-left transition-all ${
                       (settings.ttsModel || 'gemini-3.8-flash-lite-tts') === 'gemini-3.8-flash-lite-tts'
-                        ? 'bg-[#20a66a]/15 border-[#20a66a] text-white shadow-sm ring-1 ring-[#20a66a]/30'
+                        ? 'bg-[#2563eb]/15 border-[#2563eb] text-white shadow-sm ring-1 ring-[#2563eb]/30'
                         : 'bg-[#181a24] border-[#27293a] text-neutral-400 hover:text-white'
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-[#34d399]" /> Gemini 3.8 Flash Lite TTS
+                        <Sparkles className="w-3.5 h-3.5 text-[#60a5fa]" /> Gemini 3.8 Flash Lite TTS
                       </span>
                       {(settings.ttsModel || 'gemini-3.8-flash-lite-tts') === 'gemini-3.8-flash-lite-tts' && (
-                        <Check className="w-3.5 h-3.5 text-[#34d399]" />
+                        <Check className="w-3.5 h-3.5 text-[#60a5fa]" />
                       )}
                     </div>
                     <p className="text-[11px] text-neutral-300 mt-1">
@@ -342,7 +342,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     onClick={() => handleUpdate('ttsModel', 'gemini-3.8-flash-tts')}
                     className={`p-3 rounded-2xl border text-left transition-all ${
                       settings.ttsModel === 'gemini-3.8-flash-tts'
-                        ? 'bg-[#20a66a]/15 border-[#20a66a] text-white shadow-sm ring-1 ring-[#20a66a]/30'
+                        ? 'bg-[#2563eb]/15 border-[#2563eb] text-white shadow-sm ring-1 ring-[#2563eb]/30'
                         : 'bg-[#181a24] border-[#27293a] text-neutral-400 hover:text-white'
                     }`}
                   >
@@ -351,7 +351,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                         <Sparkles className="w-3.5 h-3.5 text-purple-400" /> Gemini 3.8 Flash TTS
                       </span>
                       {settings.ttsModel === 'gemini-3.8-flash-tts' && (
-                        <Check className="w-3.5 h-3.5 text-[#34d399]" />
+                        <Check className="w-3.5 h-3.5 text-[#60a5fa]" />
                       )}
                     </div>
                     <p className="text-[11px] text-neutral-300 mt-1">
@@ -492,7 +492,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                       onClick={() => handleUpdate('speechSpeed', spd as any)}
                       className={`py-2 rounded-xl border text-xs font-medium text-center transition-all ${
                         (settings.speechSpeed || '1x') === spd
-                          ? 'bg-[#20a66a] border-[#20a66a] text-white font-bold'
+                          ? 'bg-[#2563eb] border-[#2563eb] text-white font-bold'
                           : 'bg-[#181a24] border-[#27293a] text-neutral-400 hover:text-white'
                       }`}
                     >
@@ -512,7 +512,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   <div className="p-4 rounded-2xl bg-[#131520] border border-[#232537] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div>
                       <div className="text-xs font-semibold text-white flex items-center gap-1.5">
-                        <Volume2 className="w-3.5 h-3.5 text-[#34d399]" />
+                        <Volume2 className="w-3.5 h-3.5 text-[#60a5fa]" />
                         <span>Uji Suara Model AI: {activePersona.name} ({activePersona.label})</span>
                       </div>
                       <div className="text-[11px] text-neutral-400 mt-0.5">
@@ -541,7 +541,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                       className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all shrink-0 ${
                         speechState.isSpeaking && speechState.activeMessageId === 'settings_test'
                           ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30'
-                          : 'bg-[#20a66a] text-white hover:bg-[#1b8c59] shadow-lg shadow-[#20a66a]/20'
+                          : 'bg-[#2563eb] text-white hover:bg-[#1d4ed8] shadow-lg shadow-[#2563eb]/20'
                       }`}
                     >
                       {speechState.isLoading && speechState.activeMessageId === 'settings_test' ? (
@@ -579,7 +579,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   type="checkbox"
                   checked={settings.enterToSend !== false}
                   onChange={(e) => handleUpdate('enterToSend', e.target.checked)}
-                  className="w-4 h-4 accent-[#20a66a] rounded"
+                  className="w-4 h-4 accent-[#2563eb] rounded"
                 />
               </div>
 
@@ -592,7 +592,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   type="checkbox"
                   checked={settings.saveChatHistory !== false}
                   onChange={(e) => handleUpdate('saveChatHistory', e.target.checked)}
-                  className="w-4 h-4 accent-[#20a66a] rounded"
+                  className="w-4 h-4 accent-[#2563eb] rounded"
                 />
               </div>
             </div>
@@ -610,7 +610,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   type="checkbox"
                   checked={settings.dlpEnabled !== false}
                   onChange={(e) => handleUpdate('dlpEnabled', e.target.checked)}
-                  className="w-4 h-4 accent-[#20a66a] rounded"
+                  className="w-4 h-4 accent-[#2563eb] rounded"
                 />
               </div>
 
@@ -643,8 +643,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-white">Google Cloud Firestore</div>
-                    <div className="text-[11px] text-[#34d399] flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-[#34d399] inline-block animate-pulse" /> Terhubung & Aktif
+                    <div className="text-[11px] text-[#60a5fa] flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-[#60a5fa] inline-block animate-pulse" /> Terhubung & Aktif
                     </div>
                   </div>
                 </div>
@@ -658,8 +658,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-white">Google Gemini 3.5 Flash & 3.1 Pro</div>
-                    <div className="text-[11px] text-[#34d399] flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-[#34d399] inline-block" /> Mode Penalaran Cerdas Aktif
+                    <div className="text-[11px] text-[#60a5fa] flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-[#60a5fa] inline-block" /> Mode Penalaran Cerdas Aktif
                     </div>
                   </div>
                 </div>
@@ -674,9 +674,9 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                 <div className="p-5 rounded-2xl bg-[#171923] border border-[#27293a] flex items-center justify-between">
                   <div className="flex items-center gap-3.5">
                     {user.photoURL ? (
-                      <img src={user.photoURL} alt="Avatar" className="w-12 h-12 rounded-2xl object-cover ring-2 ring-[#20a66a]/40" />
+                      <img src={user.photoURL} alt="Avatar" className="w-12 h-12 rounded-2xl object-cover ring-2 ring-[#2563eb]/40" />
                     ) : (
-                      <div className="w-12 h-12 rounded-2xl bg-[#20a66a] text-white flex items-center justify-center font-bold text-lg">
+                      <div className="w-12 h-12 rounded-2xl bg-[#2563eb] text-white flex items-center justify-center font-bold text-lg">
                         {(user.displayName || user.email || 'M')[0].toUpperCase()}
                       </div>
                     )}
@@ -705,7 +705,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   </div>
                   <button
                     onClick={signIn}
-                    className="w-full py-2.5 px-4 rounded-xl bg-[#20a66a] hover:bg-[#1a8c59] text-white font-semibold text-xs shadow-md transition-all flex items-center justify-center gap-2"
+                    className="w-full py-2.5 px-4 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold text-xs shadow-md transition-all flex items-center justify-center gap-2"
                   >
                     <User className="w-4 h-4" />
                     <span>Masuk dengan Akun Google</span>

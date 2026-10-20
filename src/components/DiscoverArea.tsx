@@ -155,7 +155,7 @@ export const DiscoverArea: React.FC<DiscoverAreaProps> = ({ onBackToChat, onLaun
 
         <button
           onClick={onBackToChat}
-          className="py-1.5 px-3.5 rounded-xl bg-[#20a66a] hover:bg-[#1a8c59] text-white text-xs font-semibold shadow-md transition-all flex items-center gap-1.5"
+          className="py-1.5 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold shadow-md shadow-blue-900/20 transition-all flex items-center gap-1.5"
         >
           <MessageSquare className="w-3.5 h-3.5" />
           <span>Kembali ke Chat</span>

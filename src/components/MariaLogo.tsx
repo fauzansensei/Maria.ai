@@ -39,8 +39,7 @@ export const MariaLogo: React.FC<MariaLogoProps> = ({
         <defs>
           <linearGradient id="maria-tile-bg" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#1e2538" />
-            <stop offset="50%" stopColor="#151b2c" />
-            <stop offset="100%" stopColor="#0f1422" />
+            <stop offset="100%" stopColor="#101524" />
           </linearGradient>
         </defs>
 

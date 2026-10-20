@@ -1,4 +1,4 @@
-// Media & File utilities for upload, thumbnail generation, and base64 conversions
+// Media & File utilities for upload, thumbnail generation, base64 conversions, and full-resolution IndexedDB caching
 
 export function formatBytes(bytes: number, decimals: number = 1): string {
   if (bytes === 0) return '0 B';
@@ -29,23 +29,94 @@ export function extractBase64(dataUrl: string): string {
   return parts.length > 1 ? parts[1] : dataUrl;
 }
 
-// In-memory store for 100% original uncompressed media data URLs during session
+// In-memory store for 100% original uncompressed media data URLs / object URLs during session
 const originalMediaCache = new Map<string, string>();
 
-export function storeOriginalMedia(id: string, dataUrl: string) {
-  if (originalMediaCache.size > 200) {
+export function storeOriginalMedia(id: string, url: string) {
+  if (originalMediaCache.size > 300) {
     const firstKey = originalMediaCache.keys().next().value;
     if (firstKey) originalMediaCache.delete(firstKey);
   }
-  originalMediaCache.set(id, dataUrl);
+  originalMediaCache.set(id, url);
 }
 
 export function getOriginalMedia(id: string): string | undefined {
   return originalMediaCache.get(id);
 }
 
-// Generate high-fidelity thumbnail for image preview (sharp and clear up to 1280px)
-export function generateImageThumbnail(file: File, maxDimension: number = 1280, quality: number = 0.88): Promise<string> {
+// Persistent IndexedDB store for 100% uncompressed raw Blobs/Files
+const DB_NAME = 'maria_highres_media_db';
+const STORE_NAME = 'original_media';
+
+function getMediaDB(): Promise<IDBDatabase | null> {
+  if (typeof window === 'undefined' || !window.indexedDB) {
+    return Promise.resolve(null);
+  }
+  return new Promise((resolve) => {
+    try {
+      const request = indexedDB.open(DB_NAME, 1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME);
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+export async function storeOriginalMediaBlob(key: string, data: Blob | File | string): Promise<void> {
+  try {
+    const db = await getMediaDB();
+    if (!db) return;
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).put(data, key);
+  } catch (err) {
+    console.warn('Could not store full media in IndexedDB:', err);
+  }
+}
+
+export async function getOriginalMediaBlob(key: string): Promise<string | null> {
+  // 1. Check memory cache first
+  const cached = originalMediaCache.get(key);
+  if (cached) return cached;
+
+  // 2. Check IndexedDB
+  try {
+    const db = await getMediaDB();
+    if (!db) return null;
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.get(key);
+      req.onsuccess = () => {
+        const result = req.result;
+        if (!result) {
+          resolve(null);
+        } else if (result instanceof Blob) {
+          const blobUrl = URL.createObjectURL(result);
+          originalMediaCache.set(key, blobUrl);
+          resolve(blobUrl);
+        } else if (typeof result === 'string') {
+          originalMediaCache.set(key, result);
+          resolve(result);
+        } else {
+          resolve(null);
+        }
+      };
+      req.onerror = () => resolve(null);
+    });
+  } catch {
+    return null;
+  }
+}
+
+// Generate crystal-sharp high-fidelity thumbnail for image preview (up to 1600px with high quality)
+export function generateImageThumbnail(file: File, maxDimension: number = 1600, quality: number = 0.92): Promise<string> {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -56,7 +127,7 @@ export function generateImageThumbnail(file: File, maxDimension: number = 1280, 
           let width = img.width;
           let height = img.height;
 
-          // Only downscale if the image exceeds maxDimension (e.g. 1280px)
+          // Only downscale if the image exceeds maxDimension (e.g. 1600px)
           if (width > maxDimension || height > maxDimension) {
             if (width > height) {
               height = Math.round((height * maxDimension) / width);
@@ -75,7 +146,6 @@ export function generateImageThumbnail(file: File, maxDimension: number = 1280, 
             ctx.imageSmoothingQuality = 'high';
             ctx.drawImage(img, 0, 0, width, height);
 
-            // Prefer WebP or clean high-quality JPEG
             const thumbUrl = canvas.toDataURL('image/jpeg', quality);
             resolve(thumbUrl);
             return;
@@ -119,18 +189,18 @@ export function generateVideoThumbnail(file: File): Promise<string> {
       resolved = true;
       try {
         const canvas = document.createElement('canvas');
-        canvas.width = Math.min(video.videoWidth || 320, 480);
-        canvas.height = (canvas.width * (video.videoHeight || 240)) / (video.videoWidth || 320);
+        canvas.width = Math.min(video.videoWidth || 640, 720);
+        canvas.height = (canvas.width * (video.videoHeight || 360)) / (video.videoWidth || 640);
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const thumbUrl = canvas.toDataURL('image/jpeg', 0.7);
+          const thumbUrl = canvas.toDataURL('image/jpeg', 0.85);
           cleanup();
           resolve(thumbUrl);
           return;
         }
       } catch {
-        // Fallback to empty if canvas security blocks it
+        // Fallback
       }
       cleanup();
       resolve('');
@@ -144,7 +214,6 @@ export function generateVideoThumbnail(file: File): Promise<string> {
       }
     };
 
-    // Timeout safety
     setTimeout(() => {
       if (!resolved) {
         resolved = true;

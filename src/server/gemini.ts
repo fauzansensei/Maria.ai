@@ -54,12 +54,13 @@ export async function generateChatResponse(options: GenerateOptions) {
   const { messages, mode = 'general', systemInstruction, location, withVoice, voiceName, personaId } = options;
 
   const hasMedia = messages.some((m) => m.attachments && m.attachments.length > 0);
-  let modelName = 'gemini-3.8-flash';
+  // Default to ultra fast gemini-3.1-flash-lite for near-instant responses
+  let modelName = hasMedia ? 'gemini-2.5-flash' : 'gemini-3.1-flash-lite';
   const config: any = {};
 
   // System persona for Maria AI
   let defaultSystemInstruction =
-    'Anda adalah Maria AI, asisten kecerdasan buatan serba bisa yang cerdas, santun, ramah, dan terstruktur rapi. Jawablah dalam bahasa Indonesia secara alami, rapi, enak dibaca, dan gunakan format Markdown yang bersih (sub-judul, poin-poin, tabel teratur, atau blok kode beranotasi). ATURAN MUTLAK: DILARANG KERAS MENGGUNAKAN EMOJI SAMA SEKALI. Jangan pernah menyertakan emotikon, karakter emoji, atau simbol grafis apa pun dalam seluruh respon Anda. Gunakan teks murni yang bersih, elegan, dan profesional. Bila pengguna melampirkan gambar atau video, amati dengan teliti setiap objek, teks, adegan, dan berikan analisis yang tajam dan akurat.';
+    'Anda adalah Maria AI, asisten kecerdasan buatan serba bisa yang cerdas, santun, ramah, cepat tanggap, dan terstruktur rapi. Jawablah dalam bahasa Indonesia secara alami, rapi, enak dibaca, dan gunakan format Markdown yang bersih (sub-judul, poin-poin, tabel teratur, atau blok kode beranotasi). ATURAN MUTLAK: DILARANG KERAS MENGGUNAKAN EMOJI SAMA SEKALI. Jangan pernah menyertakan emotikon, karakter emoji, atau simbol grafis apa pun dalam seluruh respon Anda. Gunakan teks murni yang bersih, elegan, dan profesional. Bila pengguna melampirkan gambar atau video, amati dengan teliti setiap objek, teks, adegan, dan berikan analisis yang tajam dan akurat.';
 
   if (mode === 'thinking') {
     modelName = 'gemini-3.8-flash';
@@ -73,12 +74,12 @@ export async function generateChatResponse(options: GenerateOptions) {
     defaultSystemInstruction +=
       ' Mode cepat diaktifkan. Berikan jawaban yang ringkas, langsung ke inti persoalan, dan efisien.';
   } else if (mode === 'search') {
-    modelName = 'gemini-3.8-flash';
+    modelName = 'gemini-2.5-flash';
     config.tools = [{ googleSearch: {} }];
     defaultSystemInstruction +=
       ' Mode pencarian Google aktif. Gunakan informasi web terkini dan faktual.';
   } else if (mode === 'maps') {
-    modelName = 'gemini-3.8-flash';
+    modelName = 'gemini-2.5-flash';
     config.tools = [{ googleMaps: {} }];
     if (location) {
       config.toolConfig = {
@@ -157,25 +158,11 @@ export async function generateChatResponse(options: GenerateOptions) {
     }
   }
 
-  let audioUrl: string | undefined;
-  let audioVoice: string | undefined;
-
-  if (withVoice && responseText) {
-    try {
-      const speechRes = await generateSpeechAudio(responseText, voiceName || 'Aoede', personaId);
-      audioUrl = speechRes.audioUrl || undefined;
-      audioVoice = speechRes.voice;
-    } catch (err: any) {
-      console.warn('Concurrent voice generation note:', err?.message || err);
-    }
-  }
-
+  // Audio generation is handled asynchronously on the frontend via /api/tts to make text responses blazing fast
   return {
     text: responseText,
     model: modelName,
     groundingLinks: groundingLinks.length > 0 ? groundingLinks : undefined,
-    audioUrl,
-    audioVoice,
   };
 }
 

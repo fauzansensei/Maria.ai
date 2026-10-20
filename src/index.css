@@ -9,14 +9,19 @@
     font-family: 'JetBrains Mono', monospace;
   }
 
-  /* True OLED Dark Background */
+  /* Deep Midnight Navy Background for Dark Mode & Clean Crisp Canvas for Light Mode */
   html.dark, html.dark body {
-    background-color: #000000;
-    color: #f3f4f6;
+    background-color: #070d1e;
+    color: #f1f5f9;
+  }
+
+  html:not(.dark), body:not(.dark) {
+    background-color: #f8fafc;
+    color: #0f172a;
   }
 }
 
-/* Custom neat scrollbar for OLED & Light */
+/* Custom neat scrollbar for White & Navy Blue theme */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -27,20 +32,20 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.25);
+  background: rgba(37, 99, 235, 0.25);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.45);
+  background: rgba(37, 99, 235, 0.45);
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(96, 165, 250, 0.2);
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(96, 165, 250, 0.35);
 }
 
 /* Prevent layout shift */

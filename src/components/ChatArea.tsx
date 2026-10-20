@@ -112,25 +112,25 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const currentPersona = VOICE_PERSONAS.find((p) => p.id === voicePersona) || VOICE_PERSONAS[0];
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-white dark:bg-[#0e0f12] text-gray-900 dark:text-white relative overflow-hidden transition-colors">
-      {/* Top Bar Header (Matches Screenshot Exactly) */}
-      <header className="h-14 px-3 sm:px-5 border-b border-gray-100 dark:border-[#1b1c26] bg-white dark:bg-[#111218] flex items-center justify-between shrink-0 z-30 select-none">
-        {/* Left: Hamburger Button, Maria AI Logo with online dot, Brand Name & PLUS Badge */}
+    <div className="flex-1 flex flex-col h-full bg-white text-gray-900 relative overflow-hidden select-none">
+      {/* Top Bar Header (Exact match to Image 1) */}
+      <header className="h-14 px-3 sm:px-4 border-b border-gray-100 bg-white flex items-center justify-between shrink-0 z-30 select-none">
+        {/* Left: Hamburger Button, Maria AI Logo with online dot, Brand Name & Purple PLUS Badge */}
         <div className="flex items-center gap-2 sm:gap-2.5">
           <button
             onClick={onToggleSidebar}
             title="Buka Menu"
-            className="w-9 h-9 rounded-xl border border-gray-200 dark:border-[#282a3d] flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-[#1f212f] transition-colors"
+            className="w-9 h-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-700 hover:bg-gray-50 transition-colors shadow-xs"
           >
             <Menu className="w-4 h-4" />
           </button>
 
           <div className="flex items-center gap-2">
             <MariaLogo size="sm" withOnlineDot={true} />
-            <span className="font-bold text-gray-900 dark:text-white text-base tracking-tight">
+            <span className="font-bold text-[#111827] text-base tracking-tight">
               Maria AI
             </span>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#6366f1] text-white text-[10px] font-extrabold tracking-wide uppercase shadow-sm">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#6366f1] text-white text-[10px] font-extrabold tracking-wide uppercase shadow-xs">
               <Sparkles className="w-2.5 h-2.5 fill-white" />
               <span>PLUS</span>
             </span>
@@ -140,44 +140,44 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         {/* Center: Conversation Title if active (desktop only) */}
         {activeConversation && (
           <div className="hidden md:flex items-center gap-2">
-            <span className="text-xs font-medium text-gray-500 dark:text-neutral-400 truncate max-w-xs">
+            <span className="text-xs font-medium text-gray-500 truncate max-w-xs">
               {activeConversation.title}
             </span>
           </div>
         )}
 
-        {/* Right: DEFCON 5 Status Shield Badge & Notifications Bell (Exact Screenshot Match) */}
+        {/* Right: DEFCON 5 Status Shield Badge & Notifications Bell with '1' badge */}
         <div className="flex items-center gap-2">
-          {/* DEFCON 5 Status Shield Badge */}
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-emerald-300/80 dark:border-emerald-500/30 bg-emerald-50/90 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-xs font-bold shadow-sm">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+          {/* DEFCON 5 Mint Green Badge */}
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#a7f3d0] bg-[#ecfdf5] text-[#059669] text-xs font-bold shadow-xs">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#059669]" />
             <span>DEFCON 5</span>
           </div>
 
-          {/* Notifications Bell with Popover */}
+          {/* Notifications Bell with Red '1' Badge */}
           <div className="relative">
             <button
               onClick={() => setShowNotifications((prev) => !prev)}
               title="Notifikasi"
-              className="w-9 h-9 rounded-xl border border-gray-200 dark:border-[#282a3d] flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-[#1f212f] transition-colors relative"
+              className="w-9 h-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-700 hover:bg-gray-50 transition-colors shadow-xs relative"
             >
               <Bell className="w-4 h-4" />
-              {unreadCount > 0 && (
-                <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              )}
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#ef4444] text-white rounded-full text-[9px] font-bold flex items-center justify-center shadow-xs">
+                {unreadCount > 0 ? unreadCount : 1}
+              </span>
             </button>
 
             {/* Notifications Popover */}
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#151722] border border-gray-200 dark:border-[#27293a] rounded-2xl shadow-2xl p-3 z-50 text-xs animate-in fade-in zoom-in-95">
-                <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-[#212332]">
-                  <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                    <Bell className="w-3.5 h-3.5 text-emerald-500" /> Notifikasi
+              <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-2xl shadow-2xl p-3 z-50 text-xs animate-in fade-in zoom-in-95">
+                <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                  <span className="font-bold text-gray-900 flex items-center gap-1.5">
+                    <Bell className="w-3.5 h-3.5 text-emerald-600" /> Notifikasi
                   </span>
                   {unreadCount > 0 && (
                     <button
                       onClick={markAllRead}
-                      className="text-[10px] text-emerald-600 dark:text-[#34d399] hover:underline"
+                      className="text-[10px] text-emerald-600 hover:underline"
                     >
                       Tandai dibaca
                     </button>
@@ -190,17 +190,17 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                       key={n.id}
                       className={`p-2 rounded-xl border transition-colors ${
                         n.read
-                          ? 'bg-gray-50/60 dark:bg-[#181a26]/50 border-transparent text-gray-400 dark:text-neutral-400'
-                          : 'bg-emerald-50/50 dark:bg-[#1c1e2c] border-emerald-100 dark:border-[#292c3d] text-gray-800 dark:text-neutral-200'
+                          ? 'bg-gray-50 border-transparent text-gray-400'
+                          : 'bg-emerald-50/60 border-emerald-100 text-gray-800'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-1">
                         <span className="font-medium text-xs leading-snug">{n.title}</span>
                         {!n.read && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0 mt-1" />
                         )}
                       </div>
-                      <span className="text-[10px] text-gray-400 dark:text-neutral-500 mt-1 block">
+                      <span className="text-[10px] text-gray-400 mt-1 block">
                         {n.time}
                       </span>
                     </div>
@@ -209,28 +209,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               </div>
             )}
           </div>
-
-          {/* Quick Voice Persona Indicator Button */}
-          <button
-            onClick={onOpenSettings}
-            title={`Model Suara AI: ${currentPersona.name} (${currentPersona.label}) - Klik untuk ganti model suara`}
-            className="h-9 px-2.5 rounded-xl border border-emerald-300/60 dark:border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5 hover:bg-emerald-100/50 dark:hover:bg-emerald-950/40 transition-colors text-xs font-semibold"
-          >
-            <Volume2 className="w-3.5 h-3.5 text-emerald-500" />
-            <span className="hidden xs:inline">{currentPersona.name}</span>
-            <span className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70 hidden sm:inline">
-              ({currentPersona.category})
-            </span>
-          </button>
-
-          {/* Settings button */}
-          <button
-            onClick={onOpenSettings}
-            title="Pengaturan"
-            className="w-9 h-9 rounded-xl border border-gray-200 dark:border-[#282a3d] hidden sm:flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-[#1f212f] transition-colors"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
         </div>
       </header>
 
@@ -268,8 +246,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             {isLoading && (
               <div className="py-4 px-6 flex items-center gap-3 animate-in fade-in">
                 <MariaLogo size="sm" />
-                <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-gray-100 dark:bg-[#14151f] border border-gray-200 dark:border-[#242636] text-xs text-gray-700 dark:text-neutral-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white dark:bg-[#0e172e] border border-blue-200/80 dark:border-[#1e2d4d] text-xs text-blue-900 dark:text-blue-200 shadow-sm">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping" />
                   <span className="font-medium">Maria sedang merumuskan jawaban...</span>
                 </div>
               </div>
@@ -283,25 +261,25 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       {/* Floating Active Speech Bar (When speaking or generating audio) */}
       {(speechState.isSpeaking || speechState.isLoading) && (
         <div className="max-w-xl mx-auto w-full px-4 pt-1 animate-in fade-in slide-in-from-bottom-2">
-          <div className="flex items-center justify-between py-2 px-3.5 rounded-full bg-white dark:bg-[#141624] border border-emerald-500/40 shadow-lg text-xs">
+          <div className="flex items-center justify-between py-2 px-3.5 rounded-full bg-white dark:bg-[#0e172e] border border-blue-500/40 shadow-lg text-xs">
             <div className="flex items-center gap-2.5">
               {speechState.isLoading ? (
-                <Loader2 className="w-4 h-4 text-emerald-600 dark:text-[#34d399] animate-spin" />
+                <Loader2 className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" />
               ) : (
-                <Volume2 className="w-4 h-4 text-emerald-600 dark:text-[#34d399] animate-pulse" />
+                <Volume2 className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-pulse" />
               )}
               <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-gray-900 dark:text-white">
+                <span className="font-semibold text-slate-900 dark:text-white">
                   {speechState.isLoading ? 'Menyiapkan Suara Maria AI...' : `${currentPersona.label} sedang berbicara`}
                 </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-[#20a66a]/20 text-emerald-700 dark:text-[#34d399] font-medium flex items-center gap-1">
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium flex items-center gap-1">
                   <span>AI Voice Engine</span>
                 </span>
               </div>
             </div>
             <button
               onClick={() => speechService.stopSpeaking()}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-100 dark:bg-[#1f2233] text-gray-700 dark:text-neutral-200 hover:text-red-600 text-[11px] font-semibold transition-colors"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-[#15223e] text-slate-700 dark:text-slate-200 hover:text-red-600 text-[11px] font-semibold transition-colors"
             >
               <VolumeX className="w-3.5 h-3.5" />
               <span>Hentikan</span>
@@ -311,7 +289,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       )}
 
       {/* Bottom Chat Input Dock (Floating Pill with Subtext) */}
-      <div className="shrink-0 pt-2 pb-1 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-[#0e0f12] dark:via-[#0e0f12]/95 dark:to-transparent">
+      <div className="shrink-0 pt-2 pb-1 bg-gradient-to-t from-slate-50 via-slate-50/95 to-transparent dark:from-[#070d1e] dark:via-[#070d1e]/95 dark:to-transparent">
         <ChatInput
           onSendMessage={onSendMessage}
           isLoading={isLoading}

@@ -24,6 +24,8 @@ import {
   extractBase64,
   generateImageThumbnail,
   generateVideoThumbnail,
+  storeOriginalMedia,
+  storeOriginalMediaBlob,
 } from '../lib/mediaUtils.ts';
 import { MediaLightboxModal, LightboxMedia } from './MediaLightboxModal.tsx';
 
@@ -95,22 +97,31 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       try {
         const dataUrl = await readFileAsDataUrl(file);
         const base64Data = extractBase64(dataUrl);
+        const originalUrl = URL.createObjectURL(file);
+        const attId = `att_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+        // Retain 100% full original uncompressed file in memory and persistent IndexedDB
+        storeOriginalMedia(attId, originalUrl);
+        storeOriginalMedia(file.name, originalUrl);
+        await storeOriginalMediaBlob(attId, file);
+        await storeOriginalMediaBlob(file.name, file);
 
         let previewUrl = '';
         if (mediaType === 'image') {
-          // Generate lightweight compressed thumbnail (< 25 KB) so Firestore document limit is never exceeded
-          previewUrl = await generateImageThumbnail(file, 320);
+          // Sharp high-res preview thumbnail (up to 1600px with 0.92 quality)
+          previewUrl = await generateImageThumbnail(file, 1600, 0.92);
         } else if (mediaType === 'video') {
           previewUrl = await generateVideoThumbnail(file);
         }
 
         newAttachments.push({
-          id: `att_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          id: attId,
           name: file.name,
           size: file.size,
           mimeType: file.type || (mediaType === 'video' ? 'video/mp4' : 'image/jpeg'),
           type: mediaType,
-          previewUrl: previewUrl || dataUrl.slice(0, 30000),
+          previewUrl: previewUrl || originalUrl,
+          originalUrl: originalUrl || dataUrl,
           base64Data,
         });
       } catch (err) {
@@ -292,20 +303,20 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
       {/* Attachments Menu Popover */}
       {isAttachmentOpen && (
-        <div className="mb-2 p-2 rounded-2xl bg-white dark:bg-[#181a26] border border-gray-200 dark:border-[#282a3d] shadow-2xl animate-in fade-in zoom-in-95 duration-150 text-xs">
+        <div className="mb-2 p-2 rounded-2xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-[#1e293b] shadow-2xl animate-in fade-in zoom-in-95 duration-150 text-xs">
           <div className="grid grid-cols-2 gap-1.5">
             {/* Foto & Gambar */}
             <button
               type="button"
               onClick={() => mediaInputRef.current?.click()}
-              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-[#202234] text-gray-800 dark:text-neutral-200 text-left transition-colors"
+              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-blue-50/70 dark:hover:bg-[#1e293b] text-slate-800 dark:text-slate-200 text-left transition-colors"
             >
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
                 <ImageIcon className="w-4 h-4" />
               </div>
               <div className="min-w-0">
                 <div className="font-semibold truncate">Unggah Foto</div>
-                <div className="text-[10px] text-gray-400 dark:text-neutral-400">JPG, PNG, WebP</div>
+                <div className="text-[10px] text-slate-400 dark:text-slate-400">JPG, PNG, WebP</div>
               </div>
             </button>
 
@@ -313,14 +324,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <button
               type="button"
               onClick={() => videoInputRef.current?.click()}
-              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-[#202234] text-gray-800 dark:text-neutral-200 text-left transition-colors"
+              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-blue-50/70 dark:hover:bg-[#1e293b] text-slate-800 dark:text-slate-200 text-left transition-colors"
             >
               <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
                 <Film className="w-4 h-4" />
               </div>
               <div className="min-w-0">
                 <div className="font-semibold truncate">Unggah Video</div>
-                <div className="text-[10px] text-gray-400 dark:text-neutral-400">MP4, WebM, MOV</div>
+                <div className="text-[10px] text-slate-400 dark:text-slate-400">MP4, WebM, MOV</div>
               </div>
             </button>
 
@@ -328,14 +339,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <button
               type="button"
               onClick={() => cameraInputRef.current?.click()}
-              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-[#202234] text-gray-800 dark:text-neutral-200 text-left transition-colors"
+              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-blue-50/70 dark:hover:bg-[#1e293b] text-slate-800 dark:text-slate-200 text-left transition-colors"
             >
-              <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
                 <Camera className="w-4 h-4" />
               </div>
               <div className="min-w-0">
                 <div className="font-semibold truncate">Ambil Kamera</div>
-                <div className="text-[10px] text-gray-400 dark:text-neutral-400">Foto langsung</div>
+                <div className="text-[10px] text-slate-400 dark:text-slate-400">Foto langsung</div>
               </div>
             </button>
 
@@ -343,23 +354,23 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <button
               type="button"
               onClick={() => docInputRef.current?.click()}
-              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-[#202234] text-gray-800 dark:text-neutral-200 text-left transition-colors"
+              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-blue-50/70 dark:hover:bg-[#1e293b] text-slate-800 dark:text-slate-200 text-left transition-colors"
             >
-              <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 flex items-center justify-center shrink-0">
                 <FileText className="w-4 h-4" />
               </div>
               <div className="min-w-0">
                 <div className="font-semibold truncate">Dokumen</div>
-                <div className="text-[10px] text-gray-400 dark:text-neutral-400">PDF, TXT, CSV</div>
+                <div className="text-[10px] text-slate-400 dark:text-slate-400">PDF, TXT, CSV</div>
               </div>
             </button>
           </div>
 
-          <div className="my-1.5 border-t border-gray-100 dark:border-[#242636]" />
+          <div className="my-1.5 border-t border-slate-100 dark:border-[#1e293b]" />
 
           {/* Mode Switch Shortcuts */}
           <div className="flex items-center gap-1.5 flex-wrap px-1">
-            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Mode:</span>
+            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Mode:</span>
             {[
               { id: 'general', label: 'Umum' },
               { id: 'thinking', label: 'Thinking' },
@@ -378,8 +389,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 }}
                 className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-all ${
                   activeMode === m.id
-                    ? 'bg-emerald-600 text-white font-bold'
-                    : 'bg-gray-100 dark:bg-[#202232] text-gray-600 dark:text-neutral-300 hover:text-emerald-600'
+                    ? 'bg-blue-600 text-white font-bold shadow-xs'
+                    : 'bg-slate-100 dark:bg-[#1e293b] text-slate-600 dark:text-slate-300 hover:text-blue-600'
                 }`}
               >
                 {m.label}
@@ -392,12 +403,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       {/* Active Mode Tag Indicator if not general */}
       {activeMode !== 'general' && (
         <div className="flex items-center gap-2 mb-2 px-1">
-          <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-gray-100 dark:bg-[#1b1d2a] border border-gray-200 dark:border-[#2d3045] text-gray-800 dark:text-neutral-200 flex items-center gap-1.5">
-            <Sparkles className="w-3 h-3 text-emerald-600 dark:text-[#34d399]" />
-            Mode: <span className="text-emerald-600 dark:text-[#34d399] uppercase">{activeMode}</span>
+          <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white dark:bg-[#0f172a] border border-blue-200 dark:border-[#1e293b] text-blue-900 dark:text-blue-100 shadow-xs flex items-center gap-1.5">
+            <Sparkles className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+            Mode: <span className="text-blue-600 dark:text-blue-400 uppercase">{activeMode}</span>
             <button
               onClick={() => onModeChange('general')}
-              className="ml-1 text-gray-400 hover:text-gray-700 dark:hover:text-white"
+              className="ml-1 text-slate-400 hover:text-slate-700 dark:hover:text-white"
             >
               <X className="w-3 h-3" />
             </button>
@@ -443,7 +454,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 className="relative w-10 h-10 rounded-lg overflow-hidden bg-black shrink-0 cursor-pointer"
                 onClick={() =>
                   setLightboxMedia({
-                    url: att.previewUrl,
+                    url: att.originalUrl || att.previewUrl,
                     type: att.type === 'video' ? 'video' : 'image',
                     name: att.name,
                     size: att.size,
@@ -510,16 +521,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
 
-      {/* Main Floating Pill Input Bar (Exact match to screenshot) */}
-      <div className="relative flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-[#f8f9fa] dark:bg-[#151722] border border-gray-200 dark:border-[#282a3d] shadow-sm focus-within:border-emerald-500/70 focus-within:ring-2 focus-within:ring-emerald-500/10 transition-all duration-200">
+      {/* Main Floating Pill Input Bar (White & Navy Blue Aesthetic matching Sky Host) */}
+      <div className="relative flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-[#1e293b] shadow-md focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-600/15 transition-all duration-200">
         {/* Plus Button (+) */}
         <button
           type="button"
           onClick={() => setIsAttachmentOpen((prev) => !prev)}
           title="Lampiran & Media"
-          className="w-8 h-8 rounded-full bg-white dark:bg-[#1f2233] border border-gray-200 dark:border-[#2d3045] flex items-center justify-center text-gray-600 dark:text-neutral-300 hover:text-gray-900 dark:hover:text-white transition-colors shrink-0 shadow-xs"
+          className="w-8 h-8 rounded-full bg-slate-50 dark:bg-[#1e293b] border border-slate-200 dark:border-[#2d3b55] flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0 shadow-xs"
         >
-          <Plus className={`w-4 h-4 transition-transform duration-200 ${isAttachmentOpen ? 'rotate-45' : ''}`} />
+          <Plus className={`w-4 h-4 transition-transform duration-200 ${isAttachmentOpen ? 'rotate-45 text-blue-600' : ''}`} />
         </button>
 
         {/* Text Input */}
@@ -531,13 +542,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           onPaste={handlePaste}
           placeholder="Tanya Maria..."
           rows={1}
-          className="flex-1 bg-transparent border-0 resize-none py-1.5 px-1.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-neutral-500 focus:outline-none max-h-32 leading-relaxed"
+          className="flex-1 bg-transparent border-0 resize-none py-1.5 px-1.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none max-h-32 leading-relaxed"
         />
 
         {/* Right Section: Divider | Mic | Waveform/Send Button */}
         <div className="flex items-center gap-1.5 shrink-0">
           {/* Subtle Vertical Divider */}
-          <div className="h-5 w-px bg-gray-200 dark:bg-[#2d3148] my-auto" />
+          <div className="h-5 w-px bg-slate-200 dark:bg-[#1e293b] my-auto" />
 
           {/* Microphone Button */}
           <button
@@ -547,20 +558,20 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
               isRecording
                 ? 'bg-rose-50 text-rose-600 animate-pulse border border-rose-300'
-                : 'text-gray-500 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white'
+                : 'text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400'
             }`}
           >
             {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
           </button>
 
-          {/* Green Waveform Voice Button OR Send Button */}
+          {/* Navy Blue Waveform Voice Button OR Send Button */}
           {hasInput ? (
             <button
               type="button"
               disabled={isLoading}
               onClick={() => handleSubmit()}
               title="Kirim pesan"
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-sm shrink-0 transition-all active:scale-95"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white flex items-center justify-center shadow-md shadow-blue-900/20 shrink-0 transition-all active:scale-95"
             >
               <Send className="w-4 h-4 ml-0.5" />
             </button>
@@ -569,14 +580,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               type="button"
               onClick={handleVoiceWaveClick}
               title="Mode Suara Maria AI"
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/80 flex items-center justify-center shadow-xs shrink-0 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/60 flex items-center justify-center shadow-xs shrink-0 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
             >
-              {/* Waveform Equalizer Bars Icon (Exact visual from screenshot) */}
+              {/* Waveform Equalizer Bars in Navy/Royal Blue */}
               <div className="flex items-center gap-[2.5px] h-3.5">
-                <span className="w-[2px] h-2 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
-                <span className="w-[2px] h-3.5 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
-                <span className="w-[2px] h-2.5 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
-                <span className="w-[2px] h-3 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
+                <span className="w-[2px] h-2 bg-blue-600 dark:bg-blue-400 rounded-full" />
+                <span className="w-[2px] h-3.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+                <span className="w-[2px] h-2.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+                <span className="w-[2px] h-3 bg-blue-600 dark:bg-blue-400 rounded-full" />
               </div>
             </button>
           )}
@@ -584,7 +595,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       </div>
 
       {/* Sub-label Bawah: Exact match to Screenshot */}
-      <p className="text-[10px] font-medium tracking-widest text-gray-400 dark:text-neutral-500 text-center uppercase pt-2 pb-1 select-none">
+      <p className="text-[10px] font-medium tracking-widest text-slate-400 dark:text-slate-500 text-center uppercase pt-2 pb-1 select-none">
         MARIA ADALAH AI YANG DAPAT MELAKUKAN KESALAHAN
       </p>
     </div>

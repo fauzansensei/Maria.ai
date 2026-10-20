@@ -2,16 +2,15 @@ import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
-  User,
   Copy,
   Check,
   Volume2,
   VolumeX,
   Loader2,
-  ExternalLink,
-  MapPin,
-  Globe,
   Brain,
+  Globe,
+  MapPin,
+  ExternalLink,
   Download,
   Dna,
   ChevronDown,
@@ -24,12 +23,11 @@ import {
   Pencil,
   X,
   RotateCcw,
-  Send,
 } from 'lucide-react';
 import { Message, MediaAttachment } from '../types/index.ts';
 import { MariaLogo } from './MariaLogo.tsx';
 import { speechService, SpeechState } from '../lib/speechService.ts';
-import { formatBytes } from '../lib/mediaUtils.ts';
+import { formatBytes, getOriginalMedia, getOriginalMediaBlob } from '../lib/mediaUtils.ts';
 import { MediaLightboxModal, LightboxMedia } from './MediaLightboxModal.tsx';
 
 interface MessageItemProps {
@@ -40,6 +38,46 @@ interface MessageItemProps {
   onEditMessage?: (messageId: string, newContent: string, resend: boolean) => void;
   onLoadToInput?: (text: string) => void;
 }
+
+// Subcomponent to resolve and display the 100% full original resolution image
+const HighResImage: React.FC<{
+  img: MediaAttachment;
+  onOpenLightbox: (url: string) => void;
+  className?: string;
+}> = ({ img, onOpenLightbox, className = '' }) => {
+  const [resolvedUrl, setResolvedUrl] = useState<string>(() => {
+    return (
+      img.originalUrl ||
+      getOriginalMedia(img.id) ||
+      getOriginalMedia(img.name) ||
+      (img.base64Data ? `data:${img.mimeType || 'image/jpeg'};base64,${img.base64Data}` : '') ||
+      img.previewUrl
+    );
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      const blobUrl = (await getOriginalMediaBlob(img.id)) || (await getOriginalMediaBlob(img.name));
+      if (blobUrl && isMounted) {
+        setResolvedUrl(blobUrl);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, [img.id, img.name]);
+
+  return (
+    <img
+      src={resolvedUrl}
+      alt={img.name}
+      onClick={() => onOpenLightbox(resolvedUrl)}
+      className={className}
+      style={{ imageRendering: 'auto' }}
+    />
+  );
+};
 
 export const MessageItem: React.FC<MessageItemProps> = ({
   message,
@@ -57,14 +95,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   const [editContent, setEditContent] = useState(message.content);
   const [resendAfterEdit, setResendAfterEdit] = useState(true);
 
-  // Sync editContent when message prop changes
   useEffect(() => {
     setEditContent(message.content);
   }, [message.content]);
-
-  const isModel = message.role === 'model';
-  const isThisSpeaking = speechState.isSpeaking && speechState.activeMessageId === message.id;
-  const isThisLoading = speechState.isLoading && speechState.activeMessageId === message.id;
 
   useEffect(() => {
     return speechService.subscribe((state) => {
@@ -72,29 +105,32 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     });
   }, []);
 
-  const handleCopyText = async () => {
-    try {
-      await navigator.clipboard.writeText(message.content);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy message:', err);
-    }
+  const isModel = message.role === 'model';
+  const isThisSpeaking =
+    speechState.isSpeaking && speechState.activeMessageId === message.id;
+  const isThisLoading =
+    speechState.isLoading && speechState.activeMessageId === message.id;
+
+  const handleCopyText = () => {
+    navigator.clipboard.writeText(message.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handlePlayTTS = () => {
     speechService.unlockAudio();
+
     if (isThisSpeaking || isThisLoading) {
       speechService.stopSpeaking();
     } else {
-      let personaId = 'wanita';
       let voiceName = 'Aoede';
+      let personaId = 'wanita';
       try {
         const saved = localStorage.getItem('maria_settings');
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (parsed.voicePersona) personaId = parsed.voicePersona;
           if (parsed.geminiVoice) voiceName = parsed.geminiVoice;
+          if (parsed.voicePersona) personaId = parsed.voicePersona;
         }
       } catch {}
 
@@ -116,8 +152,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     <div
       className={`group flex gap-3.5 sm:gap-4 py-4 px-3 sm:px-6 transition-colors ${
         isModel
-          ? 'bg-[#12131b]/60 border-y border-[#1e202e]/60'
-          : 'bg-transparent'
+          ? 'bg-white dark:bg-[#0c1222]/80 border-y border-slate-200/80 dark:border-[#1e293b]/70 shadow-xs'
+          : 'bg-slate-50/70 dark:bg-transparent'
       }`}
     >
       {/* Lightbox for zooming images or videos */}
@@ -134,11 +170,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           <img
             src={userPhoto}
             alt={userName || 'Pengguna'}
-            className="w-8 h-8 rounded-xl object-cover ring-2 ring-[#20a66a]/40"
+            className="w-8 h-8 rounded-xl object-cover ring-2 ring-blue-500/40"
           />
         ) : (
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#20a66a] to-[#059669] text-white flex items-center justify-center font-bold text-xs shadow-md">
-            {(userName || 'Basit')[0].toUpperCase()}
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-700 to-blue-900 text-white flex items-center justify-center font-bold text-xs shadow-md shadow-blue-900/30 ring-2 ring-blue-500/30">
+            {(userName || 'B')[0].toUpperCase()}
           </div>
         )}
       </div>
@@ -148,34 +184,34 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         {/* Author & Model Tag */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-bold text-white">
+            <span className="text-xs font-bold text-slate-900 dark:text-white">
               {isModel ? 'Maria AI' : userName || 'Anda'}
             </span>
             {isModel && (
-              <span className="text-[10px] px-2 py-0.5 rounded-md font-mono bg-[#20a66a]/15 text-[#34d399] border border-[#20a66a]/30">
-                {message.model ? message.model.replace('-preview', '') : 'gemini-3.5-flash'}
+              <span className="text-[10px] px-2 py-0.5 rounded-md font-mono bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/80">
+                {message.model ? message.model.replace('-preview', '') : 'gemini-3.8-flash'}
               </span>
             )}
             {isThisLoading && (
-              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/20 text-[#34d399] border border-[#20a66a]/40 animate-pulse">
-                <Loader2 className="w-3 h-3 animate-spin" />
+              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 animate-pulse">
+                <Loader2 className="w-3 h-3 animate-spin text-blue-600 dark:text-blue-400" />
                 <span>Menyiapkan suara AI...</span>
               </span>
             )}
             {isThisSpeaking && (
-              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-[#20a66a]/20 text-[#34d399] border border-[#20a66a]/40 animate-pulse">
-                <Volume2 className="w-3 h-3" />
+              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700 animate-pulse">
+                <Volume2 className="w-3 h-3 text-blue-600" />
                 <span>Berbicara...</span>
               </span>
             )}
             {message.mode === 'science' && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-semibold">
-                <Dna className="w-2.5 h-2.5" /> Sains
+              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex items-center gap-1 font-semibold">
+                <Dna className="w-2.5 h-2.5 text-blue-600" /> Sains
               </span>
             )}
             {message.mode === 'thinking' && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center gap-1 font-semibold">
-                <Brain className="w-2.5 h-2.5" /> High Thinking
+              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1 font-semibold">
+                <Brain className="w-2.5 h-2.5 text-indigo-600" /> High Thinking
               </span>
             )}
           </div>
@@ -185,9 +221,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             <button
               onClick={handleCopyText}
               title="Salin teks"
-              className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-[#1f2130] transition-colors"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#1e293b] transition-colors"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-[#34d399]" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-blue-600" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
 
             {!isModel && onEditMessage && (
@@ -197,7 +233,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   setIsEditing(true);
                 }}
                 title="Edit teks (perbaiki typo/salah ketik)"
-                className="p-1.5 rounded-lg text-neutral-400 hover:text-emerald-400 hover:bg-[#1f2130] transition-colors flex items-center gap-1 text-[11px]"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-[#1e293b] transition-colors flex items-center gap-1 text-[11px]"
               >
                 <Pencil className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Edit</span>
@@ -208,7 +244,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               <button
                 onClick={() => onLoadToInput(message.content)}
                 title="Muat teks ke input bawah"
-                className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-[#1f2130] transition-colors flex items-center gap-1 text-[11px]"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#1e293b] transition-colors flex items-center gap-1 text-[11px]"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
@@ -221,14 +257,14 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 title={isThisSpeaking ? 'Hentikan suara' : 'Dengarkan suara model AI'}
                 className={`p-1.5 rounded-lg transition-colors ${
                   isThisSpeaking
-                    ? 'text-[#34d399] bg-[#20a66a]/20'
-                    : 'text-neutral-400 hover:text-[#34d399] hover:bg-[#1f2130]'
+                    ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/30'
+                    : 'text-slate-400 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-[#1e293b]'
                 }`}
               >
                 {isThisLoading ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#34d399]" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
                 ) : isThisSpeaking ? (
-                  <VolumeX className="w-3.5 h-3.5 text-[#34d399] animate-pulse" />
+                  <VolumeX className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
                 ) : (
                   <Volume2 className="w-3.5 h-3.5" />
                 )}
@@ -239,19 +275,19 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
         {/* Reasoning Process Accordion */}
         {isModel && (message.thinkingProcess || message.mode === 'thinking') && (
-          <div className="my-2 rounded-xl border border-[#2b2e40] bg-[#141622] overflow-hidden text-xs">
+          <div className="my-2 rounded-xl border border-slate-200 dark:border-[#1e293b] bg-slate-50 dark:bg-[#0a1128] overflow-hidden text-xs">
             <button
               onClick={() => setShowThought((p) => !p)}
-              className="w-full flex items-center justify-between px-3 py-2 text-neutral-400 hover:text-white transition-colors"
+              className="w-full flex items-center justify-between px-3 py-2 text-slate-600 dark:text-slate-300 hover:text-blue-600 transition-colors"
             >
-              <span className="flex items-center gap-2 font-medium text-[11px] text-purple-300">
-                <Brain className="w-3.5 h-3.5 text-purple-400" />
-                <span>Thought for 2s • Analisis penalaran multi-tahap</span>
+              <span className="flex items-center gap-2 font-medium text-[11px] text-blue-600 dark:text-blue-400">
+                <Brain className="w-3.5 h-3.5" />
+                <span>Thought process • Analisis penalaran multi-tahap</span>
               </span>
               <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showThought ? 'rotate-180' : ''}`} />
             </button>
             {showThought && (
-              <div className="px-3 pb-3 pt-1 text-[11px] text-neutral-300 border-t border-[#222434] leading-relaxed font-mono">
+              <div className="px-3 pb-3 pt-1 text-[11px] text-slate-700 dark:text-slate-300 border-t border-slate-200 dark:border-[#1e293b] leading-relaxed font-mono">
                 {message.thinkingProcess ||
                   '1. Memahami maksud inti permintaan pengguna.\n2. Mengaitkan basis pengetahuan visual dan konteks histori percakapan.\n3. Menyusun formulasi jawaban sistematis, jelas, dan akurat.'}
               </div>
@@ -265,7 +301,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             {videos.map((vid) => (
               <div
                 key={vid.id}
-                className="rounded-2xl overflow-hidden border border-[#27293d] bg-black shadow-xl max-w-lg group/vid relative"
+                className="rounded-2xl overflow-hidden border border-slate-200 dark:border-[#1e293b] bg-black shadow-xl max-w-lg group/vid relative"
               >
                 <video
                   src={vid.previewUrl}
@@ -273,11 +309,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   playsInline
                   className="w-full max-h-[380px] object-cover bg-black"
                 />
-                <div className="p-2.5 bg-[#141520] border-t border-[#232536] flex items-center justify-between text-xs">
+                <div className="p-2.5 bg-slate-50 dark:bg-[#0f172a] border-t border-slate-200 dark:border-[#1e293b] flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2 min-w-0">
-                    <Film className="w-4 h-4 text-indigo-400 shrink-0" />
-                    <span className="font-medium text-neutral-200 truncate">{vid.name}</span>
-                    <span className="text-[10px] text-neutral-400 shrink-0">({formatBytes(vid.size)})</span>
+                    <Film className="w-4 h-4 text-indigo-500 shrink-0" />
+                    <span className="font-medium text-slate-800 dark:text-slate-200 truncate">{vid.name}</span>
+                    <span className="text-[10px] text-slate-400 shrink-0">({formatBytes(vid.size)})</span>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
@@ -290,7 +326,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                         })
                       }
                       title="Perbesar video"
-                      className="p-1 rounded-lg hover:bg-neutral-800 text-neutral-400 hover:text-white"
+                      className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white"
                     >
                       <Maximize2 className="w-3.5 h-3.5" />
                     </button>
@@ -298,7 +334,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                       href={vid.previewUrl}
                       download={vid.name}
                       title="Unduh video"
-                      className="p-1 rounded-lg hover:bg-neutral-800 text-neutral-400 hover:text-white"
+                      className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white"
                     >
                       <Download className="w-3.5 h-3.5" />
                     </a>
@@ -309,48 +345,54 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           </div>
         )}
 
-        {/* User Uploaded Media: Image Gallery */}
+        {/* User Uploaded Media: Image Gallery with 100% Original Resolution via HighResImage */}
         {images.length > 0 && (
           <div className="my-2.5">
             {images.length === 1 ? (
-              <div className="rounded-2xl overflow-hidden border border-[#27293d] bg-black shadow-xl max-w-lg group/img relative">
-                <img
-                  src={images[0].previewUrl}
-                  alt={images[0].name}
-                  onClick={() =>
+              <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-[#1e293b] bg-white dark:bg-[#0a1128] shadow-md max-w-2xl group/img relative">
+                <HighResImage
+                  img={images[0]}
+                  onOpenLightbox={(url) =>
                     setLightboxMedia({
-                      url: images[0].previewUrl,
+                      url,
                       type: 'image',
                       name: images[0].name,
                       size: images[0].size,
                     })
                   }
-                  className="w-full max-h-[400px] object-cover cursor-pointer hover:scale-[1.01] transition-transform duration-200"
+                  className="w-full max-h-[560px] object-contain cursor-pointer hover:opacity-95 transition-opacity bg-slate-50 dark:bg-black/30"
                 />
-                <div className="p-2 bg-[#141520] border-t border-[#232536] flex items-center justify-between text-xs">
-                  <span className="text-neutral-300 truncate max-w-[220px] font-medium text-[11px]">
+                <div className="p-2.5 bg-slate-50 dark:bg-[#0f172a] border-t border-slate-200 dark:border-[#1e293b] flex items-center justify-between text-xs">
+                  <span className="text-slate-800 dark:text-slate-200 truncate max-w-[220px] font-medium text-[11px]">
                     {images[0].name}
                   </span>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-neutral-400">{formatBytes(images[0].size)}</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                      {formatBytes(images[0].size)}
+                    </span>
                     <button
-                      onClick={() =>
+                      onClick={() => {
+                        const fallbackUrl =
+                          images[0].originalUrl ||
+                          getOriginalMedia(images[0].id) ||
+                          getOriginalMedia(images[0].name) ||
+                          images[0].previewUrl;
                         setLightboxMedia({
-                          url: images[0].previewUrl,
+                          url: fallbackUrl,
                           type: 'image',
                           name: images[0].name,
                           size: images[0].size,
-                        })
-                      }
-                      className="p-1 rounded-lg hover:bg-neutral-800 text-neutral-400 hover:text-white"
+                        });
+                      }}
+                      className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-blue-600 transition-colors"
                       title="Perbesar"
                     >
                       <Eye className="w-3.5 h-3.5" />
                     </button>
                     <a
-                      href={images[0].previewUrl}
+                      href={images[0].originalUrl || images[0].previewUrl}
                       download={images[0].name}
-                      className="p-1 rounded-lg hover:bg-neutral-800 text-neutral-400 hover:text-white"
+                      className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-blue-600 transition-colors"
                       title="Unduh"
                     >
                       <Download className="w-3.5 h-3.5" />
@@ -363,24 +405,36 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 {images.map((img) => (
                   <div
                     key={img.id}
-                    onClick={() =>
+                    className="relative group/grid rounded-xl overflow-hidden border border-slate-200 dark:border-[#1e293b] bg-white dark:bg-[#0a1128] aspect-square cursor-pointer shadow-xs"
+                    onClick={() => {
+                      const url =
+                        img.originalUrl ||
+                        getOriginalMedia(img.id) ||
+                        getOriginalMedia(img.name) ||
+                        img.previewUrl;
                       setLightboxMedia({
-                        url: img.previewUrl,
+                        url,
                         type: 'image',
                         name: img.name,
                         size: img.size,
-                      })
-                    }
-                    className="group/item relative aspect-square rounded-xl overflow-hidden border border-[#2b2e42] bg-neutral-900 cursor-pointer shadow-md"
+                      });
+                    }}
                   >
-                    <img
-                      src={img.previewUrl}
-                      alt={img.name}
-                      className="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-200"
+                    <HighResImage
+                      img={img}
+                      onOpenLightbox={(url) =>
+                        setLightboxMedia({
+                          url,
+                          type: 'image',
+                          name: img.name,
+                          size: img.size,
+                        })
+                      }
+                      className="w-full h-full object-cover group-hover/grid:scale-105 transition-transform duration-200"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover/item:opacity-100 transition-opacity p-2 flex flex-col justify-end">
-                      <span className="text-[10px] text-white font-medium truncate">{img.name}</span>
-                      <span className="text-[9px] text-neutral-400">{formatBytes(img.size)}</span>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover/grid:opacity-100 flex items-end justify-between p-2 text-white text-[10px] transition-opacity">
+                      <span className="truncate">{img.name}</span>
+                      <Maximize2 className="w-3 h-3 shrink-0" />
                     </div>
                   </div>
                 ))}
@@ -389,82 +443,91 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           </div>
         )}
 
-        {/* User Uploaded Documents */}
+        {/* User Uploaded Media: Documents */}
         {files.length > 0 && (
-          <div className="my-2 space-y-1.5">
-            {files.map((f) => (
+          <div className="my-2 space-y-1.5 max-w-md">
+            {files.map((file) => (
               <div
-                key={f.id}
-                className="flex items-center gap-3 p-2.5 rounded-xl bg-[#161826] border border-[#26283b] max-w-sm text-xs"
+                key={file.id}
+                className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-[#1e293b] bg-white dark:bg-[#0f172a] shadow-xs text-xs"
               >
-                <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
-                  <FileText className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-neutral-200 truncate">{f.name}</div>
-                  <div className="text-[10px] text-neutral-400">{formatBytes(f.size)}</div>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-semibold text-slate-800 dark:text-slate-200 truncate">{file.name}</div>
+                    <div className="text-[10px] text-slate-400">{formatBytes(file.size)}</div>
+                  </div>
                 </div>
                 <a
-                  href={f.previewUrl}
-                  download={f.name}
-                  className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white"
-                  title="Unduh berkas"
+                  href={file.originalUrl || file.previewUrl}
+                  download={file.name}
+                  className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-blue-600 transition-colors shrink-0"
+                  title="Unduh dokumen"
                 >
-                  <Download className="w-3.5 h-3.5" />
+                  <Download className="w-4 h-4" />
                 </a>
               </div>
             ))}
           </div>
         )}
 
-        {/* Generated Image Result from AI Studio */}
+        {/* AI Generated Image Output */}
         {message.imageUri && (
-          <div className="my-3 rounded-2xl overflow-hidden border border-[#27293d] bg-black shadow-xl max-w-lg group/img relative">
+          <div className="my-3 rounded-2xl overflow-hidden border border-slate-200 dark:border-[#1e293b] bg-white dark:bg-[#0a1128] shadow-md max-w-lg group/aiimg relative">
             <img
               src={message.imageUri}
-              alt="Gambar AI yang dihasilkan"
+              alt="Gambar hasil generasi Maria AI"
               onClick={() =>
                 setLightboxMedia({
                   url: message.imageUri!,
                   type: 'image',
-                  name: 'maria-ai-generation.png',
+                  name: 'Maria_AI_Generated.png',
                 })
               }
-              className="w-full h-auto object-cover max-h-[500px] cursor-pointer"
+              className="w-full max-h-[500px] object-contain cursor-pointer hover:opacity-95 transition-opacity"
             />
-            <div className="absolute bottom-2 right-2 flex gap-2">
-              <button
-                onClick={() =>
-                  setLightboxMedia({
-                    url: message.imageUri!,
-                    type: 'image',
-                    name: 'maria-ai-generation.png',
-                  })
-                }
-                className="px-2.5 py-1.5 rounded-lg bg-black/80 hover:bg-black text-white text-xs font-medium backdrop-blur-sm flex items-center gap-1 shadow transition-colors"
-                title="Perbesar"
-              >
-                <Eye className="w-3.5 h-3.5" />
-              </button>
-              <a
-                href={message.imageUri}
-                download="maria-ai-generation.png"
-                className="px-3 py-1.5 rounded-lg bg-black/80 hover:bg-black text-white text-xs font-medium backdrop-blur-sm flex items-center gap-1.5 shadow transition-colors"
-              >
-                <Download className="w-3.5 h-3.5" /> Unduh HD
-              </a>
+            <div className="p-2.5 bg-slate-50 dark:bg-[#0f172a] border-t border-slate-200 dark:border-[#1e293b] flex items-center justify-between text-xs">
+              <span className="text-slate-800 dark:text-slate-200 font-medium text-[11px] flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                Maria AI Studio Gambar
+              </span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() =>
+                    setLightboxMedia({
+                      url: message.imageUri!,
+                      type: 'image',
+                      name: 'Maria_AI_Generated.png',
+                    })
+                  }
+                  title="Perbesar"
+                  className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-blue-600"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                </button>
+                <a
+                  href={message.imageUri}
+                  download="Maria_AI_Generated.png"
+                  title="Unduh gambar"
+                  className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-blue-600"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                </a>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Body Text / Inline Edit Mode */}
+        {/* Main Text Content / Editing Box */}
         {isEditing ? (
-          <div className="my-2 space-y-2.5 p-3.5 rounded-2xl bg-neutral-900/90 border border-emerald-500/50 shadow-xl ring-1 ring-emerald-500/20 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between text-xs text-emerald-400 font-semibold">
+          <div className="my-2 space-y-2.5 p-3.5 rounded-2xl bg-white dark:bg-[#0f172a] border border-blue-500/50 shadow-xl ring-1 ring-blue-500/20 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between text-xs text-blue-600 dark:text-blue-400 font-semibold">
               <span className="flex items-center gap-1.5">
                 <Pencil className="w-3.5 h-3.5" /> Edit Pesan (Perbaiki Typo / Salah Ketik)
               </span>
-              <span className="text-[10px] text-neutral-400 font-normal">
+              <span className="text-[10px] text-slate-400 font-normal">
                 Shift + Enter untuk baris baru
               </span>
             </div>
@@ -486,18 +549,18 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 }
               }}
               rows={Math.min(8, Math.max(2, editContent.split('\n').length))}
-              className="w-full p-3 rounded-xl bg-[#0c0d12] border border-[#2b2e42] text-xs text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 font-sans leading-relaxed resize-y"
+              className="w-full p-3 rounded-xl bg-slate-50 dark:bg-[#070d1e] border border-slate-200 dark:border-[#1e293b] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600/30 font-sans leading-relaxed resize-y"
               placeholder="Tulis pesan yang sudah diperbaiki..."
               autoFocus
             />
 
             <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-              <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-neutral-300">
+              <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-slate-700 dark:text-slate-300">
                 <input
                   type="checkbox"
                   checked={resendAfterEdit}
                   onChange={(e) => setResendAfterEdit(e.target.checked)}
-                  className="w-4 h-4 accent-[#20a66a] rounded"
+                  className="w-4 h-4 accent-blue-600 rounded"
                 />
                 <span>Kirim ulang ke Maria AI untuk jawaban baru</span>
               </label>
@@ -509,7 +572,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                     setEditContent(message.content);
                     setIsEditing(false);
                   }}
-                  className="px-3 py-1.5 rounded-xl border border-[#2e3144] text-neutral-300 hover:text-white hover:bg-neutral-800 text-xs font-medium transition-colors"
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-[#2e3b55] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium transition-colors"
                 >
                   Batal
                 </button>
@@ -522,7 +585,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                     onEditMessage?.(message.id, trimmed, resendAfterEdit);
                     setIsEditing(false);
                   }}
-                  className="px-3.5 py-1.5 rounded-xl bg-[#20a66a] hover:bg-[#1a8c59] text-white text-xs font-semibold shadow-md transition-colors flex items-center gap-1.5"
+                  className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold shadow-md shadow-blue-900/20 transition-colors flex items-center gap-1.5"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>{resendAfterEdit ? 'Simpan & Kirim Ulang' : 'Simpan Saja'}</span>
@@ -531,16 +594,16 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             </div>
           </div>
         ) : (
-          <div className="prose prose-invert prose-sm max-w-none break-words leading-relaxed text-neutral-200">
+          <div className="prose prose-slate dark:prose-invert prose-sm max-w-none break-words leading-relaxed text-slate-800 dark:text-slate-200">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
                 code({ node, inline, className, children, ...props }: any) {
                   const match = /language-(\w+)/.exec(className || '');
                   return !inline ? (
-                    <div className="my-3 rounded-xl overflow-hidden border border-[#2b2e42] bg-[#0c0d12] text-neutral-100 shadow-lg">
-                      <div className="flex items-center justify-between px-3.5 py-1.5 bg-[#141620] border-b border-[#25283a] text-[11px] font-mono text-neutral-400">
-                        <span className="text-[#34d399] font-semibold">{match ? match[1] : 'code'}</span>
+                    <div className="my-3 rounded-xl overflow-hidden border border-slate-200 dark:border-[#1e293b] bg-slate-900 text-slate-100 shadow-md">
+                      <div className="flex items-center justify-between px-3.5 py-1.5 bg-[#0a1128] border-b border-slate-800 text-[11px] font-mono text-slate-400">
+                        <span className="text-blue-400 font-semibold">{match ? match[1] : 'code'}</span>
                         <button
                           onClick={() => navigator.clipboard.writeText(String(children).replace(/\n$/, ''))}
                           className="hover:text-white transition-colors"
@@ -548,7 +611,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                           Salin Kode
                         </button>
                       </div>
-                      <pre className="p-3.5 text-xs font-mono overflow-x-auto m-0 bg-[#0c0d12]">
+                      <pre className="p-3.5 text-xs font-mono overflow-x-auto m-0 bg-slate-950">
                         <code className={className} {...props}>
                           {children}
                         </code>
@@ -556,7 +619,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                     </div>
                   ) : (
                     <code
-                      className="px-1.5 py-0.5 rounded-md font-mono text-xs bg-[#1f2231] text-[#34d399]"
+                      className="px-1.5 py-0.5 rounded-md font-mono text-xs bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/40"
                       {...props}
                     >
                       {children}
@@ -565,8 +628,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 },
                 table({ children }: any) {
                   return (
-                    <div className="overflow-x-auto my-3 border border-[#2b2e42] rounded-xl">
-                      <table className="min-w-full divide-y divide-[#26283a] text-xs">
+                    <div className="overflow-x-auto my-3 border border-slate-200 dark:border-[#1e293b] rounded-xl">
+                      <table className="min-w-full divide-y divide-slate-200 dark:divide-[#1e293b] text-xs">
                         {children}
                       </table>
                     </div>
@@ -574,14 +637,14 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 },
                 th({ children }: any) {
                   return (
-                    <th className="px-3 py-2 bg-[#151722] text-left font-semibold text-neutral-200">
+                    <th className="px-3 py-2 bg-slate-100 dark:bg-[#0f172a] text-left font-semibold text-slate-800 dark:text-slate-200">
                       {children}
                     </th>
                   );
                 },
                 td({ children }: any) {
                   return (
-                    <td className="px-3 py-2 border-t border-[#232536] text-neutral-300">
+                    <td className="px-3 py-2 border-t border-slate-200 dark:border-[#1e293b] text-slate-700 dark:text-slate-300">
                       {children}
                     </td>
                   );
@@ -592,7 +655,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             </ReactMarkdown>
 
             {message.editedAt && (
-              <span className="text-[10px] text-neutral-500 italic inline-block mt-1">
+              <span className="text-[10px] text-slate-400 italic inline-block mt-1">
                 (diedit)
               </span>
             )}
@@ -601,9 +664,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
         {/* Grounding Source Links (Search or Maps) */}
         {message.groundingLinks && message.groundingLinks.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-[#202231]">
-            <div className="text-[11px] font-medium text-neutral-400 mb-2 flex items-center gap-1.5">
-              <Globe className="w-3.5 h-3.5 text-[#34d399]" /> Sumber Terverifikasi Google:
+          <div className="mt-3 pt-3 border-t border-slate-200 dark:border-[#1e293b]">
+            <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-2 flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5 text-blue-600" /> Sumber Terverifikasi Google:
             </div>
             <div className="flex flex-wrap gap-2">
               {message.groundingLinks.map((link, idx) => (
@@ -612,12 +675,12 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   href={link.uri}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#161824] text-neutral-300 hover:text-white hover:bg-[#202336] border border-[#2b2e40] transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-white dark:bg-[#0f172a] text-slate-700 dark:text-slate-300 hover:text-blue-600 hover:border-blue-400 border border-slate-200 dark:border-[#1e293b] transition-colors shadow-xs"
                 >
                   {link.uri.includes('google.com/maps') ? (
-                    <MapPin className="w-3 h-3 text-rose-400" />
+                    <MapPin className="w-3 h-3 text-rose-500" />
                   ) : (
-                    <Globe className="w-3 h-3 text-cyan-400" />
+                    <Globe className="w-3 h-3 text-blue-500" />
                   )}
                   <span className="truncate max-w-[200px]">{link.title || link.uri}</span>
                   <ExternalLink className="w-2.5 h-2.5 opacity-60" />

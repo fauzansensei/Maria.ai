@@ -126,43 +126,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-40 w-72 sm:w-80 bg-[#0e0f12] text-neutral-200 border-r border-[#1e202a] flex flex-col transition-transform duration-300 ease-in-out select-none shadow-2xl lg:shadow-none ${
+        className={`fixed lg:static inset-y-0 left-0 z-40 w-72 sm:w-80 bg-[#0a1128] text-slate-200 border-r border-[#1e293b] flex flex-col transition-transform duration-300 ease-in-out select-none shadow-2xl lg:shadow-none ${
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         {/* Header Atas: [M] Maria AI + Arrow Left */}
-        <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#1b1c26] bg-[#111218]">
+        <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#1e293b] bg-[#070d1e]">
           <div className="flex items-center gap-2.5">
             <MariaLogo size="sm" glow={true} />
             <div>
               <div className="flex items-center gap-1.5">
-                <h1 className="font-bold text-sm tracking-tight text-white">Maria AI</h1>
-                <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-[#20a66a]/15 text-[#34d399] border border-[#20a66a]/30">
+                <h1 className="font-bold text-sm tracking-tight text-white">
+                  Maria <span className="text-blue-400">AI</span>
+                </h1>
+                <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
                   v3.8
                 </span>
               </div>
-              <p className="text-[10px] text-neutral-400">Intelligent Companion</p>
+              <p className="text-[10px] text-slate-400">Intelligent Companion</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
             title="Tutup / Lipat Sidebar"
-            className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-[#1f212f] transition-colors lg:flex"
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-[#15203b] transition-colors lg:flex"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Action Button: Emerald Green "New Chat" */}
-        <div className="p-3.5 space-y-2 bg-[#0e0f12]">
+        {/* Action Button: Navy Blue "New Chat" (Matches Sky Host) */}
+        <div className="p-3.5 space-y-2 bg-[#0a1128]">
           <button
             onClick={() => {
               onNewConversation();
               onNavigateView('chat');
               if (window.innerWidth < 1024) onClose();
             }}
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#20a66a] hover:bg-[#1a8c59] text-white font-bold text-xs tracking-wide shadow-lg shadow-[#20a66a]/25 transition-all duration-200 active:scale-[0.98]"
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs tracking-wide shadow-lg shadow-blue-900/30 transition-all duration-200 active:scale-[0.98]"
           >
             <MessageSquarePlus className="w-4 h-4" />
             <span>New Chat</span>
@@ -177,11 +179,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                 activeView === 'library'
-                  ? 'bg-[#1c1e2a] text-[#34d399] font-semibold border border-[#292c3d]'
-                  : 'text-neutral-300 hover:bg-[#161722] hover:text-white'
+                  ? 'bg-[#15223e] text-blue-400 font-semibold border border-blue-500/30'
+                  : 'text-slate-300 hover:bg-[#121c35] hover:text-white'
               }`}
             >
-              <Bookmark className="w-4 h-4 text-emerald-400" />
+              <Bookmark className="w-4 h-4 text-blue-400" />
               <span>Library</span>
             </button>
 
@@ -192,11 +194,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                 activeView === 'discover'
-                  ? 'bg-[#1c1e2a] text-purple-300 font-semibold border border-[#292c3d]'
-                  : 'text-neutral-300 hover:bg-[#161722] hover:text-white'
+                  ? 'bg-[#15223e] text-sky-400 font-semibold border border-blue-500/30'
+                  : 'text-slate-300 hover:bg-[#121c35] hover:text-white'
               }`}
             >
-              <Compass className="w-4 h-4 text-purple-400" />
+              <Compass className="w-4 h-4 text-sky-400" />
               <span>Discover</span>
             </button>
 
@@ -204,9 +206,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onClick={() => {
                 onOpenSettings();
               }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-neutral-300 hover:bg-[#161722] hover:text-white transition-all"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-[#121c35] hover:text-white transition-all"
             >
-              <Settings className="w-4 h-4 text-neutral-400" />
+              <Settings className="w-4 h-4 text-slate-400" />
               <span>Pengaturan</span>
             </button>
           </div>
@@ -214,27 +216,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Riwayat Chat Header & Search */}
         <div className="px-3.5 pb-2 space-y-2">
-          <div className="flex items-center justify-between text-[11px] font-bold tracking-wider text-neutral-400 uppercase pt-2">
+          <div className="flex items-center justify-between text-[11px] font-bold tracking-wider text-slate-400 uppercase pt-2">
             <span>RIWAYAT CHAT</span>
-            <span className="text-[10px] bg-[#1a1c27] px-2 py-0.5 rounded-full text-neutral-400 border border-[#262838]">
+            <span className="text-[10px] bg-[#121c35] px-2 py-0.5 rounded-full text-blue-300 border border-[#1e2d4d]">
               {conversations.length}
             </span>
           </div>
 
           {/* Search Box */}
           <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari riwayat percakapan..."
-              className="w-full pl-9 pr-7 py-2 bg-[#14151e] border border-[#222432] rounded-xl text-xs text-neutral-100 placeholder-neutral-500 focus:outline-none focus:border-[#20a66a] transition-all"
+              className="w-full pl-9 pr-7 py-2 bg-[#0e172e] border border-[#1e2d4d] rounded-xl text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -245,7 +247,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Conversation List */}
         <div className="flex-1 overflow-y-auto px-2.5 space-y-1">
           {filteredConversations.length === 0 ? (
-            <div className="py-12 text-center text-xs text-neutral-500 px-4 leading-relaxed">
+            <div className="py-12 text-center text-xs text-slate-400 px-4 leading-relaxed">
               {searchQuery
                 ? 'Tidak ada riwayat percakapan yang cocok dengan pencarian.'
                 : 'Belum ada obrolan. Mulai percakapan pertama Anda!'}
@@ -265,12 +267,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   }}
                   className={`group relative flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl cursor-pointer text-xs transition-all ${
                     isActive
-                      ? 'bg-[#181a25] text-white font-medium border border-[#2c2f42] shadow-sm'
-                      : 'text-neutral-400 hover:bg-[#14151e] hover:text-neutral-200'
+                      ? 'bg-[#15223e] text-white font-medium border border-blue-500/40 shadow-xs'
+                      : 'text-slate-300 hover:bg-[#0e172e] hover:text-white'
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-[#20a66a]/60 group-hover:bg-[#20a66a]" />
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-blue-500/70 group-hover:bg-blue-400" />
                     {isEditing ? (
                       <input
                         type="text"
@@ -283,7 +285,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           if (e.key === 'Enter') handleSaveRename(conv.id);
                           if (e.key === 'Escape') setEditingConvId(null);
                         }}
-                        className="bg-black border border-[#20a66a] px-1.5 py-0.5 rounded text-xs text-white outline-none w-full"
+                        className="bg-[#070d1e] border border-blue-500 px-1.5 py-0.5 rounded text-xs text-white outline-none w-full"
                       />
                     ) : (
                       <span className="truncate">{conv.title}</span>
@@ -295,7 +297,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     type="button"
                     onClick={(e) => handleOpenPopover(e, conv.id, false)}
                     title="Opsi obrolan"
-                    className="opacity-0 group-hover:opacity-100 p-1 text-neutral-400 hover:text-white rounded hover:bg-[#222536] transition-all shrink-0"
+                    className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-white rounded hover:bg-[#1a2747] transition-all shrink-0"
                   >
                     <MoreHorizontal className="w-3.5 h-3.5" />
                   </button>
@@ -327,18 +329,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="relative">
             <div
               onClick={() => setShowAccountMenu((prev) => !prev)}
-              className="flex items-center justify-between p-2 rounded-xl bg-[#151722] hover:bg-[#1a1c2b] border border-[#26283a] cursor-pointer transition-colors"
+              className="flex items-center justify-between p-2 rounded-xl bg-[#0e172e] hover:bg-[#15223e] border border-[#1e2d4d] cursor-pointer transition-colors"
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 {user?.photoURL ? (
                   <img
                     src={user.photoURL}
                     alt={user.displayName || 'User'}
-                    className="w-8 h-8 rounded-lg object-cover ring-1 ring-[#20a66a]/40 shrink-0"
+                    className="w-8 h-8 rounded-lg object-cover ring-1 ring-blue-500/40 shrink-0"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#20a66a] to-[#10b981] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-inner">
-                    {(user?.displayName || user?.email || 'Basit')[0].toUpperCase()}
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-800 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-md">
+                    {(user?.displayName || user?.email || 'B')[0].toUpperCase()}
                   </div>
                 )}
                 <div className="min-w-0">
@@ -356,18 +358,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             {/* Account Quick Menu Popover */}
             {showAccountMenu && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 bg-[#171924] border border-[#2b2d40] rounded-xl shadow-2xl p-1.5 text-xs text-neutral-200 space-y-1 z-50">
-                <div className="px-3 py-1.5 text-[11px] text-neutral-400 border-b border-[#252737]">
-                  Status: <span className="text-[#34d399] font-medium">Cloud Firestore Terhubung</span>
+              <div className="absolute bottom-full left-0 right-0 mb-2 bg-[#0e172e] border border-[#1e2d4d] rounded-xl shadow-2xl p-1.5 text-xs text-slate-200 space-y-1 z-50">
+                <div className="px-3 py-1.5 text-[11px] text-slate-400 border-b border-[#1b2540]">
+                  Status: <span className="text-blue-400 font-medium">Cloud Firestore Terhubung</span>
                 </div>
                 <button
                   onClick={() => {
                     setShowAccountMenu(false);
                     onOpenSettings();
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#232537] text-left transition-colors"
+                  className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#15223e] text-left transition-colors"
                 >
-                  <Settings className="w-3.5 h-3.5 text-neutral-400" />
+                  <Settings className="w-3.5 h-3.5 text-slate-400" />
                   <span>Pengaturan Akun</span>
                 </button>
                 {user ? (
@@ -387,7 +389,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       setShowAccountMenu(false);
                       signIn();
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#20a66a]/20 text-[#34d399] text-left transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400 text-left transition-colors"
                   >
                     <LogIn className="w-3.5 h-3.5" />
                     <span>Masuk dengan Google</span>
