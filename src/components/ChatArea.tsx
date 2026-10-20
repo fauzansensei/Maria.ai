@@ -128,13 +128,26 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
           <div className="flex items-center gap-2">
             <MariaLogo size="sm" withOnlineDot={true} />
-            <span className="font-bold text-[#111827] text-base tracking-tight">
-              Maria AI
-            </span>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#6366f1] text-white text-[10px] font-extrabold tracking-wide uppercase shadow-xs">
-              <Sparkles className="w-2.5 h-2.5 fill-white" />
-              <span>PLUS</span>
-            </span>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-[#0f172a] text-sm sm:text-base tracking-tight">
+                  Maria AI
+                </span>
+                <a
+                  href="https://zandev-six.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-1.5 py-0.2 rounded border border-blue-200 transition-colors"
+                  title="Kunjungi website developer Zan.dev"
+                >
+                  by Zan.dev
+                </a>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full bg-[#6366f1] text-white text-[9px] font-extrabold tracking-wide uppercase shadow-2xs">
+                  <Sparkles className="w-2.5 h-2.5 fill-white" />
+                  <span>PLUS</span>
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -219,14 +232,31 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           /* Empty State Hero: Exact match to Screenshot */
           <div className="flex-1 flex flex-col items-center justify-center px-4 -mt-10 sm:-mt-16 animate-in fade-in duration-300 select-none">
             {/* Centered Maria Squircle Logo */}
-            <div className="mb-6">
+            <div className="mb-4">
               <MariaLogo size="hero" glow={false} />
             </div>
 
-            {/* Heading: Dari mana kita harus mulai? */}
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight text-center">
+            {/* Brand Title: Maria AI by Zan.dev */}
+            <div className="text-center mb-1">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0f172a] tracking-tight">
+                Maria AI
+              </h1>
+              <a
+                href="https://zandev-six.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-blue-600 hover:text-blue-800 transition-colors mt-0.5"
+                title="Website Developer Zan.dev"
+              >
+                <span>by Zan.dev</span>
+                <span className="text-[10px]">↗</span>
+              </a>
+            </div>
+
+            {/* Subheading: Dari mana kita harus mulai? */}
+            <p className="text-sm font-medium text-slate-500 text-center mt-1">
               Dari mana kita harus mulai?
-            </h1>
+            </p>
           </div>
         ) : (
           /* Message Stream (Neat independent bubbles) */

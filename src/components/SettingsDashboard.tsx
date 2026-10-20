@@ -20,6 +20,7 @@ import {
   Lock,
   Download,
   Trash2,
+  ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useTheme } from '../context/ThemeContext.tsx';
@@ -215,6 +216,44 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   <option value="Indonesia">Bahasa Indonesia</option>
                   <option value="English">English (US)</option>
                 </select>
+              </div>
+
+              {/* Developer & Creator Attribution Card */}
+              <div className="pt-2 border-t border-[#25283a]">
+                <label className="text-xs font-semibold text-neutral-300 block mb-2 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Developer & Pembuat Maria AI</span>
+                </label>
+                <div className="p-4 rounded-2xl bg-[#161a29] border border-[#253352] flex items-center justify-between gap-4">
+                  <div>
+                    <div className="text-sm font-bold text-white flex items-center gap-2">
+                      <span>Maria AI</span>
+                      <span className="text-xs text-blue-400 font-semibold px-2 py-0.5 rounded-full bg-blue-500/20 border border-blue-500/30">
+                        by Zan.dev
+                      </span>
+                    </div>
+                    <div className="text-xs text-neutral-400 mt-1">
+                      Kunjungi portofolio resmi pengembang untuk melihat proyek dan kolaborasi:
+                    </div>
+                    <a
+                      href="https://zandev-six.vercel.app/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-mono text-blue-400 hover:text-blue-300 hover:underline inline-block mt-0.5"
+                    >
+                      https://zandev-six.vercel.app/
+                    </a>
+                  </div>
+                  <a
+                    href="https://zandev-six.vercel.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shrink-0 shadow-md"
+                  >
+                    <span>Portofolio</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
               </div>
             </div>
           )}

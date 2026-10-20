@@ -12,17 +12,10 @@ import {
   X,
   Sparkles,
   Camera,
-  Bold,
-  Italic,
-  Heading2,
-  List,
-  ListOrdered,
-  Code,
-  Quote,
-  Type,
-  Eraser,
-  Table as TableIcon,
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { autoFormatMarkdown, hasFormattingSyntax } from '../lib/formatUtils.ts';
 import { AiMode, MediaAttachment } from '../types/index.ts';
 import { speechService } from '../lib/speechService.ts';
 import {
@@ -64,7 +57,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 }) => {
   const [text, setText] = useState('');
   const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
-  const [isFormatToolbarOpen, setIsFormatToolbarOpen] = useState(false);
   const [imageSize, setImageSize] = useState<'1K' | '2K' | '4K'>('1K');
   const [aspectRatio, setAspectRatio] = useState<'1:1' | '16:9' | '9:16' | '4:3'>('1:1');
   const [isRecording, setIsRecording] = useState(false);
@@ -113,73 +105,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       }
       return next;
     });
-  };
-
-  // Text formatting utility (applies markdown tags around selected text)
-  const applyTextFormat = (type: 'bold' | 'italic' | 'h2' | 'bullet' | 'number' | 'code' | 'quote' | 'table' | 'clear') => {
-    if (!textareaRef.current) return;
-    const textarea = textareaRef.current;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selected = text.substring(start, end);
-
-    let replacement = '';
-    let cursorOffset = 0;
-
-    switch (type) {
-      case 'bold':
-        replacement = selected ? `**${selected}**` : '**teks tebal**';
-        cursorOffset = selected ? replacement.length : 2;
-        break;
-      case 'italic':
-        replacement = selected ? `*${selected}*` : '*teks miring*';
-        cursorOffset = selected ? replacement.length : 1;
-        break;
-      case 'h2':
-        replacement = `\n## ${selected || 'Judul Bagian'}\n`;
-        cursorOffset = replacement.length;
-        break;
-      case 'bullet':
-        replacement = selected
-          ? selected.split('\n').map((l) => `- ${l}`).join('\n')
-          : '\n- Poin pertama\n- Poin kedua\n';
-        cursorOffset = replacement.length;
-        break;
-      case 'number':
-        replacement = selected
-          ? selected.split('\n').map((l, i) => `${i + 1}. ${l}`).join('\n')
-          : '\n1. Langkah pertama\n2. Langkah kedua\n';
-        cursorOffset = replacement.length;
-        break;
-      case 'code':
-        if (selected.includes('\n')) {
-          replacement = `\n\`\`\`javascript\n${selected || '// Kode program'}\n\`\`\`\n`;
-        } else {
-          replacement = selected ? `\`${selected}\`` : '`kode`';
-        }
-        cursorOffset = replacement.length;
-        break;
-      case 'quote':
-        replacement = `\n> ${selected || 'Kutipan penting'}\n`;
-        cursorOffset = replacement.length;
-        break;
-      case 'table':
-        replacement = `\n| Kolom 1 | Kolom 2 |\n| :--- | :--- |\n| Data 1 | Data 2 |\n`;
-        cursorOffset = replacement.length;
-        break;
-      case 'clear':
-        // Strip markdown stars, hashes, backticks
-        replacement = selected.replace(/[*_`#>~]/g, '');
-        cursorOffset = replacement.length;
-        break;
-    }
-
-    const nextText = text.substring(0, start) + replacement + text.substring(end);
-    setText(nextText);
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + cursorOffset, start + cursorOffset);
-    }, 15);
   };
 
   // Process files into MediaAttachment objects with original full resolution
@@ -278,7 +203,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     setText('');
     setAttachments([]);
     setIsAttachmentOpen(false);
-    setIsFormatToolbarOpen(false);
 
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -387,10 +311,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         onChange={handleMediaFileChange}
       />
 
-      {/* Top Controls Row: Web Search Always Active Toggle & Format Text Button */}
+      {/* Top Controls Row: Web Search Always Active Toggle & Format Otomatis indicator */}
       <div className="flex items-center justify-between gap-2 mb-2 px-1 text-xs">
         {/* Web Search Always Active Toggle */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
             onClick={toggleWebSearch}
@@ -414,20 +338,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <span>{webSearchActive ? 'Cari Web: Aktif' : 'Cari Web: Nonaktif'}</span>
           </button>
 
-          {/* Quick Format Text Toolbar Toggle */}
-          <button
-            type="button"
-            onClick={() => setIsFormatToolbarOpen((prev) => !prev)}
-            title="Buka alat format teks (tebal, miring, poin, tabel, kode)"
-            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
-              isFormatToolbarOpen
-                ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
-                : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-[#0c1222] dark:text-slate-300 dark:border-slate-800'
-            }`}
-          >
-            <Type className="w-3.5 h-3.5" />
-            <span>Format Teks</span>
-          </button>
+          {/* Quick Auto-Format Guide Badge (No manual button clicking needed) */}
+          <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+            <span>Format otomatis:</span>
+            <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+              *tebal*
+            </span>
+            <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+              ~coret~
+            </span>
+            <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+              `kode`
+            </span>
+          </div>
         </div>
 
         {/* Active Mode indicator badge if non-standard */}
@@ -438,95 +361,31 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         )}
       </div>
 
-      {/* Rich Text Formatting Toolbar */}
-      {isFormatToolbarOpen && (
-        <div className="mb-2 p-1.5 px-2 rounded-2xl bg-white dark:bg-[#0c1222] border border-slate-200 dark:border-[#1e293b] shadow-md flex items-center gap-1 overflow-x-auto text-xs animate-in fade-in slide-in-from-bottom-2 select-none">
-          <span className="text-[10px] font-bold text-slate-400 px-1 uppercase tracking-wider">Format:</span>
-
-          <button
-            type="button"
-            onClick={() => applyTextFormat('bold')}
-            title="Tebal (**teks**)"
-            className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-[#1a233a] text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors"
-          >
-            <Bold className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => applyTextFormat('italic')}
-            title="Miring (*teks*)"
-            className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-[#1a233a] text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors"
-          >
-            <Italic className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => applyTextFormat('h2')}
-            title="Sub-judul (## Judul)"
-            className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-[#1a233a] text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors font-bold text-[11px]"
-          >
-            <Heading2 className="w-3.5 h-3.5" />
-          </button>
-
-          <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 my-auto" />
-
-          <button
-            type="button"
-            onClick={() => applyTextFormat('bullet')}
-            title="Daftar Poin (- Poin)"
-            className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-[#1a233a] text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors"
-          >
-            <List className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => applyTextFormat('number')}
-            title="Daftar Angka (1. Poin)"
-            className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-[#1a233a] text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors"
-          >
-            <ListOrdered className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => applyTextFormat('quote')}
-            title="Kutipan (> Teks)"
-            className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-[#1a233a] text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors"
-          >
-            <Quote className="w-3.5 h-3.5" />
-          </button>
-
-          <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 my-auto" />
-
-          <button
-            type="button"
-            onClick={() => applyTextFormat('code')}
-            title="Kode (`kode` atau blok kode)"
-            className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-[#1a233a] text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors"
-          >
-            <Code className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => applyTextFormat('table')}
-            title="Sisipkan Tabel Markdown"
-            className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-[#1a233a] text-slate-700 dark:text-slate-300 hover:text-blue-600 transition-colors"
-          >
-            <TableIcon className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => applyTextFormat('clear')}
-            title="Bersihkan Simbol Format"
-            className="p-1.5 rounded-lg hover:bg-rose-50 text-slate-500 hover:text-rose-600 transition-colors ml-auto"
-          >
-            <Eraser className="w-3.5 h-3.5" />
-          </button>
+      {/* Automatic Live Real-time Text Format Preview (Appears automatically when *test*, ~test~, or `test` is typed) */}
+      {hasFormattingSyntax(text) && (
+        <div className="mb-2 px-3 py-1.5 rounded-xl bg-blue-50/90 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/50 shadow-2xs flex items-center gap-2 text-xs animate-in fade-in slide-in-from-bottom-1 select-text">
+          <div className="flex items-center gap-1 font-bold text-[10px] uppercase text-blue-700 dark:text-blue-300 tracking-wider shrink-0">
+            <Sparkles className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+            <span>Format Otomatis:</span>
+          </div>
+          <div className="flex-1 text-[#0f172a] dark:text-slate-200 text-xs font-normal truncate leading-relaxed">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                p: ({ children }) => <span className="inline">{children}</span>,
+                strong: ({ children }) => <strong className="font-bold text-blue-950 dark:text-white">{children}</strong>,
+                em: ({ children }) => <em className="italic">{children}</em>,
+                del: ({ children }) => <del className="line-through opacity-70">{children}</del>,
+                code: ({ children }) => (
+                  <code className="px-1.5 py-0.5 rounded font-mono text-[11px] bg-blue-100 dark:bg-blue-900/60 text-blue-900 dark:text-blue-200 border border-blue-200 dark:border-blue-800">
+                    {children}
+                  </code>
+                ),
+              }}
+            >
+              {autoFormatMarkdown(text)}
+            </ReactMarkdown>
+          </div>
         </div>
       )}
 
