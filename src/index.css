@@ -9,14 +9,9 @@
     font-family: 'JetBrains Mono', monospace;
   }
 
-  /* Deep Midnight Navy Background for Dark Mode & Clean Crisp Canvas for Light Mode */
-  html.dark, html.dark body {
-    background-color: #070d1e;
-    color: #f1f5f9;
-  }
-
-  html:not(.dark), body:not(.dark) {
-    background-color: #f8fafc;
+  /* Clean White Canvas with Navy Blue Accents (Matching user web development & screenshots) */
+  html, body {
+    background-color: #ffffff;
     color: #0f172a;
   }
 }

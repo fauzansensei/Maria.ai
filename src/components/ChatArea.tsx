@@ -28,7 +28,8 @@ interface ChatAreaProps {
     content: string,
     mode: AiMode,
     imageConfig?: { imageSize: '1K' | '2K' | '4K'; aspectRatio: '1:1' | '16:9' | '9:16' | '4:3' },
-    attachments?: MediaAttachment[]
+    attachments?: MediaAttachment[],
+    webSearchEnabled?: boolean
   ) => void;
   onToggleSidebar: () => void;
   onOpenScienceScout: () => void;
@@ -228,8 +229,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             </h1>
           </div>
         ) : (
-          /* Message Stream */
-          <div className="max-w-4xl mx-auto w-full py-4 divide-y divide-gray-100 dark:divide-[#1b1d29]">
+          /* Message Stream (Neat independent bubbles) */
+          <div className="max-w-4xl mx-auto w-full py-4 space-y-2">
             {messages.map((message) => (
               <MessageItem
                 key={message.id}
@@ -248,7 +249,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 <MariaLogo size="sm" />
                 <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white dark:bg-[#0e172e] border border-blue-200/80 dark:border-[#1e2d4d] text-xs text-blue-900 dark:text-blue-200 shadow-sm">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping" />
-                  <span className="font-medium">Maria sedang merumuskan jawaban...</span>
+                  <span className="font-medium">Maria sedang mencari & merumuskan jawaban...</span>
                 </div>
               </div>
             )}
@@ -288,8 +289,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         </div>
       )}
 
-      {/* Bottom Chat Input Dock (Floating Pill with Subtext) */}
-      <div className="shrink-0 pt-2 pb-1 bg-gradient-to-t from-slate-50 via-slate-50/95 to-transparent dark:from-[#070d1e] dark:via-[#070d1e]/95 dark:to-transparent">
+      {/* Bottom Chat Input Dock (Matching Screenshot 2: Clean White Background) */}
+      <div className="shrink-0 pt-2 pb-2 bg-white dark:bg-[#070d1e]">
         <ChatInput
           onSendMessage={onSendMessage}
           isLoading={isLoading}

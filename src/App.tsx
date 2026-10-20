@@ -35,7 +35,7 @@ function AppContent() {
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeMode, setActiveMode] = useState<AiMode>('general');
+  const [activeMode, setActiveMode] = useState<AiMode>('search');
 
   // Modals & Drawers
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -367,7 +367,8 @@ function AppContent() {
     content: string,
     mode: AiMode = activeMode,
     imageConfig?: { imageSize: '1K' | '2K' | '4K'; aspectRatio: '1:1' | '16:9' | '9:16' | '4:3' },
-    attachments?: MediaAttachment[]
+    attachments?: MediaAttachment[],
+    webSearchEnabled: boolean = true
   ) => {
     if ((!content.trim() && (!attachments || attachments.length === 0)) || isLoading) return;
 
@@ -530,71 +531,189 @@ function AppContent() {
       const personaObj = VOICE_PERSONAS.find((p) => p.id === (settings.voicePersona || 'wanita'));
       const activeVoiceName = personaObj?.geminiVoice || settings.geminiVoice || 'Aoede';
 
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: historyTurns,
-          mode,
-          location: userLocation,
-          withVoice: isVoiceAuto,
-          voiceName: activeVoiceName,
-          personaId: settings.voicePersona || 'wanita',
-        }),
-      });
+      // Stream SSE response for instant real-time tokens (Zero waiting time!)
+      let streamedSuccess = false;
+      const streamAiId = `ai_${Date.now()}`;
+      let fullText = '';
+      let streamModel = webSearchEnabled ? 'gemini-2.5-flash' : 'gemini-3.1-flash-lite';
+      let streamGroundingLinks: any[] = [];
 
-      if (!response.ok) {
-        let errMessage = 'Gagal mengambil jawaban AI.';
-        try {
-          const errData = await response.json();
-          if (errData.error) errMessage = errData.error;
-        } catch {}
-        throw new Error(errMessage);
-      }
-
-      const data = await response.json();
-
-      const modelMessageObj: Message = {
-        id: `ai_${Date.now()}`,
-        conversationId: currentConvId || 'guest_conv',
-        userId: user ? user.uid : 'guest',
-        role: 'model',
-        content: data.text || 'Tidak ada teks yang dihasilkan.',
-        model: data.model,
-        mode,
-        groundingLinks: data.groundingLinks,
-        audioUri: data.audioUrl,
-        createdAt: new Date(),
-      };
-
-      if (user && currentConvId) {
-        await addMessage(currentConvId, user.uid, {
-          role: 'model',
-          content: modelMessageObj.content,
-          model: modelMessageObj.model,
-          groundingLinks: modelMessageObj.groundingLinks,
-          audioUri: modelMessageObj.audioUri,
+      try {
+        const streamRes = await fetch('/api/chat-stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: historyTurns,
+            mode,
+            location: userLocation,
+            webSearch: webSearchEnabled,
+          }),
         });
-      } else {
-        setGuestMessages((prev) => [...prev, modelMessageObj]);
+
+        if (streamRes.ok && streamRes.body) {
+          const reader = streamRes.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          const initialAiMsg: Message = {
+            id: streamAiId,
+            conversationId: currentConvId || 'guest_conv',
+            userId: user ? user.uid : 'guest',
+            role: 'model',
+            content: '',
+            model: streamModel,
+            mode,
+            createdAt: new Date(),
+          };
+
+          setMessages((prev) => [...prev, initialAiMsg]);
+          if (!user || !currentConvId) {
+            setGuestMessages((prev) => [...prev, initialAiMsg]);
+          }
+
+          setIsLoading(false); // Stop loading indicator immediately as tokens begin streaming
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed.startsWith('data: ')) continue;
+              const dataStr = trimmed.slice(6);
+              if (dataStr === '[DONE]') continue;
+
+              try {
+                const parsed = JSON.parse(dataStr);
+                if (parsed.type === 'chunk' && parsed.text) {
+                  fullText += parsed.text;
+                  if (parsed.model) streamModel = parsed.model;
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === streamAiId
+                        ? { ...m, content: fullText, model: streamModel }
+                        : m
+                    )
+                  );
+                } else if (parsed.type === 'done') {
+                  if (parsed.model) streamModel = parsed.model;
+                  if (parsed.groundingLinks) streamGroundingLinks = parsed.groundingLinks;
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === streamAiId
+                        ? {
+                            ...m,
+                            content: fullText,
+                            model: streamModel,
+                            groundingLinks: streamGroundingLinks,
+                          }
+                        : m
+                    )
+                  );
+                }
+              } catch {}
+            }
+          }
+
+          if (user && currentConvId && fullText.trim()) {
+            await addMessage(currentConvId, user.uid, {
+              role: 'model',
+              content: fullText,
+              model: streamModel,
+              groundingLinks:
+                streamGroundingLinks.length > 0 ? streamGroundingLinks : undefined,
+            });
+          }
+
+          if (isVoiceAuto && fullText.trim()) {
+            speechService.speak(fullText, {
+              messageId: streamAiId,
+              speed: settings.speechSpeed || '1x',
+              voiceName: activeVoiceName,
+              personaId: settings.voicePersona || 'wanita',
+              ttsModel: settings.ttsModel || 'gemini-3.8-flash-lite-tts',
+            });
+          }
+
+          streamedSuccess = true;
+          return;
+        }
+      } catch (streamErr) {
+        console.warn('Streaming failed, falling back to standard completion:', streamErr);
       }
 
-      // Auto TTS voice readout if enabled (plays instantly with 0ms delay if audioUrl is returned!)
-      if (isVoiceAuto && modelMessageObj.content) {
-        if (data.audioUrl) {
-          speechService.playAudioDirectly(data.audioUrl, {
-            messageId: modelMessageObj.id,
-            speed: settings.speechSpeed || '1x',
-            personaId: settings.voicePersona || 'wanita',
-          });
-        } else {
-          speechService.speak(modelMessageObj.content, {
-            messageId: modelMessageObj.id,
-            speed: settings.speechSpeed || '1x',
+      if (!streamedSuccess) {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: historyTurns,
+            mode,
+            location: userLocation,
+            withVoice: isVoiceAuto,
             voiceName: activeVoiceName,
             personaId: settings.voicePersona || 'wanita',
-            ttsModel: settings.ttsModel || 'gemini-3.8-flash-lite-tts',
+            webSearch: webSearchEnabled,
+          }),
+        });
+
+        if (!response.ok) {
+          let errMessage = 'Gagal mengambil jawaban AI.';
+          try {
+            const errData = await response.json();
+            if (errData.error) errMessage = errData.error;
+          } catch {}
+          throw new Error(errMessage);
+        }
+
+        const data = await response.json();
+
+        const modelMessageObj: Message = {
+          id: `ai_${Date.now()}`,
+          conversationId: currentConvId || 'guest_conv',
+          userId: user ? user.uid : 'guest',
+          role: 'model',
+          content: data.text || 'Tidak ada teks yang dihasilkan.',
+          model: data.model,
+          mode,
+          groundingLinks: data.groundingLinks,
+          audioUri: data.audioUrl,
+          createdAt: new Date(),
+        };
+
+        if (user && currentConvId) {
+          await addMessage(currentConvId, user.uid, {
+            role: 'model',
+            content: modelMessageObj.content,
+            model: modelMessageObj.model,
+            groundingLinks: modelMessageObj.groundingLinks,
+            audioUri: modelMessageObj.audioUri,
           });
+        } else {
+          setGuestMessages((prev) => [...prev, modelMessageObj]);
+        }
+        setMessages((prev) => [...prev, modelMessageObj]);
+
+        // Auto TTS voice readout if enabled
+        if (isVoiceAuto && modelMessageObj.content) {
+          if (data.audioUrl) {
+            speechService.playAudioDirectly(data.audioUrl, {
+              messageId: modelMessageObj.id,
+              speed: settings.speechSpeed || '1x',
+              personaId: settings.voicePersona || 'wanita',
+            });
+          } else {
+            speechService.speak(modelMessageObj.content, {
+              messageId: modelMessageObj.id,
+              speed: settings.speechSpeed || '1x',
+              voiceName: activeVoiceName,
+              personaId: settings.voicePersona || 'wanita',
+              ttsModel: settings.ttsModel || 'gemini-3.8-flash-lite-tts',
+            });
+          }
         }
       }
     } catch (err: any) {

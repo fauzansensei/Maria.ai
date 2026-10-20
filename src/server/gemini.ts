@@ -39,6 +39,7 @@ export interface GenerateOptions {
   withVoice?: boolean;
   voiceName?: string;
   personaId?: string;
+  webSearch?: boolean; // Web search is ON by default
 }
 
 // Helper to strip any emoji characters completely from text
@@ -49,18 +50,148 @@ export function stripEmojis(str: string): string {
     .replace(/  +/g, ' ');
 }
 
-export async function generateChatResponse(options: GenerateOptions) {
+// Real-time token streaming generator for blazing-fast responses
+export async function* generateChatResponseStream(options: GenerateOptions) {
   const ai = getGeminiClient();
-  const { messages, mode = 'general', systemInstruction, location, withVoice, voiceName, personaId } = options;
+  const { messages, mode = 'search', systemInstruction, location, webSearch = true } = options;
 
-  const hasMedia = messages.some((m) => m.attachments && m.attachments.length > 0);
-  // Default to ultra fast gemini-3.1-flash-lite for near-instant responses
-  let modelName = hasMedia ? 'gemini-2.5-flash' : 'gemini-3.1-flash-lite';
+  let modelName = 'gemini-3.1-flash-lite';
   const config: any = {};
 
-  // System persona for Maria AI
   let defaultSystemInstruction =
-    'Anda adalah Maria AI, asisten kecerdasan buatan serba bisa yang cerdas, santun, ramah, cepat tanggap, dan terstruktur rapi. Jawablah dalam bahasa Indonesia secara alami, rapi, enak dibaca, dan gunakan format Markdown yang bersih (sub-judul, poin-poin, tabel teratur, atau blok kode beranotasi). ATURAN MUTLAK: DILARANG KERAS MENGGUNAKAN EMOJI SAMA SEKALI. Jangan pernah menyertakan emotikon, karakter emoji, atau simbol grafis apa pun dalam seluruh respon Anda. Gunakan teks murni yang bersih, elegan, dan profesional. Bila pengguna melampirkan gambar atau video, amati dengan teliti setiap objek, teks, adegan, dan berikan analisis yang tajam dan akurat.';
+    'Anda adalah Maria AI, asisten kecerdasan buatan serba bisa yang cerdas, santun, ramah, cepat tanggap, dan terstruktur rapi. Jawablah dalam bahasa Indonesia secara alami, rapi, enak dibaca, dan gunakan format Markdown yang bersih (sub-judul, poin-poin teratur, atau blok kode beranotasi). ATURAN MUTLAK: DILARANG KERAS MENGGUNAKAN EMOJI SAMA SEKALI. Jangan pernah menyertakan emotikon, karakter emoji, atau simbol grafis apa pun dalam seluruh respon Anda.';
+
+  const isSearchActive = webSearch !== false;
+
+  if (mode === 'thinking') {
+    modelName = 'gemini-3.8-flash';
+    config.thinkingConfig = {
+      thinkingLevel: ThinkingLevel.HIGH,
+    };
+    defaultSystemInstruction +=
+      ' Mode penalaran mendalam aktif. Analisis masalah langkah demi langkah secara komprehensif.';
+  } else if (isSearchActive) {
+    // Web search always active by default with verified Google Grounding
+    modelName = 'gemini-2.5-flash';
+    config.tools = [{ googleSearch: {} }];
+    defaultSystemInstruction +=
+      ' Mode pencarian Google aktif. Gunakan informasi web terkini dan faktual.';
+  } else if (mode === 'maps') {
+    modelName = 'gemini-2.5-flash';
+    config.tools = [{ googleMaps: {} }];
+    if (location) {
+      config.toolConfig = {
+        retrievalConfig: {
+          latLng: location,
+        },
+      };
+    }
+    defaultSystemInstruction +=
+      ' Mode Google Maps aktif. Berikan informasi lokasi, rekomendasi tempat, dan petunjuk geografis dengan jelas.';
+  } else if (mode === 'science') {
+    modelName = 'gemini-3.8-flash';
+    defaultSystemInstruction =
+      'Anda adalah Maria AI Spesialis Sains & Bioinformatika. Jelaskan konsep sains secara mendalam, akurat secara akademis, dan sebutkan data struktur/gen bila relevan.';
+  } else {
+    // Web search manually turned off: blazing fast gemini-3.1-flash-lite
+    modelName = 'gemini-3.1-flash-lite';
+    defaultSystemInstruction +=
+      ' Mode kilat aktif. Berikan jawaban yang ringkas, cepat, dan to-the-point.';
+  }
+
+  config.systemInstruction =
+    (systemInstruction || defaultSystemInstruction) +
+    '\n\nATURAN MUTLAK: DILARANG KERAS MENGGUNAKAN KARAKTER EMOJI ATAU EMOTIKON APAPUN dalam seluruh respon jawaban Anda.';
+
+  // Format contents for multi-turn chat, preserving network speed by sending attachments only on latest turns
+  const contents = messages.map((m, idx) => {
+    const isRecentTurn = idx >= messages.length - 2;
+    const parts: any[] = [];
+
+    if (m.attachments && m.attachments.length > 0 && isRecentTurn) {
+      for (const att of m.attachments) {
+        if (att.data) {
+          parts.push({
+            inlineData: {
+              mimeType: att.mimeType || (att.type === 'video' ? 'video/mp4' : 'image/jpeg'),
+              data: att.data,
+            },
+          });
+        }
+      }
+    }
+
+    if (m.content) {
+      parts.push({ text: m.content });
+    } else if (parts.length > 0) {
+      parts.push({ text: 'Tolong analisis dan jelaskan gambar/video ini secara mendalam.' });
+    }
+
+    return {
+      role: m.role,
+      parts,
+    };
+  });
+
+  const responseStream = await ai.models.generateContentStream({
+    model: modelName,
+    contents,
+    config,
+  });
+
+  const groundingLinks: Array<{ title?: string; uri: string }> = [];
+
+  for await (const chunk of responseStream) {
+    if (chunk.text) {
+      yield {
+        type: 'chunk',
+        text: stripEmojis(chunk.text),
+        model: modelName,
+      };
+    }
+
+    const groundingChunks =
+      chunk.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+    for (const gChunk of groundingChunks) {
+      if (gChunk.web?.uri) {
+        const link = {
+          title: gChunk.web.title || gChunk.web.uri,
+          uri: gChunk.web.uri,
+        };
+        if (!groundingLinks.some((l) => l.uri === link.uri)) {
+          groundingLinks.push(link);
+        }
+      }
+      if (gChunk.maps?.uri) {
+        const link = {
+          title: gChunk.maps.title || 'Buka di Google Maps',
+          uri: gChunk.maps.uri,
+        };
+        if (!groundingLinks.some((l) => l.uri === link.uri)) {
+          groundingLinks.push(link);
+        }
+      }
+    }
+  }
+
+  yield {
+    type: 'done',
+    model: modelName,
+    groundingLinks: groundingLinks.length > 0 ? groundingLinks : undefined,
+  };
+}
+
+export async function generateChatResponse(options: GenerateOptions) {
+  const ai = getGeminiClient();
+  const { messages, mode = 'search', systemInstruction, location, webSearch = true } = options;
+
+  let modelName = 'gemini-3.1-flash-lite';
+  const config: any = {};
+
+  let defaultSystemInstruction =
+    'Anda adalah Maria AI, asisten kecerdasan buatan serba bisa yang cerdas, santun, ramah, cepat tanggap, dan terstruktur rapi. Jawablah dalam bahasa Indonesia secara alami, rapi, enak dibaca, dan gunakan format Markdown yang bersih (sub-judul, poin-poin teratur, atau blok kode beranotasi). ATURAN MUTLAK: DILARANG KERAS MENGGUNAKAN EMOJI SAMA SEKALI. Jangan pernah menyertakan emotikon, karakter emoji, atau simbol grafis apa pun dalam seluruh respon Anda.';
+
+  const isSearchActive = webSearch !== false;
 
   if (mode === 'thinking') {
     modelName = 'gemini-3.8-flash';
@@ -69,11 +200,7 @@ export async function generateChatResponse(options: GenerateOptions) {
     };
     defaultSystemInstruction +=
       ' Mode penalaran mendalam diaktifkan. Analisis masalah langkah demi langkah secara komprehensif dan berikan penjelasan yang kokoh.';
-  } else if (mode === 'fast') {
-    modelName = 'gemini-3.1-flash-lite';
-    defaultSystemInstruction +=
-      ' Mode cepat diaktifkan. Berikan jawaban yang ringkas, langsung ke inti persoalan, dan efisien.';
-  } else if (mode === 'search') {
+  } else if (isSearchActive) {
     modelName = 'gemini-2.5-flash';
     config.tools = [{ googleSearch: {} }];
     defaultSystemInstruction +=
@@ -94,17 +221,21 @@ export async function generateChatResponse(options: GenerateOptions) {
     modelName = 'gemini-3.8-flash';
     defaultSystemInstruction =
       'Anda adalah Maria AI Spesialis Sains & Bioinformatika (Google DeepMind Science Specialist). Anda ahli dalam biologi molekuler, struktur protein (AlphaFold, RCSB PDB, UniProt), genetika & genomik (ClinVar, gnomAD, dbSNP), kimia obat (PubChem, ChEMBL), jalur biologis (Reactome, STRING), dan literatur ilmiah (PubMed). Jelaskan konsep sains secara mendalam, akurat secara akademis, dan sebutkan data struktur/gen bila relevan.';
+  } else {
+    modelName = 'gemini-3.1-flash-lite';
+    defaultSystemInstruction +=
+      ' Mode kilat aktif. Berikan jawaban yang ringkas, langsung ke inti persoalan, dan efisien.';
   }
 
   config.systemInstruction =
     (systemInstruction || defaultSystemInstruction) +
     '\n\nATURAN MUTLAK: DILARANG KERAS MENGGUNAKAN KARAKTER EMOJI ATAU EMOTIKON APAPUN dalam seluruh respon jawaban Anda.';
 
-  // Format contents for multi-turn chat with full multimodal parts support
-  const contents = messages.map((m) => {
+  const contents = messages.map((m, idx) => {
+    const isRecentTurn = idx >= messages.length - 2;
     const parts: any[] = [];
 
-    if (m.attachments && m.attachments.length > 0) {
+    if (m.attachments && m.attachments.length > 0 && isRecentTurn) {
       for (const att of m.attachments) {
         if (att.data) {
           parts.push({

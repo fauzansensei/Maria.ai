@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import {
   generateChatResponse,
+  generateChatResponseStream,
   generateAiImage,
   generateSpeechAudio,
 } from './gemini.ts';
@@ -30,10 +31,54 @@ apiRouter.get('/health', (_req: Request, res: Response) => {
   });
 });
 
-// Chat Completion
+// Real-time Chat Streaming via Server-Sent Events (SSE)
+apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
+  try {
+    const { messages, mode, systemInstruction, location, webSearch } = req.body || {};
+
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      sendJson(res, 400, { error: 'Daftar pesan tidak boleh kosong.' });
+      return;
+    }
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+
+    const stream = generateChatResponseStream({
+      messages,
+      mode,
+      systemInstruction,
+      location,
+      webSearch: webSearch !== false,
+    });
+
+    for await (const chunk of stream) {
+      res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+    }
+
+    res.write('data: [DONE]\n\n');
+    res.end();
+  } catch (error: any) {
+    console.error('Chat stream error:', error);
+    if (!res.headersSent) {
+      sendJson(res, 500, {
+        error: error.message || 'Gagal memproses stream AI.',
+      });
+    } else {
+      res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
+      res.end();
+    }
+  }
+});
+
+// Chat Completion (Standard Fallback)
 apiRouter.post('/chat', async (req: Request, res: Response) => {
   try {
-    const { messages, mode, systemInstruction, location, withVoice, voiceName, personaId } = req.body || {};
+    const { messages, mode, systemInstruction, location, withVoice, voiceName, personaId, webSearch } = req.body || {};
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       sendJson(res, 400, { error: 'Daftar pesan tidak boleh kosong.' });
@@ -48,6 +93,7 @@ apiRouter.post('/chat', async (req: Request, res: Response) => {
       withVoice: Boolean(withVoice),
       voiceName,
       personaId,
+      webSearch: webSearch !== false,
     });
 
     sendJson(res, 200, result);
