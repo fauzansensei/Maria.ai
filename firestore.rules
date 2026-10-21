@@ -113,15 +113,14 @@ service cloud.firestore {
         allow get: if isSignedIn() && isValidId(conversationId) && isValidId(messageId) &&
                    (
                      (resource != null && resource.data.userId == request.auth.uid) ||
-                     (exists(/databases/$(database)/documents/conversations/$(conversationId)) &&
+                     (!exists(/databases/$(database)/documents/conversations/$(conversationId)) ||
                       get(/databases/$(database)/documents/conversations/$(conversationId)).data.userId == request.auth.uid)
                    );
                    
         allow list: if isSignedIn() && isValidId(conversationId) &&
                     (
-                      (resource != null && resource.data.userId == request.auth.uid) ||
-                      (exists(/databases/$(database)/documents/conversations/$(conversationId)) &&
-                       get(/databases/$(database)/documents/conversations/$(conversationId)).data.userId == request.auth.uid)
+                      !exists(/databases/$(database)/documents/conversations/$(conversationId)) ||
+                      get(/databases/$(database)/documents/conversations/$(conversationId)).data.userId == request.auth.uid
                     );
                     
         allow create: if isSignedIn() && isValidId(conversationId) && isValidId(messageId) &&
@@ -146,8 +145,8 @@ service cloud.firestore {
                       (
                         resource == null ||
                         resource.data.userId == request.auth.uid ||
-                        (exists(/databases/$(database)/documents/conversations/$(conversationId)) &&
-                         get(/databases/$(database)/documents/conversations/$(conversationId)).data.userId == request.auth.uid)
+                        !exists(/databases/$(database)/documents/conversations/$(conversationId)) ||
+                        get(/databases/$(database)/documents/conversations/$(conversationId)).data.userId == request.auth.uid
                       );
       }
     }
