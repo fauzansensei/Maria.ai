@@ -37,8 +37,13 @@ function AppContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeMode, setActiveMode] = useState<AiMode>('search');
 
-  // Modals & Drawers
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // Modals & Drawers (Sidebar open by default on desktop, drawer on mobile)
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 1024;
+    }
+    return false;
+  });
   const [isScienceScoutOpen, setIsScienceScoutOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [is2FAOpen, setIs2FAOpen] = useState(false);
@@ -540,6 +545,15 @@ function AppContent() {
       const personaObj = VOICE_PERSONAS.find((p) => p.id === (settings.voicePersona || 'wanita'));
       const activeVoiceName = personaObj?.geminiVoice || settings.geminiVoice || 'Aoede';
 
+      // Read device real-time clock and timezone for accurate temporal responses
+      const now = new Date();
+      const deviceTime = {
+        iso: now.toISOString(),
+        localTime: now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        localDate: now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Jakarta',
+      };
+
       // Stream SSE response for instant real-time tokens (Zero waiting time!)
       let streamedSuccess = false;
       const streamAiId = `ai_${Date.now()}`;
@@ -556,6 +570,7 @@ function AppContent() {
             mode,
             location: userLocation,
             webSearch: webSearchEnabled,
+            deviceTime,
           }),
         });
 
@@ -676,6 +691,7 @@ function AppContent() {
             voiceName: activeVoiceName,
             personaId: settings.voicePersona || 'wanita',
             webSearch: webSearchEnabled,
+            deviceTime,
           }),
         });
 
@@ -760,7 +776,7 @@ function AppContent() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-white dark:bg-[#0e0f12] font-sans">
+    <div className="flex h-[100dvh] w-screen overflow-hidden bg-white dark:bg-[#0e0f12] font-sans">
       {/* Navigation Sidebar */}
       <Sidebar
         conversations={conversations}

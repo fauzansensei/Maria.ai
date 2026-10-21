@@ -82,52 +82,65 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     });
   }, []);
 
-  const [notifications, setNotifications] = useState<NotificationItem[]>([
-    {
-      id: 'notif-1',
-      title: 'Cloud Firestore aktif & tersinkronisasi',
-      time: 'Baru saja',
-      read: false,
-    },
-    {
-      id: 'notif-2',
-      title: 'Model Gemini 3.5 Flash & 6 Karakter Suara AI aktif',
-      time: '5m lalu',
-      read: false,
-    },
-    {
-      id: 'notif-3',
-      title: 'Sistem DEFCON 5 Shield mengamankan koneksi',
-      time: '1j lalu',
-      read: true,
-    },
-  ]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('maria_notifications_state');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [
+      {
+        id: 'notif-1',
+        title: 'Cloud Firestore aktif & tersinkronisasi',
+        time: 'Baru saja',
+        read: false,
+      },
+      {
+        id: 'notif-2',
+        title: 'Model Gemini 3.5 Flash & 6 Karakter Suara AI aktif',
+        time: '5m lalu',
+        read: false,
+      },
+      {
+        id: 'notif-3',
+        title: 'Sistem DEFCON 5 Shield mengamankan koneksi',
+        time: '1j lalu',
+        read: true,
+      },
+    ];
+  });
 
-  // Auto-scroll on new message or loading change
+  // Auto-scroll on new message or loading change so streaming typewriter text is never clipped
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
   }, [messages, isLoading]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setNotifications((prev) => {
+      const updated = prev.map((n) => ({ ...n, read: true }));
+      try {
+        localStorage.setItem('maria_notifications_state', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
   };
 
   const currentPersona = VOICE_PERSONAS.find((p) => p.id === voicePersona) || VOICE_PERSONAS[0];
 
   return (
     <div className="flex-1 flex flex-col h-full bg-white text-gray-900 relative overflow-hidden select-none">
-      {/* Top Bar Header (Exact match to Image 1) */}
-      <header className="h-14 px-3 sm:px-4 border-b border-gray-100 bg-white flex items-center justify-between shrink-0 z-30 select-none">
+      {/* Top Bar Header (Sticky, always visible on mobile & desktop) */}
+      <header className="sticky top-0 h-14 px-3 sm:px-4 border-b border-gray-100 bg-white/95 backdrop-blur-md flex items-center justify-between shrink-0 z-30 select-none shadow-2xs">
         {/* Left: Hamburger Button, Maria AI Logo with online dot, Brand Name & Purple PLUS Badge */}
         <div className="flex items-center gap-2 sm:gap-2.5">
           <button
             onClick={onToggleSidebar}
-            title="Buka Menu"
-            className="w-9 h-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-700 hover:bg-gray-50 transition-colors shadow-xs"
+            title="Buka / Tutup Menu"
+            aria-label="Buka / Tutup Menu"
+            className="w-9 h-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-800 hover:bg-gray-50 active:scale-95 transition-all shadow-xs shrink-0"
           >
-            <Menu className="w-4 h-4" />
+            <Menu className="w-5 h-5" />
           </button>
 
           <div className="flex items-center gap-2">
@@ -155,7 +168,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           </div>
         )}
 
-        {/* Right: DEFCON 5 Status Shield Badge & Notifications Bell with '1' badge */}
+        {/* Right: DEFCON 5 Status Shield Badge & Notifications Bell with conditional badge */}
         <div className="flex items-center gap-2">
           {/* DEFCON 5 Mint Green Badge */}
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#a7f3d0] bg-[#ecfdf5] text-[#059669] text-xs font-bold shadow-xs">
@@ -163,7 +176,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             <span>DEFCON 5</span>
           </div>
 
-          {/* Notifications Bell with Red '1' Badge */}
+          {/* Notifications Bell */}
           <div className="relative">
             <button
               onClick={() => setShowNotifications((prev) => !prev)}
@@ -171,9 +184,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               className="w-9 h-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-700 hover:bg-gray-50 transition-colors shadow-xs relative"
             >
               <Bell className="w-4 h-4" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#ef4444] text-white rounded-full text-[9px] font-bold flex items-center justify-center shadow-xs">
-                {unreadCount > 0 ? unreadCount : 1}
-              </span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#ef4444] text-white rounded-full text-[9px] font-bold flex items-center justify-center shadow-xs animate-in zoom-in-75">
+                  {unreadCount}
+                </span>
+              )}
             </button>
 
             {/* Notifications Popover */}
@@ -244,8 +259,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             </p>
           </div>
         ) : (
-          /* Message Stream (Neat independent bubbles) */
-          <div className="max-w-4xl mx-auto w-full py-4 space-y-2">
+          /* Message Stream (Neat independent bubbles with generous bottom padding for typewriter text) */
+          <div className="max-w-4xl mx-auto w-full pt-4 pb-28 sm:pb-36 px-2 sm:px-4 space-y-3">
             {messages.map((message) => (
               <MessageItem
                 key={message.id}
@@ -269,7 +284,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               </div>
             )}
 
-            <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} className="h-8 shrink-0" />
           </div>
         )}
       </div>

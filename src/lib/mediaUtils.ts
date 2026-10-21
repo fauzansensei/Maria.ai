@@ -115,8 +115,8 @@ export async function getOriginalMediaBlob(key: string): Promise<string | null> 
   }
 }
 
-// Generate crystal-sharp high-fidelity thumbnail for image preview (up to 1600px with high quality)
-export function generateImageThumbnail(file: File, maxDimension: number = 1600, quality: number = 0.92): Promise<string> {
+// Generate crystal-sharp high-fidelity thumbnail for image preview (up to 480px with clean quality, safe for Firestore)
+export function generateImageThumbnail(file: File, maxDimension: number = 480, quality: number = 0.72): Promise<string> {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onload = () => {

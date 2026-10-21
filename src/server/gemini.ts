@@ -31,6 +31,13 @@ export interface ChatMessageTurn {
   attachments?: ChatAttachment[];
 }
 
+export interface DeviceTimeInfo {
+  iso?: string;
+  localTime?: string;
+  localDate?: string;
+  timeZone?: string;
+}
+
 export interface GenerateOptions {
   messages: ChatMessageTurn[];
   mode?: 'general' | 'thinking' | 'fast' | 'search' | 'maps' | 'science';
@@ -40,6 +47,7 @@ export interface GenerateOptions {
   voiceName?: string;
   personaId?: string;
   webSearch?: boolean; // Web search is ON by default
+  deviceTime?: DeviceTimeInfo;
 }
 
 // Helper to strip any emoji characters completely from text
@@ -93,6 +101,31 @@ Kemampuan Vision & Analisis Gambar/Video:
 
 ATURAN MUTLAK:
 - DILARANG KERAS MENGGUNAKAN KARAKTER EMOJI ATAU EMOTIKON APAPUN dalam seluruh respon jawaban Anda.`;
+
+// Build dynamic system instruction with device real-time clock and global weather capability
+function buildSystemInstruction(deviceTime?: DeviceTimeInfo, custom?: string): string {
+  let instruction = custom || BASE_MARIA_INSTRUCTION;
+
+  if (deviceTime?.localTime || deviceTime?.localDate || deviceTime?.timeZone) {
+    const timeSnippet = `
+Informasi Waktu & Lokasi Perangkat Pengguna:
+- Hari & Tanggal Perangkat Pengguna: ${deviceTime.localDate || 'Hari ini'}
+- Jam / Waktu Terkini Perangkat Pengguna: ${deviceTime.localTime || 'Terkini'}
+- Zona Waktu Perangkat: ${deviceTime.timeZone || 'Asia/Jakarta'}
+Bila pengguna menanyakan waktu, jam berapa sekarang, hari apa, atau tanggal berapa saat ini, Anda WAJIB merujuk pada data waktu lokal perangkat pengguna di atas secara tepat dan akurat.
+
+Informasi Status Cuaca Global & Lokal:
+- Anda memiliki kapabilitas membaca dan mengabarkan status cuaca terkini di seluruh penjuru dunia (cuaca global di berbagai kota dan negara) maupun cuaca di wilayah lokal perangkat pengguna.
+- Ketika pengguna menanyakan kondisi cuaca, suhu udara, kelembapan, prakiraan cuaca, atau kondisi langit di kota/negara manapun di dunia: manfaatkan mesin pencari Google Search untuk memperoleh laporan cuaca aktual paling baru, lalu jelaskan dengan ringkas, jelas, terstruktur (suhu dalam derajat Celsius, kondisi langit, dan saran singkat), tanpa emoji.`;
+
+    instruction = `${instruction}\n\n${timeSnippet}`;
+  } else {
+    instruction = `${instruction}\n\nInformasi Status Cuaca Global & Lokal:
+- Anda memiliki kapabilitas membaca dan mengabarkan status cuaca terkini di seluruh penjuru dunia (cuaca global) maupun cuaca lokal. Gunakan Google Search untuk mengambil data cuaca aktual terkini (suhu Celsius, kondisi cuaca, prakiraan) secara akurat tanpa emoji.`;
+  }
+
+  return instruction;
+}
 
 // Ensure multi-turn conversation strictly alternates user -> model -> user -> model without empty turns
 function sanitizeConversationTurns(messages: ChatMessageTurn[]) {
@@ -166,11 +199,11 @@ function sanitizeConversationTurns(messages: ChatMessageTurn[]) {
 // Real-time token streaming generator for blazing-fast responses
 export async function* generateChatResponseStream(options: GenerateOptions) {
   const ai = getGeminiClient();
-  const { messages, mode = 'search', systemInstruction, location, webSearch = true } = options;
+  const { messages, mode = 'search', systemInstruction, location, webSearch = true, deviceTime } = options;
 
   let modelName = 'gemini-2.5-flash';
   const config: any = {};
-  const defaultSystemInstruction = BASE_MARIA_INSTRUCTION;
+  const activeSystemInstruction = buildSystemInstruction(deviceTime, systemInstruction);
   const isSearchActive = webSearch !== false;
 
   if (mode === 'thinking') {
@@ -195,7 +228,7 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
     modelName = 'gemini-2.5-flash';
   }
 
-  config.systemInstruction = systemInstruction || defaultSystemInstruction;
+  config.systemInstruction = activeSystemInstruction;
 
   const contents = sanitizeConversationTurns(messages);
   if (contents.length === 0) {
@@ -216,7 +249,7 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
     // If search tool or thinking failed, retry with pure text gemini-2.5-flash
     console.warn('Stream failed with initial config, retrying with pure model:', err?.message);
     const fallbackConfig: any = {
-      systemInstruction: systemInstruction || defaultSystemInstruction,
+      systemInstruction: activeSystemInstruction,
     };
     responseStream = await ai.models.generateContentStream({
       model: 'gemini-2.5-flash',
@@ -270,11 +303,11 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
 
 export async function generateChatResponse(options: GenerateOptions) {
   const ai = getGeminiClient();
-  const { messages, mode = 'search', systemInstruction, location, webSearch = true } = options;
+  const { messages, mode = 'search', systemInstruction, location, webSearch = true, deviceTime } = options;
 
   let modelName = 'gemini-2.5-flash';
   const config: any = {};
-  const defaultSystemInstruction = BASE_MARIA_INSTRUCTION;
+  const activeSystemInstruction = buildSystemInstruction(deviceTime, systemInstruction);
   const isSearchActive = webSearch !== false;
 
   if (mode === 'thinking') {
@@ -299,7 +332,7 @@ export async function generateChatResponse(options: GenerateOptions) {
     modelName = 'gemini-2.5-flash';
   }
 
-  config.systemInstruction = systemInstruction || defaultSystemInstruction;
+  config.systemInstruction = activeSystemInstruction;
 
   const contents = sanitizeConversationTurns(messages);
   if (contents.length === 0) {

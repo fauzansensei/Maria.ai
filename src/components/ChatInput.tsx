@@ -130,7 +130,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
         let previewUrl = '';
         if (mediaType === 'image') {
-          previewUrl = await generateImageThumbnail(file, 1600, 0.92);
+          previewUrl = await generateImageThumbnail(file, 480, 0.72);
         } else if (mediaType === 'video') {
           previewUrl = await generateVideoThumbnail(file);
         }

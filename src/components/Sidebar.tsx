@@ -126,8 +126,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-40 w-72 sm:w-80 bg-[#0a1128] text-slate-200 border-r border-[#1e293b] flex flex-col transition-transform duration-300 ease-in-out select-none shadow-2xl lg:shadow-none ${
-          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        className={`fixed lg:static inset-y-0 left-0 z-40 bg-[#0a1128] text-slate-200 border-r border-[#1e293b] flex flex-col transition-all duration-300 ease-in-out select-none shadow-2xl lg:shadow-none ${
+          isOpen
+            ? 'w-72 sm:w-80 translate-x-0'
+            : '-translate-x-full lg:translate-x-0 lg:w-0 lg:overflow-hidden lg:border-r-0'
         }`}
       >
         {/* Header Atas: [M] Maria AI + Arrow Left */}

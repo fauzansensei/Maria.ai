@@ -34,7 +34,7 @@ apiRouter.get('/health', (_req: Request, res: Response) => {
 // Real-time Chat Streaming via Server-Sent Events (SSE)
 apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
   try {
-    const { messages, mode, systemInstruction, location, webSearch } = req.body || {};
+    const { messages, mode, systemInstruction, location, webSearch, deviceTime } = req.body || {};
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       sendJson(res, 400, { error: 'Daftar pesan tidak boleh kosong.' });
@@ -54,6 +54,7 @@ apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
       systemInstruction,
       location,
       webSearch: webSearch !== false,
+      deviceTime,
     });
 
     for await (const chunk of stream) {
@@ -78,7 +79,7 @@ apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
 // Chat Completion (Standard Fallback)
 apiRouter.post('/chat', async (req: Request, res: Response) => {
   try {
-    const { messages, mode, systemInstruction, location, withVoice, voiceName, personaId, webSearch } = req.body || {};
+    const { messages, mode, systemInstruction, location, withVoice, voiceName, personaId, webSearch, deviceTime } = req.body || {};
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       sendJson(res, 400, { error: 'Daftar pesan tidak boleh kosong.' });
@@ -94,6 +95,7 @@ apiRouter.post('/chat', async (req: Request, res: Response) => {
       voiceName,
       personaId,
       webSearch: webSearch !== false,
+      deviceTime,
     });
 
     sendJson(res, 200, result);
