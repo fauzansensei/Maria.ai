@@ -351,15 +351,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               <span className="text-xs sm:text-sm font-bold text-[#0f172a] tracking-tight">
                 Maria AI
               </span>
-              <a
-                href="https://zandev-six.vercel.app/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[9px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-1.5 py-0.2 rounded border border-blue-200 transition-colors"
-                title="Website Developer Zan.dev"
-              >
-                by Zan.dev
-              </a>
             </div>
 
             {/* Model Badge */}

@@ -82,7 +82,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       if (textareaRef.current) {
         textareaRef.current.focus();
       }
-      onClearLoadedText?.();
+      const timer = setTimeout(() => {
+        onClearLoadedText?.();
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [loadedText, onClearLoadedText]);
 
@@ -95,16 +98,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   }, [text]);
 
   const toggleWebSearch = () => {
-    setWebSearchActive((prev) => {
-      const next = !prev;
-      localStorage.setItem('maria_web_search_active', String(next));
-      if (next && activeMode === 'general') {
-        onModeChange('search');
-      } else if (!next && activeMode === 'search') {
-        onModeChange('general');
-      }
-      return next;
-    });
+    const next = !webSearchActive;
+    setWebSearchActive(next);
+    localStorage.setItem('maria_web_search_active', String(next));
+    if (next && activeMode === 'general') {
+      onModeChange('search');
+    } else if (!next && activeMode === 'search') {
+      onModeChange('general');
+    }
   };
 
   // Process files into MediaAttachment objects with original full resolution

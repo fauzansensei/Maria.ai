@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import {
   Menu,
   ShieldCheck,
@@ -72,6 +72,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const [showVoicePopover, setShowVoicePopover] = useState(false);
   const [loadedInputText, setLoadedInputText] = useState('');
 
+  const handleClearLoadedText = useCallback(() => {
+    setLoadedInputText('');
+  }, []);
+
   useEffect(() => {
     return speechService.subscribe((state) => {
       setSpeechState(state);
@@ -133,15 +137,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 <span className="font-bold text-[#0f172a] text-sm sm:text-base tracking-tight">
                   Maria AI
                 </span>
-                <a
-                  href="https://zandev-six.vercel.app/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-1.5 py-0.2 rounded border border-blue-200 transition-colors"
-                  title="Kunjungi website developer Zan.dev"
-                >
-                  by Zan.dev
-                </a>
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full bg-[#6366f1] text-white text-[9px] font-extrabold tracking-wide uppercase shadow-2xs">
                   <Sparkles className="w-2.5 h-2.5 fill-white" />
                   <span>PLUS</span>
@@ -236,21 +231,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               <MariaLogo size="hero" glow={false} />
             </div>
 
-            {/* Brand Title: Maria AI by Zan.dev */}
+            {/* Brand Title: Maria AI */}
             <div className="text-center mb-1">
               <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0f172a] tracking-tight">
                 Maria AI
               </h1>
-              <a
-                href="https://zandev-six.vercel.app/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-blue-600 hover:text-blue-800 transition-colors mt-0.5"
-                title="Website Developer Zan.dev"
-              >
-                <span>by Zan.dev</span>
-                <span className="text-[10px]">↗</span>
-              </a>
             </div>
 
             {/* Subheading: Dari mana kita harus mulai? */}
@@ -328,7 +313,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           onModeChange={onModeChange}
           onOpenScienceScout={onOpenScienceScout}
           loadedText={loadedInputText}
-          onClearLoadedText={() => setLoadedInputText('')}
+          onClearLoadedText={handleClearLoadedText}
         />
       </div>
     </div>

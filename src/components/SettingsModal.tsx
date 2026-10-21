@@ -180,32 +180,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               </div>
             )}
           </div>
-          {/* Developer Information */}
-          <div className="space-y-3">
-            <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-blue-500" /> Developer & Pembuat
-            </label>
-            <div className="p-3.5 rounded-xl bg-blue-50/70 dark:bg-[#0c1427] border border-blue-200 dark:border-blue-900/50 flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <span>Maria AI</span>
-                  <span className="text-blue-600 dark:text-blue-400 font-semibold text-xs">by Zan.dev</span>
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Portfolio: <span className="font-mono text-blue-600 dark:text-blue-400">zandev-six.vercel.app</span>
-                </div>
-              </div>
-              <a
-                href="https://zandev-six.vercel.app/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 shrink-0 shadow-2xs"
-              >
-                <span>Portfolio</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}

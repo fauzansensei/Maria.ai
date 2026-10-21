@@ -3,7 +3,7 @@ import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 
 // Initialize Gemini Client strictly on server-side
 export function getGeminiClient(): GoogleGenAI {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY environment variable is missing.');
   }
@@ -50,32 +50,134 @@ export function stripEmojis(str: string): string {
     .replace(/  +/g, ' ');
 }
 
+// Core system instruction following the official Maria AI Communication Guidelines (revisi by dola)
+const BASE_MARIA_INSTRUCTION = `INSTRUKSI SISTEM: GAYA KOMUNIKASI MARIA AI
+
+Identitas & Karakter:
+- Anda adalah Maria, asisten kecerdasan buatan yang profesional, ramah, sopan, dan beretika.
+- Bila pengguna secara eksplisit menanyakan siapa pembuat atau pengembang Anda, jawab dengan sopan bahwa Anda adalah Maria AI yang dikembangkan oleh Zan.dev.
+- DILARANG KERAS menyertakan tautan/URL/link web apapun ke situs Zan.dev atau tautan eksternal lainnya saat menyebut pengembang.
+- Jika pengguna hanya menyapa (seperti "Halo", "Halo Maria", "Selamat pagi"), berikan sapaan ramah dan tanyakan apa yang dapat Anda bantu tanpa menyebutkan pengembang.
+
+Filosofi Karakter:
+- Sopan itu wajib: selalu hormati pengguna.
+- Ramah itu terasa: nada bicara hangat dan bersahabat, tanpa berlebihan.
+- Profesional: jelas, tepat sasaran, tidak bertele-tele, menghargai waktu pengguna.
+
+Aturan Berbicara:
+1. Selalu gunakan bahasa yang sopan, jelas, dan mudah dipahami.
+2. Tetap ramah dan hangat, tetapi tidak berlebihan. Cukup satu sapaan di awal, tidak perlu di setiap kalimat.
+3. Gunakan "Anda" untuk menyapa pengguna. JANGAN gunakan panggilan "Kak", "Kakak", atau sebutan santai sejenis kecuali pengguna meminta secara khusus.
+4. Gunakan "Saya" untuk menyebut diri sendiri, bukan nama "Maria" berulang-ulang di setiap kalimat.
+5. Langsung pada inti pembicaraan. Jangan bertele-tele. Jika butuh kalimat pembuka, cukup satu kalimat saja (contoh: "Tentu, berikut rangkumannya:").
+6. Jika memberikan penjelasan panjang atau langkah-langkah, gunakan poin-poin terstruktur agar mudah dibaca. Pastikan tidak ada teks yang terulang.
+7. Tetap hangat dengan frasa seperti: "Dengan senang hati", "Semoga membantu", "Silakan beri tahu saya jika ada hal lain yang perlu dijelaskan."
+8. Saat tidak tahu atau tidak bisa: sampaikan dengan jujur dan sopan, jangan beralasan berlebihan (contoh: "Mohon maaf, saat ini saya belum dapat melakukan hal tersebut.").
+9. Sesuaikan panjang jawaban dengan pertanyaan: singkat untuk pertanyaan singkat, lengkap dan mendalam jika diminta penjelasan.
+10. Selalu akhiri dengan kesiapan membantu (contoh: "Ada lagi yang bisa saya bantu?").
+
+Mencegah Duplikasi:
+- Pastikan tidak ada bagian teks yang sama persis muncul dua kali.
+- Rangkum kalimat agar padat dan berbobot.
+
+Struktur Jawaban:
+1. [Pembuka Singkat - maksimal 1 kalimat]
+2. [Isi Jawaban - poin-poin, jelas, padat, rapi]
+3. [Penutup Ramah - maksimal 1 kalimat]
+
+Pencarian Web & Rangkuman Informasi Media:
+- Anda memiliki integrasi Google Search. Ketika pengguna menanyakan berita, kabar terkini, perkembangan peristiwa di media, atau informasi aktual: telusuri web dan media terpercaya, kemudian rangkum fakta-fakta kunci secara akurat, objektif, dan terstruktur.
+
+Kemampuan Vision & Analisis Gambar/Video:
+- Pengguna dapat mengunggah gambar, foto, tangkapan layar (screenshot), dokumen, atau diagram. Anda WAJIB menganalisis seluruh elemen visual dengan cermat, termasuk teks bacaan (OCR), tata letak, data, dan konteks gambar. Jawab pertanyaan pengguna mengenai gambar tersebut dengan jelas dan tepat.
+
+ATURAN MUTLAK:
+- DILARANG KERAS MENGGUNAKAN KARAKTER EMOJI ATAU EMOTIKON APAPUN dalam seluruh respon jawaban Anda.`;
+
+// Ensure multi-turn conversation strictly alternates user -> model -> user -> model without empty turns
+function sanitizeConversationTurns(messages: ChatMessageTurn[]) {
+  const rawTurns: Array<{ role: 'user' | 'model'; parts: any[] }> = [];
+
+  for (let idx = 0; idx < messages.length; idx++) {
+    const m = messages[idx];
+    const isRecentTurn = idx >= messages.length - 2;
+    const parts: any[] = [];
+
+    if (m.attachments && m.attachments.length > 0 && isRecentTurn) {
+      for (const att of m.attachments) {
+        if (att.data) {
+          const cleanData = att.data.includes(',')
+            ? att.data.split(',')[1].trim()
+            : att.data.trim();
+          if (cleanData) {
+            parts.push({
+              inlineData: {
+                mimeType: att.mimeType || (att.type === 'video' ? 'video/mp4' : 'image/jpeg'),
+                data: cleanData,
+              },
+            });
+          }
+        }
+      }
+    }
+
+    if (m.content && m.content.trim()) {
+      parts.push({ text: m.content.trim() });
+    } else if (parts.length > 0) {
+      parts.push({ text: 'Mohon amati dan jelaskan gambar ini secara mendalam.' });
+    }
+
+    if (parts.length > 0) {
+      rawTurns.push({
+        role: m.role === 'model' ? 'model' : 'user',
+        parts,
+      });
+    }
+  }
+
+  // Filter leading non-user turns
+  while (rawTurns.length > 0 && rawTurns[0].role !== 'user') {
+    rawTurns.shift();
+  }
+
+  // Strict alternation: merge consecutive turns with identical roles
+  const alternating: Array<{ role: 'user' | 'model'; parts: any[] }> = [];
+  for (const turn of rawTurns) {
+    if (alternating.length === 0) {
+      alternating.push({ role: turn.role, parts: [...turn.parts] });
+    } else {
+      const last = alternating[alternating.length - 1];
+      if (last.role === turn.role) {
+        last.parts.push(...turn.parts);
+      } else {
+        alternating.push({ role: turn.role, parts: [...turn.parts] });
+      }
+    }
+  }
+
+  // Multi-turn conversation must end with 'user' turn for response generation
+  while (alternating.length > 0 && alternating[alternating.length - 1].role !== 'user') {
+    alternating.pop();
+  }
+
+  return alternating;
+}
+
 // Real-time token streaming generator for blazing-fast responses
 export async function* generateChatResponseStream(options: GenerateOptions) {
   const ai = getGeminiClient();
   const { messages, mode = 'search', systemInstruction, location, webSearch = true } = options;
 
-  let modelName = 'gemini-3.1-flash-lite';
+  let modelName = 'gemini-2.5-flash';
   const config: any = {};
-
-  let defaultSystemInstruction =
-    'Anda adalah Maria AI by Zan.dev (https://zandev-six.vercel.app/), asisten kecerdasan buatan serba bisa yang cerdas, santun, ramah, cepat tanggap, dan terstruktur rapi. Anda dikembangkan dan diciptakan oleh Zan.dev (https://zandev-six.vercel.app/). Bila pengguna menanyakan identitas, pencipta, atau developer Anda, jelaskan dengan jelas dan bangga bahwa Anda adalah Maria AI yang dikembangkan oleh Zan.dev. Jawablah dalam bahasa Indonesia secara alami, rapi, enak dibaca, dan gunakan pemformatan Markdown terstruktur otomatis yang rapi (gunakan **teks tebal** untuk penekanan, _teks miring_ untuk istilah, ~teks coret~ bila relevan, `kode inline` untuk istilah teknis, serta sub-judul ### dan poin-poin teratur agar teks tidak berantakan). ATURAN MUTLAK: DILARANG KERAS MENGGUNAKAN EMOJI SAMA SEKALI. Jangan pernah menyertakan emotikon, karakter emoji, atau simbol grafis apa pun dalam seluruh respon Anda.';
-
+  const defaultSystemInstruction = BASE_MARIA_INSTRUCTION;
   const isSearchActive = webSearch !== false;
 
   if (mode === 'thinking') {
-    modelName = 'gemini-3.8-flash';
+    modelName = 'gemini-2.5-flash';
     config.thinkingConfig = {
       thinkingLevel: ThinkingLevel.HIGH,
     };
-    defaultSystemInstruction +=
-      ' Mode penalaran mendalam aktif. Analisis masalah langkah demi langkah secara komprehensif.';
-  } else if (isSearchActive) {
-    // Web search always active by default with verified Google Grounding
-    modelName = 'gemini-2.5-flash';
-    config.tools = [{ googleSearch: {} }];
-    defaultSystemInstruction +=
-      ' Mode pencarian Google aktif. Gunakan informasi web terkini dan faktual.';
   } else if (mode === 'maps') {
     modelName = 'gemini-2.5-flash';
     config.tools = [{ googleMaps: {} }];
@@ -86,58 +188,43 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
         },
       };
     }
-    defaultSystemInstruction +=
-      ' Mode Google Maps aktif. Berikan informasi lokasi, rekomendasi tempat, dan petunjuk geografis dengan jelas.';
-  } else if (mode === 'science') {
-    modelName = 'gemini-3.8-flash';
-    defaultSystemInstruction =
-      'Anda adalah Maria AI Spesialis Sains & Bioinformatika. Jelaskan konsep sains secara mendalam, akurat secara akademis, dan sebutkan data struktur/gen bila relevan.';
+  } else if (isSearchActive) {
+    modelName = 'gemini-2.5-flash';
+    config.tools = [{ googleSearch: {} }];
   } else {
-    // Web search manually turned off: blazing fast gemini-3.1-flash-lite
-    modelName = 'gemini-3.1-flash-lite';
-    defaultSystemInstruction +=
-      ' Mode kilat aktif. Berikan jawaban yang ringkas, cepat, dan to-the-point.';
+    modelName = 'gemini-2.5-flash';
   }
 
-  config.systemInstruction =
-    (systemInstruction || defaultSystemInstruction) +
-    '\n\nATURAN MUTLAK: DILARANG KERAS MENGGUNAKAN KARAKTER EMOJI ATAU EMOTIKON APAPUN dalam seluruh respon jawaban Anda.';
+  config.systemInstruction = systemInstruction || defaultSystemInstruction;
 
-  // Format contents for multi-turn chat, preserving network speed by sending attachments only on latest turns
-  const contents = messages.map((m, idx) => {
-    const isRecentTurn = idx >= messages.length - 2;
-    const parts: any[] = [];
+  const contents = sanitizeConversationTurns(messages);
+  if (contents.length === 0) {
+    contents.push({
+      role: 'user',
+      parts: [{ text: 'Halo Maria' }],
+    });
+  }
 
-    if (m.attachments && m.attachments.length > 0 && isRecentTurn) {
-      for (const att of m.attachments) {
-        if (att.data) {
-          parts.push({
-            inlineData: {
-              mimeType: att.mimeType || (att.type === 'video' ? 'video/mp4' : 'image/jpeg'),
-              data: att.data,
-            },
-          });
-        }
-      }
-    }
-
-    if (m.content) {
-      parts.push({ text: m.content });
-    } else if (parts.length > 0) {
-      parts.push({ text: 'Tolong analisis dan jelaskan gambar/video ini secara mendalam.' });
-    }
-
-    return {
-      role: m.role,
-      parts,
+  let responseStream;
+  try {
+    responseStream = await ai.models.generateContentStream({
+      model: modelName,
+      contents,
+      config,
+    });
+  } catch (err: any) {
+    // If search tool or thinking failed, retry with pure text gemini-2.5-flash
+    console.warn('Stream failed with initial config, retrying with pure model:', err?.message);
+    const fallbackConfig: any = {
+      systemInstruction: systemInstruction || defaultSystemInstruction,
     };
-  });
-
-  const responseStream = await ai.models.generateContentStream({
-    model: modelName,
-    contents,
-    config,
-  });
+    responseStream = await ai.models.generateContentStream({
+      model: 'gemini-2.5-flash',
+      contents,
+      config: fallbackConfig,
+    });
+    modelName = 'gemini-2.5-flash';
+  }
 
   const groundingLinks: Array<{ title?: string; uri: string }> = [];
 
@@ -185,26 +272,16 @@ export async function generateChatResponse(options: GenerateOptions) {
   const ai = getGeminiClient();
   const { messages, mode = 'search', systemInstruction, location, webSearch = true } = options;
 
-  let modelName = 'gemini-3.1-flash-lite';
+  let modelName = 'gemini-2.5-flash';
   const config: any = {};
-
-  let defaultSystemInstruction =
-    'Anda adalah Maria AI by Zan.dev (https://zandev-six.vercel.app/), asisten kecerdasan buatan serba bisa yang cerdas, santun, ramah, cepat tanggap, dan terstruktur rapi. Anda dikembangkan dan diciptakan oleh Zan.dev (https://zandev-six.vercel.app/). Bila pengguna menanyakan identitas, pencipta, atau developer Anda, jelaskan dengan jelas dan bangga bahwa Anda adalah Maria AI yang dikembangkan oleh Zan.dev. Jawablah dalam bahasa Indonesia secara alami, rapi, enak dibaca, dan gunakan pemformatan Markdown terstruktur otomatis yang rapi (gunakan **teks tebal** untuk penekanan, _teks miring_ untuk istilah, ~teks coret~ bila relevan, `kode inline` untuk istilah teknis, serta sub-judul ### dan poin-poin teratur agar teks tidak berantakan). ATURAN MUTLAK: DILARANG KERAS MENGGUNAKAN EMOJI SAMA SEKALI. Jangan pernah menyertakan emotikon, karakter emoji, atau simbol grafis apa pun dalam seluruh respon Anda.';
-
+  const defaultSystemInstruction = BASE_MARIA_INSTRUCTION;
   const isSearchActive = webSearch !== false;
 
   if (mode === 'thinking') {
-    modelName = 'gemini-3.8-flash';
+    modelName = 'gemini-2.5-flash';
     config.thinkingConfig = {
       thinkingLevel: ThinkingLevel.HIGH,
     };
-    defaultSystemInstruction +=
-      ' Mode penalaran mendalam diaktifkan. Analisis masalah langkah demi langkah secara komprehensif dan berikan penjelasan yang kokoh.';
-  } else if (isSearchActive) {
-    modelName = 'gemini-2.5-flash';
-    config.tools = [{ googleSearch: {} }];
-    defaultSystemInstruction +=
-      ' Mode pencarian Google aktif. Gunakan informasi web terkini dan faktual.';
   } else if (mode === 'maps') {
     modelName = 'gemini-2.5-flash';
     config.tools = [{ googleMaps: {} }];
@@ -215,56 +292,42 @@ export async function generateChatResponse(options: GenerateOptions) {
         },
       };
     }
-    defaultSystemInstruction +=
-      ' Mode Google Maps aktif. Berikan informasi lokasi, rekomendasi tempat, jam operasional, dan petunjuk geografis dengan jelas.';
-  } else if (mode === 'science') {
-    modelName = 'gemini-3.8-flash';
-    defaultSystemInstruction =
-      'Anda adalah Maria AI Spesialis Sains & Bioinformatika (Google DeepMind Science Specialist). Anda ahli dalam biologi molekuler, struktur protein (AlphaFold, RCSB PDB, UniProt), genetika & genomik (ClinVar, gnomAD, dbSNP), kimia obat (PubChem, ChEMBL), jalur biologis (Reactome, STRING), dan literatur ilmiah (PubMed). Jelaskan konsep sains secara mendalam, akurat secara akademis, dan sebutkan data struktur/gen bila relevan.';
+  } else if (isSearchActive) {
+    modelName = 'gemini-2.5-flash';
+    config.tools = [{ googleSearch: {} }];
   } else {
-    modelName = 'gemini-3.1-flash-lite';
-    defaultSystemInstruction +=
-      ' Mode kilat aktif. Berikan jawaban yang ringkas, langsung ke inti persoalan, dan efisien.';
+    modelName = 'gemini-2.5-flash';
   }
 
-  config.systemInstruction =
-    (systemInstruction || defaultSystemInstruction) +
-    '\n\nATURAN MUTLAK: DILARANG KERAS MENGGUNAKAN KARAKTER EMOJI ATAU EMOTIKON APAPUN dalam seluruh respon jawaban Anda.';
+  config.systemInstruction = systemInstruction || defaultSystemInstruction;
 
-  const contents = messages.map((m, idx) => {
-    const isRecentTurn = idx >= messages.length - 2;
-    const parts: any[] = [];
+  const contents = sanitizeConversationTurns(messages);
+  if (contents.length === 0) {
+    contents.push({
+      role: 'user',
+      parts: [{ text: 'Halo Maria' }],
+    });
+  }
 
-    if (m.attachments && m.attachments.length > 0 && isRecentTurn) {
-      for (const att of m.attachments) {
-        if (att.data) {
-          parts.push({
-            inlineData: {
-              mimeType: att.mimeType || (att.type === 'video' ? 'video/mp4' : 'image/jpeg'),
-              data: att.data,
-            },
-          });
-        }
-      }
-    }
-
-    if (m.content) {
-      parts.push({ text: m.content });
-    } else if (parts.length > 0) {
-      parts.push({ text: 'Tolong analisis dan jelaskan gambar/video ini secara mendalam.' });
-    }
-
-    return {
-      role: m.role,
-      parts,
+  let response;
+  try {
+    response = await ai.models.generateContent({
+      model: modelName,
+      contents,
+      config,
+    });
+  } catch (err: any) {
+    console.warn('generateContent failed with initial config, retrying pure model:', err?.message);
+    const fallbackConfig: any = {
+      systemInstruction: systemInstruction || defaultSystemInstruction,
     };
-  });
-
-  const response = await ai.models.generateContent({
-    model: modelName,
-    contents,
-    config,
-  });
+    response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents,
+      config: fallbackConfig,
+    });
+    modelName = 'gemini-2.5-flash';
+  }
 
   const rawText = response.text || '';
   const responseText = stripEmojis(rawText).replace(/  +/g, ' ').trim();
@@ -289,7 +352,6 @@ export async function generateChatResponse(options: GenerateOptions) {
     }
   }
 
-  // Audio generation is handled asynchronously on the frontend via /api/tts to make text responses blazing fast
   return {
     text: responseText,
     model: modelName,

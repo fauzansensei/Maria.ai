@@ -501,31 +501,40 @@ function AppContent() {
         } catch {}
       }
 
-      // Prepare conversation history
-      const historyTurns = (user ? messages : guestMessages).map((m) => ({
-        role: m.role as 'user' | 'model',
-        content: m.content,
-        attachments: m.attachments?.map((a) => ({
-          type: a.type,
-          mimeType: a.mimeType,
-          data: a.base64Data,
-          name: a.name,
-          size: a.size,
-        })),
-      }));
+      // Prepare conversation history excluding the current message to avoid duplicates
+      const priorTurns = (user ? messages : guestMessages)
+        .filter(
+          (m) =>
+            m.id !== userMessageObj.id &&
+            (m.content.trim().length > 0 || (m.attachments && m.attachments.length > 0))
+        )
+        .map((m) => ({
+          role: m.role as 'user' | 'model',
+          content: m.content,
+          attachments: m.attachments?.map((a) => ({
+            type: a.type,
+            mimeType: a.mimeType,
+            data: a.base64Data,
+            name: a.name,
+            size: a.size,
+          })),
+        }));
 
-      // Append latest turn
-      historyTurns.push({
-        role: 'user',
-        content,
-        attachments: attachments?.map((a) => ({
-          type: a.type,
-          mimeType: a.mimeType,
-          data: a.base64Data,
-          name: a.name,
-          size: a.size,
-        })),
-      });
+      // Append current turn
+      const historyTurns = [
+        ...priorTurns,
+        {
+          role: 'user' as const,
+          content,
+          attachments: attachments?.map((a) => ({
+            type: a.type,
+            mimeType: a.mimeType,
+            data: a.base64Data,
+            name: a.name,
+            size: a.size,
+          })),
+        },
+      ];
 
       const isVoiceAuto = Boolean(settings.voiceEnabled || settings.voiceResponses);
       const personaObj = VOICE_PERSONAS.find((p) => p.id === (settings.voicePersona || 'wanita'));
@@ -550,7 +559,8 @@ function AppContent() {
           }),
         });
 
-        if (streamRes.ok && streamRes.body) {
+        const contentType = streamRes.headers.get('content-type') || '';
+        if (streamRes.ok && streamRes.body && contentType.includes('text/event-stream')) {
           const reader = streamRes.body.getReader();
           const decoder = new TextDecoder();
           let buffer = '';
@@ -618,34 +628,43 @@ function AppContent() {
             }
           }
 
-          if (user && currentConvId && fullText.trim()) {
-            await addMessage(currentConvId, user.uid, {
-              role: 'model',
-              content: fullText,
-              model: streamModel,
-              groundingLinks:
-                streamGroundingLinks.length > 0 ? streamGroundingLinks : undefined,
-            });
-          }
+          if (fullText.trim()) {
+            if (user && currentConvId) {
+              await addMessage(currentConvId, user.uid, {
+                role: 'model',
+                content: fullText,
+                model: streamModel,
+                groundingLinks:
+                  streamGroundingLinks.length > 0 ? streamGroundingLinks : undefined,
+              });
+            }
 
-          if (isVoiceAuto && fullText.trim()) {
-            speechService.speak(fullText, {
-              messageId: streamAiId,
-              speed: settings.speechSpeed || '1x',
-              voiceName: activeVoiceName,
-              personaId: settings.voicePersona || 'wanita',
-              ttsModel: settings.ttsModel || 'gemini-3.8-flash-lite-tts',
-            });
-          }
+            if (isVoiceAuto) {
+              speechService.speak(fullText, {
+                messageId: streamAiId,
+                speed: settings.speechSpeed || '1x',
+                voiceName: activeVoiceName,
+                personaId: settings.voicePersona || 'wanita',
+                ttsModel: settings.ttsModel || 'gemini-3.8-flash-lite-tts',
+              });
+            }
 
-          streamedSuccess = true;
-          return;
+            streamedSuccess = true;
+            return;
+          } else {
+            // Clean up empty placeholder if no content arrived
+            setMessages((prev) => prev.filter((m) => m.id !== streamAiId));
+            setGuestMessages((prev) => prev.filter((m) => m.id !== streamAiId));
+          }
         }
       } catch (streamErr) {
         console.warn('Streaming failed, falling back to standard completion:', streamErr);
+        setMessages((prev) => prev.filter((m) => m.id !== streamAiId));
+        setGuestMessages((prev) => prev.filter((m) => m.id !== streamAiId));
       }
 
       if (!streamedSuccess) {
+        setIsLoading(true);
         const response = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -723,7 +742,7 @@ function AppContent() {
         conversationId: activeConvId || 'guest_conv',
         userId: user ? user.uid : 'guest',
         role: 'model',
-        content: `⚠️ Maaf, terjadi kesalahan: ${err.message || 'Koneksi gagal'}. Silakan coba lagi.`,
+        content: `Mohon maaf, terjadi kendala saat memproses permintaan Anda: ${err.message || 'Koneksi gagal'}. Silakan coba lagi.`,
         createdAt: new Date(),
       };
 

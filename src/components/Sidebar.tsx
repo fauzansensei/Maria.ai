@@ -135,28 +135,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex items-center gap-2.5">
             <MariaLogo size="sm" glow={true} />
             <div>
-              <div className="flex items-center gap-1.5">
-                <h1 className="font-bold text-sm tracking-tight text-white">
-                  Maria <span className="text-blue-400">AI</span>
-                </h1>
-                <a
-                  href="https://zandev-six.vercel.app/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-blue-600/30 text-blue-300 border border-blue-500/40 hover:bg-blue-600/50 transition-colors"
-                  title="Website Developer Zan.dev"
-                >
-                  by Zan.dev
-                </a>
-              </div>
-              <a
-                href="https://zandev-six.vercel.app/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[10px] text-slate-400 hover:text-blue-400 transition-colors block"
-              >
-                zandev-six.vercel.app
-              </a>
+              <h1 className="font-bold text-sm tracking-tight text-white">
+                Maria <span className="text-blue-400">AI</span>
+              </h1>
             </div>
           </div>
 
@@ -412,16 +393,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
 
-          {/* Legal and Security Footer Links with Developer attribution */}
-          <div className="text-[10px] text-slate-400 text-center space-y-1 pt-1">
-            <a
-              href="https://zandev-six.vercel.app/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300 font-semibold block transition-colors"
-            >
-              Maria AI by Zan.dev
-            </a>
+          {/* Legal and Security Footer Links */}
+          <div className="text-[10px] text-slate-400 text-center pt-1">
             <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-slate-500 text-[10px]">
               <a href="/help.html" className="hover:text-slate-300 transition-colors">Bantuan</a>
               <span>•</span>
