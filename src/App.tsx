@@ -598,13 +598,7 @@ function AppContent() {
 
           setIsLoading(false); // Stop loading indicator immediately as tokens begin streaming
 
-          // Start instant real-time streaming speech immediately as tokens begin
-          if (isVoiceAuto) {
-            speechService.startStreaming(streamAiId, {
-              speed: settings.speechSpeed || '1x',
-              personaId: settings.voicePersona || 'wanita',
-            });
-          }
+          let hasPrefetched = false;
 
           while (true) {
             const { done, value } = await reader.read();
@@ -625,9 +619,14 @@ function AppContent() {
                   fullText += parsed.text;
                   if (parsed.model) streamModel = parsed.model;
 
-                  // Real-time zero-delay speech chunk feeding
-                  if (isVoiceAuto) {
-                    speechService.feedStreamChunk(fullText);
+                  // Pre-warm Gemini AI voice in background so audio is ready without delay
+                  if (isVoiceAuto && !hasPrefetched && fullText.length > 80) {
+                    hasPrefetched = true;
+                    speechService.prefetchSpeech(fullText, {
+                      voiceName: activeVoiceName,
+                      personaId: settings.voicePersona || 'wanita',
+                      ttsModel: settings.ttsModel || 'gemini-3.8-flash-lite-tts',
+                    });
                   }
 
                   setMessages((prev) =>
@@ -658,11 +657,6 @@ function AppContent() {
           }
 
           if (fullText.trim()) {
-            // Finalize streaming speech so remaining sentence is spoken to the very end
-            if (isVoiceAuto) {
-              speechService.endStream(fullText);
-            }
-
             if (user && currentConvId) {
               await addMessage(currentConvId, user.uid, {
                 role: 'model',
@@ -670,6 +664,17 @@ function AppContent() {
                 model: streamModel,
                 groundingLinks:
                   streamGroundingLinks.length > 0 ? streamGroundingLinks : undefined,
+              });
+            }
+
+            // Play Gemini AI Voice Engine
+            if (isVoiceAuto) {
+              speechService.speak(fullText, {
+                messageId: streamAiId,
+                speed: settings.speechSpeed || '1x',
+                voiceName: activeVoiceName,
+                personaId: settings.voicePersona || 'wanita',
+                ttsModel: settings.ttsModel || 'gemini-3.8-flash-lite-tts',
               });
             }
 

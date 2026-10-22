@@ -577,18 +577,18 @@ export async function generateSpeechAudio(
     return { audioUrl: null, model: 'none', voice: voiceName, notice: 'Teks kosong untuk suara.' };
   }
 
-  // Read full answers up to 2500 characters cleanly
-  if (cleanText.length > 2500) {
+  // Read full answers up to 6000 characters cleanly without cutting off
+  if (cleanText.length > 6000) {
     const sentences = cleanText.split(/(?<=[.!?])\s+/);
     let spokenSnippet = '';
     for (const s of sentences) {
-      if ((spokenSnippet + ' ' + s).trim().length <= 2500) {
+      if ((spokenSnippet + ' ' + s).trim().length <= 6000) {
         spokenSnippet = (spokenSnippet + ' ' + s).trim();
       } else {
         break;
       }
     }
-    cleanText = spokenSnippet || cleanText.slice(0, 2500);
+    cleanText = spokenSnippet || cleanText.slice(0, 6000);
   }
 
   // 1. Resolve Gemini AI Voice selection based on Voice Name or Persona ID
