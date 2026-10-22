@@ -11,6 +11,7 @@ import { TwoFactorModal } from './components/TwoFactorModal.tsx';
 import { Conversation, Message, AiMode, UserSettings, MediaAttachment } from './types/index.ts';
 import { DEFAULT_SETTINGS, VOICE_PERSONAS } from './constants.ts';
 import { speechService } from './lib/speechService.ts';
+import { optimizeCookies, pruneLocalStorageBloat } from './lib/storageOptimizer.ts';
 import {
   subscribeConversations,
   subscribeMessages,
@@ -26,6 +27,12 @@ import {
 function AppContent() {
   const { user } = useAuth();
   const { setTheme } = useTheme();
+
+  // Enforce super-compact 1-byte micro cookies and clean storage on launch
+  useEffect(() => {
+    optimizeCookies();
+    pruneLocalStorageBloat();
+  }, []);
 
   // Navigation View State: 'chat' | 'library' | 'discover'
   const [activeView, setActiveView] = useState<'chat' | 'library' | 'discover'>('chat');
@@ -558,7 +565,7 @@ function AppContent() {
       let streamedSuccess = false;
       const streamAiId = `ai_${Date.now()}`;
       let fullText = '';
-      let streamModel = webSearchEnabled ? 'gemini-2.5-flash' : 'gemini-3.1-flash-lite';
+      let streamModel = webSearchEnabled ? 'gemini-3.8-flash' : 'gemini-3.1-flash-lite';
       let streamGroundingLinks: any[] = [];
 
       try {

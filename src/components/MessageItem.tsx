@@ -18,6 +18,8 @@ import {
   Pencil,
   RotateCcw,
   Image as ImageIcon,
+  Play,
+  Music,
 } from 'lucide-react';
 import { Message, MediaAttachment } from '../types/index.ts';
 import { MariaLogo } from './MariaLogo.tsx';
@@ -134,6 +136,109 @@ const SourceFavicon: React.FC<{ uri: string; title?: string }> = ({ uri, title }
       className="w-3.5 h-3.5 rounded-xs object-contain shrink-0"
       loading="lazy"
     />
+  );
+};
+
+interface YouTubeInfo {
+  videoId?: string;
+  searchQuery?: string;
+  fullUrl: string;
+}
+
+function extractYouTubeInfo(content: string): YouTubeInfo | null {
+  if (!content) return null;
+
+  // 1. YouTube watch or embed or youtu.be
+  const watchMatch = content.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i);
+  if (watchMatch) {
+    return {
+      videoId: watchMatch[1],
+      fullUrl: `https://www.youtube.com/watch?v=${watchMatch[1]}`,
+    };
+  }
+
+  // 2. YouTube search results query
+  const searchMatch = content.match(/(?:https?:\/\/)?(?:www\.)?youtube\.com\/results\?search_query=([^&\s\)"']+)/i);
+  if (searchMatch) {
+    const rawQuery = decodeURIComponent(searchMatch[1].replace(/\+/g, ' '));
+    return {
+      searchQuery: rawQuery,
+      fullUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(rawQuery)}`,
+    };
+  }
+
+  return null;
+}
+
+// Subcomponent: YouTube Interactive Player & Windows Open Action Card
+const YouTubeActionCard: React.FC<{ info: YouTubeInfo }> = ({ info }) => {
+  const handleOpenWindow = () => {
+    window.open(info.fullUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  return (
+    <div className="mt-3 overflow-hidden rounded-2xl border border-red-200/80 bg-linear-to-b from-red-50/50 to-white shadow-xs">
+      {/* Header bar */}
+      <div className="flex items-center justify-between px-3.5 py-2.5 bg-red-500/10 border-b border-red-100 text-xs">
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 rounded-md bg-red-600 flex items-center justify-center text-white shadow-2xs">
+            <Play className="w-3 h-3 fill-current ml-0.5" />
+          </div>
+          <span className="font-bold text-red-950">
+            {info.videoId ? 'Pemutar Musik & Video YouTube' : 'Aksi YouTube: Putar Lagu'}
+          </span>
+          {info.searchQuery && (
+            <span className="text-[11px] text-red-800/80 truncate max-w-[180px] sm:max-w-[260px]">
+              &ldquo;{info.searchQuery}&rdquo;
+            </span>
+          )}
+        </div>
+
+        <button
+          onClick={handleOpenWindow}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold text-[11px] shadow-2xs transition-colors cursor-pointer"
+        >
+          <span>Buka di YouTube</span>
+          <ExternalLink className="w-3 h-3" />
+        </button>
+      </div>
+
+      {/* Embedded Player if videoId exists */}
+      {info.videoId ? (
+        <div className="p-2.5 bg-black/5">
+          <iframe
+            src={`https://www.youtube-nocookie.com/embed/${info.videoId}?autoplay=1`}
+            title="Pemutar YouTube Maria AI"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="w-full aspect-video rounded-xl border border-slate-200 shadow-inner bg-black"
+          />
+        </div>
+      ) : (
+        <div className="p-3.5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-red-600">
+              <Music className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-900">
+                Putar Lagu: {info.searchQuery || 'Musik Pilihan'}
+              </p>
+              <p className="text-[11px] text-slate-500">
+                Putar lagu langsung di YouTube dalam jendela baru
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleOpenWindow}
+            className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors shrink-0 cursor-pointer"
+          >
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span>Mulai Putar</span>
+          </button>
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -599,11 +704,34 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   </td>
                 );
               },
+              a({ href, children }: any) {
+                return (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 underline underline-offset-2 font-medium hover:bg-blue-50/80 px-1 py-0.5 rounded-sm transition-colors group/link"
+                  >
+                    <SourceFavicon uri={href || ''} />
+                    <span>{children}</span>
+                    <ExternalLink className="w-3 h-3 text-blue-500 opacity-70 group-hover/link:opacity-100 shrink-0" />
+                  </a>
+                );
+              },
             }}
           >
             {autoFormatMarkdown(message.content)}
           </ReactMarkdown>
         </div>
+
+        {/* Interactive YouTube Action Card / Embedded Player & Windows Open */}
+        {(() => {
+          const ytInfo = extractYouTubeInfo(message.content);
+          if (ytInfo) {
+            return <YouTubeActionCard info={ytInfo} />;
+          }
+          return null;
+        })()}
 
         {/* Verified Google Search Grounding Sources */}
         {hasGrounding && (

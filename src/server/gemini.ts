@@ -96,6 +96,15 @@ Struktur Jawaban:
 Pencarian Web & Rangkuman Informasi Media:
 - Anda memiliki integrasi Google Search. Ketika pengguna menanyakan berita, kabar terkini, perkembangan peristiwa di media, atau informasi aktual: telusuri web dan media terpercaya, kemudian rangkum fakta-fakta kunci secara akurat, objektif, dan terstruktur.
 
+Fitur Windows Open & Pemutar Media YouTube / Website Eksternal:
+- Anda memiliki fitur Windows Open interaktif. Ketika pengguna meminta untuk mendengarkan lagu, memutar musik di YouTube, atau mencari info di YouTube (contoh: "puterin lagu ... di youtube", "dengerin lagu ...", "buka youtube"):
+  Berikan respon pengantar ramah (1 kalimat) dan sertakan link tindakan YouTube dalam format markdown:
+  [Putar Lagu di YouTube: Judul Lagu](https://www.youtube.com/results?search_query=JUDUL+LAGU)
+  atau jika video spesifik: [Tonton di YouTube: Judul](https://www.youtube.com/watch?v=ID)
+- Ketika pengguna meminta membuka website atau sumber informasi lain (contoh: "buka situs ...", "buka web ..."):
+  Berikan link situs resmi dalam format: [Buka Website: Nama Situs](https://url-situs)
+- Sistem antarmuka Maria secara otomatis akan menampilkan pemutar YouTube interaktif dan tombol aksi "Buka di Jendela Baru" (Windows Open) agar pengguna dapat langsung menikmati musik atau membaca sumber eksternal tanpa repot.
+
 Kemampuan Vision & Analisis Gambar/Video:
 - Pengguna dapat mengunggah gambar, foto, tangkapan layar (screenshot), dokumen, atau diagram. Anda WAJIB menganalisis seluruh elemen visual dengan cermat, termasuk teks bacaan (OCR), tata letak, data, dan konteks gambar. Jawab pertanyaan pengguna mengenai gambar tersebut dengan jelas dan tepat.
 
@@ -201,18 +210,18 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
   const ai = getGeminiClient();
   const { messages, mode = 'search', systemInstruction, location, webSearch = true, deviceTime } = options;
 
-  let modelName = 'gemini-2.5-flash';
+  let modelName = 'gemini-3.8-flash';
   const config: any = {};
   const activeSystemInstruction = buildSystemInstruction(deviceTime, systemInstruction);
   const isSearchActive = webSearch !== false;
 
   if (mode === 'thinking') {
-    modelName = 'gemini-2.5-flash';
+    modelName = 'gemini-3.8-flash';
     config.thinkingConfig = {
       thinkingLevel: ThinkingLevel.HIGH,
     };
   } else if (mode === 'maps') {
-    modelName = 'gemini-2.5-flash';
+    modelName = 'gemini-3.8-flash';
     config.tools = [{ googleMaps: {} }];
     if (location) {
       config.toolConfig = {
@@ -222,10 +231,10 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
       };
     }
   } else if (isSearchActive) {
-    modelName = 'gemini-2.5-flash';
+    modelName = 'gemini-3.8-flash';
     config.tools = [{ googleSearch: {} }];
   } else {
-    modelName = 'gemini-2.5-flash';
+    modelName = 'gemini-3.8-flash';
   }
 
   config.systemInstruction = activeSystemInstruction;
@@ -246,17 +255,29 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
       config,
     });
   } catch (err: any) {
-    // If search tool or thinking failed, retry with pure text gemini-2.5-flash
-    console.warn('Stream failed with initial config, retrying with pure model:', err?.message);
-    const fallbackConfig: any = {
-      systemInstruction: activeSystemInstruction,
-    };
-    responseStream = await ai.models.generateContentStream({
-      model: 'gemini-2.5-flash',
-      contents,
-      config: fallbackConfig,
-    });
-    modelName = 'gemini-2.5-flash';
+    console.warn('Primary stream failed with gemini-3.8-flash, falling back to gemini-3.1-flash-lite:', err?.message);
+    try {
+      modelName = 'gemini-3.1-flash-lite';
+      const fallbackConfig: any = {
+        systemInstruction: activeSystemInstruction,
+      };
+      if (isSearchActive) {
+        fallbackConfig.tools = [{ googleSearch: {} }];
+      }
+      responseStream = await ai.models.generateContentStream({
+        model: modelName,
+        contents,
+        config: fallbackConfig,
+      });
+    } catch (fallbackErr: any) {
+      console.warn('Fallback to gemini-3.1-flash-lite failed, falling back to pure gemini-flash-latest:', fallbackErr?.message);
+      modelName = 'gemini-flash-latest';
+      responseStream = await ai.models.generateContentStream({
+        model: modelName,
+        contents,
+        config: { systemInstruction: activeSystemInstruction },
+      });
+    }
   }
 
   const groundingLinks: Array<{ title?: string; uri: string }> = [];
@@ -305,18 +326,18 @@ export async function generateChatResponse(options: GenerateOptions) {
   const ai = getGeminiClient();
   const { messages, mode = 'search', systemInstruction, location, webSearch = true, deviceTime } = options;
 
-  let modelName = 'gemini-2.5-flash';
+  let modelName = 'gemini-3.8-flash';
   const config: any = {};
   const activeSystemInstruction = buildSystemInstruction(deviceTime, systemInstruction);
   const isSearchActive = webSearch !== false;
 
   if (mode === 'thinking') {
-    modelName = 'gemini-2.5-flash';
+    modelName = 'gemini-3.8-flash';
     config.thinkingConfig = {
       thinkingLevel: ThinkingLevel.HIGH,
     };
   } else if (mode === 'maps') {
-    modelName = 'gemini-2.5-flash';
+    modelName = 'gemini-3.8-flash';
     config.tools = [{ googleMaps: {} }];
     if (location) {
       config.toolConfig = {
@@ -326,10 +347,10 @@ export async function generateChatResponse(options: GenerateOptions) {
       };
     }
   } else if (isSearchActive) {
-    modelName = 'gemini-2.5-flash';
+    modelName = 'gemini-3.8-flash';
     config.tools = [{ googleSearch: {} }];
   } else {
-    modelName = 'gemini-2.5-flash';
+    modelName = 'gemini-3.8-flash';
   }
 
   config.systemInstruction = activeSystemInstruction;
@@ -350,16 +371,29 @@ export async function generateChatResponse(options: GenerateOptions) {
       config,
     });
   } catch (err: any) {
-    console.warn('generateContent failed with initial config, retrying pure model:', err?.message);
-    const fallbackConfig: any = {
-      systemInstruction: activeSystemInstruction,
-    };
-    response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents,
-      config: fallbackConfig,
-    });
-    modelName = 'gemini-2.5-flash';
+    console.warn('generateContent failed with gemini-3.8-flash, falling back to gemini-3.1-flash-lite:', err?.message);
+    try {
+      modelName = 'gemini-3.1-flash-lite';
+      const fallbackConfig: any = {
+        systemInstruction: activeSystemInstruction,
+      };
+      if (isSearchActive) {
+        fallbackConfig.tools = [{ googleSearch: {} }];
+      }
+      response = await ai.models.generateContent({
+        model: modelName,
+        contents,
+        config: fallbackConfig,
+      });
+    } catch (fallbackErr: any) {
+      console.warn('Fallback to gemini-3.1-flash-lite failed, falling back to gemini-flash-latest:', fallbackErr?.message);
+      modelName = 'gemini-flash-latest';
+      response = await ai.models.generateContent({
+        model: modelName,
+        contents,
+        config: { systemInstruction: activeSystemInstruction },
+      });
+    }
   }
 
   const rawText = response.text || '';

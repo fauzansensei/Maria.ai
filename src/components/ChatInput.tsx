@@ -187,6 +187,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     const contentToSend = overrideText !== undefined ? overrideText : text;
     if ((!contentToSend.trim() && attachments.length === 0) || isLoading) return;
 
+    // Pre-unlock audio permissions on user gesture for seamless autoplay
+    speechService.unlockAudio();
+
     // Send message with webSearchActive state
     const effectiveMode = webSearchActive && activeMode === 'general' ? 'search' : activeMode;
     onSendMessage(
