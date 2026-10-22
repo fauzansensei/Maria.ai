@@ -42,81 +42,6 @@ interface ChatInputProps {
   onClearLoadedText?: () => void;
 }
 
-/**
- * WhatsApp-Style Rich Text Renderer
- * Live in-place formatting for WhatsApp markdown:
- * - *tebal* -> bold
- * - _miring_ -> italic
- * - ~coret~ -> strikethrough
- * - `kode` -> inline code
- * - ```blok kode``` -> code block
- */
-function renderWhatsAppFormattedText(content: string): React.ReactNode {
-  if (!content) return null;
-
-  const regex = /(```[\s\S]+?```|`[^`\n]+`|\*[^\s*](?:[^*]*?[^\s*])?\*|_[^\s_](?:[^_]*?[^\s_])?_|~[^\s~](?:[^~]*?[^\s~])?~)/g;
-  const parts = content.split(regex);
-
-  return parts.map((part, index) => {
-    if (!part) return null;
-
-    if (part.startsWith('```') && part.endsWith('```') && part.length >= 6) {
-      return (
-        <code key={index} className="font-mono bg-blue-100/70 dark:bg-blue-900/40 text-blue-900 dark:text-blue-200 px-1 py-0.5 rounded text-xs">
-          {part}
-        </code>
-      );
-    }
-
-    if (part.startsWith('`') && part.endsWith('`') && part.length >= 2) {
-      return (
-        <code key={index} className="font-mono bg-blue-100/70 dark:bg-blue-900/40 text-blue-900 dark:text-blue-200 px-1 py-0.5 rounded text-xs">
-          {part}
-        </code>
-      );
-    }
-
-    if (part.startsWith('*') && part.endsWith('*') && part.length >= 3) {
-      const inner = part.slice(1, -1);
-      return (
-        <span key={index} className="font-bold text-[#0f172a] dark:text-white">
-          <span className="text-slate-400 font-normal select-none">*</span>
-          {inner}
-          <span className="text-slate-400 font-normal select-none">*</span>
-        </span>
-      );
-    }
-
-    if (part.startsWith('_') && part.endsWith('_') && part.length >= 3) {
-      const inner = part.slice(1, -1);
-      return (
-        <span key={index} className="italic text-[#0f172a] dark:text-white">
-          <span className="text-slate-400 not-italic select-none">_</span>
-          {inner}
-          <span className="text-slate-400 not-italic select-none">_</span>
-        </span>
-      );
-    }
-
-    if (part.startsWith('~') && part.endsWith('~') && part.length >= 3) {
-      const inner = part.slice(1, -1);
-      return (
-        <span key={index} className="line-through text-[#0f172a] dark:text-white">
-          <span className="text-slate-400 no-underline inline-block select-none">~</span>
-          {inner}
-          <span className="text-slate-400 no-underline inline-block select-none">~</span>
-        </span>
-      );
-    }
-
-    return (
-      <span key={index} className="text-[#0f172a] dark:text-white">
-        {part}
-      </span>
-    );
-  });
-}
-
 export const ChatInput: React.FC<ChatInputProps> = ({
   onSendMessage,
   isLoading,
@@ -141,7 +66,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   });
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const backdropRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -551,40 +475,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           />
         </button>
 
-        {/* WhatsApp-Style Live Rich Formatting Input Container */}
-        <div className="relative flex-1 min-h-[36px] flex items-center overflow-hidden">
-          {/* Synchronized live formatting backdrop (renders *bold*, _italic_, ~strike~, `code` in-place) */}
-          {text ? (
-            <div
-              ref={backdropRef}
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 py-1.5 px-1.5 text-sm font-sans leading-relaxed whitespace-pre-wrap break-words overflow-hidden select-none"
-            >
-              {renderWhatsAppFormattedText(text)}
-            </div>
-          ) : null}
-
-          {/* Interactive Textarea with Caret and Focus */}
-          <textarea
-            ref={textareaRef}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            onScroll={(e) => {
-              if (backdropRef.current) {
-                backdropRef.current.scrollTop = e.currentTarget.scrollTop;
-              }
-            }}
-            placeholder="Tanya Maria..."
-            rows={1}
-            className={`w-full bg-transparent border-0 resize-none py-1.5 px-1.5 text-sm font-sans leading-relaxed focus:outline-none max-h-32 ${
-              text
-                ? 'text-transparent caret-blue-600 dark:caret-blue-400'
-                : 'text-[#0f172a] dark:text-white placeholder-slate-400 dark:placeholder-slate-500'
-            }`}
-          />
-        </div>
+        {/* Native Text Input - Perfect Caret Alignment & Multi-line Support */}
+        <textarea
+          ref={textareaRef}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          placeholder="Tanya Maria..."
+          rows={1}
+          className="flex-1 bg-transparent border-0 resize-none py-1.5 px-1.5 text-sm text-[#0f172a] dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none max-h-32 leading-relaxed"
+        />
 
         {/* Right Section: Divider | Mic | Waveform/Send Button */}
         <div className="flex items-center gap-1.5 shrink-0">

@@ -598,6 +598,14 @@ function AppContent() {
 
           setIsLoading(false); // Stop loading indicator immediately as tokens begin streaming
 
+          // Start instant real-time streaming speech immediately as tokens begin
+          if (isVoiceAuto) {
+            speechService.startStreaming(streamAiId, {
+              speed: settings.speechSpeed || '1x',
+              personaId: settings.voicePersona || 'wanita',
+            });
+          }
+
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -616,6 +624,12 @@ function AppContent() {
                 if (parsed.type === 'chunk' && parsed.text) {
                   fullText += parsed.text;
                   if (parsed.model) streamModel = parsed.model;
+
+                  // Real-time zero-delay speech chunk feeding
+                  if (isVoiceAuto) {
+                    speechService.feedStreamChunk(fullText);
+                  }
+
                   setMessages((prev) =>
                     prev.map((m) =>
                       m.id === streamAiId
@@ -644,6 +658,11 @@ function AppContent() {
           }
 
           if (fullText.trim()) {
+            // Finalize streaming speech so remaining sentence is spoken to the very end
+            if (isVoiceAuto) {
+              speechService.endStream(fullText);
+            }
+
             if (user && currentConvId) {
               await addMessage(currentConvId, user.uid, {
                 role: 'model',
@@ -651,16 +670,6 @@ function AppContent() {
                 model: streamModel,
                 groundingLinks:
                   streamGroundingLinks.length > 0 ? streamGroundingLinks : undefined,
-              });
-            }
-
-            if (isVoiceAuto) {
-              speechService.speak(fullText, {
-                messageId: streamAiId,
-                speed: settings.speechSpeed || '1x',
-                voiceName: activeVoiceName,
-                personaId: settings.voicePersona || 'wanita',
-                ttsModel: settings.ttsModel || 'gemini-3.8-flash-lite-tts',
               });
             }
 
