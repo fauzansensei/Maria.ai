@@ -104,6 +104,39 @@ const HighResImage: React.FC<{
   );
 };
 
+// Subcomponent to render live website favicon for Google Search grounding sources
+const SourceFavicon: React.FC<{ uri: string; title?: string }> = ({ uri, title }) => {
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  let hostname = '';
+  try {
+    hostname = new URL(uri).hostname;
+  } catch {
+    hostname = '';
+  }
+
+  if (uri.includes('google.com/maps')) {
+    return <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />;
+  }
+
+  if (!hostname || loadFailed) {
+    return <Globe className="w-3.5 h-3.5 text-blue-500 shrink-0" />;
+  }
+
+  // Google Favicon service with 32px resolution
+  const faviconUrl = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=32`;
+
+  return (
+    <img
+      src={faviconUrl}
+      alt={title || hostname}
+      onError={() => setLoadFailed(true)}
+      className="w-3.5 h-3.5 rounded-xs object-contain shrink-0"
+      loading="lazy"
+    />
+  );
+};
+
 export const MessageItem: React.FC<MessageItemProps> = ({
   message,
   userPhoto,
@@ -321,7 +354,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   remarkPlugins={[remarkGfm]}
                   components={{
                     p({ children }: any) {
-                      return <p className="mb-1.5 last:mb-0 leading-relaxed">{children}</p>;
+                      return <div className="mb-1.5 last:mb-0 leading-relaxed">{children}</div>;
+                    },
+                    pre({ children }: any) {
+                      return <>{children}</>;
                     },
                     strong({ children }: any) {
                       return <strong className="font-bold text-[#0f172a]">{children}</strong>;
@@ -481,7 +517,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 );
               },
               p({ children }: any) {
-                return <p className="mb-3 last:mb-0 text-[#1e293b] font-normal leading-relaxed">{children}</p>;
+                return <div className="mb-3 last:mb-0 text-[#1e293b] font-normal leading-relaxed">{children}</div>;
+              },
+              pre({ children }: any) {
+                return <>{children}</>;
               },
               strong({ children }: any) {
                 return <strong className="font-bold text-[#0f172a]">{children}</strong>;
@@ -583,11 +622,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   className="flex items-center justify-between gap-2 p-2 rounded-xl text-xs bg-slate-50 hover:bg-blue-50/60 border border-slate-200 hover:border-blue-300 transition-all shadow-2xs group/link"
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    {link.uri.includes('google.com/maps') ? (
-                      <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                    ) : (
-                      <Globe className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                    )}
+                    <SourceFavicon uri={link.uri} title={link.title} />
                     <span className="truncate text-slate-800 group-hover/link:text-blue-600 font-medium">
                       {link.title || link.uri}
                     </span>
