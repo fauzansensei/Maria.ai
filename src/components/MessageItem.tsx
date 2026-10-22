@@ -17,6 +17,7 @@ import {
   Eye,
   Pencil,
   RotateCcw,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { Message, MediaAttachment } from '../types/index.ts';
 import { MariaLogo } from './MariaLogo.tsx';
@@ -48,9 +49,11 @@ const HighResImage: React.FC<{
       getOriginalMedia(img.id) ||
       getOriginalMedia(img.name) ||
       (img.base64Data ? `data:${img.mimeType || 'image/jpeg'};base64,${img.base64Data}` : '') ||
-      img.previewUrl
+      img.previewUrl ||
+      ''
     );
   });
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -58,6 +61,7 @@ const HighResImage: React.FC<{
       const blobUrl = (await getOriginalMediaBlob(img.id)) || (await getOriginalMediaBlob(img.name));
       if (blobUrl && isMounted) {
         setResolvedUrl(blobUrl);
+        setLoadError(false);
       }
     })();
     return () => {
@@ -65,10 +69,34 @@ const HighResImage: React.FC<{
     };
   }, [img.id, img.name]);
 
+  if (loadError || !resolvedUrl) {
+    return (
+      <div
+        onClick={() => resolvedUrl && onOpenLightbox(resolvedUrl)}
+        className={`${className} flex flex-col items-center justify-center bg-blue-50/50 dark:bg-slate-800 text-slate-500 rounded-xl p-3 border border-blue-200/50 dark:border-slate-700 cursor-pointer`}
+      >
+        <ImageIcon className="w-6 h-6 mb-1 text-blue-400" />
+        <span className="text-[11px] font-medium truncate max-w-full text-slate-700 dark:text-slate-300">
+          {img.name || 'Gambar'}
+        </span>
+        {img.size ? (
+          <span className="text-[9px] text-slate-400">{formatBytes(img.size)}</span>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <img
       src={resolvedUrl}
       alt={img.name}
+      onError={() => {
+        if (img.previewUrl && resolvedUrl !== img.previewUrl && img.previewUrl.length > 50) {
+          setResolvedUrl(img.previewUrl);
+        } else {
+          setLoadError(true);
+        }
+      }}
       onClick={() => onOpenLightbox(resolvedUrl)}
       className={className}
       style={{ imageRendering: 'auto' }}
@@ -222,14 +250,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 {images.map((img) => (
                   <div
                     key={img.id}
-                    onClick={() =>
-                      setLightboxMedia({
-                        url: img.originalUrl || img.previewUrl,
-                        type: 'image',
-                        name: img.name,
-                        size: img.size,
-                      })
-                    }
                     className="relative rounded-xl overflow-hidden cursor-pointer group/img border border-blue-200 aspect-video bg-black/5"
                   >
                     <HighResImage

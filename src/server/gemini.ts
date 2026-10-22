@@ -352,7 +352,7 @@ export async function generateChatResponse(options: GenerateOptions) {
   } catch (err: any) {
     console.warn('generateContent failed with initial config, retrying pure model:', err?.message);
     const fallbackConfig: any = {
-      systemInstruction: systemInstruction || defaultSystemInstruction,
+      systemInstruction: activeSystemInstruction,
     };
     response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',

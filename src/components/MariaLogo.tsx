@@ -37,56 +37,62 @@ export const MariaLogo: React.FC<MariaLogoProps> = ({
         className="w-full h-full"
       >
         <defs>
-          <linearGradient id="maria-tile-bg" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#1e2538" />
-            <stop offset="100%" stopColor="#101524" />
+          <linearGradient id="maria-logo-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1a233e" />
+            <stop offset="100%" stopColor="#13192f" />
           </linearGradient>
         </defs>
 
-        {/* Outer Rounded Dark Squircle Tile */}
+        {/* Outer Squircle Dark Navy Background */}
         <rect
-          x="3"
-          y="3"
-          width="94"
-          height="94"
+          x="2"
+          y="2"
+          width="96"
+          height="96"
           rx="26"
-          fill="url(#maria-tile-bg)"
+          fill="url(#maria-logo-bg)"
         />
 
-        {/* Inner Circle Ring */}
+        {/* Inner Silver-Blue Circle Ring */}
         <circle
           cx="50"
           cy="50"
-          r="30"
-          stroke="#ffffff"
-          strokeWidth="2.2"
-          strokeOpacity="0.88"
+          r="28.5"
+          stroke="#b8c5d6"
+          strokeWidth="2"
+          fill="none"
         />
 
-        {/* Diagonal Ray cutting through */}
+        {/* Diagonal Coral Pink Slash (Bottom-Left to Top-Right with gap for M) */}
         <line
-          x1="22"
-          y1="76"
-          x2="78"
-          y2="24"
-          stroke="#ffffff"
-          strokeWidth="1.2"
-          strokeOpacity="0.75"
-        />
-
-        {/* Top-Right Star Sparkle on the ray */}
-        <path
-          d="M78 24L80 20L82 24L86 26L82 28L80 32L78 28L74 26Z"
-          fill="#ffffff"
-        />
-
-        {/* Stylized Capital Letter "M" */}
-        <path
-          d="M33 65V35L42 50L50 62L58 50L67 35V65"
-          stroke="#ffffff"
-          strokeWidth="4"
+          x1="29.5"
+          y1="77"
+          x2="45.5"
+          y2="61"
+          stroke="#f39296"
+          strokeWidth="2.2"
           strokeLinecap="round"
-          strokeLinejoin="round"
+        />
+        <line
+          x1="58.5"
+          y1="36"
+          x2="70.5"
+          y2="24"
+          stroke="#f39296"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+        />
+
+        {/* Top-Right 4-Point Sparkle Star */}
+        <path
+          d="M76.5 30.5 Q76.5 33.5 79.5 33.5 Q76.5 33.5 76.5 36.5 Q76.5 33.5 73.5 33.5 Q76.5 33.5 76.5 30.5 Z"
+          fill="#f39296"
+        />
+
+        {/* Solid Bold Capital Letter M */}
+        <path
+          d="M40 39 H44.2 L50 51.5 L55.8 39 H60 V61 H56.2 V45.2 L51.6 55.2 H48.4 L43.8 45.2 V61 H40 Z"
+          fill="#ffffff"
         />
       </svg>
 

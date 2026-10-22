@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Deep Navy Blue Squircle Background -->
+  <rect width="100" height="100" rx="26" fill="#161e36"/>
+  
+  <!-- Silver-blue Circle Ring -->
+  <circle cx="50" cy="50" r="28.5" stroke="#b8c5d6" stroke-width="2" fill="none"/>
+  
+  <!-- Diagonal Coral Pink Slash (Bottom-Left to Top-Right with gap for M) -->
+  <line x1="29.5" y1="77" x2="45.5" y2="61" stroke="#f39296" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="58.5" y1="36" x2="70.5" y2="24" stroke="#f39296" stroke-width="2.2" stroke-linecap="round"/>
+  
+  <!-- Top-Right 4-Point Sparkle Star -->
+  <path d="M76.5 30.5 Q76.5 33.5 79.5 33.5 Q76.5 33.5 76.5 36.5 Q76.5 33.5 73.5 33.5 Q76.5 33.5 76.5 30.5 Z" fill="#f39296"/>
+  
+  <!-- Solid Bold Capital Letter M -->
+  <path d="M40 39 H44.2 L50 51.5 L55.8 39 H60 V61 H56.2 V45.2 L51.6 55.2 H48.4 L43.8 45.2 V61 H40 Z" fill="#ffffff"/>
+</svg>

@@ -10,12 +10,8 @@ import {
   Globe,
   Dna,
   X,
-  Sparkles,
   Camera,
 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { autoFormatMarkdown, hasFormattingSyntax } from '../lib/formatUtils.ts';
 import { AiMode, MediaAttachment } from '../types/index.ts';
 import { speechService } from '../lib/speechService.ts';
 import {
@@ -46,6 +42,81 @@ interface ChatInputProps {
   onClearLoadedText?: () => void;
 }
 
+/**
+ * WhatsApp-Style Rich Text Renderer
+ * Live in-place formatting for WhatsApp markdown:
+ * - *tebal* -> bold
+ * - _miring_ -> italic
+ * - ~coret~ -> strikethrough
+ * - `kode` -> inline code
+ * - ```blok kode``` -> code block
+ */
+function renderWhatsAppFormattedText(content: string): React.ReactNode {
+  if (!content) return null;
+
+  const regex = /(```[\s\S]+?```|`[^`\n]+`|\*[^\s*](?:[^*]*?[^\s*])?\*|_[^\s_](?:[^_]*?[^\s_])?_|~[^\s~](?:[^~]*?[^\s~])?~)/g;
+  const parts = content.split(regex);
+
+  return parts.map((part, index) => {
+    if (!part) return null;
+
+    if (part.startsWith('```') && part.endsWith('```') && part.length >= 6) {
+      return (
+        <code key={index} className="font-mono bg-blue-100/70 dark:bg-blue-900/40 text-blue-900 dark:text-blue-200 px-1 py-0.5 rounded text-xs">
+          {part}
+        </code>
+      );
+    }
+
+    if (part.startsWith('`') && part.endsWith('`') && part.length >= 2) {
+      return (
+        <code key={index} className="font-mono bg-blue-100/70 dark:bg-blue-900/40 text-blue-900 dark:text-blue-200 px-1 py-0.5 rounded text-xs">
+          {part}
+        </code>
+      );
+    }
+
+    if (part.startsWith('*') && part.endsWith('*') && part.length >= 3) {
+      const inner = part.slice(1, -1);
+      return (
+        <span key={index} className="font-bold text-[#0f172a] dark:text-white">
+          <span className="text-slate-400 font-normal select-none">*</span>
+          {inner}
+          <span className="text-slate-400 font-normal select-none">*</span>
+        </span>
+      );
+    }
+
+    if (part.startsWith('_') && part.endsWith('_') && part.length >= 3) {
+      const inner = part.slice(1, -1);
+      return (
+        <span key={index} className="italic text-[#0f172a] dark:text-white">
+          <span className="text-slate-400 not-italic select-none">_</span>
+          {inner}
+          <span className="text-slate-400 not-italic select-none">_</span>
+        </span>
+      );
+    }
+
+    if (part.startsWith('~') && part.endsWith('~') && part.length >= 3) {
+      const inner = part.slice(1, -1);
+      return (
+        <span key={index} className="line-through text-[#0f172a] dark:text-white">
+          <span className="text-slate-400 no-underline inline-block select-none">~</span>
+          {inner}
+          <span className="text-slate-400 no-underline inline-block select-none">~</span>
+        </span>
+      );
+    }
+
+    return (
+      <span key={index} className="text-[#0f172a] dark:text-white">
+        {part}
+      </span>
+    );
+  });
+}
+
 export const ChatInput: React.FC<ChatInputProps> = ({
   onSendMessage,
   isLoading,
@@ -70,6 +141,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   });
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -339,19 +411,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <span>{webSearchActive ? 'Cari Web: Aktif' : 'Cari Web: Nonaktif'}</span>
           </button>
 
-          {/* Quick Auto-Format Guide Badge (No manual button clicking needed) */}
-          <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
-            <span>Format otomatis:</span>
-            <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-              *tebal*
-            </span>
-            <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-              ~coret~
-            </span>
-            <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-              `kode`
-            </span>
-          </div>
         </div>
 
         {/* Active Mode indicator badge if non-standard */}
@@ -361,34 +420,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           </span>
         )}
       </div>
-
-      {/* Automatic Live Real-time Text Format Preview (Appears automatically when *test*, ~test~, or `test` is typed) */}
-      {hasFormattingSyntax(text) && (
-        <div className="mb-2 px-3 py-1.5 rounded-xl bg-blue-50/90 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/50 shadow-2xs flex items-center gap-2 text-xs animate-in fade-in slide-in-from-bottom-1 select-text">
-          <div className="flex items-center gap-1 font-bold text-[10px] uppercase text-blue-700 dark:text-blue-300 tracking-wider shrink-0">
-            <Sparkles className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-            <span>Format Otomatis:</span>
-          </div>
-          <div className="flex-1 text-[#0f172a] dark:text-slate-200 text-xs font-normal truncate leading-relaxed">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                p: ({ children }) => <span className="inline">{children}</span>,
-                strong: ({ children }) => <strong className="font-bold text-blue-950 dark:text-white">{children}</strong>,
-                em: ({ children }) => <em className="italic">{children}</em>,
-                del: ({ children }) => <del className="line-through opacity-70">{children}</del>,
-                code: ({ children }) => (
-                  <code className="px-1.5 py-0.5 rounded font-mono text-[11px] bg-blue-100 dark:bg-blue-900/60 text-blue-900 dark:text-blue-200 border border-blue-200 dark:border-blue-800">
-                    {children}
-                  </code>
-                ),
-              }}
-            >
-              {autoFormatMarkdown(text)}
-            </ReactMarkdown>
-          </div>
-        </div>
-      )}
 
       {/* Attachments Menu Popover */}
       {isAttachmentOpen && (
@@ -520,17 +551,40 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           />
         </button>
 
-        {/* Text Input */}
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          placeholder="Tanya Maria..."
-          rows={1}
-          className="flex-1 bg-transparent border-0 resize-none py-1.5 px-1.5 text-sm text-[#0f172a] dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none max-h-32 leading-relaxed"
-        />
+        {/* WhatsApp-Style Live Rich Formatting Input Container */}
+        <div className="relative flex-1 min-h-[36px] flex items-center overflow-hidden">
+          {/* Synchronized live formatting backdrop (renders *bold*, _italic_, ~strike~, `code` in-place) */}
+          {text ? (
+            <div
+              ref={backdropRef}
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 py-1.5 px-1.5 text-sm font-sans leading-relaxed whitespace-pre-wrap break-words overflow-hidden select-none"
+            >
+              {renderWhatsAppFormattedText(text)}
+            </div>
+          ) : null}
+
+          {/* Interactive Textarea with Caret and Focus */}
+          <textarea
+            ref={textareaRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            onScroll={(e) => {
+              if (backdropRef.current) {
+                backdropRef.current.scrollTop = e.currentTarget.scrollTop;
+              }
+            }}
+            placeholder="Tanya Maria..."
+            rows={1}
+            className={`w-full bg-transparent border-0 resize-none py-1.5 px-1.5 text-sm font-sans leading-relaxed focus:outline-none max-h-32 ${
+              text
+                ? 'text-transparent caret-blue-600 dark:caret-blue-400'
+                : 'text-[#0f172a] dark:text-white placeholder-slate-400 dark:placeholder-slate-500'
+            }`}
+          />
+        </div>
 
         {/* Right Section: Divider | Mic | Waveform/Send Button */}
         <div className="flex items-center gap-1.5 shrink-0">
