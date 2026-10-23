@@ -12,6 +12,7 @@ import { Conversation, Message, AiMode, UserSettings, MediaAttachment } from './
 import { DEFAULT_SETTINGS, VOICE_PERSONAS } from './constants.ts';
 import { speechService } from './lib/speechService.ts';
 import { optimizeCookies, pruneLocalStorageBloat } from './lib/storageOptimizer.ts';
+import { detectLaunchAction, executeLaunch, LaunchAction } from './lib/actionLauncher.ts';
 import {
   subscribeConversations,
   subscribeMessages,
@@ -27,6 +28,7 @@ import {
 function AppContent() {
   const { user } = useAuth();
   const { setTheme } = useTheme();
+  const [activeConnectingAction, setActiveConnectingAction] = useState<LaunchAction | null>(null);
 
   // Enforce super-compact 1-byte micro cookies and clean storage on launch
   useEffect(() => {
@@ -387,6 +389,13 @@ function AppContent() {
     // Pre-unlock audio context within user gesture
     speechService.unlockAudio();
 
+    // Detect Windows Open action (Music, Discord, YouTube, external sites)
+    const launchAction = detectLaunchAction(content);
+    if (launchAction) {
+      setActiveConnectingAction(launchAction);
+      executeLaunch(launchAction);
+    }
+
     setIsLoading(true);
     setActiveView('chat');
 
@@ -565,7 +574,7 @@ function AppContent() {
       let streamedSuccess = false;
       const streamAiId = `ai_${Date.now()}`;
       let fullText = '';
-      let streamModel = webSearchEnabled ? 'gemini-3.8-flash' : 'gemini-3.1-flash-lite';
+      let streamModel = webSearchEnabled ? 'gemini-flash-latest' : 'gemini-3.1-flash-lite';
       let streamGroundingLinks: any[] = [];
 
       try {
@@ -595,6 +604,7 @@ function AppContent() {
             content: '',
             model: streamModel,
             mode,
+            launchAction: launchAction || undefined,
             createdAt: new Date(),
           };
 
@@ -737,6 +747,7 @@ function AppContent() {
           mode,
           groundingLinks: data.groundingLinks,
           audioUri: data.audioUrl,
+          launchAction: launchAction || undefined,
           createdAt: new Date(),
         };
 
@@ -792,6 +803,7 @@ function AppContent() {
         setGuestMessages((prev) => [...prev, errorMessageObj]);
       }
     } finally {
+      setActiveConnectingAction(null);
       setIsLoading(false);
     }
   };
@@ -843,6 +855,7 @@ function AppContent() {
             onEditMessage={handleEditMessage}
             userPhoto={user?.photoURL}
             userName={user?.displayName}
+            activeConnectingAction={activeConnectingAction}
           />
         )}
 

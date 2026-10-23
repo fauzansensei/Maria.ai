@@ -11,7 +11,7 @@ import {
   Check,
   ChevronDown,
 } from 'lucide-react';
-import { Message, Conversation, AiMode, MediaAttachment, VoicePersonaGender } from '../types/index.ts';
+import { Message, Conversation, AiMode, MediaAttachment, VoicePersonaGender, LaunchAction } from '../types/index.ts';
 import { VOICE_PERSONAS } from '../constants.ts';
 import { MessageItem } from './MessageItem.tsx';
 import { ChatInput } from './ChatInput.tsx';
@@ -40,6 +40,7 @@ interface ChatAreaProps {
   onEditMessage?: (messageId: string, newContent: string, resend: boolean) => void;
   userPhoto?: string | null;
   userName?: string | null;
+  activeConnectingAction?: LaunchAction | null;
 }
 
 interface NotificationItem {
@@ -65,6 +66,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   onEditMessage,
   userPhoto,
   userName,
+  activeConnectingAction,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [speechState, setSpeechState] = useState<SpeechState>(() => speechService.getState());
@@ -277,10 +279,17 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             {isLoading && (
               <div className="py-4 px-6 flex items-center gap-3 animate-in fade-in">
                 <MariaLogo size="sm" />
-                <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white dark:bg-[#0e172e] border border-blue-200/80 dark:border-[#1e2d4d] text-xs text-blue-900 dark:text-blue-200 shadow-sm">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping" />
-                  <span className="font-medium">Maria sedang mencari & merumuskan jawaban...</span>
-                </div>
+                {activeConnectingAction ? (
+                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#1e2330] border border-slate-700 text-xs text-white shadow-sm">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping shrink-0" />
+                    <span className="font-medium">{activeConnectingAction.statusText}...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white dark:bg-[#0e172e] border border-blue-200/80 dark:border-[#1e2d4d] text-xs text-blue-900 dark:text-blue-200 shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping" />
+                    <span className="font-medium">Maria sedang mencari & merumuskan jawaban...</span>
+                  </div>
+                )}
               </div>
             )}
 

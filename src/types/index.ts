@@ -17,6 +17,9 @@ export interface MediaAttachment {
   duration?: number;
 }
 
+import { LaunchAction } from '../lib/actionLauncher.ts';
+export type { LaunchAction };
+
 export interface Message {
   id: string;
   conversationId: string;
@@ -31,6 +34,7 @@ export interface Message {
   groundingLinks?: GroundingLink[];
   thinkingProcess?: string;
   audioUri?: string;
+  launchAction?: LaunchAction;
   editedAt?: any;
   createdAt: any;
 }
