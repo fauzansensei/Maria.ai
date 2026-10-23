@@ -192,6 +192,7 @@ export function subscribeMessages(
           groundingLinks: data.groundingLinks,
           thinkingProcess: data.thinkingProcess,
           audioUri: data.audioUri,
+          launchAction: data.launchAction,
           createdAt: data.createdAt,
         };
       });
@@ -218,6 +219,7 @@ export async function addMessage(
     groundingLinks?: any[];
     thinkingProcess?: string;
     audioUri?: string;
+    launchAction?: any;
   }
 ): Promise<string> {
   const messageId = generateId('msg');
@@ -248,6 +250,9 @@ export async function addMessage(
     }
     if (message.audioUri) {
       dataToSave.audioUri = message.audioUri.slice(0, 48000);
+    }
+    if (message.launchAction) {
+      dataToSave.launchAction = message.launchAction;
     }
 
     if (message.attachments && Array.isArray(message.attachments) && message.attachments.length > 0) {

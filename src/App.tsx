@@ -301,26 +301,71 @@ function AppContent() {
       const personaObj = VOICE_PERSONAS.find((p) => p.id === (settings.voicePersona || 'wanita'));
       const activeVoiceName = personaObj?.geminiVoice || settings.geminiVoice || 'Aoede';
 
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: historyTurns,
-          mode: targetMessage.mode || activeMode,
-          location: undefined,
-          withVoice: isVoiceAuto,
-          voiceName: activeVoiceName,
-          personaId: settings.voicePersona || 'wanita',
-        }),
-      });
+      // Check if edited message contains launch action (e.g. music or app open)
+      const editLaunchAction = detectLaunchAction(newContent);
+      if (editLaunchAction) {
+        executeLaunch(editLaunchAction);
+      }
 
-      if (!response.ok) {
+      // Resilient fetch with automatic retry for transient network reconnections
+      let response: Response | null = null;
+      let lastFetchError: any = null;
+
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              messages: historyTurns,
+              mode: targetMessage.mode || activeMode,
+              location: undefined,
+              withVoice: isVoiceAuto,
+              voiceName: activeVoiceName,
+              personaId: settings.voicePersona || 'wanita',
+            }),
+          });
+          if (response.ok) break;
+        } catch (fetchErr: any) {
+          lastFetchError = fetchErr;
+          if (attempt === 0) {
+            await new Promise((r) => setTimeout(r, 600)); // Brief backoff for reconnection
+          }
+        }
+      }
+
+      if (!response || !response.ok) {
         let errMessage = 'Gagal mengambil jawaban AI.';
         try {
-          const errData = await response.json();
-          if (errData.error) errMessage = errData.error;
+          if (response) {
+            const errData = await response.json();
+            if (errData.error) errMessage = errData.error;
+          } else if (lastFetchError?.message) {
+            errMessage = `Koneksi terputus: ${lastFetchError.message}`;
+          }
         } catch {}
-        throw new Error(errMessage);
+
+        const errorNotice: Message = {
+          id: `ai_${Date.now()}`,
+          conversationId: activeConvId || 'guest_conv',
+          userId: user ? user.uid : 'guest',
+          role: 'model',
+          content: `Mohon maaf, terjadi kendala saat memproses pesan: ${errMessage}. Silakan coba kirim ulang.`,
+          model: 'system',
+          createdAt: new Date(),
+        };
+
+        if (user && activeConvId) {
+          await addMessage(activeConvId, user.uid, {
+            role: 'model',
+            content: errorNotice.content,
+            model: errorNotice.model,
+          }).catch(() => {});
+        } else {
+          setGuestMessages((prev) => [...prev, errorNotice]);
+        }
+        setMessages((prev) => [...prev, errorNotice]);
+        return;
       }
 
       const data = await response.json();
@@ -335,6 +380,7 @@ function AppContent() {
         mode: targetMessage.mode || activeMode,
         groundingLinks: data.groundingLinks,
         audioUri: data.audioUrl,
+        launchAction: editLaunchAction || undefined,
         createdAt: new Date(),
       };
 
@@ -345,6 +391,7 @@ function AppContent() {
           model: modelMessageObj.model,
           groundingLinks: modelMessageObj.groundingLinks,
           audioUri: modelMessageObj.audioUri,
+          launchAction: modelMessageObj.launchAction ? { ...modelMessageObj.launchAction } : undefined,
         });
       } else {
         setGuestMessages((prev) => [...prev, modelMessageObj]);
@@ -370,7 +417,7 @@ function AppContent() {
         }
       }
     } catch (err: any) {
-      console.error('Error generating response for edited message:', err);
+      console.warn('Notice during message edit exchange:', err?.message || err);
     } finally {
       setIsLoading(false);
     }
@@ -681,6 +728,7 @@ function AppContent() {
                 model: streamModel,
                 groundingLinks:
                   streamGroundingLinks.length > 0 ? streamGroundingLinks : undefined,
+                launchAction: launchAction ? { ...launchAction } : undefined,
               });
             }
 
@@ -758,6 +806,7 @@ function AppContent() {
             model: modelMessageObj.model,
             groundingLinks: modelMessageObj.groundingLinks,
             audioUri: modelMessageObj.audioUri,
+            launchAction: modelMessageObj.launchAction ? { ...modelMessageObj.launchAction } : undefined,
           });
         } else {
           setGuestMessages((prev) => [...prev, modelMessageObj]);
