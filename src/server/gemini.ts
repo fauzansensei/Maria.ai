@@ -247,38 +247,31 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
   }
 
   let responseStream;
-  const modelsToTry = [modelName, 'gemini-3.8-flash', 'gemini-3.1-flash-lite'];
   let streamError: any = null;
 
-  for (const candidate of modelsToTry) {
+  try {
+    responseStream = await ai.models.generateContentStream({
+      model: modelName,
+      contents,
+      config,
+    });
+  } catch (err: any) {
+    streamError = err;
+    // Fallback: try pure model without tools if tools or config caused the issue
     try {
-      const activeConfig: any = { ...config };
       responseStream = await ai.models.generateContentStream({
-        model: candidate,
+        model: modelName,
         contents,
-        config: activeConfig,
+        config: { systemInstruction: activeSystemInstruction },
       });
-      modelName = candidate;
       streamError = null;
-      break;
-    } catch (err: any) {
-      streamError = err;
-      // Try next candidate without throwing or dumping verbose error to stderr
+    } catch (fallbackErr) {
+      streamError = fallbackErr;
     }
   }
 
   if (!responseStream) {
-    // Pure model fallback without tools
-    try {
-      responseStream = await ai.models.generateContentStream({
-        model: 'gemini-flash-latest',
-        contents,
-        config: { systemInstruction: activeSystemInstruction },
-      });
-      modelName = 'gemini-flash-latest';
-    } catch {
-      throw streamError || new Error('Gagal terhubung ke model Gemini.');
-    }
+    throw streamError || new Error('Gagal terhubung ke model Gemini.');
   }
 
   const groundingLinks: Array<{ title?: string; uri: string }> = [];
@@ -365,38 +358,30 @@ export async function generateChatResponse(options: GenerateOptions) {
   }
 
   let response;
-  const modelsToTry = [modelName, 'gemini-3.8-flash', 'gemini-3.1-flash-lite'];
   let lastError: any = null;
 
-  for (const candidate of modelsToTry) {
+  try {
+    response = await ai.models.generateContent({
+      model: modelName,
+      contents,
+      config,
+    });
+  } catch (err: any) {
+    lastError = err;
     try {
-      const activeConfig: any = { ...config };
       response = await ai.models.generateContent({
-        model: candidate,
+        model: modelName,
         contents,
-        config: activeConfig,
+        config: { systemInstruction: activeSystemInstruction },
       });
-      modelName = candidate;
       lastError = null;
-      break;
-    } catch (err: any) {
-      lastError = err;
-      // Try next candidate model smoothly
+    } catch (fallbackErr) {
+      lastError = fallbackErr;
     }
   }
 
   if (!response) {
-    // Pure model fallback
-    try {
-      response = await ai.models.generateContent({
-        model: 'gemini-flash-latest',
-        contents,
-        config: { systemInstruction: activeSystemInstruction },
-      });
-      modelName = 'gemini-flash-latest';
-    } catch {
-      throw lastError || new Error('Gagal terhubung ke model Gemini.');
-    }
+    throw lastError || new Error('Gagal terhubung ke model Gemini.');
   }
 
   const rawText = response.text || '';
@@ -660,63 +645,55 @@ export async function generateSpeechAudio(
     styleHint = 'Ceria, lincah, ingin tahu, penuh rasa penasaran dalam bahasa Indonesia';
   }
 
-  // 2. PRIMARY: Latest Gemini AI Voice Engine models
-  const primaryModel =
+  // 2. PRIMARY: Gemini AI Voice Engine
+  const targetTtsModel =
     preferredModel === 'gemini-3.8-flash-tts'
       ? 'gemini-3.8-flash-tts'
       : 'gemini-3.8-flash-lite-tts';
-  const alternateModel =
-    primaryModel === 'gemini-3.8-flash-lite-tts'
-      ? 'gemini-3.8-flash-tts'
-      : 'gemini-3.8-flash-lite-tts';
 
-  const geminiModels = [primaryModel, alternateModel];
   const ai = getGeminiClient();
 
-  for (const model of geminiModels) {
-    try {
-      const response = await ai.models.generateContent({
-        model,
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              {
-                text: cleanText,
-                speechMetadata: {
-                  style: styleHint,
-                },
+  try {
+    const response = await ai.models.generateContent({
+      model: targetTtsModel,
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: cleanText,
+              speechMetadata: {
+                style: styleHint,
               },
-            ],
-          },
-        ],
-        config: {
-          responseModalities: ['AUDIO'],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: selectedVoice },
             },
+          ],
+        },
+      ],
+      config: {
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: selectedVoice },
           },
         },
-      });
+      },
+    });
 
-      const base64Audio =
-        response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    const base64Audio =
+      response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
 
-      if (base64Audio) {
-        const result = {
-          audioUrl: `data:audio/wav;base64,${base64Audio}`,
-          model,
-          voice: selectedVoice,
-        };
-        // Store in cache
-        if (serverAudioCache.size > 200) serverAudioCache.clear();
-        serverAudioCache.set(cacheKey, result);
-        return result;
-      }
-    } catch {
-      // Free tier rate limit or transient pause: continue smoothly to fallback without noisy logging
+    if (base64Audio) {
+      const result = {
+        audioUrl: `data:audio/wav;base64,${base64Audio}`,
+        model: targetTtsModel,
+        voice: selectedVoice,
+      };
+      if (serverAudioCache.size > 200) serverAudioCache.clear();
+      serverAudioCache.set(cacheKey, result);
+      return result;
     }
+  } catch {
+    // Smoothly fall back to Neural Voice without noise
   }
 
   // 3. Fallback to Neural Voice (MsEdgeTTS) if Gemini TTS rate limit is reached
