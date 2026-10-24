@@ -263,7 +263,7 @@ export async function addMessage(
         size: typeof a.size === 'number' ? a.size : 0,
         mimeType: String(a.mimeType || 'image/jpeg').slice(0, 64),
         type: String(a.type || 'image').slice(0, 20),
-        previewUrl: typeof a.previewUrl === 'string' && a.previewUrl.length <= 32000 ? a.previewUrl : '',
+        previewUrl: typeof a.previewUrl === 'string' && a.previewUrl.length <= 200000 ? a.previewUrl : '',
       }));
     }
 

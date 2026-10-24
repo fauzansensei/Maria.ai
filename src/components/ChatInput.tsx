@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   Send,
   Plus,
@@ -11,9 +13,12 @@ import {
   Dna,
   X,
   Camera,
+  Sparkles,
+  Type,
 } from 'lucide-react';
 import { AiMode, MediaAttachment } from '../types/index.ts';
 import { speechService } from '../lib/speechService.ts';
+import { autoFormatMarkdown, hasFormattingSyntax } from '../lib/formatUtils.ts';
 import {
   formatBytes,
   getMediaType,
@@ -58,6 +63,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [isRecording, setIsRecording] = useState(false);
   const [attachments, setAttachments] = useState<MediaAttachment[]>([]);
   const [lightboxMedia, setLightboxMedia] = useState<LightboxMedia | null>(null);
+  const [showFormatToolbar, setShowFormatToolbar] = useState(false);
 
   // Web search is ALWAYS ACTIVE by default, can be toggled manually by user
   const [webSearchActive, setWebSearchActive] = useState<boolean>(() => {
@@ -180,6 +186,33 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       e.preventDefault();
       processFiles(filesToUpload);
     }
+  };
+
+  // Wrap selected text or insert markdown formatting syntax at caret
+  const applyFormatting = (prefix: string, suffix: string = prefix) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = text.slice(start, end);
+
+    let newText = '';
+    let newCursorPos = start + prefix.length;
+
+    if (start !== end && selected) {
+      newText = text.slice(0, start) + prefix + selected + suffix + text.slice(end);
+      newCursorPos = end + prefix.length + suffix.length;
+    } else {
+      newText = text.slice(0, start) + prefix + suffix + text.slice(end);
+      newCursorPos = start + prefix.length;
+    }
+
+    setText(newText);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 15);
   };
 
   // Submit Handler
@@ -411,6 +444,24 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 <div className="text-[10px] text-slate-400">PDF, TXT, CSV</div>
               </div>
             </button>
+
+            {/* Format Teks (Markdown & WhatsApp style) */}
+            <button
+              type="button"
+              onClick={() => {
+                setShowFormatToolbar((prev) => !prev);
+                setIsAttachmentOpen(false);
+              }}
+              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-blue-50/70 dark:hover:bg-[#1e293b] text-slate-800 dark:text-slate-200 text-left transition-colors col-span-2 border-t border-slate-100 dark:border-slate-800 pt-2.5"
+            >
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <Type className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="font-semibold truncate">Format Teks (Markdown & WhatsApp)</div>
+                <div className="text-[10px] text-slate-400">*tebal*, _miring_, ~coret~, `kode`</div>
+              </div>
+            </button>
           </div>
         </div>
       )}
@@ -462,6 +513,106 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
 
+      {/* 1. Live Formatting Auto-Preview (Renders live when typing *test*, _test_, ~test~, `test`) */}
+      {hasFormattingSyntax(text) && (
+        <div className="mb-2 px-3.5 py-1.5 rounded-full bg-white dark:bg-[#0c1222] border border-blue-400/50 dark:border-blue-500/40 shadow-md flex items-center justify-between gap-2.5 animate-in fade-in slide-in-from-bottom-1">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/70 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800 flex items-center gap-1 shrink-0">
+              <Sparkles className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+              Pratinjau Format
+            </span>
+            <div className="text-xs text-slate-800 dark:text-slate-100 truncate font-sans">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  p: ({ children }) => <span className="inline">{children}</span>,
+                  strong: ({ children }) => (
+                    <strong className="font-bold text-slate-900 dark:text-white bg-blue-100/70 dark:bg-blue-900/40 px-1 py-0.5 rounded">
+                      {children}
+                    </strong>
+                  ),
+                  em: ({ children }) => (
+                    <em className="italic text-blue-700 dark:text-blue-300">{children}</em>
+                  ),
+                  del: ({ children }) => (
+                    <del className="line-through text-slate-400">{children}</del>
+                  ),
+                  code: ({ children }) => (
+                    <code className="font-mono text-[11px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-blue-600 dark:text-blue-400 border border-slate-200 dark:border-slate-700">
+                      {children}
+                    </code>
+                  ),
+                }}
+              >
+                {autoFormatMarkdown(text)}
+              </ReactMarkdown>
+            </div>
+          </div>
+          <span className="text-[10px] text-slate-400 shrink-0 hidden sm:inline">Diformat otomatis saat dikirim</span>
+        </div>
+      )}
+
+      {/* 2. Quick Formatting Toolbar (Toggleable with Type button) */}
+      {showFormatToolbar && (
+        <div className="mb-2 p-1.5 px-3 rounded-full bg-white dark:bg-[#0c1222] border border-blue-400/40 dark:border-blue-500/30 shadow-md flex items-center gap-1.5 animate-in fade-in slide-in-from-bottom-1 text-xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1 flex items-center gap-1">
+            <Type className="w-3.5 h-3.5 text-blue-500" />
+            Format
+          </span>
+          <button
+            type="button"
+            onClick={() => applyFormatting('*', '*')}
+            title="Tebal (*teks*)"
+            className="w-7 h-7 rounded-lg font-bold hover:bg-blue-50 dark:hover:bg-blue-900/40 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-colors"
+          >
+            B
+          </button>
+          <button
+            type="button"
+            onClick={() => applyFormatting('_', '_')}
+            title="Miring (_teks_)"
+            className="w-7 h-7 rounded-lg italic font-serif hover:bg-blue-50 dark:hover:bg-blue-900/40 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-colors"
+          >
+            I
+          </button>
+          <button
+            type="button"
+            onClick={() => applyFormatting('~', '~')}
+            title="Coret (~teks~)"
+            className="w-7 h-7 rounded-lg line-through hover:bg-blue-50 dark:hover:bg-blue-900/40 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-colors"
+          >
+            S
+          </button>
+          <button
+            type="button"
+            onClick={() => applyFormatting('`', '`')}
+            title="Kode (`teks`)"
+            className="w-8 h-7 rounded-lg font-mono text-[11px] hover:bg-blue-50 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-colors"
+          >
+            &lt;/&gt;
+          </button>
+          <button
+            type="button"
+            onClick={() => applyFormatting('> ', '')}
+            title="Kutipan (> teks)"
+            className="w-7 h-7 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/40 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-colors"
+          >
+            &ldquo;
+          </button>
+          <div className="ml-auto text-[10px] text-slate-400 dark:text-slate-500 hidden sm:block">
+            *tebal* • _miring_ • ~coret~
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowFormatToolbar(false)}
+            className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white"
+            title="Tutup toolbar"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Main Floating Pill Input Bar (Matching Screenshot 2: Clean White Pill) */}
       <div className="relative flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-[#0c1222] border border-slate-200/90 dark:border-[#1e293b] shadow-md focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-600/15 transition-all duration-200">
         {/* Plus Button (+) */}
@@ -476,6 +627,20 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               isAttachmentOpen ? 'rotate-45 text-blue-600' : ''
             }`}
           />
+        </button>
+
+        {/* Format Toolbar Toggle Button */}
+        <button
+          type="button"
+          onClick={() => setShowFormatToolbar((prev) => !prev)}
+          title="Format Teks (*tebal*, _miring_, ~coret~, `kode`)"
+          className={`w-8 h-8 rounded-full border flex items-center justify-center transition-colors shrink-0 shadow-2xs ${
+            showFormatToolbar
+              ? 'bg-blue-50 dark:bg-blue-950/60 border-blue-400 text-blue-600 dark:text-blue-400'
+              : 'bg-slate-50 dark:bg-[#15203b] border-slate-200 dark:border-slate-800 text-slate-500 hover:text-blue-600'
+          }`}
+        >
+          <Type className="w-4 h-4" />
         </button>
 
         {/* Native Text Input - Perfect Caret Alignment & Multi-line Support */}

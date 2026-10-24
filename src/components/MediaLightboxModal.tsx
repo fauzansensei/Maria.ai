@@ -217,7 +217,7 @@ export const MediaLightboxModal: React.FC<MediaLightboxModalProps> = ({ media, o
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-black select-none overflow-hidden animate-in fade-in duration-150"
+      className="fixed inset-0 z-[9999] flex flex-col items-center justify-between bg-black select-none overflow-hidden animate-in fade-in duration-150"
       style={{ backgroundColor: `rgba(10, 15, 29, ${bgOpacity})` }}
       onClick={onClose}
       onWheel={handleWheel}

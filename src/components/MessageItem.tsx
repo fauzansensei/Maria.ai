@@ -65,17 +65,23 @@ const HighResImage: React.FC<{
       if (blobUrl && isMounted) {
         setResolvedUrl(blobUrl);
         setLoadError(false);
+      } else if (!resolvedUrl && (img.previewUrl || img.base64Data) && isMounted) {
+        setResolvedUrl(img.previewUrl || (img.base64Data ? `data:${img.mimeType || 'image/jpeg'};base64,${img.base64Data}` : ''));
+        setLoadError(false);
       }
     })();
     return () => {
       isMounted = false;
     };
-  }, [img.id, img.name]);
+  }, [img.id, img.name, img.previewUrl, img.base64Data, resolvedUrl]);
 
   if (loadError || !resolvedUrl) {
     return (
       <div
-        onClick={() => resolvedUrl && onOpenLightbox(resolvedUrl)}
+        onClick={() => {
+          const fallback = resolvedUrl || img.previewUrl || (img.base64Data ? `data:${img.mimeType || 'image/jpeg'};base64,${img.base64Data}` : '');
+          if (fallback) onOpenLightbox(fallback);
+        }}
         className={`${className} flex flex-col items-center justify-center bg-blue-50/50 dark:bg-slate-800 text-slate-500 rounded-xl p-3 border border-blue-200/50 dark:border-slate-700 cursor-pointer`}
       >
         <ImageIcon className="w-6 h-6 mb-1 text-blue-400" />
@@ -94,7 +100,7 @@ const HighResImage: React.FC<{
       src={resolvedUrl}
       alt={img.name}
       onError={() => {
-        if (img.previewUrl && resolvedUrl !== img.previewUrl && img.previewUrl.length > 50) {
+        if (img.previewUrl && resolvedUrl !== img.previewUrl && img.previewUrl.length > 20) {
           setResolvedUrl(img.previewUrl);
         } else {
           setLoadError(true);
@@ -389,7 +395,29 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 {images.map((img) => (
                   <div
                     key={img.id}
-                    className="relative rounded-xl overflow-hidden cursor-pointer group/img border border-blue-200 aspect-video bg-black/5"
+                    role="button"
+                    tabIndex={0}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      const bestUrl =
+                        img.originalUrl ||
+                        getOriginalMedia(img.id) ||
+                        getOriginalMedia(img.name) ||
+                        (await getOriginalMediaBlob(img.id)) ||
+                        (await getOriginalMediaBlob(img.name)) ||
+                        (img.base64Data ? `data:${img.mimeType || 'image/jpeg'};base64,${img.base64Data}` : '') ||
+                        img.previewUrl ||
+                        '';
+                      if (bestUrl) {
+                        setLightboxMedia({
+                          url: bestUrl,
+                          type: 'image',
+                          name: img.name || 'Gambar Lampiran',
+                          size: img.size,
+                        });
+                      }
+                    }}
+                    className="relative rounded-xl overflow-hidden cursor-pointer group/img border border-blue-200 aspect-video bg-black/5 hover:border-blue-400 active:scale-[0.98] transition-all shadow-2xs"
                   >
                     <HighResImage
                       img={img}
@@ -397,15 +425,15 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                         setLightboxMedia({
                           url,
                           type: 'image',
-                          name: img.name,
+                          name: img.name || 'Gambar Lampiran',
                           size: img.size,
                         })
                       }
                       className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-200"
                     />
-                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-[11px] font-semibold">
+                    <div className="absolute inset-0 pointer-events-none bg-black/30 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-[11px] font-semibold">
                       <Eye className="w-4 h-4" />
-                      <span>Zoom Asli</span>
+                      <span>Lihat Penuh</span>
                     </div>
                   </div>
                 ))}
