@@ -612,24 +612,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 <div className="text-[10px] text-slate-400">PDF, TXT, CSV</div>
               </div>
             </button>
-
-            {/* Format Teks */}
-            <button
-              type="button"
-              onClick={() => {
-                setShowFormatToolbar((prev) => !prev);
-                setIsAttachmentOpen(false);
-              }}
-              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1e293b] text-slate-800 dark:text-slate-200 text-left transition-colors col-span-2 border-t border-slate-200 dark:border-slate-800 pt-2.5"
-            >
-              <div className="w-8 h-8 rounded-lg bg-white/10 border border-white/30 text-white flex items-center justify-center shrink-0">
-                <Type className="w-4 h-4 text-white" />
-              </div>
-              <div className="min-w-0">
-                <div className="font-semibold truncate">Format Teks WhatsApp (*tebal*, _miring_, ~coret~, `kode`)</div>
-                <div className="text-[10px] text-slate-400">Langsung berubah saat diketik</div>
-              </div>
-            </button>
           </div>
         </div>
       )}
@@ -697,8 +679,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           />
         </button>
 
-        {/* WhatsApp Formatting Floating Mini-Menu */}
-        {(showFormatToolbar || hasSelection) && (
+        {/* WhatsApp Formatting Floating Mini-Menu (Shown when text is selected/highlighted) */}
+        {hasSelection && (
           <div className="absolute bottom-full left-4 sm:left-8 mb-2 p-1.5 rounded-2xl bg-white border-2 border-slate-300 shadow-2xl flex items-center gap-1.5 z-30 animate-in fade-in zoom-in-95 text-xs">
             <span className="text-[10px] text-slate-700 font-bold px-1.5 hidden sm:inline">
               Format WhatsApp:
@@ -740,20 +722,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             </button>
           </div>
         )}
-
-        {/* Format Button [T] */}
-        <button
-          type="button"
-          onClick={() => setShowFormatToolbar((prev) => !prev)}
-          title="Format Teks WhatsApp (*tebal*, _miring_, ~coret~, `kode`)"
-          className={`w-8 h-8 rounded-full border flex items-center justify-center transition-colors shrink-0 shadow-xs ${
-            showFormatToolbar || hasSelection
-              ? 'bg-slate-100 border-slate-400 text-slate-950 font-bold'
-              : 'bg-transparent hover:bg-slate-100 border-slate-300 text-slate-700 hover:text-slate-950'
-          }`}
-        >
-          <Type className="w-4 h-4" />
-        </button>
 
         {/* WhatsApp-Style Rich WYSIWYG Editable Input Box */}
         <div
