@@ -249,24 +249,43 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
   let responseStream;
   let streamError: any = null;
 
-  try {
-    responseStream = await ai.models.generateContentStream({
-      model: modelName,
-      contents,
-      config,
-    });
-  } catch (err: any) {
-    streamError = err;
-    // Fallback: try pure model without tools if tools or config caused the issue
+  // Attempt generation with automatic retry and model fallback on 503 high demand
+  const candidateModels = [modelName, 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+
+  for (const candidate of candidateModels) {
     try {
       responseStream = await ai.models.generateContentStream({
-        model: modelName,
+        model: candidate,
         contents,
-        config: { systemInstruction: activeSystemInstruction },
+        config,
       });
       streamError = null;
-    } catch (fallbackErr) {
-      streamError = fallbackErr;
+      break;
+    } catch (err: any) {
+      streamError = err;
+      const is503 =
+        String(err?.message || '').includes('503') ||
+        String(err?.message || '').includes('UNAVAILABLE') ||
+        String(err?.message || '').includes('high demand');
+
+      if (is503) {
+        // Spikes in demand are temporary; pause briefly before trying next candidate
+        await new Promise((res) => setTimeout(res, 800));
+        continue;
+      }
+
+      // Try fallback without tools if tools or config caused the error
+      try {
+        responseStream = await ai.models.generateContentStream({
+          model: candidate,
+          contents,
+          config: { systemInstruction: activeSystemInstruction },
+        });
+        streamError = null;
+        break;
+      } catch (fallbackErr) {
+        streamError = fallbackErr;
+      }
     }
   }
 

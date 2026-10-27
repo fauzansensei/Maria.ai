@@ -35,7 +35,6 @@ interface SettingsDashboardProps {
   onClearHistoryRequest: () => void;
   settings?: UserSettings;
   onUpdateSettings?: (patch: Partial<UserSettings>) => void;
-  onOpenCookiePolicy?: () => void;
 }
 
 type TabType = 'general' | 'ai-memory' | 'voice' | 'chat' | 'privacy' | 'integrations' | 'account';
@@ -46,7 +45,6 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
   onClearHistoryRequest,
   settings: propSettings,
   onUpdateSettings,
-  onOpenCookiePolicy,
 }) => {
   const { user, signIn, signOut } = useAuth();
   const { theme, setTheme, isDark } = useTheme();
@@ -629,17 +627,15 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     <div className="text-[11px] text-neutral-400">Transparansi sesi Firebase, audio cache, dan tanpa cookie iklan</div>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    if (onOpenCookiePolicy) onOpenCookiePolicy();
-                    else window.open('/cookies.html', '_blank');
-                  }}
-                  className="py-1.5 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 transition-colors shrink-0"
+                <a
+                  href="/cookies.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="py-1.5 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 transition-colors shrink-0 inline-flex items-center gap-1.5"
                 >
-                  Buka Kebijakan
-                </button>
+                  <span>Buka Kebijakan</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-neutral-400" />
+                </a>
               </div>
 
               <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-between">

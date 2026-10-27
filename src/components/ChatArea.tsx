@@ -41,7 +41,6 @@ interface ChatAreaProps {
   userPhoto?: string | null;
   userName?: string | null;
   activeConnectingAction?: LaunchAction | null;
-  onOpenCookiePolicy?: () => void;
 }
 
 interface NotificationItem {
@@ -68,7 +67,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   userPhoto,
   userName,
   activeConnectingAction,
-  onOpenCookiePolicy,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [speechState, setSpeechState] = useState<SpeechState>(() => speechService.getState());
@@ -330,8 +328,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         </div>
       )}
 
-      {/* Bottom Chat Input Dock (Matching Screenshot 2: Clean White Background) */}
-      <div className="shrink-0 pt-2 pb-2 bg-white dark:bg-[#070d1e]">
+      {/* Bottom Chat Input Dock (Pure White Background) */}
+      <div className="shrink-0 pt-2 pb-2 bg-white border-t border-slate-200 shadow-xs">
         <ChatInput
           onSendMessage={onSendMessage}
           isLoading={isLoading}
@@ -340,7 +338,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           onOpenScienceScout={onOpenScienceScout}
           loadedText={loadedInputText}
           onClearLoadedText={handleClearLoadedText}
-          onOpenCookiePolicy={onOpenCookiePolicy}
         />
       </div>
     </div>

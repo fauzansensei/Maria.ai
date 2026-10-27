@@ -8,7 +8,6 @@ import { DiscoverArea } from './components/DiscoverArea.tsx';
 import { ScienceScoutModal } from './components/ScienceScoutModal.tsx';
 import { SettingsDashboard } from './components/SettingsDashboard.tsx';
 import { TwoFactorModal } from './components/TwoFactorModal.tsx';
-import { CookiePolicyModal } from './components/CookiePolicyModal.tsx';
 import { Conversation, Message, AiMode, UserSettings, MediaAttachment } from './types/index.ts';
 import { DEFAULT_SETTINGS, VOICE_PERSONAS } from './constants.ts';
 import { speechService } from './lib/speechService.ts';
@@ -57,7 +56,6 @@ function AppContent() {
   const [isScienceScoutOpen, setIsScienceScoutOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [is2FAOpen, setIs2FAOpen] = useState(false);
-  const [isCookiePolicyOpen, setIsCookiePolicyOpen] = useState(false);
 
   // User Settings for TTS, voice, and preferences
   const [settings, setSettings] = useState<UserSettings>(() => {
@@ -879,7 +877,6 @@ function AppContent() {
         activeView={activeView}
         onNavigateView={(view) => setActiveView(view)}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenCookiePolicy={() => setIsCookiePolicyOpen(true)}
       />
 
       {/* Main Workspace: Chat, Library, or Discover View */}
@@ -895,7 +892,6 @@ function AppContent() {
             onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
             onOpenScienceScout={() => setIsScienceScoutOpen(true)}
             onOpenSettings={() => setIsSettingsOpen(true)}
-            onOpenCookiePolicy={() => setIsCookiePolicyOpen(true)}
             speechSpeed={settings.speechSpeed || '1x'}
             voicePersona={settings.voicePersona || 'wanita'}
             onSelectVoicePersona={(p) => {
@@ -952,7 +948,6 @@ function AppContent() {
         onClearHistoryRequest={() => setIs2FAOpen(true)}
         settings={settings}
         onUpdateSettings={handleUpdateSettings}
-        onOpenCookiePolicy={() => setIsCookiePolicyOpen(true)}
       />
 
       {/* 2FA Security Modal for Purging History */}
@@ -962,12 +957,6 @@ function AppContent() {
         title="Otentikasi Keamanan 2FA"
         description="Masukkan PIN keamanan 6-digit untuk mengonfirmasi penghapusan seluruh riwayat obrolan secara permanen dari server database Cloud Firestore."
         onConfirm={handleConfirmPurgeAllHistory}
-      />
-
-      {/* Kebijakan Cookie & Penyimpanan Data Modal */}
-      <CookiePolicyModal
-        isOpen={isCookiePolicyOpen}
-        onClose={() => setIsCookiePolicyOpen(false)}
       />
     </div>
   );

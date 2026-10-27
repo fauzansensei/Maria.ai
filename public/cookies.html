@@ -6,98 +6,306 @@
     <link rel="shortcut icon" href="/favicon.svg?v=3" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
     <link rel="apple-touch-icon" href="/favicon.svg?v=3" />
-    <title>Kebijakan Cookies - Maria AI</title>
+    <title>Kebijakan Cookies & Privasi Data - Maria AI</title>
     <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #111726;
+            --card-border: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-green: #10b981;
+            --accent-blue: #38bdf8;
+            --code-bg: #070d1e;
+        }
+
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg-color: #f8fafc;
+                --card-bg: #ffffff;
+                --card-border: #e2e8f0;
+                --text-primary: #0f172a;
+                --text-secondary: #64748b;
+                --accent-green: #059669;
+                --accent-blue: #0284c7;
+                --code-bg: #f1f5f9;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f9f9f9;
+            line-height: 1.7;
+            color: var(--text-primary);
+            background-color: var(--bg-color);
+            padding: 24px 16px;
+            display: flex;
+            justify-content: center;
         }
-        h1, h2, h3 {
-            color: #2c3e50;
-            margin-top: 1.5em;
-        }
+
         .container {
-            background: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 820px;
+            background: var(--card-bg);
+            padding: 36px 32px;
+            border-radius: 20px;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
         }
-        a {
-            color: #3498db;
-            text-decoration: none;
+
+        .top-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--card-border);
         }
-        a:hover {
-            text-decoration: underline;
-        }
+
         .back-link {
-            display: inline-block;
-            margin-bottom: 20px;
-            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            padding: 8px 14px;
+            border-radius: 9999px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--card-border);
+            transition: all 0.2s ease;
         }
+
+        .back-link:hover {
+            background: rgba(255, 255, 255, 0.12);
+            transform: translateX(-2px);
+        }
+
+        .badge-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background-color: var(--accent-green);
+        }
+
+        h1 {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .meta-date {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        .notice-card {
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            border-radius: 14px;
+            padding: 16px 20px;
+            margin: 20px 0 28px 0;
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        .notice-card strong {
+            color: var(--accent-green);
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-top: 32px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
         ul, ol {
             padding-left: 20px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: var(--text-secondary);
         }
+
         li {
-            margin-bottom: 0.5em;
+            margin-bottom: 8px;
+        }
+
+        li strong {
+            color: var(--text-primary);
+        }
+
+        .storage-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .storage-item {
+            background: var(--code-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 14px 18px;
+        }
+
+        .storage-item-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .tag-pill {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+        }
+
+        .storage-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        a.contact-link {
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        a.contact-link:hover {
+            text-decoration: underline;
+        }
+
+        .footer-note {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid var(--card-border);
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-secondary);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <a href="/" class="back-link">← Kembali ke Maria AI</a>
-        
-        <h1>Kebijakan Cookies (Cookies Policy)</h1>
-        <p><em>Pembaruan Terakhir: 13 Juni 2026</em></p>
+        <div class="top-nav">
+            <a href="/" class="back-link">
+                ← Kembali ke Maria AI
+            </a>
+            <div class="badge-status">
+                <span class="badge-dot"></span>
+                <span>Bebas Iklan & Pelacak</span>
+            </div>
+        </div>
 
-        <p>Selamat datang di <strong>Maria AI</strong> (selanjutnya disebut "Kami"). Kami berkomitmen untuk melindungi privasi Anda dan bersikap transparan mengenai teknologi yang kami gunakan demi kenyamanan berselancar Kakak.</p>
-        
-        <p>Kebijakan Cookies ini menjelaskan apa itu <em>cookies</em>, bagaimana Kami menggunakannya di situs web Kami <strong>https://maria-ai-main.vercel.app</strong> (selanjutnya disebut "Situs"), serta pilihan yang Anda miliki untuk mengelola penggunaannya.</p>
+        <h1>Kebijakan Cookie & Penyimpanan Data</h1>
+        <p class="meta-date">Pembaruan Terakhir: 27 Oktober 2026 • Maria AI</p>
 
-        <h2>1. Apa itu Cookies?</h2>
-        <p><strong>Cookies</strong> adalah file teks kecil yang disimpan di perangkat Anda (komputer, tablet, atau ponsel pintar) oleh browser web Anda saat Anda mengunjungi sebuah situs web. <em>Cookies</em> memungkinkan situs web mengenali perangkat Anda dan menyimpan informasi tertentu tentang preferensi Anda atau aktivitas masa lalu untuk meningkatkan pengalaman berselancar Anda.</p>
+        <div class="notice-card">
+            <strong>Komitmen Privasi Maria AI:</strong> Kami menerapkan prinsip <em>Zero Third-Party Ad Tracking</em>. Maria AI tidak pernah menyewakan, menjual, ataupun menggunakan cookie pihak ketiga untuk keperluan pelacakan komersial. Seluruh data penyimpanan diatur untuk kenyamanan, keandalan sesi login, dan performa suara AI Anda.
+        </div>
 
-        <h2>2. Bagaimana Kami Menggunakan Cookies?</h2>
-        <p>Kami menggunakan <em>cookies</em> untuk beberapa tujuan utama, antara lain:</p>
+        <h2>1. Apa itu Cookie dan Local Storage?</h2>
+        <p><strong>Cookie</strong> dan <strong>Local Storage</strong> adalah mekanisme penyimpanan file teks kecil dan preferensi yang ditempatkan pada browser web di perangkat Anda (smartphone, tablet, atau komputer). Teknologi ini memungkinkan Maria AI mengingat status login Anda, pengaturan tema, dan riwayat obrolan Anda secara aman dan instan.</p>
+
+        <h2>2. Data yang Disimpan di Perangkat Anda</h2>
+        <div class="storage-grid">
+            <div class="storage-item">
+                <div class="storage-item-title">
+                    <span>Firebase Auth Session Token</span>
+                    <span class="tag-pill" style="background: rgba(99, 102, 241, 0.2); color: #818cf8;">Wajib (Esensial)</span>
+                </div>
+                <p class="storage-desc">Menjaga sesi akun Google Anda tetap aktif sehingga Anda tidak perlu login ulang setiap kali membuka tab baru atau me-refresh halaman.</p>
+            </div>
+
+            <div class="storage-item">
+                <div class="storage-item-title">
+                    <span>maria_settings & Theme Preference</span>
+                    <span class="tag-pill" style="background: rgba(168, 85, 247, 0.2); color: #c084fc;">Fungsional</span>
+                </div>
+                <p class="storage-desc">Menyimpan pilihan tema gelap/terang, kecepatan ucapan suara Maria AI (0.75x - 1.5x), model AI default, dan pengaturan preferensi enter-to-send.</p>
+            </div>
+
+            <div class="storage-item">
+                <div class="storage-item-title">
+                    <span>Cache Suara AI & Audio TTS (Local/IndexedDB)</span>
+                    <span class="tag-pill" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">Kinerja</span>
+                </div>
+                <p class="storage-desc">Menyimpan sampel audio ucapan yang telah dihasilkan agar balasan suara Maria AI terdengar instan tanpa menghabiskan kuota internet berulang.</p>
+            </div>
+
+            <div class="storage-item">
+                <div class="storage-item-title">
+                    <span>Arsitektur Micro-Cookies (~1 Byte/Item)</span>
+                    <span class="tag-pill">Optimasi</span>
+                </div>
+                <p class="storage-desc">Flag status ultra-kompak (1 byte) untuk memastikan payload HTTP header tetap minimalis, ringan, dan cepat di jaringan lambat.</p>
+            </div>
+        </div>
+
+        <h2>3. Bagaimana Kami Menggunakan Data Tersebut?</h2>
         <ul>
-            <li><strong>Fungsionalitas Esensial:</strong> Memastikan Situs dapat beroperasi dengan aman dan sebagaimana mestinya (misalnya, untuk proses masuk akun atau pengisian formulir secara instan).</li>
-            <li><strong>Analisis dan Kinerja:</strong> Memahami bagaimana pengunjung berinteraksi dengan Situs Kami, mendeteksi kesalahan, dan meningkatkan kinerja Situs secara keseluruhan.</li>
-            <li><strong>Preferensi Pengguna:</strong> Mengingat pilihan yang Anda buat (seperti preferensi bahasa atau wilayah) untuk memberikan pengalaman yang lebih personal.</li>
-            <li><strong>Pemasaran dan Periklanan:</strong> Menyajikan iklan yang relevan dengan minat Anda dan mengukur efektivitas kampanye pemasaran Kami.</li>
+            <li><strong>Fungsionalitas Esensial:</strong> Mengautentikasi pengguna secara aman dengan database Google Cloud Firestore.</li>
+            <li><strong>Grounding Google Search:</strong> Mengirimkan kueri pencarian web real-time hanya saat fitur pencarian web aktif atau saat menjawab pertanyaan aktual.</li>
+            <li><strong>Pemrosesan Dokumen & Media:</strong> Menyimpan berkas gambar dan lampiran dengan resolusi asli 100% pada penyimpanan lokal per sesi pengguna.</li>
         </ul>
 
-        <h2>3. Jenis Cookies yang Kami Gunakan</h2>
-        <p><strong>Arsitektur Micro-Cookies (~1 Byte/Data):</strong> Maria AI dirancang dengan standar efisiensi tertinggi. Data cookies dijaga pada ukuran super kecil (~1 byte per data) guna mencegah beban HTTP header dan memastikan situs web berjalan sangat ringan, responsif, dan hemat kuota data.</p>
+        <h2>4. Kontrol dan Hak Anda</h2>
+        <p>Anda memiliki kontrol penuh atas seluruh data yang tersimpan di perangkat Anda:</p>
         <ul>
-            <li><strong>Cookies Wajib & Micro Flags:</strong> Nilai status 1 byte untuk mengenali status sesi, versi aplikasi, dan kesiapan audio secara instan tanpa membebani browser.</li>
-            <li><strong>Cookies Kinerja dan Analisis:</strong> Informasi anonim tentang navigasi Situs guna mendeteksi kendala dan mempercepat waktu muat.</li>
-            <li><strong>Cookies Fungsionalitas:</strong> Mengingat pilihan personal seperti preferensi tema tanpa menyimpan data berat di cookies browser.</li>
+            <li><strong>Pengaturan Browser:</strong> Anda dapat menghapus cookie dan data situs kapan saja melalui menu pengaturan browser Anda (<em>Settings &gt; Privacy and Security &gt; Clear Browsing Data</em>).</li>
+            <li><strong>Penghapusan Riwayat Chat 2FA:</strong> Anda dapat menghapus seluruh riwayat percakapan dari server database Firestore melalui menu <em>Pengaturan &gt; Privasi & Data &gt; Hapus Riwayat</em> yang dilindungi verifikasi 2FA.</li>
         </ul>
 
-        <h2>4. Pilihan dan Kendali Anda Terkait Cookies</h2>
-        <p>Kami menghormati hak privasi Anda Kakak. Anda dapat mengelola atau membatasi penggunaan <em>cookies</em> melalui beberapa cara berikut:</p>
-        <ul>
-            <li><strong>Spanduk Persetujuan Cookies (Cookie Consent Banner):</strong> Saat pertama kali mengunjungi Situs Kami, Anda akan melihat spanduk yang meminta persetujuan Anda untuk penggunaan <em>cookies</em> non-esensial. Anda dapat memilih untuk menerima semua, menolak, atau mengatur preferensi Anda.</li>
-            <li><strong>Pengaturan Browser:</strong> Sebagian besar browser web memungkinkan Anda untuk memblokir atau menghapus <em>cookies</em> melalui pengaturan browser Anda. Harap diperhatikan bahwa jika Anda menonaktifkan <em>cookies</em> wajib, beberapa bagian dari Situs Kami mungkin tidak dapat berfungsi dengan optimal.
-                <ul>
-                    <li>Untuk browser <strong>Google Chrome</strong>, silakan buka: <em>Setelan &gt; Privasi dan Keamanan &gt; Cookies dan data situs lainnya</em>.</li>
-                    <li>Untuk browser <strong>Safari</strong>, silakan buka: <em>Preferensi &gt; Privasi &gt; Cookies dan data situs web</em>.</li>
-                    <li>Untuk browser lainnya, silakan merujuk pada menu <em>"Bantuan"</em> di browser Anda.</li>
-                </ul>
-            </li>
-        </ul>
+        <h2>5. Kontak & Pertanyaan</h2>
+        <p>Jika Anda memiliki pertanyaan terkait kebijakan cookie dan privasi ini, silakan hubungi pengembang:</p>
+        <p>Email: <a href="mailto:basitfauzan42@gmail.com" class="contact-link">basitfauzan42@gmail.com</a></p>
 
-        <h2>5. Perubahan pada Kebijakan Cookies Ini</h2>
-        <p>Kami dapat memperbarui Kebijakan Cookies ini dari waktu ke waktu untuk mencerminkan perubahan dalam teknologi, hukum, atau operasional bisnis Kami. Setiap perubahan akan dipublikasikan di halaman ini dengan memperbarui tanggal "Pembaruan Terakhir" di bagian atas dokumen. Kami menyarankan Anda untuk memeriksa halaman ini secara berkala.</p>
-
-        <h2>6. Hubungi Kami</h2>
-        <p>Jika Kakak memiliki pertanyaan, kekhawatiran, atau permintaan klarifikasi lebih lanjut mengenai penggunaan <em>cookies</em> di Situs Kami, silakan hubungi Kami melalui:</p>
-        <p>Email: <a href="mailto:basitfauzan42@gmail.com">basitfauzan42@gmail.com</a></p>
-
+        <div class="footer-note">
+            &copy; 2026 Maria AI by Zan.dev • Dilindungi oleh Enkripsi & Firebase Security Rules
+        </div>
     </div>
 </body>
 </html>
