@@ -58,6 +58,7 @@ interface SidebarProps {
   activeView: 'chat' | 'library' | 'discover';
   onNavigateView: (view: 'chat' | 'library' | 'discover') => void;
   onOpenSettings: () => void;
+  onOpenCookiePolicy?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -74,6 +75,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeView,
   onNavigateView,
   onOpenSettings,
+  onOpenCookiePolicy,
 }) => {
   const { user, signIn, signOut } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -432,6 +434,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <a href="/privacy.html" className="hover:text-slate-300 transition-colors">Privasi</a>
               <span>•</span>
               <a href="/terms.html" className="hover:text-slate-300 transition-colors">Ketentuan</a>
+              <span>•</span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onOpenCookiePolicy) onOpenCookiePolicy();
+                  else window.open('/cookies.html', '_blank');
+                }}
+                className="hover:text-slate-300 transition-colors underline cursor-pointer"
+              >
+                Cookie
+              </button>
             </div>
           </div>
         </div>

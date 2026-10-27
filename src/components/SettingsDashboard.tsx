@@ -21,6 +21,7 @@ import {
   Download,
   Trash2,
   ExternalLink,
+  Cookie,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useTheme } from '../context/ThemeContext.tsx';
@@ -34,6 +35,7 @@ interface SettingsDashboardProps {
   onClearHistoryRequest: () => void;
   settings?: UserSettings;
   onUpdateSettings?: (patch: Partial<UserSettings>) => void;
+  onOpenCookiePolicy?: () => void;
 }
 
 type TabType = 'general' | 'ai-memory' | 'voice' | 'chat' | 'privacy' | 'integrations' | 'account';
@@ -44,6 +46,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
   onClearHistoryRequest,
   settings: propSettings,
   onUpdateSettings,
+  onOpenCookiePolicy,
 }) => {
   const { user, signIn, signOut } = useAuth();
   const { theme, setTheme, isDark } = useTheme();
@@ -613,6 +616,30 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   onChange={(e) => handleUpdate('dlpEnabled', e.target.checked)}
                   className="w-4 h-4 accent-[#2563eb] rounded"
                 />
+              </div>
+
+              {/* Kebijakan Cookie & Penyimpanan Data */}
+              <div className="p-4 rounded-2xl bg-[#171923] border border-[#27293a] flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
+                    <Cookie className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-white">Kebijakan Cookie & Penyimpanan Data</div>
+                    <div className="text-[11px] text-neutral-400">Transparansi sesi Firebase, audio cache, dan tanpa cookie iklan</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    if (onOpenCookiePolicy) onOpenCookiePolicy();
+                    else window.open('/cookies.html', '_blank');
+                  }}
+                  className="py-1.5 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 transition-colors shrink-0"
+                >
+                  Buka Kebijakan
+                </button>
               </div>
 
               <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-between">

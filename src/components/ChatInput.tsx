@@ -1,6 +1,4 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import {
   Send,
   Plus,
@@ -13,12 +11,11 @@ import {
   Dna,
   X,
   Camera,
-  Sparkles,
   Type,
 } from 'lucide-react';
 import { AiMode, MediaAttachment } from '../types/index.ts';
 import { speechService } from '../lib/speechService.ts';
-import { autoFormatMarkdown, hasFormattingSyntax } from '../lib/formatUtils.ts';
+import { autoFormatMarkdown } from '../lib/formatUtils.ts';
 import {
   formatBytes,
   getMediaType,
@@ -45,6 +42,7 @@ interface ChatInputProps {
   onOpenScienceScout?: () => void;
   loadedText?: string;
   onClearLoadedText?: () => void;
+  onOpenCookiePolicy?: () => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -55,6 +53,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onOpenScienceScout,
   loadedText,
   onClearLoadedText,
+  onOpenCookiePolicy,
 }) => {
   const [text, setText] = useState('');
   const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
@@ -198,27 +197,34 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     const selected = text.slice(start, end);
 
     let newText = '';
-    let newCursorPos = start + prefix.length;
+    let selStart = start + prefix.length;
+    let selEnd = selStart;
 
     if (start !== end && selected) {
       newText = text.slice(0, start) + prefix + selected + suffix + text.slice(end);
-      newCursorPos = end + prefix.length + suffix.length;
+      selStart = start + prefix.length;
+      selEnd = start + prefix.length + selected.length;
     } else {
-      newText = text.slice(0, start) + prefix + suffix + text.slice(end);
-      newCursorPos = start + prefix.length;
+      const placeholder = 'teks';
+      newText = text.slice(0, start) + prefix + placeholder + suffix + text.slice(end);
+      selStart = start + prefix.length;
+      selEnd = selStart + placeholder.length;
     }
 
     setText(newText);
     setTimeout(() => {
       textarea.focus();
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
+      textarea.setSelectionRange(selStart, selEnd);
     }, 15);
   };
 
-  // Submit Handler
+  // Submit Handler with WhatsApp auto-formatting (*bold* -> **bold**, ~strike~ -> ~~strike~~)
   const handleSubmit = (overrideText?: string) => {
-    const contentToSend = overrideText !== undefined ? overrideText : text;
-    if ((!contentToSend.trim() && attachments.length === 0) || isLoading) return;
+    const rawText = overrideText !== undefined ? overrideText : text;
+    if ((!rawText.trim() && attachments.length === 0) || isLoading) return;
+
+    // Convert WhatsApp formatted syntax to standard markdown
+    const contentToSend = autoFormatMarkdown(rawText);
 
     // Pre-unlock audio permissions on user gesture for seamless autoplay
     speechService.unlockAudio();
@@ -236,6 +242,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     setText('');
     setAttachments([]);
     setIsAttachmentOpen(false);
+    setShowFormatToolbar(false);
 
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -358,13 +365,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             }
             className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold transition-all shadow-2xs ${
               webSearchActive
-                ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800'
+                ? 'bg-slate-900/85 text-white border border-white/60 dark:bg-white/10 dark:text-white dark:border-white/60'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-500 border border-slate-300 dark:bg-[#1a233a] dark:text-slate-400 dark:border-slate-700'
             }`}
           >
             <span
               className={`w-2 h-2 rounded-full ${
-                webSearchActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+                webSearchActive ? 'bg-emerald-400 animate-pulse' : 'bg-slate-400'
               }`}
             />
             <Globe className="w-3.5 h-3.5" />
@@ -513,131 +520,69 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
 
-      {/* 1. Live Formatting Auto-Preview (Renders live when typing *test*, _test_, ~test~, `test`) */}
-      {hasFormattingSyntax(text) && (
-        <div className="mb-2 px-3.5 py-1.5 rounded-full bg-white dark:bg-[#0c1222] border border-blue-400/50 dark:border-blue-500/40 shadow-md flex items-center justify-between gap-2.5 animate-in fade-in slide-in-from-bottom-1">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/70 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800 flex items-center gap-1 shrink-0">
-              <Sparkles className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-              Pratinjau Format
-            </span>
-            <div className="text-xs text-slate-800 dark:text-slate-100 truncate font-sans">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  p: ({ children }) => <span className="inline">{children}</span>,
-                  strong: ({ children }) => (
-                    <strong className="font-bold text-slate-900 dark:text-white bg-blue-100/70 dark:bg-blue-900/40 px-1 py-0.5 rounded">
-                      {children}
-                    </strong>
-                  ),
-                  em: ({ children }) => (
-                    <em className="italic text-blue-700 dark:text-blue-300">{children}</em>
-                  ),
-                  del: ({ children }) => (
-                    <del className="line-through text-slate-400">{children}</del>
-                  ),
-                  code: ({ children }) => (
-                    <code className="font-mono text-[11px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-blue-600 dark:text-blue-400 border border-slate-200 dark:border-slate-700">
-                      {children}
-                    </code>
-                  ),
-                }}
-              >
-                {autoFormatMarkdown(text)}
-              </ReactMarkdown>
-            </div>
-          </div>
-          <span className="text-[10px] text-slate-400 shrink-0 hidden sm:inline">Diformat otomatis saat dikirim</span>
-        </div>
-      )}
-
-      {/* 2. Quick Formatting Toolbar (Toggleable with Type button) */}
-      {showFormatToolbar && (
-        <div className="mb-2 p-1.5 px-3 rounded-full bg-white dark:bg-[#0c1222] border border-blue-400/40 dark:border-blue-500/30 shadow-md flex items-center gap-1.5 animate-in fade-in slide-in-from-bottom-1 text-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1 flex items-center gap-1">
-            <Type className="w-3.5 h-3.5 text-blue-500" />
-            Format
-          </span>
-          <button
-            type="button"
-            onClick={() => applyFormatting('*', '*')}
-            title="Tebal (*teks*)"
-            className="w-7 h-7 rounded-lg font-bold hover:bg-blue-50 dark:hover:bg-blue-900/40 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-colors"
-          >
-            B
-          </button>
-          <button
-            type="button"
-            onClick={() => applyFormatting('_', '_')}
-            title="Miring (_teks_)"
-            className="w-7 h-7 rounded-lg italic font-serif hover:bg-blue-50 dark:hover:bg-blue-900/40 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-colors"
-          >
-            I
-          </button>
-          <button
-            type="button"
-            onClick={() => applyFormatting('~', '~')}
-            title="Coret (~teks~)"
-            className="w-7 h-7 rounded-lg line-through hover:bg-blue-50 dark:hover:bg-blue-900/40 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-colors"
-          >
-            S
-          </button>
-          <button
-            type="button"
-            onClick={() => applyFormatting('`', '`')}
-            title="Kode (`teks`)"
-            className="w-8 h-7 rounded-lg font-mono text-[11px] hover:bg-blue-50 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-colors"
-          >
-            &lt;/&gt;
-          </button>
-          <button
-            type="button"
-            onClick={() => applyFormatting('> ', '')}
-            title="Kutipan (> teks)"
-            className="w-7 h-7 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/40 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-colors"
-          >
-            &ldquo;
-          </button>
-          <div className="ml-auto text-[10px] text-slate-400 dark:text-slate-500 hidden sm:block">
-            *tebal* • _miring_ • ~coret~
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowFormatToolbar(false)}
-            className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white"
-            title="Tutup toolbar"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-
-      {/* Main Floating Pill Input Bar (Matching Screenshot 2: Clean White Pill) */}
-      <div className="relative flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-[#0c1222] border border-slate-200/90 dark:border-[#1e293b] shadow-md focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-600/15 transition-all duration-200">
+      {/* Main Floating Pill Input Bar (Pure White Outline, No Blue) */}
+      <div className="relative flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-[#0a0f1d] border border-slate-300 dark:border-white/70 shadow-lg shadow-black/20 focus-within:border-white focus-within:ring-2 focus-within:ring-white/40 transition-all duration-200">
         {/* Plus Button (+) */}
         <button
           type="button"
           onClick={() => setIsAttachmentOpen((prev) => !prev)}
           title="Lampiran & Media"
-          className="w-8 h-8 rounded-full bg-slate-50 dark:bg-[#15203b] border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-blue-600 transition-colors shrink-0 shadow-2xs"
+          className="w-8 h-8 rounded-full bg-transparent hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200 dark:border-white/20 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-white transition-colors shrink-0 shadow-2xs"
         >
           <Plus
             className={`w-4 h-4 transition-transform duration-200 ${
-              isAttachmentOpen ? 'rotate-45 text-blue-600' : ''
+              isAttachmentOpen ? 'rotate-45 text-white' : ''
             }`}
           />
         </button>
 
-        {/* Format Toolbar Toggle Button */}
+        {/* Format Mini Popover (Floating above [T] button) */}
+        {showFormatToolbar && (
+          <div className="absolute bottom-full left-10 mb-2 p-1 rounded-xl bg-slate-900/95 dark:bg-[#0c1222] border border-slate-300 dark:border-white/40 shadow-2xl flex items-center gap-1 z-30 animate-in fade-in zoom-in-95 text-xs">
+            <button
+              type="button"
+              onClick={() => applyFormatting('*', '*')}
+              title="Tebal (*teks*)"
+              className="w-7 h-7 rounded-lg font-bold text-slate-200 hover:text-white hover:bg-white/15 flex items-center justify-center transition-colors"
+            >
+              B
+            </button>
+            <button
+              type="button"
+              onClick={() => applyFormatting('_', '_')}
+              title="Miring (_teks_)"
+              className="w-7 h-7 rounded-lg italic font-serif text-slate-200 hover:text-white hover:bg-white/15 flex items-center justify-center transition-colors"
+            >
+              I
+            </button>
+            <button
+              type="button"
+              onClick={() => applyFormatting('~', '~')}
+              title="Coret (~teks~)"
+              className="w-7 h-7 rounded-lg line-through text-slate-200 hover:text-white hover:bg-white/15 flex items-center justify-center transition-colors"
+            >
+              S
+            </button>
+            <button
+              type="button"
+              onClick={() => applyFormatting('`', '`')}
+              title="Kode (`teks`)"
+              className="px-2 h-7 rounded-lg font-mono text-[11px] text-slate-200 hover:text-white hover:bg-white/15 flex items-center justify-center transition-colors"
+            >
+              &lt;/&gt;
+            </button>
+          </div>
+        )}
+
+        {/* Format Button [T] */}
         <button
           type="button"
           onClick={() => setShowFormatToolbar((prev) => !prev)}
-          title="Format Teks (*tebal*, _miring_, ~coret~, `kode`)"
+          title="Format Teks WhatsApp (*tebal*, _miring_, ~coret~, `kode`)"
           className={`w-8 h-8 rounded-full border flex items-center justify-center transition-colors shrink-0 shadow-2xs ${
             showFormatToolbar
-              ? 'bg-blue-50 dark:bg-blue-950/60 border-blue-400 text-blue-600 dark:text-blue-400'
-              : 'bg-slate-50 dark:bg-[#15203b] border-slate-200 dark:border-slate-800 text-slate-500 hover:text-blue-600'
+              ? 'bg-white/20 border-white text-white'
+              : 'bg-transparent hover:bg-slate-100 dark:hover:bg-white/10 border-slate-200 dark:border-white/20 text-slate-500 dark:text-slate-300 hover:text-white'
           }`}
         >
           <Type className="w-4 h-4" />
@@ -668,20 +613,20 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
               isRecording
                 ? 'bg-rose-50 text-rose-600 animate-pulse border border-rose-300'
-                : 'text-slate-400 hover:text-blue-600 dark:text-slate-400 dark:hover:text-white'
+                : 'text-slate-400 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white'
             }`}
           >
             {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
           </button>
 
-          {/* Waveform Voice Button OR Send Button (Matches Screenshot 2: Teal/Mint Waveform) */}
+          {/* Waveform Voice Button OR Send Button (Crisp White Button on Send, no blue!) */}
           {hasInput ? (
             <button
               type="button"
               disabled={isLoading}
               onClick={() => handleSubmit()}
               title="Kirim pesan"
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white flex items-center justify-center shadow-md shadow-blue-900/20 shrink-0 transition-all active:scale-95"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white hover:bg-slate-200 text-slate-900 flex items-center justify-center shadow-md shrink-0 transition-all active:scale-95 font-bold"
             >
               <Send className="w-4 h-4 ml-0.5" />
             </button>
@@ -692,7 +637,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               title="Mode Suara Maria AI"
               className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#ecfdf5] dark:bg-emerald-950/40 text-[#059669] dark:text-emerald-400 border border-[#a7f3d0] dark:border-emerald-800 flex items-center justify-center shadow-2xs shrink-0 hover:bg-[#d1fae5] transition-colors"
             >
-              {/* Teal Equalizer Bars matching Screenshot 2 */}
+              {/* Teal Equalizer Bars */}
               <div className="flex items-center gap-[2px] h-3.5">
                 <span className="w-[2px] h-2 bg-[#059669] dark:bg-emerald-400 rounded-full" />
                 <span className="w-[2px] h-3.5 bg-[#059669] dark:bg-emerald-400 rounded-full" />
@@ -704,10 +649,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       </div>
 
-      {/* Sub-label Bawah (Matches Screenshot 2: Clean Light Text) */}
-      <p className="text-[10px] font-medium tracking-widest text-slate-400 text-center uppercase pt-2 pb-1 select-none">
-        MARIA ADALAH AI YANG DAPAT MELAKUKAN KESALAHAN
-      </p>
+      {/* Sub-label Bawah (Matches Screenshot: Clean Light Text + Link Kebijakan Cookie) */}
+      <div className="flex items-center justify-center gap-1.5 pt-2 pb-1 select-none text-[10px] font-medium tracking-wider text-slate-400 uppercase flex-wrap">
+        <span>MARIA ADALAH AI YANG DAPAT MELAKUKAN KESALAHAN</span>
+        <span className="text-slate-600">•</span>
+        <button
+          type="button"
+          onClick={onOpenCookiePolicy}
+          className="underline hover:text-white transition-colors cursor-pointer normal-case tracking-normal text-[10px] text-slate-300 hover:text-white font-semibold"
+        >
+          Kebijakan Cookie
+        </button>
+      </div>
     </div>
   );
 };

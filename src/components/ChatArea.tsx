@@ -41,6 +41,7 @@ interface ChatAreaProps {
   userPhoto?: string | null;
   userName?: string | null;
   activeConnectingAction?: LaunchAction | null;
+  onOpenCookiePolicy?: () => void;
 }
 
 interface NotificationItem {
@@ -67,6 +68,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   userPhoto,
   userName,
   activeConnectingAction,
+  onOpenCookiePolicy,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [speechState, setSpeechState] = useState<SpeechState>(() => speechService.getState());
@@ -338,6 +340,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           onOpenScienceScout={onOpenScienceScout}
           loadedText={loadedInputText}
           onClearLoadedText={handleClearLoadedText}
+          onOpenCookiePolicy={onOpenCookiePolicy}
         />
       </div>
     </div>
