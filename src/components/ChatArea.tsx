@@ -17,6 +17,7 @@ import { MessageItem } from './MessageItem.tsx';
 import { ChatInput } from './ChatInput.tsx';
 import { MariaLogo } from './MariaLogo.tsx';
 import { speechService, SpeechState } from '../lib/speechService.ts';
+import { DefconShieldModal, DefconLevel } from './DefconShieldModal.tsx';
 
 interface ChatAreaProps {
   activeConversation: Conversation | null;
@@ -72,6 +73,22 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const [speechState, setSpeechState] = useState<SpeechState>(() => speechService.getState());
   const [showNotifications, setShowNotifications] = useState(false);
   const [showVoicePopover, setShowVoicePopover] = useState(false);
+  const [showDefconModal, setShowDefconModal] = useState(false);
+  const [defconLevel, setDefconLevel] = useState<DefconLevel>(() => {
+    try {
+      const saved = localStorage.getItem('maria_defcon_level');
+      if (saved) return Number(saved) as DefconLevel;
+    } catch {}
+    return 5;
+  });
+
+  const handleDefconLevelChange = (lvl: DefconLevel) => {
+    setDefconLevel(lvl);
+    try {
+      localStorage.setItem('maria_defcon_level', String(lvl));
+    } catch {}
+  };
+
   const [loadedInputText, setLoadedInputText] = useState('');
 
   const handleClearLoadedText = useCallback(() => {
@@ -172,11 +189,25 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
         {/* Right: DEFCON 5 Status Shield Badge & Notifications Bell with conditional badge */}
         <div className="flex items-center gap-2">
-          {/* DEFCON 5 Mint Green Badge */}
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#a7f3d0] bg-[#ecfdf5] text-[#059669] text-xs font-bold shadow-xs">
-            <ShieldCheck className="w-3.5 h-3.5 text-[#059669]" />
-            <span>DEFCON 5</span>
-          </div>
+          {/* DEFCON Shield Badge Button */}
+          <button
+            onClick={() => setShowDefconModal(true)}
+            title="Buka Sistem Keamanan Maria DEFCON Shield (Anti-DDoS, Malware & Prompt Injection)"
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95 ${
+              defconLevel === 5
+                ? 'border-[#a7f3d0] bg-[#ecfdf5] text-[#059669] hover:bg-emerald-100/80 hover:border-emerald-300'
+                : defconLevel === 4
+                ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
+                : defconLevel === 3
+                ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                : defconLevel === 2
+                ? 'border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100'
+                : 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 animate-pulse'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>DEFCON {defconLevel}</span>
+          </button>
 
           {/* Notifications Bell */}
           <div className="relative">
@@ -340,6 +371,14 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           onClearLoadedText={handleClearLoadedText}
         />
       </div>
+
+      {/* Maria DEFCON Shield Security Modal */}
+      <DefconShieldModal
+        isOpen={showDefconModal}
+        onClose={() => setShowDefconModal(false)}
+        currentLevel={defconLevel}
+        onLevelChange={handleDefconLevelChange}
+      />
     </div>
   );
 };
