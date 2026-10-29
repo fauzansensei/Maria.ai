@@ -18,6 +18,7 @@ import { ChatInput } from './ChatInput.tsx';
 import { MariaLogo } from './MariaLogo.tsx';
 import { speechService, SpeechState } from '../lib/speechService.ts';
 import { DefconShieldModal, DefconLevel } from './DefconShieldModal.tsx';
+import { defconService, DefconState } from '../lib/defconProtectionService.ts';
 
 interface ChatAreaProps {
   activeConversation: Conversation | null;
@@ -74,19 +75,19 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const [showNotifications, setShowNotifications] = useState(false);
   const [showVoicePopover, setShowVoicePopover] = useState(false);
   const [showDefconModal, setShowDefconModal] = useState(false);
-  const [defconLevel, setDefconLevel] = useState<DefconLevel>(() => {
-    try {
-      const saved = localStorage.getItem('maria_defcon_level');
-      if (saved) return Number(saved) as DefconLevel;
-    } catch {}
-    return 5;
-  });
+  const [defconState, setDefconState] = useState<DefconState>(() => defconService.getState());
+  const [defconLevel, setDefconLevel] = useState<DefconLevel>(() => defconService.getState().currentLevel);
+
+  useEffect(() => {
+    return defconService.subscribe((state) => {
+      setDefconState(state);
+      setDefconLevel(state.currentLevel);
+    });
+  }, []);
 
   const handleDefconLevelChange = (lvl: DefconLevel) => {
     setDefconLevel(lvl);
-    try {
-      localStorage.setItem('maria_defcon_level', String(lvl));
-    } catch {}
+    defconService.setLevel(lvl);
   };
 
   const [loadedInputText, setLoadedInputText] = useState('');
@@ -207,6 +208,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           >
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>DEFCON {defconLevel}</span>
+            {defconState.blockedThisSession > 0 && (
+              <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-emerald-600 text-white text-[9px] font-extrabold animate-in zoom-in-75">
+                {defconState.blockedThisSession}
+              </span>
+            )}
           </button>
 
           {/* Notifications Bell */}

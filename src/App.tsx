@@ -24,6 +24,7 @@ import {
   updateConversation,
   getUserProfile,
 } from './lib/firestoreService.ts';
+import { defconService } from './lib/defconProtectionService.ts';
 
 function AppContent() {
   const { user } = useAuth();
@@ -433,11 +434,21 @@ function AppContent() {
   ) => {
     if ((!content.trim() && (!attachments || attachments.length === 0)) || isLoading) return;
 
+    // DEFCON Rate Limiter / Flood check
+    if (!defconService.checkRateLimit()) {
+      alert('⚠️ DEFCON 5: Lonjakan flood request terdeteksi dan ditahan untuk menjaga stabilitas server.');
+      return;
+    }
+
+    // DEFCON Real-time Input Sanitizer (XSS, Jailbreak Prompt Injection, Malware)
+    const { cleanText } = defconService.inspectAndSanitizeText(content);
+    const safeContent = cleanText;
+
     // Pre-unlock audio context within user gesture
     speechService.unlockAudio();
 
     // Detect Windows Open action (Music, Discord, YouTube, external sites)
-    const launchAction = detectLaunchAction(content);
+    const launchAction = detectLaunchAction(safeContent);
     if (launchAction) {
       setActiveConnectingAction(launchAction);
       executeLaunch(launchAction);
@@ -451,7 +462,7 @@ function AppContent() {
 
       // Create conversation if first turn for logged-in user
       if (user && !currentConvId) {
-        const titleSnippet = content.length > 35 ? content.slice(0, 35) + '...' : (attachments?.[0]?.name || content);
+        const titleSnippet = safeContent.length > 35 ? safeContent.slice(0, 35) + '...' : (attachments?.[0]?.name || safeContent);
         currentConvId = await createConversation(user.uid, titleSnippet, mode);
         setActiveConvId(currentConvId);
       }
@@ -462,7 +473,7 @@ function AppContent() {
         conversationId: currentConvId || 'guest_conv',
         userId: user ? user.uid : 'guest',
         role: 'user',
-        content,
+        content: safeContent,
         mode,
         attachments,
         createdAt: new Date(),
