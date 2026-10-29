@@ -42,7 +42,7 @@ export interface UserSettings {
   voiceResponses?: boolean;
   speechSpeed?: "0.75x" | "1x" | "1.25x" | "1.5x";
   voiceEngine?: "gemini";
-  ttsModel?: "gemini-3.8-flash-lite-tts" | "gemini-3.8-flash-tts";
+  ttsModel?: "gemini-3.8-flash-lite-tts";
   geminiVoice?: "Kore" | "Aoede" | "Puck" | "Fenrir" | "Zephyr" | "Charon";
   voicePersona?: VoicePersonaGender;
   saveChatHistory?: boolean;

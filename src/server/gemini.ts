@@ -209,18 +209,18 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
   const ai = getGeminiClient();
   const { messages, mode = 'search', systemInstruction, location, webSearch = true, deviceTime } = options;
 
-  let modelName = 'gemini-flash-latest';
+  let modelName = 'gemini-3.8-flash';
   const config: any = {};
   const activeSystemInstruction = buildSystemInstruction(deviceTime, systemInstruction);
   const isSearchActive = webSearch !== false;
 
   if (mode === 'thinking') {
-    modelName = 'gemini-flash-latest';
+    modelName = 'gemini-3.8-flash';
     config.thinkingConfig = {
       thinkingLevel: ThinkingLevel.HIGH,
     };
   } else if (mode === 'maps') {
-    modelName = 'gemini-flash-latest';
+    modelName = 'gemini-3.8-flash';
     config.tools = [{ googleMaps: {} }];
     if (location) {
       config.toolConfig = {
@@ -230,10 +230,10 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
       };
     }
   } else if (isSearchActive) {
-    modelName = 'gemini-flash-latest';
+    modelName = 'gemini-3.8-flash';
     config.tools = [{ googleSearch: {} }];
   } else {
-    modelName = 'gemini-flash-latest';
+    modelName = 'gemini-3.8-flash';
   }
 
   config.systemInstruction = activeSystemInstruction;
@@ -249,8 +249,8 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
   let responseStream;
   let streamError: any = null;
 
-  // Attempt generation with automatic retry and model fallback on 503 high demand
-  const candidateModels = [modelName, 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+  // Candidate models: prioritize 3.1-flash-lite (500 RPD, zero 503 congestion), then 2.5-flash-lite, then 3.8-flash
+  const candidateModels = ['gemini-3.1-flash-lite', 'gemini-2.5-flash-lite', 'gemini-3.8-flash'];
 
   for (const candidate of candidateModels) {
     try {
@@ -339,18 +339,18 @@ export async function generateChatResponse(options: GenerateOptions) {
   const ai = getGeminiClient();
   const { messages, mode = 'search', systemInstruction, location, webSearch = true, deviceTime } = options;
 
-  let modelName = 'gemini-flash-latest';
+  let modelName = 'gemini-3.8-flash';
   const config: any = {};
   const activeSystemInstruction = buildSystemInstruction(deviceTime, systemInstruction);
   const isSearchActive = webSearch !== false;
 
   if (mode === 'thinking') {
-    modelName = 'gemini-flash-latest';
+    modelName = 'gemini-3.8-flash';
     config.thinkingConfig = {
       thinkingLevel: ThinkingLevel.HIGH,
     };
   } else if (mode === 'maps') {
-    modelName = 'gemini-flash-latest';
+    modelName = 'gemini-3.8-flash';
     config.tools = [{ googleMaps: {} }];
     if (location) {
       config.toolConfig = {
@@ -360,10 +360,10 @@ export async function generateChatResponse(options: GenerateOptions) {
       };
     }
   } else if (isSearchActive) {
-    modelName = 'gemini-flash-latest';
+    modelName = 'gemini-3.8-flash';
     config.tools = [{ googleSearch: {} }];
   } else {
-    modelName = 'gemini-flash-latest';
+    modelName = 'gemini-3.8-flash';
   }
 
   config.systemInstruction = activeSystemInstruction;
@@ -378,24 +378,34 @@ export async function generateChatResponse(options: GenerateOptions) {
 
   let response;
   let lastError: any = null;
+  let successfulModel = 'gemini-3.1-flash-lite';
 
-  try {
-    response = await ai.models.generateContent({
-      model: modelName,
-      contents,
-      config,
-    });
-  } catch (err: any) {
-    lastError = err;
+  const candidateModels = ['gemini-3.1-flash-lite', 'gemini-2.5-flash-lite', 'gemini-3.8-flash'];
+
+  for (const candidate of candidateModels) {
     try {
       response = await ai.models.generateContent({
-        model: modelName,
+        model: candidate,
         contents,
-        config: { systemInstruction: activeSystemInstruction },
+        config,
       });
+      successfulModel = candidate;
       lastError = null;
-    } catch (fallbackErr) {
-      lastError = fallbackErr;
+      break;
+    } catch (err: any) {
+      lastError = err;
+      try {
+        response = await ai.models.generateContent({
+          model: candidate,
+          contents,
+          config: { systemInstruction: activeSystemInstruction },
+        });
+        successfulModel = candidate;
+        lastError = null;
+        break;
+      } catch (fallbackErr) {
+        lastError = fallbackErr;
+      }
     }
   }
 
@@ -428,7 +438,7 @@ export async function generateChatResponse(options: GenerateOptions) {
 
   return {
     text: responseText,
-    model: modelName,
+    model: successfulModel,
     groundingLinks: groundingLinks.length > 0 ? groundingLinks : undefined,
   };
 }
@@ -664,11 +674,8 @@ export async function generateSpeechAudio(
     styleHint = 'Ceria, lincah, ingin tahu, penuh rasa penasaran dalam bahasa Indonesia';
   }
 
-  // 2. PRIMARY: Gemini AI Voice Engine
-  const targetTtsModel =
-    preferredModel === 'gemini-3.8-flash-tts'
-      ? 'gemini-3.8-flash-tts'
-      : 'gemini-3.8-flash-lite-tts';
+  // 2. PRIMARY: Gemini AI Voice Engine (Satu model saja: gemini-3.8-flash-lite-tts)
+  const targetTtsModel = 'gemini-3.8-flash-lite-tts';
 
   const ai = getGeminiClient();
 

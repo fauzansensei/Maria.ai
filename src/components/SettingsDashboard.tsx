@@ -309,57 +309,26 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
               </div>
 
               {/* Gemini AI Voice Engine Model Selector */}
+              {/* Gemini AI Voice Engine Model (Satu Model Saja) */}
               <div>
                 <label className="text-xs font-semibold text-neutral-300 block mb-1.5 flex items-center justify-between">
                   <span>Model AI Voice Engine (Gemini TTS)</span>
                   <span className="text-[10px] text-[#60a5fa] font-medium flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-[#60a5fa]" /> Gemini AI Audio Terkini
+                    <Sparkles className="w-3 h-3 text-[#60a5fa]" /> Model Utama Aktif
                   </span>
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleUpdate('ttsModel', 'gemini-3.8-flash-lite-tts')}
-                    className={`p-3 rounded-2xl border text-left transition-all ${
-                      (settings.ttsModel || 'gemini-3.8-flash-lite-tts') === 'gemini-3.8-flash-lite-tts'
-                        ? 'bg-[#2563eb]/15 border-[#2563eb] text-white shadow-sm ring-1 ring-[#2563eb]/30'
-                        : 'bg-[#181a24] border-[#27293a] text-neutral-400 hover:text-white'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-[#60a5fa]" /> Gemini 3.8 Flash Lite TTS
-                      </span>
-                      {(settings.ttsModel || 'gemini-3.8-flash-lite-tts') === 'gemini-3.8-flash-lite-tts' && (
-                        <Check className="w-3.5 h-3.5 text-[#60a5fa]" />
-                      )}
-                    </div>
-                    <p className="text-[11px] text-neutral-300 mt-1">
-                      Model suara terkencang, responsif, latensi ultra rendah, dan nada bicara sangat alami.
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleUpdate('ttsModel', 'gemini-3.8-flash-tts')}
-                    className={`p-3 rounded-2xl border text-left transition-all ${
-                      settings.ttsModel === 'gemini-3.8-flash-tts'
-                        ? 'bg-[#2563eb]/15 border-[#2563eb] text-white shadow-sm ring-1 ring-[#2563eb]/30'
-                        : 'bg-[#181a24] border-[#27293a] text-neutral-400 hover:text-white'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-purple-400" /> Gemini 3.8 Flash TTS
-                      </span>
-                      {settings.ttsModel === 'gemini-3.8-flash-tts' && (
-                        <Check className="w-3.5 h-3.5 text-[#60a5fa]" />
-                      )}
-                    </div>
-                    <p className="text-[11px] text-neutral-300 mt-1">
-                      Model audio unggulan dengan artikulasi tinggi, modulasi emosional kaya, dan vokal studio.
-                    </p>
-                  </button>
+                <div className="p-3.5 rounded-2xl border bg-[#2563eb]/15 border-[#2563eb] text-white shadow-sm ring-1 ring-[#2563eb]/30">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-[#60a5fa]" /> Gemini 3.8 Flash Lite TTS
+                    </span>
+                    <span className="text-[10px] font-semibold text-[#60a5fa] bg-[#2563eb]/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Aktif
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-neutral-300 mt-1">
+                    Model suara tunggal terbaik: latensi ultra rendah, hemat kuota API, dan dilengkapi fallback Neural Voice Bahasa Indonesia otomatis.
+                  </p>
                 </div>
               </div>
 

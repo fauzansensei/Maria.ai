@@ -101,8 +101,15 @@ apiRouter.post('/chat', async (req: Request, res: Response) => {
     sendJson(res, 200, result);
   } catch (error: any) {
     console.error('Chat generation error:', error);
+    const rawMsg = String(error?.message || '');
+    let cleanMsg = error?.message || 'Terjadi kesalahan saat memproses jawaban AI.';
+    if (rawMsg.includes('503') || rawMsg.includes('high demand') || rawMsg.includes('UNAVAILABLE')) {
+      cleanMsg = 'Server AI Google sedang mengalami lonjakan permintaan (503). Sistem sedang mengalihkan ke model cadangan, silakan coba kirim ulang.';
+    } else if (rawMsg.includes('429') || rawMsg.includes('quota') || rawMsg.includes('RESOURCE_EXHAUSTED')) {
+      cleanMsg = 'Batas kuota model tercapai (429). Silakan tunggu beberapa saat atau periksa kuota Google AI Studio Anda.';
+    }
     sendJson(res, 500, {
-      error: error.message || 'Terjadi kesalahan saat memproses jawaban AI.',
+      error: cleanMsg,
     });
   }
 });
