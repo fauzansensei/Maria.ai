@@ -5,6 +5,7 @@ import {
   generateAiImage,
   generateSpeechAudio,
 } from './gemini.ts';
+import { guard, sanitizeOutput, getDefconSummary } from './defcon/guard.ts';
 
 export const apiApp = express();
 export const apiRouter = express.Router();
@@ -21,6 +22,26 @@ function sendJson(res: any, statusCode: number, data: any) {
   res.setHeader('Content-Type', 'application/json');
   res.end(JSON.stringify(data));
 }
+
+// DEFCON 5 Shield Status & Summary Endpoint (Claude revision)
+apiRouter.get('/defcon', async (_req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    const summary = await getDefconSummary();
+    sendJson(res, 200, summary);
+  } catch (err: any) {
+    sendJson(res, 500, { error: err?.message || 'Gagal memuat status DEFCON.' });
+  }
+});
+
+// Test trigger for DEFCON Shield verification
+apiRouter.post('/defcon/test', async (req: Request, res: Response) => {
+  const { payload } = req.body || {};
+  const isAllowed = await guard(req, res, { message: payload || 'test' });
+  if (isAllowed) {
+    sendJson(res, 200, { status: 'passed', message: 'Payload terverifikasi bersih dan lolos pengawasan DEFCON.' });
+  }
+});
 
 // Health Check
 apiRouter.get('/health', (_req: Request, res: Response) => {
@@ -41,6 +62,11 @@ apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
       return;
     }
 
+    // DEFCON 5 Guard inspection before calling Gemini
+    const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user')?.content || '';
+    const isAllowed = await guard(req, res, { message: lastUserMsg });
+    if (!isAllowed) return;
+
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-transform',
@@ -58,6 +84,9 @@ apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
     });
 
     for await (const chunk of stream) {
+      if (chunk && chunk.text) {
+        chunk.text = sanitizeOutput(chunk.text);
+      }
       res.write(`data: ${JSON.stringify(chunk)}\n\n`);
     }
 
@@ -86,6 +115,11 @@ apiRouter.post('/chat', async (req: Request, res: Response) => {
       return;
     }
 
+    // DEFCON 5 Guard inspection before calling Gemini
+    const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user')?.content || '';
+    const isAllowed = await guard(req, res, { message: lastUserMsg });
+    if (!isAllowed) return;
+
     const result = await generateChatResponse({
       messages,
       mode,
@@ -97,6 +131,11 @@ apiRouter.post('/chat', async (req: Request, res: Response) => {
       webSearch: webSearch !== false,
       deviceTime,
     });
+
+    // DLP Sanitize Output to prevent secret leaks
+    if (result && result.text) {
+      result.text = sanitizeOutput(result.text);
+    }
 
     sendJson(res, 200, result);
   } catch (error: any) {
