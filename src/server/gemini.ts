@@ -248,39 +248,44 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
 
   let responseStream;
   let streamError: any = null;
+  let successfulModel = 'gemini-3.1-flash-lite';
 
-  // Candidate models: prioritize 3.1-flash-lite (500 RPD, zero 503 congestion), then 2.5-flash-lite, then 3.8-flash
-  const candidateModels = ['gemini-3.1-flash-lite', 'gemini-2.5-flash-lite', 'gemini-3.8-flash'];
+  // Fast candidate models: prioritize ultra-fast gemini-3.1-flash-lite (<900ms), fallback to gemini-2.5-flash and gemini-3.8-flash
+  const candidateModels = ['gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-3.8-flash'];
 
   for (const candidate of candidateModels) {
+    // If model is gemini-3.8-flash and not in thinking mode, use ThinkingLevel.LOW for speed
+    const candidateConfig = { ...config };
+    if (candidate === 'gemini-3.8-flash' && mode !== 'thinking') {
+      candidateConfig.thinkingConfig = { thinkingLevel: ThinkingLevel.LOW };
+    }
+
+    // gemini-3.1-flash-lite does not support googleSearch/googleMaps tools
+    if (candidate === 'gemini-3.1-flash-lite' && candidateConfig.tools) {
+      delete candidateConfig.tools;
+      delete candidateConfig.toolConfig;
+    }
+
     try {
       responseStream = await ai.models.generateContentStream({
         model: candidate,
         contents,
-        config,
+        config: candidateConfig,
       });
+      successfulModel = candidate;
       streamError = null;
       break;
     } catch (err: any) {
       streamError = err;
-      const is503 =
-        String(err?.message || '').includes('503') ||
-        String(err?.message || '').includes('UNAVAILABLE') ||
-        String(err?.message || '').includes('high demand');
 
-      if (is503) {
-        // Spikes in demand are temporary; pause briefly before trying next candidate
-        await new Promise((res) => setTimeout(res, 800));
-        continue;
-      }
-
-      // Try fallback without tools if tools or config caused the error
+      // Instant fallback without tools if tools or quota caused an error
       try {
         responseStream = await ai.models.generateContentStream({
           model: candidate,
           contents,
           config: { systemInstruction: activeSystemInstruction },
         });
+        successfulModel = candidate;
         streamError = null;
         break;
       } catch (fallbackErr) {
@@ -380,14 +385,23 @@ export async function generateChatResponse(options: GenerateOptions) {
   let lastError: any = null;
   let successfulModel = 'gemini-3.1-flash-lite';
 
-  const candidateModels = ['gemini-3.1-flash-lite', 'gemini-2.5-flash-lite', 'gemini-3.8-flash'];
+  const candidateModels = ['gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-3.8-flash'];
 
   for (const candidate of candidateModels) {
+    const candidateConfig = { ...config };
+    if (candidate === 'gemini-3.8-flash' && mode !== 'thinking') {
+      candidateConfig.thinkingConfig = { thinkingLevel: ThinkingLevel.LOW };
+    }
+    if (candidate === 'gemini-3.1-flash-lite' && candidateConfig.tools) {
+      delete candidateConfig.tools;
+      delete candidateConfig.toolConfig;
+    }
+
     try {
       response = await ai.models.generateContent({
         model: candidate,
         contents,
-        config,
+        config: candidateConfig,
       });
       successfulModel = candidate;
       lastError = null;

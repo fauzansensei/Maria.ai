@@ -35,6 +35,7 @@ export interface Message {
   thinkingProcess?: string;
   audioUri?: string;
   launchAction?: LaunchAction;
+  isStreaming?: boolean;
   editedAt?: any;
   createdAt: any;
 }

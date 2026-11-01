@@ -663,6 +663,7 @@ function AppContent() {
             model: streamModel,
             mode,
             launchAction: launchAction || undefined,
+            isStreaming: true,
             createdAt: new Date(),
           };
 
@@ -707,7 +708,7 @@ function AppContent() {
                   setMessages((prev) =>
                     prev.map((m) =>
                       m.id === streamAiId
-                        ? { ...m, content: fullText, model: streamModel }
+                        ? { ...m, content: fullText, model: streamModel, isStreaming: true }
                         : m
                     )
                   );
@@ -722,6 +723,7 @@ function AppContent() {
                             content: fullText,
                             model: streamModel,
                             groundingLinks: streamGroundingLinks,
+                            isStreaming: false,
                           }
                         : m
                     )
@@ -730,6 +732,11 @@ function AppContent() {
               } catch {}
             }
           }
+
+          // Mark streaming completed
+          setMessages((prev) =>
+            prev.map((m) => (m.id === streamAiId ? { ...m, isStreaming: false } : m))
+          );
 
           if (fullText.trim()) {
             if (user && currentConvId) {

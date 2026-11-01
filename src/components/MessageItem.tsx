@@ -329,7 +329,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   // ----------------------------------------------------
   if (!isModel) {
     return (
-      <div className="flex justify-end my-3 sm:my-4 px-3 sm:px-6 select-none">
+      <div className="flex justify-end my-3 sm:my-4 px-3 sm:px-6 select-none animate-in fade-in-0 slide-in-from-bottom-2 duration-200 ease-out">
         {lightboxModal}
 
         <div className="flex flex-col items-end max-w-[90%] sm:max-w-[78%]">
@@ -528,15 +528,17 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   // MARIA AI MESSAGE CARD (Clean White Canvas, Maria AI by Zan.dev Branding)
   // ----------------------------------------------------
   return (
-    <div className="flex justify-start my-3 sm:my-4 px-3 sm:px-6 select-none">
+    <div className="flex justify-start my-3 sm:my-4 px-3 sm:px-6 select-none animate-in fade-in-0 slide-in-from-bottom-2 duration-300 ease-out">
       {lightboxModal}
 
-      <div className="w-full max-w-3xl rounded-2xl p-4 sm:p-5 bg-white border border-slate-200 shadow-xs space-y-3">
+      <div className="w-full max-w-3xl rounded-2xl p-4 sm:p-5 bg-white border border-slate-200 shadow-xs space-y-3 transition-all">
         {/* Header Bar: Brand, Model, Grounding Status & Action Toolbar */}
         <div className="flex items-center justify-between gap-2 flex-wrap pb-2.5 border-b border-slate-100">
           {/* Left: Avatar + "Maria AI by Zan.dev" Title + Badges */}
           <div className="flex items-center gap-2 flex-wrap">
-            <MariaLogo size="sm" withOnlineDot={true} />
+            <div className={message.isStreaming ? 'animate-gentle-pulse' : ''}>
+              <MariaLogo size="sm" withOnlineDot={true} />
+            </div>
             <div className="flex items-center gap-1.5">
               <span className="text-xs sm:text-sm font-bold text-[#0f172a] tracking-tight">
                 Maria AI
@@ -547,6 +549,14 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             <span className="text-[10px] px-2 py-0.5 rounded-full font-mono bg-blue-50 text-blue-700 border border-blue-200 font-medium">
               {message.model ? message.model.replace('-preview', '') : 'gemini-3.1-flash-lite'}
             </span>
+
+            {/* Streaming Active Pulse Indicator */}
+            {message.isStreaming && (
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200/80 text-[10px] font-semibold animate-pulse">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping" />
+                <span>Mengetik respons...</span>
+              </span>
+            )}
 
             {/* Web Search Grounding Status Badge */}
             {hasGrounding && (
@@ -625,132 +635,162 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
         {/* Main AI Response Body with AUTOMATIC FORMATTING (*italic*, **bold**, ~strikethrough~, `code`, etc.) */}
         <div className="text-[#0f172a] text-[14.5px] leading-relaxed select-text break-words">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              h1({ children }: any) {
-                return (
-                  <h1 className="text-lg sm:text-xl font-bold text-[#0f172a] mt-4 mb-2 pb-1 border-b border-slate-200 tracking-tight">
-                    {children}
-                  </h1>
-                );
-              },
-              h2({ children }: any) {
-                return (
-                  <h2 className="text-base sm:text-lg font-bold text-[#0f172a] mt-3.5 mb-1.5 tracking-tight flex items-center gap-1.5">
-                    <span className="w-1.5 h-4 bg-blue-600 rounded-full inline-block" />
-                    <span>{children}</span>
-                  </h2>
-                );
-              },
-              h3({ children }: any) {
-                return (
-                  <h3 className="text-sm sm:text-base font-bold text-blue-900 mt-3 mb-1">
-                    {children}
-                  </h3>
-                );
-              },
-              p({ children }: any) {
-                return <div className="mb-3 last:mb-0 text-[#1e293b] font-normal leading-relaxed">{children}</div>;
-              },
-              pre({ children }: any) {
-                return <>{children}</>;
-              },
-              strong({ children }: any) {
-                return <strong className="font-bold text-[#0f172a]">{children}</strong>;
-              },
-              em({ children }: any) {
-                return <em className="italic">{children}</em>;
-              },
-              del({ children }: any) {
-                return <del className="line-through opacity-75">{children}</del>;
-              },
-              ul({ children }: any) {
-                return <ul className="my-2.5 pl-5 list-disc space-y-1.5 marker:text-blue-600">{children}</ul>;
-              },
-              ol({ children }: any) {
-                return <ol className="my-2.5 pl-5 list-decimal space-y-1.5 marker:font-bold marker:text-blue-600">{children}</ol>;
-              },
-              li({ children }: any) {
-                return <li className="pl-1 text-[#1e293b]">{children}</li>;
-              },
-              blockquote({ children }: any) {
-                return (
-                  <blockquote className="my-3 pl-3.5 py-1 border-l-4 border-blue-500 bg-blue-50/70 rounded-r-xl text-slate-800 italic">
-                    {children}
-                  </blockquote>
-                );
-              },
-              code({ node, inline, className, children, ...props }: any) {
-                const match = /language-(\w+)/.exec(className || '');
-                return !inline ? (
-                  <div className="my-3 rounded-xl overflow-hidden border border-slate-200 bg-[#0a1128] text-slate-100 shadow-sm">
-                    <div className="flex items-center justify-between px-3.5 py-1.5 bg-[#070d1e] border-b border-slate-800 text-[11px] font-mono text-slate-400">
-                      <span className="text-blue-400 font-semibold">{match ? match[1] : 'code'}</span>
-                      <button
-                        onClick={() => navigator.clipboard.writeText(String(children).replace(/\n$/, ''))}
-                        className="hover:text-white transition-colors flex items-center gap-1 text-[11px]"
+          {/* Animated typing dots when streaming has started but first tokens are still generating */}
+          {!message.content.trim() && message.isStreaming && (
+            <div className="flex items-center gap-2.5 py-1.5 text-slate-500 animate-in fade-in duration-200">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+              <span className="text-xs text-slate-400 font-medium tracking-tight">
+                Maria sedang merumuskan jawaban...
+              </span>
+            </div>
+          )}
+
+          {Boolean(message.content.trim()) && (
+            <div className="relative">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  h1({ children }: any) {
+                    return (
+                      <h1 className="text-lg sm:text-xl font-bold text-[#0f172a] mt-4 mb-2 pb-1 border-b border-slate-200 tracking-tight animate-in fade-in-50 duration-150">
+                        {children}
+                      </h1>
+                    );
+                  },
+                  h2({ children }: any) {
+                    return (
+                      <h2 className="text-base sm:text-lg font-bold text-[#0f172a] mt-3.5 mb-1.5 tracking-tight flex items-center gap-1.5 animate-in fade-in-50 duration-150">
+                        <span className="w-1.5 h-4 bg-blue-600 rounded-full inline-block" />
+                        <span>{children}</span>
+                      </h2>
+                    );
+                  },
+                  h3({ children }: any) {
+                    return (
+                      <h3 className="text-sm sm:text-base font-bold text-blue-900 mt-3 mb-1 animate-in fade-in-50 duration-150">
+                        {children}
+                      </h3>
+                    );
+                  },
+                  p({ children }: any) {
+                    return (
+                      <div className="mb-3 last:mb-0 text-[#1e293b] font-normal leading-relaxed animate-in fade-in-50 duration-150">
+                        {children}
+                      </div>
+                    );
+                  },
+                  pre({ children }: any) {
+                    return <>{children}</>;
+                  },
+                  strong({ children }: any) {
+                    return <strong className="font-bold text-[#0f172a]">{children}</strong>;
+                  },
+                  em({ children }: any) {
+                    return <em className="italic">{children}</em>;
+                  },
+                  del({ children }: any) {
+                    return <del className="line-through opacity-75">{children}</del>;
+                  },
+                  ul({ children }: any) {
+                    return <ul className="my-2.5 pl-5 list-disc space-y-1.5 marker:text-blue-600 animate-in fade-in-50 duration-150">{children}</ul>;
+                  },
+                  ol({ children }: any) {
+                    return <ol className="my-2.5 pl-5 list-decimal space-y-1.5 marker:font-bold marker:text-blue-600 animate-in fade-in-50 duration-150">{children}</ol>;
+                  },
+                  li({ children }: any) {
+                    return <li className="pl-1 text-[#1e293b]">{children}</li>;
+                  },
+                  blockquote({ children }: any) {
+                    return (
+                      <blockquote className="my-3 pl-3.5 py-1 border-l-4 border-blue-500 bg-blue-50/70 rounded-r-xl text-slate-800 italic animate-in fade-in-50 duration-150">
+                        {children}
+                      </blockquote>
+                    );
+                  },
+                  code({ node, inline, className, children, ...props }: any) {
+                    const match = /language-(\w+)/.exec(className || '');
+                    return !inline ? (
+                      <div className="my-3 rounded-xl overflow-hidden border border-slate-200 bg-[#0a1128] text-slate-100 shadow-sm animate-in fade-in-50 duration-200">
+                        <div className="flex items-center justify-between px-3.5 py-1.5 bg-[#070d1e] border-b border-slate-800 text-[11px] font-mono text-slate-400">
+                          <span className="text-blue-400 font-semibold">{match ? match[1] : 'code'}</span>
+                          <button
+                            onClick={() => navigator.clipboard.writeText(String(children).replace(/\n$/, ''))}
+                            className="hover:text-white transition-colors flex items-center gap-1 text-[11px]"
+                          >
+                            <Copy className="w-3 h-3" />
+                            <span>Salin Kode</span>
+                          </button>
+                        </div>
+                        <pre className="p-3.5 text-xs font-mono overflow-x-auto m-0 bg-[#060a17]">
+                          <code className={className} {...props}>
+                            {children}
+                          </code>
+                        </pre>
+                      </div>
+                    ) : (
+                      <code
+                        className="px-1.5 py-0.5 rounded-md font-mono text-[12px] bg-blue-50 text-blue-700 border border-blue-200/60"
+                        {...props}
                       >
-                        <Copy className="w-3 h-3" />
-                        <span>Salin Kode</span>
-                      </button>
-                    </div>
-                    <pre className="p-3.5 text-xs font-mono overflow-x-auto m-0 bg-[#060a17]">
-                      <code className={className} {...props}>
                         {children}
                       </code>
-                    </pre>
-                  </div>
-                ) : (
-                  <code
-                    className="px-1.5 py-0.5 rounded-md font-mono text-[12px] bg-blue-50 text-blue-700 border border-blue-200/60"
-                    {...props}
-                  >
-                    {children}
-                  </code>
-                );
-              },
-              table({ children }: any) {
-                return (
-                  <div className="overflow-x-auto my-3 border border-slate-200 rounded-xl shadow-2xs">
-                    <table className="min-w-full divide-y divide-slate-200 text-xs">
-                      {children}
-                    </table>
-                  </div>
-                );
-              },
-              th({ children }: any) {
-                return (
-                  <th className="px-3 py-2 bg-slate-100 text-left font-bold text-slate-900 border-b border-slate-200">
-                    {children}
-                  </th>
-                );
-              },
-              td({ children }: any) {
-                return (
-                  <td className="px-3 py-2 border-t border-slate-100 text-slate-700">
-                    {children}
-                  </td>
-                );
-              },
-              a({ href, children }: any) {
-                return (
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 underline underline-offset-2 font-medium hover:bg-blue-50/80 px-1 py-0.5 rounded-sm transition-colors group/link"
-                  >
-                    <SourceFavicon uri={href || ''} />
-                    <span>{children}</span>
-                    <ExternalLink className="w-3 h-3 text-blue-500 opacity-70 group-hover/link:opacity-100 shrink-0" />
-                  </a>
-                );
-              },
-            }}
-          >
-            {autoFormatMarkdown(message.content)}
-          </ReactMarkdown>
+                    );
+                  },
+                  table({ children }: any) {
+                    return (
+                      <div className="overflow-x-auto my-3 border border-slate-200 rounded-xl shadow-2xs">
+                        <table className="min-w-full divide-y divide-slate-200 text-xs">
+                          {children}
+                        </table>
+                      </div>
+                    );
+                  },
+                  th({ children }: any) {
+                    return (
+                      <th className="px-3 py-2 bg-slate-100 text-left font-bold text-slate-900 border-b border-slate-200">
+                        {children}
+                      </th>
+                    );
+                  },
+                  td({ children }: any) {
+                    return (
+                      <td className="px-3 py-2 border-t border-slate-100 text-slate-700">
+                        {children}
+                      </td>
+                    );
+                  },
+                  a({ href, children }: any) {
+                    return (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 underline underline-offset-2 font-medium hover:bg-blue-50/80 px-1 py-0.5 rounded-sm transition-colors group/link"
+                      >
+                        <SourceFavicon uri={href || ''} />
+                        <span>{children}</span>
+                        <ExternalLink className="w-3 h-3 text-blue-500 opacity-70 group-hover/link:opacity-100 shrink-0" />
+                      </a>
+                    );
+                  },
+                }}
+              >
+                {autoFormatMarkdown(message.content)}
+              </ReactMarkdown>
+
+              {/* Glowing Typing Beacon / Cursor while response is actively streaming */}
+              {message.isStreaming && (
+                <span
+                  className="inline-block w-2 h-4 ml-1 bg-gradient-to-t from-blue-600 to-indigo-500 rounded-xs animate-cursor-blink align-middle shadow-xs"
+                  title="Sedang mengetik..."
+                />
+              )}
+            </div>
+          )}
         </div>
 
         {/* Gemini-Style Action Card (Matches Video 1 & Video 2) */}
