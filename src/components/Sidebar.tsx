@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Check,
   Loader2,
+  Wand2,
 } from 'lucide-react';
 import { Conversation } from '../types/index.ts';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -58,6 +59,7 @@ interface SidebarProps {
   activeView: 'chat' | 'library' | 'discover';
   onNavigateView: (view: 'chat' | 'library' | 'discover') => void;
   onOpenSettings: () => void;
+  onOpenImageStudio?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -74,6 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeView,
   onNavigateView,
   onOpenSettings,
+  onOpenImageStudio,
 }) => {
   const { user, signIn, signOut } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -228,6 +231,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               <Compass className="w-4 h-4 text-sky-400" />
               <span>Discover</span>
+            </button>
+
+            <button
+              onClick={() => {
+                onOpenImageStudio?.();
+                onClose();
+              }}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-[#121c35] hover:text-white transition-all group"
+            >
+              <div className="flex items-center gap-2.5">
+                <Wand2 className="w-4 h-4 text-purple-400 group-hover:rotate-12 transition-transform" />
+                <span>Studio Gambar AI</span>
+              </div>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-900/60 text-purple-300 font-semibold border border-purple-700/50">
+                Baru
+              </span>
             </button>
 
             <button

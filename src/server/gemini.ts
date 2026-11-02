@@ -107,6 +107,10 @@ Fitur Windows Open & Pembuka Aplikasi / Musik / Situs Eksternal:
 Kemampuan Vision & Analisis Gambar/Video:
 - Pengguna dapat mengunggah gambar, foto, tangkapan layar (screenshot), dokumen, atau diagram. Anda WAJIB menganalisis seluruh elemen visual dengan cermat, termasuk teks bacaan (OCR), tata letak, data, dan konteks gambar. Jawab pertanyaan pengguna mengenai gambar tersebut dengan jelas dan tepat.
 
+Kemampuan Studio Gambar & Visual AI:
+- Anda memiliki kapabilitas membuat dan mengedit gambar AI secara penuh (bertenaga Gemini Nano Banana 2.1 & Free Trial Flux AI).
+- Jangan pernah mengatakan bahwa Anda tidak dapat membuat gambar secara langsung.
+
 ATURAN MUTLAK:
 - DILARANG KERAS MENGGUNAKAN KARAKTER EMOJI ATAU EMOTIKON APAPUN dalam seluruh respon jawaban Anda.`;
 
@@ -460,7 +464,10 @@ export async function generateChatResponse(options: GenerateOptions) {
 export interface GenerateImageOptions {
   prompt: string;
   imageSize?: '1K' | '2K' | '4K';
-  aspectRatio?: '1:1' | '16:9' | '9:16' | '4:3';
+  aspectRatio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:4';
+  baseImage?: string; // base64 data string or data URL for image editing
+  mimeType?: string;
+  engine?: 'nano-banana' | 'flash-lite' | 'free' | 'auto';
 }
 
 // Generate aesthetic vector SVG illustration when external API rate limit is reached
@@ -477,6 +484,9 @@ function generateProceduralIllustration(prompt: string, aspectRatio: string = '1
   } else if (aspectRatio === '4:3') {
     width = 1024;
     height = 768;
+  } else if (aspectRatio === '3:4') {
+    width = 768;
+    height = 1024;
   }
 
   const escapedPrompt = prompt.replace(/[<>&"]/g, '');
@@ -534,12 +544,179 @@ function generateProceduralIllustration(prompt: string, aspectRatio: string = '1
   return `data:image/svg+xml;base64,${base64}`;
 }
 
-export async function generateAiImage(options: GenerateImageOptions) {
-  const ai = getGeminiClient();
-  const { prompt, imageSize = '1K', aspectRatio = '1:1' } = options;
+// Free AI Image Generation Engine (Flux / SDXL - Zero key, 100% Free Trial)
+async function generateFreeTrialImage(prompt: string, aspectRatio: string = '1:1') {
+  let width = 1024;
+  let height = 1024;
 
-  // 1. Try Nano Banana 2.1 (Flagship High Quality Image Model)
+  if (aspectRatio === '16:9') {
+    width = 1280;
+    height = 720;
+  } else if (aspectRatio === '9:16') {
+    width = 720;
+    height = 1280;
+  } else if (aspectRatio === '4:3') {
+    width = 1024;
+    height = 768;
+  } else if (aspectRatio === '3:4') {
+    width = 768;
+    height = 1024;
+  }
+
+  const seed = Math.floor(Math.random() * 899999) + 100000;
+  const encodedPrompt = encodeURIComponent(prompt.trim());
+  const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&seed=${seed}&nologo=true&model=flux`;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
+
   try {
+    const res = await fetch(pollinationsUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) MariaAI-ImageStudio/2.0',
+      },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      throw new Error(`Free trial engine HTTP error: ${res.status}`);
+    }
+
+    const arrayBuffer = await res.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    if (buffer.length < 500) {
+      throw new Error('Image buffer too small.');
+    }
+
+    const mime = res.headers.get('content-type') || 'image/jpeg';
+    return `data:${mime};base64,${buffer.toString('base64')}`;
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    throw err;
+  }
+}
+
+export async function generateAiImage(options: GenerateImageOptions) {
+  const { prompt, imageSize = '1K', aspectRatio = '1:1', baseImage, mimeType = 'image/jpeg', engine = 'auto' } = options;
+
+  // If user explicitly chose Free Trial engine
+  if (engine === 'free') {
+    try {
+      const freeImageUrl = await generateFreeTrialImage(prompt, aspectRatio);
+      return {
+        imageUrl: freeImageUrl,
+        model: 'flux-free-trial',
+        notice: 'Dihasilkan menggunakan Engine Free Trial (100% Gratis, Bebas Kuota & Tanpa Kartu Kredit).',
+      };
+    } catch (freeErr: any) {
+      console.warn('Free trial engine failed, falling back to procedural visualizer:', freeErr.message);
+      return {
+        imageUrl: generateProceduralIllustration(prompt, aspectRatio),
+        model: 'maria-ai-visualizer',
+        notice: 'Ilustrasi dihasilkan oleh Visualizer Prosedural Maria AI.',
+      };
+    }
+  }
+
+  // If baseImage is provided -> Image Editing Mode
+  if (baseImage) {
+    const cleanBase64 = baseImage.includes(',') ? baseImage.split(',')[1].trim() : baseImage.trim();
+    const detectedMime = mimeType || (baseImage.includes('data:image/png') ? 'image/png' : 'image/jpeg');
+
+    // 1. Try gemini-nano-banana-2.1 for high-fidelity image editing
+    try {
+      const ai = getGeminiClient();
+      const response = await ai.models.generateContent({
+        model: 'gemini-nano-banana-2.1',
+        contents: {
+          parts: [
+            {
+              inlineData: {
+                data: cleanBase64,
+                mimeType: detectedMime,
+              },
+            },
+            {
+              text: prompt,
+            },
+          ],
+        },
+        config: {
+          imageConfig: {
+            aspectRatio,
+            imageSize,
+          },
+        },
+      });
+
+      const parts = response.candidates?.[0]?.content?.parts || [];
+      for (const part of parts) {
+        if (part.inlineData?.data) {
+          return {
+            imageUrl: `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`,
+            model: 'gemini-nano-banana-2.1',
+          };
+        }
+      }
+    } catch (err: any) {
+      console.warn('nano-banana-2.1 image editing fallback:', err.message);
+
+      // 2. Try gemini-3.1-flash-lite-image
+      try {
+        const ai = getGeminiClient();
+        const fallbackResponse = await ai.models.generateContent({
+          model: 'gemini-3.1-flash-lite-image',
+          contents: {
+            parts: [
+              {
+                inlineData: {
+                  data: cleanBase64,
+                  mimeType: detectedMime,
+                },
+              },
+              {
+                text: prompt,
+              },
+            ],
+          },
+        });
+
+        const parts = fallbackResponse.candidates?.[0]?.content?.parts || [];
+        for (const part of parts) {
+          if (part.inlineData?.data) {
+            return {
+              imageUrl: `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`,
+              model: 'gemini-3.1-flash-lite-image',
+            };
+          }
+        }
+      } catch (fallbackErr: any) {
+        console.warn('gemini-3.1-flash-lite-image editing fallback failed:', fallbackErr.message);
+
+        // 3. Free Trial Flux Fallback with contextual edit prompt
+        try {
+          const editPrompt = `Modified version: ${prompt}, high quality detailed`;
+          const freeImageUrl = await generateFreeTrialImage(editPrompt, aspectRatio);
+          return {
+            imageUrl: freeImageUrl,
+            model: 'flux-free-trial',
+            notice: 'Diedit menggunakan Engine Free Trial (100% Gratis & Bebas Kuota). Untuk kualitas Google Nano Banana 2.1, aktifkan billing di Settings > Secrets.',
+          };
+        } catch {
+          return {
+            imageUrl: generateProceduralIllustration(prompt, aspectRatio),
+            model: 'maria-ai-visualizer',
+            notice: 'Visualizer Prosedural Maria AI (Fallback Offline).',
+          };
+        }
+      }
+    }
+  }
+
+  // Standard Text-to-Image Creation
+  try {
+    const ai = getGeminiClient();
     const response = await ai.models.generateContent({
       model: 'gemini-nano-banana-2.1',
       contents: {
@@ -567,6 +744,7 @@ export async function generateAiImage(options: GenerateImageOptions) {
 
     // 2. Try Flash Lite Image Model
     try {
+      const ai = getGeminiClient();
       const fallbackResponse = await ai.models.generateContent({
         model: 'gemini-3.1-flash-lite-image',
         contents: {
@@ -591,29 +769,29 @@ export async function generateAiImage(options: GenerateImageOptions) {
     } catch (fallbackErr: any) {
       console.warn('flash-lite-image fallback also failed:', fallbackErr.message);
 
-      // If quota is exhausted (429 RESOURCE_EXHAUSTED or limit: 0 on free tier key):
-      // Generate a procedural SVG visual illustration so the app remains responsive and visually stunning!
-      if (
-        fallbackErr.message?.includes('429') ||
-        fallbackErr.message?.includes('quota') ||
-        fallbackErr.message?.includes('RESOURCE_EXHAUSTED') ||
-        err.message?.includes('429') ||
-        err.message?.includes('quota') ||
-        err.message?.includes('RESOURCE_EXHAUSTED')
-      ) {
+      // 3. Free Trial Flux AI Fallback
+      try {
+        const freeImageUrl = await generateFreeTrialImage(prompt, aspectRatio);
+        return {
+          imageUrl: freeImageUrl,
+          model: 'flux-free-trial',
+          notice: 'Dihasilkan via Engine Free Trial (100% Gratis & Bebas Kuota). Untuk kualitas Google Nano Banana 2.1, aktifkan billing di Settings > Secrets.',
+        };
+      } catch {
         return {
           imageUrl: generateProceduralIllustration(prompt, aspectRatio),
           model: 'maria-ai-visualizer',
-          notice:
-            'Catatan: Kuota model gambar Gemini gratis sedang mencapai batas harian (limit 0 pada free tier). Ilustrasi di atas dihasilkan oleh Visualizer Prosedural Maria AI. Untuk mengaktifkan Gemini Nano Banana resolusi 4K penuh, silakan pilih API key dengan billing di Settings > Secrets.',
+          notice: 'Catatan: Mode Free Trial offline, menggunakan Visualizer Prosedural Maria AI.',
         };
       }
-
-      throw fallbackErr;
     }
   }
 
   throw new Error('Gagal menghasilkan gambar dari model AI.');
+}
+
+export async function editAiImage(options: GenerateImageOptions) {
+  return generateAiImage(options);
 }
 
 // In-memory cache for generated speech audio to conserve free-tier rate limits

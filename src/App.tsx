@@ -8,11 +8,13 @@ import { DiscoverArea } from './components/DiscoverArea.tsx';
 import { ScienceScoutModal } from './components/ScienceScoutModal.tsx';
 import { SettingsDashboard } from './components/SettingsDashboard.tsx';
 import { TwoFactorModal } from './components/TwoFactorModal.tsx';
+import { ImageStudioModal } from './components/ImageStudioModal.tsx';
 import { Conversation, Message, AiMode, UserSettings, MediaAttachment } from './types/index.ts';
 import { DEFAULT_SETTINGS, VOICE_PERSONAS } from './constants.ts';
 import { speechService } from './lib/speechService.ts';
 import { optimizeCookies, pruneLocalStorageBloat } from './lib/storageOptimizer.ts';
 import { detectLaunchAction, executeLaunch, LaunchAction } from './lib/actionLauncher.ts';
+import { isImageIntent, extractImagePrompt } from './lib/imageIntent.ts';
 import {
   subscribeConversations,
   subscribeMessages,
@@ -52,6 +54,9 @@ function AppContent() {
   const [isScienceScoutOpen, setIsScienceScoutOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [is2FAOpen, setIs2FAOpen] = useState(false);
+  const [isImageStudioOpen, setIsImageStudioOpen] = useState(false);
+  const [studioBaseImage, setStudioBaseImage] = useState<string | null>(null);
+  const [studioPrompt, setStudioPrompt] = useState<string>('');
 
   // User Settings for TTS, voice, and preferences
   const [settings, setSettings] = useState<UserSettings>(() => {
@@ -309,6 +314,54 @@ function AppContent() {
         executeLaunch(editLaunchAction);
       }
 
+      // Auto-trigger Image Generation on Edit if requested
+      if (isImageIntent(newContent) || targetMessage.mode === 'image') {
+        const effectivePrompt = targetMessage.mode === 'image' ? newContent : extractImagePrompt(newContent);
+        const imgRes = await fetch('/api/generate-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: effectivePrompt,
+            imageSize: '1K',
+            aspectRatio: '1:1',
+          }),
+        });
+
+        if (imgRes.ok) {
+          const imgData = await imgRes.json();
+          let messageContent = `Berikut adalah ilustrasi AI yang dihasilkan untuk: "${newContent}"`;
+          if (imgData.notice) {
+            messageContent += `\n\n> ℹ️ ${imgData.notice}`;
+          }
+
+          const modelMessageObj: Message = {
+            id: `ai_${Date.now()}`,
+            conversationId: activeConvId || 'guest_conv',
+            userId: user ? user.uid : 'guest',
+            role: 'model',
+            content: messageContent,
+            model: imgData.model || 'gemini-nano-banana-2.1',
+            mode: 'image',
+            imageUri: imgData.imageUrl,
+            createdAt: new Date(),
+          };
+
+          if (user && activeConvId) {
+            await addMessage(activeConvId, user.uid, {
+              role: 'model',
+              content: modelMessageObj.content,
+              model: modelMessageObj.model,
+              imageUri: modelMessageObj.imageUri,
+            });
+          } else {
+            setGuestMessages((prev) => [...prev, modelMessageObj]);
+          }
+          setMessages((prev) => [...prev, modelMessageObj]);
+          setIsLoading(false);
+          return;
+        }
+      }
+
       // Resilient fetch with automatic retry for transient network reconnections
       let response: Response | null = null;
       let lastFetchError: any = null;
@@ -436,11 +489,58 @@ function AppContent() {
     }
   };
 
+  // Image Studio Modal Handlers
+  const handleOpenImageStudio = (baseImage?: string, prompt?: string) => {
+    setStudioBaseImage(baseImage || null);
+    setStudioPrompt(prompt || '');
+    setIsImageStudioOpen(true);
+  };
+
+  const handleSendStudioImageToChat = async (
+    imageUrl: string,
+    promptText: string,
+    modelName: string
+  ) => {
+    let currentConvId = activeConvId;
+    if (user && !currentConvId) {
+      currentConvId = await createConversation(
+        user.uid,
+        promptText.slice(0, 32) || 'Studio Gambar AI',
+        'image'
+      );
+      setActiveConvId(currentConvId);
+    }
+
+    const modelMessageObj: Message = {
+      id: `ai_${Date.now()}`,
+      conversationId: currentConvId || 'guest_conv',
+      userId: user ? user.uid : 'guest',
+      role: 'model',
+      content: `Berikut adalah hasil kreasi Studio Gambar AI untuk: "${promptText}"`,
+      model: modelName,
+      mode: 'image',
+      imageUri: imageUrl,
+      createdAt: new Date(),
+    };
+
+    if (user && currentConvId) {
+      await addMessage(currentConvId, user.uid, {
+        role: 'model',
+        content: modelMessageObj.content,
+        model: modelMessageObj.model,
+        imageUri: modelMessageObj.imageUri,
+      });
+    } else {
+      setGuestMessages((prev) => [...prev, modelMessageObj]);
+    }
+    setMessages((prev) => [...prev, modelMessageObj]);
+  };
+
   // Handler: Send Message
   const handleSendMessage = async (
     content: string,
     mode: AiMode = activeMode,
-    imageConfig?: { imageSize: '1K' | '2K' | '4K'; aspectRatio: '1:1' | '16:9' | '9:16' | '4:3' },
+    imageConfig?: { imageSize: '1K' | '2K' | '4K'; aspectRatio: '1:1' | '16:9' | '9:16' | '4:3' | '3:4' },
     attachments?: MediaAttachment[],
     webSearchEnabled: boolean = true
   ) => {
@@ -508,15 +608,24 @@ function AppContent() {
         setGuestMessages((prev) => [...prev, userMessageObj]);
       }
 
-      // Handle Image Generation Mode
-      if (mode === 'image') {
+      // Handle Image Generation & Editing Mode (Explicit Mode OR Auto-Detected Intent from prompt)
+      const isAutoImage = isImageIntent(safeContent);
+      if (mode === 'image' || isAutoImage) {
+        const imgAttachment = attachments?.find((a) => a.type === 'image');
+        const baseImage = imgAttachment?.base64Data || imgAttachment?.originalUrl || imgAttachment?.previewUrl;
+        const mimeType = imgAttachment?.mimeType;
+
+        const effectivePrompt = mode === 'image' ? content : extractImagePrompt(content);
+
         const imgRes = await fetch('/api/generate-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            prompt: content,
+            prompt: effectivePrompt,
             imageSize: imageConfig?.imageSize || '1K',
             aspectRatio: imageConfig?.aspectRatio || '1:1',
+            baseImage,
+            mimeType,
           }),
         });
 
@@ -531,7 +640,9 @@ function AppContent() {
 
         const imgData = await imgRes.json();
 
-        let messageContent = `Berikut adalah ilustrasi AI yang dihasilkan untuk: "${content}"`;
+        let messageContent = baseImage
+          ? `Berikut adalah hasil modifikasi / edit gambar untuk: "${content}"`
+          : `Berikut adalah ilustrasi AI yang dihasilkan untuk: "${content}"`;
         if (imgData.notice) {
           messageContent += `\n\n> ℹ️ ${imgData.notice}`;
         }
@@ -915,6 +1026,7 @@ function AppContent() {
         activeView={activeView}
         onNavigateView={(view) => setActiveView(view)}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenImageStudio={() => handleOpenImageStudio()}
       />
 
       {/* Main Workspace: Chat, Library, or Discover View */}
@@ -944,6 +1056,7 @@ function AppContent() {
             userPhoto={user?.photoURL}
             userName={user?.displayName}
             activeConnectingAction={activeConnectingAction}
+            onOpenImageStudio={handleOpenImageStudio}
           />
         )}
 
@@ -996,6 +1109,15 @@ function AppContent() {
         title="Otentikasi Keamanan 2FA"
         description="Masukkan PIN keamanan 6-digit untuk mengonfirmasi penghapusan seluruh riwayat obrolan secara permanen dari server database Cloud Firestore."
         onConfirm={handleConfirmPurgeAllHistory}
+      />
+
+      {/* Maria AI Image Creation & Editing Studio */}
+      <ImageStudioModal
+        isOpen={isImageStudioOpen}
+        onClose={() => setIsImageStudioOpen(false)}
+        onSendToChat={handleSendStudioImageToChat}
+        initialBaseImage={studioBaseImage}
+        initialPrompt={studioPrompt}
       />
     </div>
   );

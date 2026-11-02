@@ -20,6 +20,7 @@ import {
   Image as ImageIcon,
   Play,
   Music,
+  Wand2,
 } from 'lucide-react';
 import { Message, MediaAttachment } from '../types/index.ts';
 import { LaunchAction, executeLaunch, detectLaunchAction } from '../lib/actionLauncher.ts';
@@ -35,6 +36,7 @@ interface MessageItemProps {
   speechSpeed?: string;
   onEditMessage?: (messageId: string, newContent: string, resend: boolean) => void;
   onLoadToInput?: (text: string) => void;
+  onOpenImageStudio?: (baseImage?: string, prompt?: string) => void;
 }
 
 import { autoFormatMarkdown } from '../lib/formatUtils.ts';
@@ -256,6 +258,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   speechSpeed = '1x',
   onEditMessage,
   onLoadToInput,
+  onOpenImageStudio,
 }) => {
   const [copied, setCopied] = useState(false);
   const [speechState, setSpeechState] = useState<SpeechState>(() => speechService.getState());
@@ -668,19 +671,67 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
         {/* AI Generated Image Output if any */}
         {message.imageUri && (
-          <div className="my-3 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 shadow-xs max-w-lg">
-            <img
-              src={message.imageUri}
-              alt="Hasil generasi gambar"
-              onClick={() =>
-                setLightboxMedia({
-                  url: message.imageUri!,
-                  type: 'image',
-                  name: 'Maria_AI_Generated.png',
-                })
-              }
-              className="w-full max-h-[500px] object-contain cursor-pointer hover:opacity-95 transition-opacity"
-            />
+          <div className="my-3 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 shadow-xs max-w-lg p-2 space-y-2">
+            <div className="rounded-xl overflow-hidden bg-slate-900 flex items-center justify-center">
+              <img
+                src={message.imageUri}
+                alt="Hasil generasi gambar"
+                onClick={() =>
+                  setLightboxMedia({
+                    url: message.imageUri!,
+                    type: 'image',
+                    name: 'Maria_AI_Generated.png',
+                  })
+                }
+                className="w-full max-h-[500px] object-contain cursor-pointer hover:opacity-95 transition-opacity"
+              />
+            </div>
+
+            {/* Quick Action Bar for Image */}
+            <div className="flex items-center justify-between gap-2 px-1 pt-1 flex-wrap">
+              <button
+                type="button"
+                onClick={() => onOpenImageStudio?.(message.imageUri, 'Modifikasi gambar ini: ')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold shadow-xs transition-all active:scale-95 cursor-pointer"
+              >
+                <Wand2 className="w-3.5 h-3.5 text-white" />
+                <span>Edit Gambar Ini</span>
+              </button>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const a = document.createElement('a');
+                    a.href = message.imageUri!;
+                    a.download = `MariaAI_${Date.now()}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                  title="Unduh Gambar"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Unduh</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLightboxMedia({
+                      url: message.imageUri!,
+                      type: 'image',
+                      name: 'Maria_AI_Generated.png',
+                    })
+                  }
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                  title="Perbesar Tampilan"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Perbesar</span>
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

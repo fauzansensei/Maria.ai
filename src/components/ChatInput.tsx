@@ -13,6 +13,7 @@ import {
   X,
   Camera,
   Type,
+  Wand2,
 } from 'lucide-react';
 import { AiMode, MediaAttachment } from '../types/index.ts';
 import { speechService } from '../lib/speechService.ts';
@@ -41,6 +42,7 @@ interface ChatInputProps {
   activeMode: AiMode;
   onModeChange: (mode: AiMode) => void;
   onOpenScienceScout?: () => void;
+  onOpenImageStudio?: () => void;
   loadedText?: string;
   onClearLoadedText?: () => void;
 }
@@ -52,6 +54,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onModeChange,
   loadedText,
   onClearLoadedText,
+  onOpenImageStudio,
 }) => {
   const [text, setText] = useState('');
   const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
@@ -553,6 +556,31 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       {isAttachmentOpen && (
         <div className="mb-2 p-2 rounded-2xl bg-white dark:bg-[#0f172a] border-2 border-white dark:border-white shadow-2xl animate-in fade-in zoom-in-95 duration-150 text-xs">
           <div className="grid grid-cols-2 gap-1.5">
+            {/* Studio Gambar AI (Buat & Edit) */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsAttachmentOpen(false);
+                onOpenImageStudio?.();
+              }}
+              className="col-span-2 flex items-center gap-2.5 p-2.5 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/40 dark:hover:to-indigo-900/40 text-blue-950 dark:text-blue-100 border border-blue-200/80 dark:border-blue-800/60 text-left transition-all shadow-2xs"
+            >
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Wand2 className="w-4 h-4 text-white" />
+              </div>
+              <div className="min-w-0">
+                <div className="font-bold truncate flex items-center gap-1.5">
+                  <span>Studio Gambar AI</span>
+                  <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-blue-600 text-white font-semibold">
+                    Free / Pro
+                  </span>
+                </div>
+                <div className="text-[10px] text-blue-700/80 dark:text-blue-300/80">
+                  Buat & edit gambar via Gemini Nano Banana 2.1 & Free Trial
+                </div>
+              </div>
+            </button>
+
             {/* Foto & Gambar */}
             <button
               type="button"

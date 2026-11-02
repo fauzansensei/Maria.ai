@@ -153,13 +153,13 @@ apiRouter.post('/chat', async (req: Request, res: Response) => {
   }
 });
 
-// Image Generation
-apiRouter.post('/generate-image', async (req: Request, res: Response) => {
+// Image Generation & Editing (Gemini Nano Banana 2.1 & Free Trial Engine)
+apiRouter.post(['/generate-image', '/edit-image'], async (req: Request, res: Response) => {
   try {
-    const { prompt, imageSize, aspectRatio } = req.body || {};
+    const { prompt, imageSize, aspectRatio, baseImage, mimeType, engine } = req.body || {};
 
     if (!prompt || typeof prompt !== 'string') {
-      sendJson(res, 400, { error: 'Prompt gambar wajib diisi.' });
+      sendJson(res, 400, { error: 'Prompt atau instruksi gambar wajib diisi.' });
       return;
     }
 
@@ -167,13 +167,16 @@ apiRouter.post('/generate-image', async (req: Request, res: Response) => {
       prompt,
       imageSize,
       aspectRatio,
+      baseImage,
+      mimeType,
+      engine,
     });
 
     sendJson(res, 200, result);
   } catch (error: any) {
-    console.error('Image generation error:', error);
+    console.error('Image generation/edit error:', error);
     sendJson(res, 500, {
-      error: error.message || 'Gagal menghasilkan gambar.',
+      error: error.message || 'Gagal memproses gambar.',
     });
   }
 });

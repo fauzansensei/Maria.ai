@@ -44,6 +44,7 @@ interface ChatAreaProps {
   userPhoto?: string | null;
   userName?: string | null;
   activeConnectingAction?: LaunchAction | null;
+  onOpenImageStudio?: (baseImage?: string, prompt?: string) => void;
 }
 
 interface NotificationItem {
@@ -71,6 +72,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   userPhoto,
   userName,
   activeConnectingAction,
+  onOpenImageStudio,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [speechState, setSpeechState] = useState<SpeechState>(() => speechService.getState());
@@ -313,6 +315,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 speechSpeed={speechSpeed}
                 onEditMessage={onEditMessage}
                 onLoadToInput={(txt) => setLoadedInputText(txt)}
+                onOpenImageStudio={onOpenImageStudio}
               />
             ))}
 
@@ -379,6 +382,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           onOpenScienceScout={onOpenScienceScout}
           loadedText={loadedInputText}
           onClearLoadedText={handleClearLoadedText}
+          onOpenImageStudio={() => onOpenImageStudio?.()}
         />
       </div>
 
