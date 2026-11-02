@@ -21,6 +21,7 @@ import {
   Play,
   Music,
   Wand2,
+  RefreshCw,
 } from 'lucide-react';
 import { Message, MediaAttachment } from '../types/index.ts';
 import { LaunchAction, executeLaunch, detectLaunchAction } from '../lib/actionLauncher.ts';
@@ -266,6 +267,45 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [resendAfterEdit, setResendAfterEdit] = useState(true);
+
+  // Resilient Image Loading & Recovery State
+  const [imageError, setImageError] = useState(false);
+  const [isRetryingImage, setIsRetryingImage] = useState(false);
+  const [currentImageUri, setCurrentImageUri] = useState<string | undefined>(message.imageUri);
+
+  useEffect(() => {
+    setCurrentImageUri(message.imageUri);
+    // Auto-detect if imageUri was corrupted/truncated at 5000 characters by the old Firestore bug
+    if (message.imageUri?.startsWith('data:image/') && message.imageUri.length <= 5000) {
+      setImageError(true);
+    } else {
+      setImageError(false);
+    }
+  }, [message.imageUri]);
+
+  const handleRetryGenerate = async () => {
+    setIsRetryingImage(true);
+    try {
+      const match = message.content.match(/"([^"]+)"/);
+      const promptToUse = match ? match[1] : 'anak kucing bermain';
+      const res = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: promptToUse }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.imageUrl) {
+          setCurrentImageUri(data.imageUrl);
+          setImageError(false);
+        }
+      }
+    } catch {
+      setImageError(true);
+    } finally {
+      setIsRetryingImage(false);
+    }
+  };
 
   // Smooth Typewriter Streaming Animation
   const [displayedContent, setDisplayedContent] = useState<string>(() => message.content);
@@ -670,68 +710,100 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         </div>
 
         {/* AI Generated Image Output if any */}
-        {message.imageUri && (
-          <div className="my-3 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 shadow-xs max-w-lg p-2 space-y-2">
-            <div className="rounded-xl overflow-hidden bg-slate-900 flex items-center justify-center">
-              <img
-                src={message.imageUri}
-                alt="Hasil generasi gambar"
-                onClick={() =>
-                  setLightboxMedia({
-                    url: message.imageUri!,
-                    type: 'image',
-                    name: 'Maria_AI_Generated.png',
-                  })
-                }
-                className="w-full max-h-[500px] object-contain cursor-pointer hover:opacity-95 transition-opacity"
-              />
-            </div>
-
-            {/* Quick Action Bar for Image */}
-            <div className="flex items-center justify-between gap-2 px-1 pt-1 flex-wrap">
-              <button
-                type="button"
-                onClick={() => onOpenImageStudio?.(message.imageUri, 'Modifikasi gambar ini: ')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold shadow-xs transition-all active:scale-95 cursor-pointer"
-              >
-                <Wand2 className="w-3.5 h-3.5 text-white" />
-                <span>Edit Gambar Ini</span>
-              </button>
-
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const a = document.createElement('a');
-                    a.href = message.imageUri!;
-                    a.download = `MariaAI_${Date.now()}.png`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                  }}
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
-                  title="Unduh Gambar"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Unduh</span>
-                </button>
-                <button
-                  type="button"
+        {currentImageUri && (
+          <div className="my-3 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 shadow-xs max-w-lg p-2 space-y-2">
+            <div className="rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center min-h-[220px] relative">
+              {imageError ? (
+                <div className="flex flex-col items-center justify-center p-6 text-center space-y-2.5">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600">
+                    <ImageIcon className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      Sinkronisasi Ulang Gambar
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 max-w-xs mt-0.5">
+                      Data gambar sesi sebelumnya perlu dimuat ulang dalam resolusi penuh.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isRetryingImage}
+                    onClick={handleRetryGenerate}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isRetryingImage ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-3.5 h-3.5" />
+                    )}
+                    <span>{isRetryingImage ? 'Memuat Ulang...' : 'Muat Gambar Sekarang'}</span>
+                  </button>
+                </div>
+              ) : (
+                <img
+                  src={currentImageUri}
+                  alt="Hasil generasi gambar"
+                  onError={() => setImageError(true)}
                   onClick={() =>
                     setLightboxMedia({
-                      url: message.imageUri!,
+                      url: currentImageUri,
                       type: 'image',
                       name: 'Maria_AI_Generated.png',
                     })
                   }
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
-                  title="Perbesar Tampilan"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Perbesar</span>
-                </button>
-              </div>
+                  className="w-full max-h-[500px] object-contain cursor-pointer hover:opacity-95 transition-opacity rounded-lg"
+                />
+              )}
             </div>
+
+            {/* Quick Action Bar for Image */}
+            {!imageError && (
+              <div className="flex items-center justify-between gap-2 px-1 pt-1 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => onOpenImageStudio?.(currentImageUri, 'Modifikasi gambar ini: ')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold shadow-xs transition-all active:scale-95 cursor-pointer"
+                >
+                  <Wand2 className="w-3.5 h-3.5 text-white" />
+                  <span>Edit Gambar Ini</span>
+                </button>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const a = document.createElement('a');
+                      a.href = currentImageUri;
+                      a.download = `MariaAI_${Date.now()}.png`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                    title="Unduh Gambar"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Unduh</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setLightboxMedia({
+                        url: currentImageUri,
+                        type: 'image',
+                        name: 'Maria_AI_Generated.png',
+                      })
+                    }
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                    title="Perbesar Tampilan"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Perbesar</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

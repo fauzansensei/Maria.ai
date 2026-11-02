@@ -243,7 +243,7 @@ export async function addMessage(
       dataToSave.mode = message.mode.slice(0, 50);
     }
     if (message.imageUri) {
-      dataToSave.imageUri = message.imageUri.slice(0, 5000);
+      dataToSave.imageUri = message.imageUri.slice(0, 800000);
     }
     if (message.thinkingProcess) {
       dataToSave.thinkingProcess = message.thinkingProcess.slice(0, 48000);
