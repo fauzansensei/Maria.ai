@@ -14,10 +14,27 @@ function expressApiPlugin(): Plugin {
         if (req.url && req.url.startsWith('/api')) {
           try {
             const { apiApp } = await import('./src/server/api.ts');
-            apiApp(req as any, res as any, next);
-          } catch (err) {
+            apiApp(req as any, res as any, (err?: any) => {
+              if (err) {
+                console.error('API Error in Vite middleware:', err);
+                if (!res.headersSent) {
+                  res.statusCode = 500;
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({ error: err.message || 'Internal Server Error' }));
+                }
+              } else if (!res.headersSent) {
+                res.statusCode = 404;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ error: 'Endpoint API tidak ditemukan.' }));
+              }
+            });
+          } catch (err: any) {
             console.error('Error handling API request in Vite middleware:', err);
-            next(err);
+            if (!res.headersSent) {
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: err?.message || 'Gagal memproses API.' }));
+            }
           }
         } else {
           next();

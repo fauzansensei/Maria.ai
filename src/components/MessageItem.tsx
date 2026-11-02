@@ -264,6 +264,51 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   const [editContent, setEditContent] = useState(message.content);
   const [resendAfterEdit, setResendAfterEdit] = useState(true);
 
+  // Smooth Typewriter Streaming Animation
+  const [displayedContent, setDisplayedContent] = useState<string>(() => message.content);
+
+  useEffect(() => {
+    if (!message.isStreaming) {
+      setDisplayedContent(message.content);
+      return;
+    }
+
+    let animationFrameId: number;
+    let lastTime = performance.now();
+
+    const updateTypewriter = (time: number) => {
+      // Step roughly every 14ms (~60-70fps)
+      if (time - lastTime >= 14) {
+        lastTime = time;
+        setDisplayedContent((current) => {
+          const target = message.content;
+          if (current.length >= target.length) {
+            return current;
+          }
+
+          const delta = target.length - current.length;
+          // Dynamically scale typing speed: smooth when close, accelerated if large buffer
+          let advance = 1;
+          if (delta > 120) advance = 8;
+          else if (delta > 60) advance = 5;
+          else if (delta > 25) advance = 3;
+          else if (delta > 6) advance = 2;
+          else advance = 1;
+
+          return target.slice(0, current.length + advance);
+        });
+      }
+
+      animationFrameId = requestAnimationFrame(updateTypewriter);
+    };
+
+    animationFrameId = requestAnimationFrame(updateTypewriter);
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [message.content, message.isStreaming]);
+
   useEffect(() => {
     setEditContent(message.content);
   }, [message.content]);
@@ -531,7 +576,13 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     <div className="flex justify-start my-3 sm:my-4 px-3 sm:px-6 select-none animate-in fade-in-0 slide-in-from-bottom-2 duration-300 ease-out">
       {lightboxModal}
 
-      <div className="w-full max-w-3xl rounded-2xl p-4 sm:p-5 bg-white border border-slate-200 shadow-xs space-y-3 transition-all">
+      <div
+        className={`w-full max-w-3xl rounded-2xl p-4 sm:p-5 bg-white border shadow-xs space-y-3 transition-all ${
+          message.isStreaming
+            ? 'border-blue-300 shadow-md shadow-blue-50/50 ring-2 ring-blue-500/10'
+            : 'border-slate-200'
+        }`}
+      >
         {/* Header Bar: Brand, Model, Grounding Status & Action Toolbar */}
         <div className="flex items-center justify-between gap-2 flex-wrap pb-2.5 border-b border-slate-100">
           {/* Left: Avatar + "Maria AI by Zan.dev" Title + Badges */}
@@ -636,7 +687,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         {/* Main AI Response Body with AUTOMATIC FORMATTING (*italic*, **bold**, ~strikethrough~, `code`, etc.) */}
         <div className="text-[#0f172a] text-[14.5px] leading-relaxed select-text break-words">
           {/* Animated typing dots when streaming has started but first tokens are still generating */}
-          {!message.content.trim() && message.isStreaming && (
+          {!displayedContent.trim() && message.isStreaming && (
             <div className="flex items-center gap-2.5 py-1.5 text-slate-500 animate-in fade-in duration-200">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -649,7 +700,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             </div>
           )}
 
-          {Boolean(message.content.trim()) && (
+          {Boolean(displayedContent.trim()) && (
             <div className="relative">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
@@ -779,7 +830,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   },
                 }}
               >
-                {autoFormatMarkdown(message.content)}
+                {autoFormatMarkdown(displayedContent)}
               </ReactMarkdown>
 
               {/* Glowing Typing Beacon / Cursor while response is actively streaming */}

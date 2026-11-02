@@ -33,6 +33,7 @@ interface ChatAreaProps {
     attachments?: MediaAttachment[],
     webSearchEnabled?: boolean
   ) => void;
+  isSidebarOpen?: boolean;
   onToggleSidebar: () => void;
   onOpenScienceScout: () => void;
   onOpenSettings: () => void;
@@ -59,6 +60,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   activeMode,
   onModeChange,
   onSendMessage,
+  isSidebarOpen = false,
   onToggleSidebar,
   onOpenScienceScout,
   onOpenSettings,
@@ -152,16 +154,18 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     <div className="flex-1 flex flex-col h-full bg-white text-gray-900 relative overflow-hidden select-none">
       {/* Top Bar Header (Sticky, always visible on mobile & desktop) */}
       <header className="sticky top-0 h-14 px-3 sm:px-4 border-b border-gray-100 bg-white/95 backdrop-blur-md flex items-center justify-between shrink-0 z-30 select-none shadow-2xs">
-        {/* Left: Hamburger Button, Maria AI Logo with online dot, Brand Name & Purple PLUS Badge */}
+        {/* Left: Hamburger Button (only shown when sidebar is closed/collapsed) + Maria AI Logo & PLUS Badge */}
         <div className="flex items-center gap-2 sm:gap-2.5">
-          <button
-            onClick={onToggleSidebar}
-            title="Buka / Tutup Menu"
-            aria-label="Buka / Tutup Menu"
-            className="w-9 h-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-800 hover:bg-gray-50 active:scale-95 transition-all shadow-xs shrink-0"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
+          {!isSidebarOpen && (
+            <button
+              onClick={onToggleSidebar}
+              title="Buka Menu"
+              aria-label="Buka Menu"
+              className="w-9 h-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-800 hover:bg-gray-50 active:scale-95 transition-all shadow-xs shrink-0 animate-in fade-in duration-150"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          )}
 
           <div className="flex items-center gap-2">
             <MariaLogo size="sm" withOnlineDot={true} />

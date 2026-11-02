@@ -47,13 +47,8 @@ function AppContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeMode, setActiveMode] = useState<AiMode>('search');
 
-  // Modals & Drawers (Sidebar open by default on desktop, drawer on mobile)
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 1024;
-    }
-    return false;
-  });
+  // Modals & Drawers - default closed so chat has full focus and hamburger menu is clean
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [isScienceScoutOpen, setIsScienceScoutOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [is2FAOpen, setIs2FAOpen] = useState(false);
@@ -144,7 +139,13 @@ function AppContent() {
     }
 
     const unsubscribe = subscribeMessages(activeConvId, (msgs) => {
-      setMessages(msgs);
+      setMessages((prev) => {
+        const streamingMsg = prev.find((m) => m.isStreaming);
+        if (streamingMsg && !msgs.some((m) => m.id === streamingMsg.id)) {
+          return [...msgs, streamingMsg];
+        }
+        return msgs;
+      });
     });
 
     return () => unsubscribe();
@@ -339,8 +340,13 @@ function AppContent() {
         let errMessage = 'Gagal mengambil jawaban AI.';
         try {
           if (response) {
-            const errData = await response.json();
-            if (errData.error) errMessage = errData.error;
+            const ct = response.headers.get('content-type') || '';
+            if (ct.includes('application/json')) {
+              const errData = await response.json();
+              if (errData.error) errMessage = errData.error;
+            } else {
+              errMessage = 'Layanan AI sedang menyinkronkan server. Silakan coba kembali.';
+            }
           } else if (lastFetchError?.message) {
             errMessage = `Koneksi terputus: ${lastFetchError.message}`;
           }
@@ -369,7 +375,13 @@ function AppContent() {
         return;
       }
 
-      const data = await response.json();
+      const ct = response.headers.get('content-type') || '';
+      let data: any = {};
+      if (ct.includes('application/json')) {
+        data = await response.json();
+      } else {
+        throw new Error('Layanan sedang menyinkronkan data. Silakan coba sesaat lagi.');
+      }
 
       const modelMessageObj: Message = {
         id: `ai_${Date.now()}`,
@@ -792,16 +804,24 @@ function AppContent() {
           }),
         });
 
+        const ct = response.headers.get('content-type') || '';
         if (!response.ok) {
           let errMessage = 'Gagal mengambil jawaban AI.';
           try {
-            const errData = await response.json();
-            if (errData.error) errMessage = errData.error;
+            if (ct.includes('application/json')) {
+              const errData = await response.json();
+              if (errData.error) errMessage = errData.error;
+            }
           } catch {}
           throw new Error(errMessage);
         }
 
-        const data = await response.json();
+        let data: any = {};
+        if (ct.includes('application/json')) {
+          data = await response.json();
+        } else {
+          throw new Error('Layanan AI sedang menyinkronkan data. Silakan coba sesaat lagi.');
+        }
 
         const modelMessageObj: Message = {
           id: `ai_${Date.now()}`,
@@ -907,6 +927,7 @@ function AppContent() {
             activeMode={activeMode}
             onModeChange={(m) => setActiveMode(m)}
             onSendMessage={handleSendMessage}
+            isSidebarOpen={isSidebarOpen}
             onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
             onOpenScienceScout={() => setIsScienceScoutOpen(true)}
             onOpenSettings={() => setIsSettingsOpen(true)}

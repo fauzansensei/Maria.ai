@@ -305,7 +305,7 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
       yield {
         type: 'chunk',
         text: stripEmojis(chunk.text),
-        model: modelName,
+        model: successfulModel,
       };
     }
 
@@ -335,7 +335,7 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
 
   yield {
     type: 'done',
-    model: modelName,
+    model: successfulModel,
     groundingLinks: groundingLinks.length > 0 ? groundingLinks : undefined,
   };
 }

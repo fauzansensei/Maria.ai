@@ -92,6 +92,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Account menu toggle
   const [showAccountMenu, setShowAccountMenu] = useState(false);
 
+  // Close sidebar on Escape key
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const filteredConversations = conversations.filter((c) =>
     c.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -139,20 +150,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* Mobile Backdrop */}
+      {/* Backdrop: click outside anywhere closes sidebar */}
       {isOpen && (
         <div
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-black/75 backdrop-blur-xs lg:hidden transition-opacity"
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px] transition-opacity animate-in fade-in duration-200"
         />
       )}
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-40 bg-[#0a1128] text-slate-200 border-r border-[#1e293b] flex flex-col transition-all duration-300 ease-in-out select-none shadow-2xl lg:shadow-none ${
-          isOpen
-            ? 'w-72 sm:w-80 translate-x-0'
-            : '-translate-x-full lg:translate-x-0 lg:w-0 lg:overflow-hidden lg:border-r-0'
+        className={`fixed inset-y-0 left-0 z-50 bg-[#0a1128] text-slate-200 border-r border-[#1e293b] flex flex-col transition-transform duration-300 ease-in-out select-none shadow-2xl ${
+          isOpen ? 'translate-x-0 w-72 sm:w-80' : '-translate-x-full w-72 sm:w-80'
         }`}
       >
         {/* Header Atas: [M] Maria AI + Arrow Left */}
@@ -168,8 +177,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <button
             onClick={onClose}
-            title="Tutup / Lipat Sidebar"
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-[#15203b] transition-colors lg:flex"
+            title="Tutup Menu"
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-[#15203b] transition-colors"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -181,7 +190,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => {
               onNewConversation();
               onNavigateView('chat');
-              if (window.innerWidth < 1024) onClose();
+              onClose();
             }}
             className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs tracking-wide shadow-lg shadow-blue-900/30 transition-all duration-200 active:scale-[0.98]"
           >
@@ -194,7 +203,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               onClick={() => {
                 onNavigateView('library');
-                if (window.innerWidth < 1024) onClose();
+                onClose();
               }}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                 activeView === 'library'
@@ -209,7 +218,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               onClick={() => {
                 onNavigateView('discover');
-                if (window.innerWidth < 1024) onClose();
+                onClose();
               }}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                 activeView === 'discover'
@@ -224,6 +233,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               onClick={() => {
                 onOpenSettings();
+                onClose();
               }}
               className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-[#121c35] hover:text-white transition-all"
             >
@@ -282,7 +292,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={() => {
                     onSelectConversation(conv.id);
                     onNavigateView('chat');
-                    if (window.innerWidth < 1024) onClose();
+                    onClose();
                   }}
                   className={`group relative flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl cursor-pointer text-xs transition-all ${
                     isActive
