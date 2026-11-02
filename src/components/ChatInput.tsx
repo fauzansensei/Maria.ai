@@ -788,18 +788,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       </div>
 
-      {/* Sub-label Bawah (Direct link to /cookies.html without any modal) */}
-      <div className="flex items-center justify-center gap-1.5 pt-2 pb-1 select-none text-[10px] font-medium tracking-wider text-slate-400 uppercase flex-wrap">
+      {/* Sub-label Bawah */}
+      <div className="flex items-center justify-center pt-2 pb-1 select-none text-[10px] font-medium tracking-wider text-slate-400 uppercase">
         <span>MARIA ADALAH AI YANG DAPAT MELAKUKAN KESALAHAN</span>
-        <span className="text-slate-400">•</span>
-        <a
-          href="/cookies.html"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline hover:text-slate-950 transition-colors cursor-pointer normal-case tracking-normal text-[10px] text-slate-600 hover:text-slate-950 font-semibold inline-flex items-center gap-1"
-        >
-          <span>Kebijakan Cookie</span>
-        </a>
       </div>
     </div>
   );
