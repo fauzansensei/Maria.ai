@@ -597,20 +597,27 @@ async function generateFreeTrialImage(prompt: string, aspectRatio: string = '1:1
   }
 }
 
+// In-memory cache for Gemini image model quota status to eliminate repeated 429 attempts
+let isGeminiImageQuotaExhausted = false;
+
 export async function generateAiImage(options: GenerateImageOptions) {
   const { prompt, imageSize = '1K', aspectRatio = '1:1', baseImage, mimeType = 'image/jpeg', engine = 'auto' } = options;
 
-  // If user explicitly chose Free Trial engine
-  if (engine === 'free') {
+  // If user explicitly chose Free Trial engine OR if free-tier key has quota 0 for Gemini image models
+  const shouldUseFreeEngine = engine === 'free' || (engine === 'auto' && isGeminiImageQuotaExhausted);
+
+  if (shouldUseFreeEngine) {
     try {
-      const freeImageUrl = await generateFreeTrialImage(prompt, aspectRatio);
+      const editPrompt = baseImage ? `Modified version: ${prompt}, high quality visual` : prompt;
+      const freeImageUrl = await generateFreeTrialImage(editPrompt, aspectRatio);
       return {
         imageUrl: freeImageUrl,
         model: 'flux-free-trial',
-        notice: 'Dihasilkan menggunakan Engine Free Trial (100% Gratis, Bebas Kuota & Tanpa Kartu Kredit).',
+        notice: baseImage
+          ? 'Diedit menggunakan Engine Free Trial (100% Gratis & Bebas Kuota).'
+          : 'Dihasilkan via Engine Free Trial (100% Gratis & Bebas Kuota).',
       };
-    } catch (freeErr: any) {
-      console.warn('Free trial engine failed, falling back to procedural visualizer:', freeErr.message);
+    } catch {
       return {
         imageUrl: generateProceduralIllustration(prompt, aspectRatio),
         model: 'maria-ai-visualizer',
@@ -619,7 +626,7 @@ export async function generateAiImage(options: GenerateImageOptions) {
     }
   }
 
-  // If baseImage is provided -> Image Editing Mode
+  // If baseImage is provided -> Image Editing Mode with Gemini
   if (baseImage) {
     const cleanBase64 = baseImage.includes(',') ? baseImage.split(',')[1].trim() : baseImage.trim();
     const detectedMime = mimeType || (baseImage.includes('data:image/png') ? 'image/png' : 'image/jpeg');
@@ -660,7 +667,9 @@ export async function generateAiImage(options: GenerateImageOptions) {
         }
       }
     } catch (err: any) {
-      console.warn('nano-banana-2.1 image editing fallback:', err.message);
+      if (err?.message?.includes('429') || err?.message?.includes('RESOURCE_EXHAUSTED')) {
+        isGeminiImageQuotaExhausted = true;
+      }
 
       // 2. Try gemini-3.1-flash-lite-image
       try {
@@ -691,10 +700,8 @@ export async function generateAiImage(options: GenerateImageOptions) {
             };
           }
         }
-      } catch (fallbackErr: any) {
-        console.warn('gemini-3.1-flash-lite-image editing fallback failed:', fallbackErr.message);
-
-        // 3. Free Trial Flux Fallback with contextual edit prompt
+      } catch {
+        // Silently route to Free Trial Flux Fallback with contextual edit prompt
         try {
           const editPrompt = `Modified version: ${prompt}, high quality detailed`;
           const freeImageUrl = await generateFreeTrialImage(editPrompt, aspectRatio);
@@ -714,7 +721,7 @@ export async function generateAiImage(options: GenerateImageOptions) {
     }
   }
 
-  // Standard Text-to-Image Creation
+  // Standard Text-to-Image Creation with Gemini
   try {
     const ai = getGeminiClient();
     const response = await ai.models.generateContent({
@@ -740,7 +747,9 @@ export async function generateAiImage(options: GenerateImageOptions) {
       }
     }
   } catch (err: any) {
-    console.warn('nano-banana-2.1 image generation fallback:', err.message);
+    if (err?.message?.includes('429') || err?.message?.includes('RESOURCE_EXHAUSTED')) {
+      isGeminiImageQuotaExhausted = true;
+    }
 
     // 2. Try Flash Lite Image Model
     try {
@@ -766,9 +775,7 @@ export async function generateAiImage(options: GenerateImageOptions) {
           };
         }
       }
-    } catch (fallbackErr: any) {
-      console.warn('flash-lite-image fallback also failed:', fallbackErr.message);
-
+    } catch {
       // 3. Free Trial Flux AI Fallback
       try {
         const freeImageUrl = await generateFreeTrialImage(prompt, aspectRatio);
@@ -787,7 +794,12 @@ export async function generateAiImage(options: GenerateImageOptions) {
     }
   }
 
-  throw new Error('Gagal menghasilkan gambar dari model AI.');
+  // Ultimate resilient fallback to ensure a valid image is ALWAYS returned
+  return {
+    imageUrl: generateProceduralIllustration(prompt, aspectRatio),
+    model: 'maria-ai-visualizer',
+    notice: 'Ilustrasi dihasilkan oleh Visualizer Prosedural Maria AI.',
+  };
 }
 
 export async function editAiImage(options: GenerateImageOptions) {
