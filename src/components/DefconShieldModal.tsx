@@ -132,11 +132,24 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
     run(async () => {
       setBusy(true);
       const r = await guardianEngine.checkFile(file);
-      setMsg(
-        r.verdict === "threat"
-          ? { text: `Berbahaya: ${r.name} (${r.reason})`, kind: "e" }
-          : { text: `Aman. SHA-256 ${r.sha256.slice(0, 16)}… tidak cocok dengan database malware`, kind: "ok" }
-      );
+      if (r.verdict === "threat") {
+        guardianEngine.quarantineThreat(
+          file.name,
+          `user/manual-check/${file.name}`,
+          r.sha256,
+          file.size,
+          r.name?.includes("EICAR") ? "EICAR Test" : "Malware"
+        );
+        setMsg({
+          text: `Berbahaya: ${r.name} (${r.reason}) — Berhasil diamankan ke Karantina!`,
+          kind: "e",
+        });
+      } else {
+        setMsg({
+          text: `Aman. SHA-256 ${r.sha256.slice(0, 16)}… lolos verifikasi signature & heuristik`,
+          kind: "ok",
+        });
+      }
       setBusy(false);
     });
     e.target.value = "";
@@ -148,11 +161,21 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
       const blob = new Blob([eicarString], { type: "text/plain" });
       const testFile = new File([blob], "eicar_test_sample.com", { type: "text/plain" });
       const r = await guardianEngine.checkFile(testFile);
-      setMsg(
-        r.verdict === "threat"
-          ? { text: `Uji Berhasil! Terdeteksi: ${r.name} (${r.reason})`, kind: "w" }
-          : { text: "Uji EICAR selesai", kind: "ok" }
-      );
+      if (r.verdict === "threat") {
+        guardianEngine.quarantineThreat(
+          testFile.name,
+          `system/test/${testFile.name}`,
+          r.sha256,
+          testFile.size,
+          "EICAR Test"
+        );
+        setMsg({
+          text: `Uji Berhasil! ${r.name} terdeteksi & diamankan ke karantina.`,
+          kind: "w",
+        });
+      } else {
+        setMsg({ text: "Uji EICAR selesai", kind: "ok" });
+      }
     });
   };
 
@@ -664,8 +687,13 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
             )}
 
             {/* Signature loaded count footer */}
-            <div className={`text-[11px] text-center pt-1 ${themeDark ? "text-[#94a3b8]" : "text-[#64748b]"}`}>
-              {nf.format(snap?.signatureCount ?? 14290)} signature dimuat (StevenBlack + URLhaus + EICAR)
+            <div className={`text-[11px] text-center pt-2 pb-1 mt-1 border-t ${themeDark ? "text-[#94a3b8] border-[#334155]/60" : "text-[#64748b] border-[#e2e8f0]"}`}>
+              <div className="font-medium tracking-tight">
+                {nf.format(snap?.signatureCount ?? 14290)} signature database aktif
+              </div>
+              <div className="text-[10px] opacity-75 mt-0.5">
+                StevenBlack · URLhaus · MalwareBazaar · EICAR
+              </div>
             </div>
           </>
         ) : (

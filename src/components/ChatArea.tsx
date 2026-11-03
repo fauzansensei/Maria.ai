@@ -19,6 +19,7 @@ import { MariaLogo } from './MariaLogo.tsx';
 import { speechService, SpeechState } from '../lib/speechService.ts';
 import { DefconShieldModal, DefconLevel } from './DefconShieldModal.tsx';
 import { defconService, DefconState } from '../lib/defconProtectionService.ts';
+import { guardianEngine, type Snapshot } from '../lib/guardian/guardianEngine.ts';
 
 interface ChatAreaProps {
   activeConversation: Conversation | null;
@@ -81,12 +82,20 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const [showDefconModal, setShowDefconModal] = useState(false);
   const [defconState, setDefconState] = useState<DefconState>(() => defconService.getState());
   const [defconLevel, setDefconLevel] = useState<DefconLevel>(() => defconService.getState().currentLevel);
+  const [guardianSnap, setGuardianSnap] = useState<Snapshot | null>(() => guardianEngine.getSnapshot());
 
   useEffect(() => {
-    return defconService.subscribe((state) => {
+    const unsubDefcon = defconService.subscribe((state) => {
       setDefconState(state);
       setDefconLevel(state.currentLevel);
     });
+    const unsubGuardian = guardianEngine.subscribe((newSnap) => {
+      setGuardianSnap(newSnap);
+    });
+    return () => {
+      unsubDefcon();
+      unsubGuardian();
+    };
   }, []);
 
   const handleDefconLevelChange = (lvl: DefconLevel) => {
@@ -214,11 +223,15 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           >
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>DEFCON {defconLevel}</span>
-            {defconState.blockedThisSession > 0 && (
+            {guardianSnap && guardianSnap.quarantine.length > 0 ? (
+              <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-rose-600 text-white text-[9px] font-extrabold animate-pulse">
+                {guardianSnap.quarantine.length}
+              </span>
+            ) : defconState.blockedThisSession > 0 ? (
               <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-emerald-600 text-white text-[9px] font-extrabold animate-in zoom-in-75">
                 {defconState.blockedThisSession}
               </span>
-            )}
+            ) : null}
           </button>
 
           {/* Notifications Bell */}
@@ -383,6 +396,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           loadedText={loadedInputText}
           onClearLoadedText={handleClearLoadedText}
           onOpenImageStudio={() => onOpenImageStudio?.()}
+          onOpenDefconModal={() => setShowDefconModal(true)}
         />
       </div>
 

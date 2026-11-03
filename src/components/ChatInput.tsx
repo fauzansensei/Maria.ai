@@ -14,10 +14,12 @@ import {
   Camera,
   Type,
   Wand2,
+  ShieldAlert,
 } from 'lucide-react';
 import { AiMode, MediaAttachment } from '../types/index.ts';
 import { speechService } from '../lib/speechService.ts';
 import { autoFormatMarkdown, hasFormattingSyntax } from '../lib/formatUtils.ts';
+import { guardianEngine } from '../lib/guardian/guardianEngine.ts';
 import {
   formatBytes,
   getMediaType,
@@ -43,6 +45,7 @@ interface ChatInputProps {
   onModeChange: (mode: AiMode) => void;
   onOpenScienceScout?: () => void;
   onOpenImageStudio?: () => void;
+  onOpenDefconModal?: () => void;
   loadedText?: string;
   onClearLoadedText?: () => void;
 }
@@ -55,6 +58,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   loadedText,
   onClearLoadedText,
   onOpenImageStudio,
+  onOpenDefconModal,
 }) => {
   const [text, setText] = useState('');
   const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
@@ -62,6 +66,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [aspectRatio] = useState<'1:1' | '16:9' | '9:16' | '4:3'>('1:1');
   const [isRecording, setIsRecording] = useState(false);
   const [attachments, setAttachments] = useState<MediaAttachment[]>([]);
+  const [defconAlert, setDefconAlert] = useState<{ filename: string; threatName: string; reason: string } | null>(null);
   const [lightboxMedia, setLightboxMedia] = useState<LightboxMedia | null>(null);
   const [showFormatToolbar, setShowFormatToolbar] = useState(false);
   const [hasSelection, setHasSelection] = useState(false);
@@ -279,12 +284,62 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     setHasSelection(false);
   };
 
-  // Process files into MediaAttachment objects with original full resolution
+  // Process files into MediaAttachment objects with DEFCON 5 Real-Time Protection Inspection
   const processFiles = useCallback(async (files: FileList | File[]) => {
     const newAttachments: MediaAttachment[] = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+
+      // 1. DEFCON 5 Real-Time Threat Interception
+      try {
+        const securityCheck = await guardianEngine.checkFile(file);
+        if (securityCheck.verdict === 'threat') {
+          const cat = securityCheck.name?.includes('EICAR')
+            ? 'EICAR Test'
+            : securityCheck.name?.includes('Binary')
+            ? 'Executable'
+            : 'Malware';
+
+          // Quarantine immediately into vault
+          guardianEngine.quarantineThreat(
+            file.name,
+            `chat/uploads/${file.name}`,
+            securityCheck.sha256,
+            file.size,
+            cat
+          );
+
+          // Alert user on UI
+          setDefconAlert({
+            filename: file.name,
+            threatName: securityCheck.name || 'Berkas Berbahaya Terdeteksi',
+            reason: securityCheck.reason || 'Dideteksi oleh protokol pertahanan DEFCON 5',
+          });
+
+          // Soft audio alert
+          try {
+            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(440, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(220, ctx.currentTime + 0.22);
+            gain.gain.setValueAtTime(0.08, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.22);
+          } catch {}
+
+          // Do NOT attach malicious or test virus file to chat
+          continue;
+        }
+      } catch (secErr) {
+        console.error('Error during DEFCON security scan:', secErr);
+      }
+
       const mediaType = getMediaType(file);
 
       try {
@@ -644,13 +699,57 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
 
-      {/* Attachments Preview Tray */}
+      {/* Real-Time DEFCON 5 Threat Intercepted & Quarantined Banner */}
+      {defconAlert && (
+        <div className="mb-2.5 p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/70 border-2 border-rose-300 dark:border-rose-600/80 text-rose-950 dark:text-rose-100 shadow-md flex items-start justify-between gap-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div className="flex items-start gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+              <ShieldAlert className="w-4 h-4 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-extrabold text-xs text-rose-700 dark:text-rose-300 uppercase tracking-wide">
+                  DEFCON 5 Shield: Berkas Berbahaya Dicegat
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-rose-200/90 dark:bg-rose-900 text-rose-800 dark:text-rose-200 text-[10px] font-bold">
+                  {defconAlert.threatName}
+                </span>
+              </div>
+              <p className="text-xs text-rose-900 dark:text-rose-200 mt-1 leading-snug">
+                Berkas <strong>"{defconAlert.filename}"</strong> berhasil dinetralisir dan dipindahkan ke <strong>Ruang Karantina Guardian Antivirus</strong>. Berkas berbahaya tidak diunggah ke ruang obrolan.
+              </p>
+              <div className="text-[10px] text-rose-700 dark:text-rose-400 mt-1 font-medium">
+                Alasan: {defconAlert.reason}
+              </div>
+              {onOpenDefconModal && (
+                <button
+                  type="button"
+                  onClick={onOpenDefconModal}
+                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-[11px] font-bold shadow-xs transition-all cursor-pointer"
+                >
+                  <span>Buka Ruang Karantina DEFCON 5</span>
+                </button>
+              )}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDefconAlert(null)}
+            className="p-1 rounded-lg text-rose-400 hover:text-rose-700 hover:bg-rose-200/60 dark:hover:bg-rose-900/50 transition-colors shrink-0"
+            title="Tutup notifikasi"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Attachments Preview Tray - Clean, theme-adaptive chip cards */}
       {attachments.length > 0 && (
-        <div className="mb-2 p-2 rounded-2xl bg-white dark:bg-[#0c1222] border-2 border-white dark:border-white flex flex-wrap gap-2 items-center shadow-md animate-in fade-in">
+        <div className="mb-2 p-2 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 flex flex-wrap gap-2 items-center shadow-xs animate-in fade-in">
           {attachments.map((att) => (
             <div
               key={att.id}
-              className="relative group flex items-center gap-2 p-1.5 pr-2.5 rounded-xl bg-slate-50 dark:bg-[#14203a] border border-slate-200 dark:border-white/30 shadow-2xs max-w-xs"
+              className="relative group flex items-center gap-2.5 p-1.5 pr-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs max-w-xs transition-all hover:border-slate-300 dark:hover:border-slate-600"
             >
               {att.type === 'image' ? (
                 <img
@@ -667,22 +766,23 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   className="w-10 h-10 rounded-lg object-cover cursor-pointer hover:opacity-90"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-lg bg-white/10 border border-white/30 flex items-center justify-center text-white">
+                <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-700 dark:text-slate-200 shrink-0">
                   <FileText className="w-5 h-5" />
                 </div>
               )}
               <div className="min-w-0 text-xs">
-                <div className="font-semibold truncate max-w-[120px] text-slate-900 dark:text-white">
+                <div className="font-semibold truncate max-w-[130px] text-slate-900 dark:text-white">
                   {att.name}
                 </div>
-                <div className="text-[10px] text-white/70 font-medium">
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
                   {formatBytes(att.size)} • Asli
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => removeAttachment(att.id)}
-                className="p-1 rounded-full text-slate-400 hover:text-rose-600 hover:bg-slate-200 dark:hover:bg-slate-800 ml-1"
+                className="p-1 rounded-full text-slate-400 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-700 ml-1 transition-colors"
+                title="Hapus lampiran"
               >
                 <X className="w-3.5 h-3.5" />
               </button>

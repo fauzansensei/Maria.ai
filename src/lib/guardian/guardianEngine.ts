@@ -310,19 +310,49 @@ class GuardianEngine {
     const sha256 = await this.computeSha256(buffer);
     const header = new Uint8Array(buffer.slice(0, 1024));
 
-    // Check EICAR standard text directly
-    const textSnippet = new TextDecoder("utf-8", { fatal: false }).decode(header.slice(0, 128));
-    if (textSnippet.includes("EICAR-STANDARD-ANTIVIRUS-TEST-FILE")) {
+    const lowerName = file.name.toLowerCase();
+    const parts = lowerName.split(".");
+    const ext = parts.length > 1 ? parts[parts.length - 1] : "";
+
+    // 1. Check EICAR standard test string or EICAR filename directly
+    const textSnippet = new TextDecoder("utf-8", { fatal: false }).decode(header.slice(0, 256));
+    const isEicarText = textSnippet.toUpperCase().includes("EICAR-STANDARD-ANTIVIRUS-TEST-FILE");
+    const isEicarName = lowerName.startsWith("eicar") || lowerName.includes("eicar.");
+    if (isEicarText || isEicarName) {
       this.addLog("Uji Antivirus EICAR", `File uji terdeteksi: ${file.name}`, "threat");
       return {
         sha256,
         verdict: "threat",
-        name: "EICAR-Test-File",
-        reason: "File uji standar antivirus EICAR (Aman untuk pengujian)",
+        name: "EICAR-Standard-AV-Test-File",
+        reason: "File uji standar antivirus EICAR (Aman untuk pengujian sistem pertahanan)",
       };
     }
 
-    // Check signature database
+    // 2. Check prohibited executable binary extensions in chat uploads (.exe, .com, .bat, .cmd, .scr, etc.)
+    if (EXEC_EXT.includes(ext)) {
+      this.addLog("Executable Ditolak", `Program biner tidak diizinkan diunggah: ${file.name}`, "threat");
+      return {
+        sha256,
+        verdict: "threat",
+        name: `Blocked.Binary.${ext.toUpperCase()}`,
+        reason: `Format berkas executable (.${ext}) diblokir oleh protokol pertahanan DEFCON 5`,
+      };
+    }
+
+    // 3. Check Disguised PE / MZ / ELF header in any file
+    const isMz = header.length >= 2 && header[0] === 0x4d && header[1] === 0x5a;
+    const isElf = header.length >= 4 && header[0] === 0x7f && header[1] === 0x45 && header[2] === 0x4c && header[3] === 0x46;
+    if (isMz || isElf) {
+      this.addLog("Disguised Executable", `Biner executable terdeteksi: ${file.name}`, "threat");
+      return {
+        sha256,
+        verdict: "threat",
+        name: "Heuristic.DisguisedExecutable",
+        reason: "Format program biner tersembunyi terdeteksi di dalam berkas",
+      };
+    }
+
+    // 4. Check signature database
     const hit = this.signatures.get(sha256.toLowerCase());
     if (hit) {
       this.addLog("Signature Match", `${hit.name} terdeteksi pada ${file.name}`, "threat");
@@ -334,7 +364,7 @@ class GuardianEngine {
       };
     }
 
-    // Check heuristics
+    // 5. Check heuristics
     const heur = this.checkHeuristics(file.name, header);
     if (heur) {
       this.addLog("Heuristic Hit", `${heur.name}: ${file.name}`, "threat");
