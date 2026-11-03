@@ -15,6 +15,7 @@ import {
   Type,
   Wand2,
   ShieldAlert,
+  Play,
 } from 'lucide-react';
 import { AiMode, MediaAttachment } from '../types/index.ts';
 import { speechService } from '../lib/speechService.ts';
@@ -360,11 +361,28 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           previewUrl = await generateVideoThumbnail(file);
         }
 
+        let detectedMime = file.type;
+        if (!detectedMime) {
+          const lowerName = file.name.toLowerCase();
+          if (lowerName.endsWith('.md') || lowerName.endsWith('.markdown')) detectedMime = 'text/markdown';
+          else if (lowerName.endsWith('.txt')) detectedMime = 'text/plain';
+          else if (lowerName.endsWith('.json')) detectedMime = 'application/json';
+          else if (lowerName.endsWith('.csv')) detectedMime = 'text/csv';
+          else if (lowerName.endsWith('.pdf')) detectedMime = 'application/pdf';
+          else if (lowerName.endsWith('.mp4')) detectedMime = 'video/mp4';
+          else if (lowerName.endsWith('.webm')) detectedMime = 'video/webm';
+          else if (lowerName.endsWith('.mov')) detectedMime = 'video/quicktime';
+          else if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) detectedMime = 'image/jpeg';
+          else if (lowerName.endsWith('.png')) detectedMime = 'image/png';
+          else if (lowerName.endsWith('.webp')) detectedMime = 'image/webp';
+          else detectedMime = mediaType === 'video' ? 'video/mp4' : mediaType === 'image' ? 'image/jpeg' : 'text/plain';
+        }
+
         newAttachments.push({
           id: attId,
           name: file.name,
           size: file.size,
-          mimeType: file.type || (mediaType === 'video' ? 'video/mp4' : 'image/jpeg'),
+          mimeType: detectedMime,
           type: mediaType,
           previewUrl: previewUrl || originalUrl,
           originalUrl: originalUrl || dataUrl,
@@ -514,7 +532,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       <input
         ref={mediaInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*"
         multiple
         className="hidden"
         onChange={handleMediaFileChange}
@@ -522,7 +540,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       <input
         ref={videoInputRef}
         type="file"
-        accept="video/mp4,video/webm,video/quicktime"
+        accept="video/mp4,video/webm,video/quicktime,video/*"
         multiple
         className="hidden"
         onChange={handleMediaFileChange}
@@ -538,7 +556,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       <input
         ref={docInputRef}
         type="file"
-        accept=".pdf,.txt,.md,.json,.csv"
+        accept=".pdf,.txt,.md,.markdown,.json,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.py,.js,.ts,.html,.css,.xml,.yaml,.yml,.sql"
         multiple
         className="hidden"
         onChange={handleMediaFileChange}
@@ -636,33 +654,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               </div>
             </button>
 
-            {/* Foto & Gambar */}
+            {/* Foto & Video (Galeri Bersatu) */}
             <button
               type="button"
               onClick={() => mediaInputRef.current?.click()}
               className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1e293b] text-slate-800 dark:text-slate-200 text-left transition-colors"
             >
-              <div className="w-8 h-8 rounded-lg bg-white/10 border border-white/30 text-white flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-500 to-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
                 <ImageIcon className="w-4 h-4 text-white" />
               </div>
               <div className="min-w-0">
-                <div className="font-semibold truncate">Unggah Foto</div>
-                <div className="text-[10px] text-slate-400">Resolusi asli 100%</div>
-              </div>
-            </button>
-
-            {/* Video */}
-            <button
-              type="button"
-              onClick={() => videoInputRef.current?.click()}
-              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1e293b] text-slate-800 dark:text-slate-200 text-left transition-colors"
-            >
-              <div className="w-8 h-8 rounded-lg bg-white/10 border border-white/30 text-white flex items-center justify-center shrink-0">
-                <Film className="w-4 h-4 text-white" />
-              </div>
-              <div className="min-w-0">
-                <div className="font-semibold truncate">Unggah Video</div>
-                <div className="text-[10px] text-slate-400">MP4, WebM, MOV</div>
+                <div className="font-semibold truncate">Foto & Video</div>
+                <div className="text-[10px] text-slate-400">Pilih dari galeri</div>
               </div>
             </button>
 
@@ -672,7 +675,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               onClick={() => cameraInputRef.current?.click()}
               className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1e293b] text-slate-800 dark:text-slate-200 text-left transition-colors"
             >
-              <div className="w-8 h-8 rounded-lg bg-white/10 border border-white/30 text-white flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-600 text-white flex items-center justify-center shrink-0 shadow-xs">
                 <Camera className="w-4 h-4 text-white" />
               </div>
               <div className="min-w-0">
@@ -681,18 +684,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               </div>
             </button>
 
-            {/* Dokumen */}
+            {/* Dokumen & Berkas Teks */}
             <button
               type="button"
               onClick={() => docInputRef.current?.click()}
-              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1e293b] text-slate-800 dark:text-slate-200 text-left transition-colors"
+              className="col-span-2 flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1e293b] text-slate-800 dark:text-slate-200 text-left transition-colors border border-slate-200/60 dark:border-slate-800/60"
             >
-              <div className="w-8 h-8 rounded-lg bg-white/10 border border-white/30 text-white flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-500 to-teal-600 text-white flex items-center justify-center shrink-0 shadow-xs">
                 <FileText className="w-4 h-4 text-white" />
               </div>
               <div className="min-w-0">
-                <div className="font-semibold truncate">Dokumen</div>
-                <div className="text-[10px] text-slate-400">PDF, TXT, CSV</div>
+                <div className="font-semibold truncate">Unggah Dokumen & Berkas</div>
+                <div className="text-[10px] text-slate-400">PDF, Markdown (.md), TXT, JSON, CSV, Kode</div>
               </div>
             </button>
           </div>
@@ -765,8 +768,29 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   }
                   className="w-10 h-10 rounded-lg object-cover cursor-pointer hover:opacity-90"
                 />
+              ) : att.type === 'video' ? (
+                <div
+                  onClick={() =>
+                    setLightboxMedia({
+                      url: att.originalUrl || att.previewUrl,
+                      type: 'video',
+                      name: att.name,
+                      size: att.size,
+                    })
+                  }
+                  className="relative w-10 h-10 rounded-lg overflow-hidden bg-slate-900 flex items-center justify-center cursor-pointer group/vid shrink-0"
+                >
+                  {att.previewUrl && att.previewUrl.startsWith('data:image/') ? (
+                    <img src={att.previewUrl} alt={att.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <Film className="w-5 h-5 text-white/60" />
+                  )}
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                    <Play className="w-4 h-4 text-white fill-current" />
+                  </div>
+                </div>
               ) : (
-                <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-700 dark:text-slate-200 shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600 dark:text-blue-300 shrink-0">
                   <FileText className="w-5 h-5" />
                 </div>
               )}

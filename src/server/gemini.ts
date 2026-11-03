@@ -155,12 +155,52 @@ function sanitizeConversationTurns(messages: ChatMessageTurn[]) {
             ? att.data.split(',')[1].trim()
             : att.data.trim();
           if (cleanData) {
-            parts.push({
-              inlineData: {
-                mimeType: att.mimeType || (att.type === 'video' ? 'video/mp4' : 'image/jpeg'),
-                data: cleanData,
-              },
-            });
+            const mime = (att.mimeType || '').toLowerCase();
+            const name = (att.name || '').toLowerCase();
+            const isTextDoc =
+              att.type === 'file' ||
+              mime.startsWith('text/') ||
+              mime.includes('json') ||
+              mime.includes('javascript') ||
+              mime.includes('typescript') ||
+              mime.includes('xml') ||
+              name.endsWith('.md') ||
+              name.endsWith('.txt') ||
+              name.endsWith('.json') ||
+              name.endsWith('.csv') ||
+              name.endsWith('.py') ||
+              name.endsWith('.js') ||
+              name.endsWith('.ts') ||
+              name.endsWith('.html') ||
+              name.endsWith('.css') ||
+              name.endsWith('.yaml') ||
+              name.endsWith('.yml') ||
+              name.endsWith('.sql') ||
+              name.endsWith('.sh');
+
+            if (isTextDoc && mime !== 'application/pdf') {
+              try {
+                const textContent = Buffer.from(cleanData, 'base64').toString('utf-8');
+                const ext = name.includes('.') ? name.split('.').pop() : 'txt';
+                parts.push({
+                  text: `\n[Isi Berkas Lampiran: ${att.name || 'Dokumen'}] (${att.size ? `${att.size} bytes` : ''}):\n\`\`\`${ext}\n${textContent.slice(0, 150000)}\n\`\`\`\n`,
+                });
+              } catch {
+                parts.push({
+                  inlineData: {
+                    mimeType: 'text/plain',
+                    data: cleanData,
+                  },
+                });
+              }
+            } else {
+              parts.push({
+                inlineData: {
+                  mimeType: att.mimeType || (att.type === 'video' ? 'video/mp4' : mime === 'application/pdf' ? 'application/pdf' : 'image/jpeg'),
+                  data: cleanData,
+                },
+              });
+            }
           }
         }
       }
@@ -169,7 +209,7 @@ function sanitizeConversationTurns(messages: ChatMessageTurn[]) {
     if (m.content && m.content.trim()) {
       parts.push({ text: m.content.trim() });
     } else if (parts.length > 0) {
-      parts.push({ text: 'Mohon amati dan jelaskan gambar ini secara mendalam.' });
+      parts.push({ text: 'Mohon amati, baca, dan jelaskan berkas atau gambar lampiran ini secara mendalam.' });
     }
 
     if (parts.length > 0) {

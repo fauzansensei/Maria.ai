@@ -22,6 +22,9 @@ import {
   Music,
   Wand2,
   RefreshCw,
+  FileText,
+  FileCode,
+  Film,
 } from 'lucide-react';
 import { Message, MediaAttachment } from '../types/index.ts';
 import { LaunchAction, executeLaunch, detectLaunchAction } from '../lib/actionLauncher.ts';
@@ -402,6 +405,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   };
 
   const images = message.attachments?.filter((a) => a.type === 'image') || [];
+  const videos = message.attachments?.filter((a) => a.type === 'video') || [];
+  const files =
+    message.attachments?.filter(
+      (a) => a.type === 'file' || (!images.includes(a) && !videos.includes(a))
+    ) || [];
   const hasGrounding = message.groundingLinks && message.groundingLinks.length > 0;
 
   // Shared Lightbox Modal
@@ -525,6 +533,125 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Videos if any */}
+            {videos.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2.5">
+                {videos.map((vid) => (
+                  <div
+                    key={vid.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      const bestUrl =
+                        vid.originalUrl ||
+                        getOriginalMedia(vid.id) ||
+                        getOriginalMedia(vid.name) ||
+                        (await getOriginalMediaBlob(vid.id)) ||
+                        (await getOriginalMediaBlob(vid.name)) ||
+                        (vid.base64Data ? `data:${vid.mimeType || 'video/mp4'};base64,${vid.base64Data}` : '') ||
+                        vid.previewUrl ||
+                        '';
+                      if (bestUrl) {
+                        setLightboxMedia({
+                          url: bestUrl,
+                          type: 'video',
+                          name: vid.name || 'Video Lampiran',
+                          size: vid.size,
+                        });
+                      }
+                    }}
+                    className="relative rounded-xl overflow-hidden cursor-pointer group/vid border border-blue-200 aspect-video bg-slate-900 hover:border-blue-400 active:scale-[0.98] transition-all shadow-2xs flex items-center justify-center"
+                  >
+                    {vid.previewUrl && vid.previewUrl.startsWith('data:image/') ? (
+                      <img
+                        src={vid.previewUrl}
+                        alt={vid.name}
+                        className="w-full h-full object-cover group-hover/vid:scale-105 transition-transform duration-200"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-slate-950 text-white">
+                        <Film className="w-8 h-8 text-white/50" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/25 group-hover/vid:bg-black/35 transition-colors flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-white/95 text-slate-900 flex items-center justify-center shadow-md group-hover/vid:scale-110 transition-transform">
+                        <Play className="w-4 h-4 ml-0.5 fill-current" />
+                      </div>
+                    </div>
+                    <div className="absolute bottom-1.5 left-2 right-2 flex items-center justify-between text-white text-[10px] font-medium bg-black/60 backdrop-blur-xs px-2 py-0.5 rounded-md truncate">
+                      <span className="truncate">{vid.name}</span>
+                      {vid.size ? <span className="shrink-0 ml-1.5 opacity-90">{formatBytes(vid.size)}</span> : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Document / File Attachments (README.md, PDF, TXT, CSV, Code) */}
+            {files.length > 0 && (
+              <div className="flex flex-col gap-1.5 mb-2.5">
+                {files.map((file) => {
+                  const isCodeOrMd =
+                    file.name.endsWith('.md') ||
+                    file.name.endsWith('.json') ||
+                    file.name.endsWith('.csv') ||
+                    file.name.endsWith('.txt') ||
+                    file.name.endsWith('.js') ||
+                    file.name.endsWith('.ts') ||
+                    file.name.endsWith('.py');
+
+                  return (
+                    <div
+                      key={file.id}
+                      className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-white border border-blue-200 hover:border-blue-300 shadow-2xs transition-all text-xs"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-9 h-9 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 shadow-2xs">
+                          {isCodeOrMd ? <FileCode className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-slate-900 truncate max-w-[180px] sm:max-w-[260px]">
+                            {file.name}
+                          </div>
+                          <div className="text-[10px] text-slate-500 font-medium">
+                            {formatBytes(file.size)} • {file.name.split('.').pop()?.toUpperCase() || 'Berkas'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const bestUrl =
+                              file.originalUrl ||
+                              getOriginalMedia(file.id) ||
+                              getOriginalMedia(file.name) ||
+                              (await getOriginalMediaBlob(file.id)) ||
+                              (await getOriginalMediaBlob(file.name)) ||
+                              (file.base64Data ? `data:${file.mimeType || 'application/octet-stream'};base64,${file.base64Data}` : '') ||
+                              file.previewUrl;
+                            if (!bestUrl) return;
+                            const a = document.createElement('a');
+                            a.href = bestUrl;
+                            a.download = file.name || 'berkas';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                          }}
+                          title="Unduh berkas ini"
+                          className="p-1.5 rounded-lg text-blue-700 hover:text-blue-900 hover:bg-blue-50 transition-colors cursor-pointer"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
