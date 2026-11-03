@@ -76,9 +76,20 @@ export const EICAR_SHA256 = "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c45
 const DOC_EXT = [
   "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "jpg", "jpeg", "png", "gif", "mp3", "mp4"
 ];
+// Comprehensive dangerous executable and script extensions
 const EXEC_EXT = [
-  "exe", "scr", "bat", "cmd", "com", "pif", "vbs", "js", "jse", "wsf", "ps1", "msi", "jar"
+  // Windows executables & scripts
+  "exe", "scr", "bat", "cmd", "com", "pif", "vbs", "vbe", "js", "jse", "wsf", "wsh", "ps1", "psm1", "msi", "msp", "reg", "hta", "cpl", "msc", "inf", "gadget",
+  // Unix / Linux / macOS
+  "elf", "bin", "so", "sh", "bash", "zsh", "command", "app", "dmg", "pkg", "deb", "rpm",
+  // Cross-platform runtime & mobile
+  "jar", "war", "ear", "apk", "aab", "xap", "dex",
+  // Web shells & server-side scripts
+  "php", "phtml", "php3", "php4", "php5", "phps", "asp", "aspx", "jsp", "jspx", "cgi", "pl", "py", "pyw"
 ];
+
+// Document extensions prone to macro or exploit injection
+const MACRO_EXT = ["docm", "xlsm", "pptm", "dotm", "xltm", "xlam", "ppam", "ppsm", "sldm"];
 
 // Seed malware hash signatures
 const DEFAULT_SIGNATURES: Record<string, { name: string; category: string }> = {
@@ -267,12 +278,25 @@ class GuardianEngine {
     return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
   }
 
-  // Heuristic analysis matching Rust scanner.rs
-  public checkHeuristics(filename: string, header: Uint8Array): { name: string; reason: string; category: string } | null {
+  // Heuristic analysis matching advanced multi-engine rules
+  public checkHeuristics(
+    filename: string,
+    header: Uint8Array,
+    buffer: ArrayBuffer
+  ): { name: string; reason: string; category: string } | null {
+    // 1. Right-to-Left Override (RTLO \u202E) evasion detection
+    if (filename.includes("\u202E") || filename.includes("%E2%80%AE")) {
+      return {
+        name: "Evasion.UnicodeRTLO",
+        reason: "Nama berkas menggunakan karakter tersembunyi RTLO (Right-to-Left Override) untuk menyamarkan ekstensi berbahaya",
+        category: "Malware",
+      };
+    }
+
     const lowerName = filename.toLowerCase();
     const parts = lowerName.split(".");
 
-    // 1. Double Extension Check (e.g. laporan.pdf.exe)
+    // 2. Double Extension Check (e.g. laporan.pdf.exe, invoice.xlsx.vbs)
     if (parts.length >= 3) {
       const last = parts[parts.length - 1];
       const prev = parts[parts.length - 2];
@@ -285,18 +309,117 @@ class GuardianEngine {
       }
     }
 
-    // 2. Disguised Executable Check (MZ / PE or ELF header in document extension)
+    // 3. Disguised Executable Check (MZ / PE, ELF, Mach-O, Dalvik DEX in document extension)
     if (parts.length >= 2) {
       const ext = parts[parts.length - 1];
       const isDocExt = DOC_EXT.includes(ext);
+
       const isMzPe = header.length >= 2 && header[0] === 0x4d && header[1] === 0x5a; // 'MZ'
       const isElf = header.length >= 4 && header[0] === 0x7f && header[1] === 0x45 && header[2] === 0x4c && header[3] === 0x46; // 0x7f 'ELF'
+      const isJavaMachO = header.length >= 4 && header[0] === 0xca && header[1] === 0xfe && header[2] === 0xba && header[3] === 0xbe; // 0xCAFEBABE
+      const isMachO32 = header.length >= 4 && header[0] === 0xfe && header[1] === 0xed && header[2] === 0xfa && (header[3] === 0xce || header[3] === 0xcf);
+      const isDex = header.length >= 4 && header[0] === 0x64 && header[1] === 0x65 && header[2] === 0x78 && header[3] === 0x0a; // 'dex\n'
 
-      if (isDocExt && (isMzPe || isElf)) {
+      if (isDocExt && (isMzPe || isElf || isJavaMachO || isMachO32 || isDex)) {
         return {
           name: "Heuristic.DisguisedExecutable",
-          reason: `Format biner executable ditemukan di dalam file berekstensi .${ext}`,
+          reason: `Format biner executable ditemukan di dalam file berekstensi samaran .${ext}`,
           category: "Malware",
+        };
+      }
+    }
+
+    // 4. Macro & Malicious Script Injection in Office Documents (.doc, .xls, .ppt, .docm, .xlsm)
+    const isOfficeDoc = parts.length > 1 && [...DOC_EXT, ...MACRO_EXT].includes(parts[parts.length - 1]);
+    if (isOfficeDoc) {
+      // Decode sample text chunks to detect VBA execution vectors
+      const sampleText = new TextDecoder("utf-8", { fatal: false }).decode(new Uint8Array(buffer.slice(0, 16384)));
+      const lowerText = sampleText.toLowerCase();
+
+      const hasVbaStream = lowerText.includes("vbaproject.bin") || lowerText.includes("_vba_project") || lowerText.includes("vba_project");
+      const hasAutoExec = lowerText.includes("autoopen") || lowerText.includes("workbook_open") || lowerText.includes("document_open") || lowerText.includes("auto_open");
+      const hasShellCall = lowerText.includes("wscript.shell") || lowerText.includes("powershell") || lowerText.includes("cmd.exe") || lowerText.includes("urldownloadtofile");
+
+      if (hasVbaStream && (hasAutoExec || hasShellCall)) {
+        return {
+          name: "Exploit.OfficeMacroVBA",
+          reason: "Skrip makro VBA otomatis berbahaya terdeteksi di dalam dokumen (percobaan eksekusi kode eksternal)",
+          category: "Ransomware",
+        };
+      }
+    }
+
+    // 5. SVG / XML / HTML Polyglot & Stored XSS Inspection
+    const ext = parts.length > 1 ? parts[parts.length - 1] : "";
+    if (["svg", "xml", "html", "htm", "xhtml"].includes(ext)) {
+      const sampleText = new TextDecoder("utf-8", { fatal: false }).decode(new Uint8Array(buffer.slice(0, 8192)));
+      const lowerText = sampleText.toLowerCase();
+
+      const hasScriptTag = lowerText.includes("<script") || lowerText.includes("</script>");
+      const hasEventHandlers = /on(error|load|click|mouseover|focus|blur|mouseenter)\s*=/i.test(lowerText);
+      const hasJsUri = /href\s*=\s*["']?\s*javascript:/i.test(lowerText) || /xlink:href\s*=\s*["']?\s*javascript:/i.test(lowerText);
+      const hasDataIframe = /<iframe[^>]+src=["']?data:/i.test(lowerText) || /<object/i.test(lowerText) || /<embed/i.test(lowerText);
+
+      if (hasScriptTag || (hasEventHandlers && hasJsUri) || hasDataIframe) {
+        return {
+          name: "Exploit.StoredXSS.Polyglot",
+          reason: "Payload JavaScript/XSS terselubung terdeteksi di dalam berkas grafis/vektor",
+          category: "Phishing",
+        };
+      }
+    }
+
+    // 6. Web Shells & Backdoors heuristics in text/code files
+    if (["txt", "conf", "config", "ini", "log", "inc", "bak", "sql"].includes(ext) || ext === "") {
+      const sampleText = new TextDecoder("utf-8", { fatal: false }).decode(new Uint8Array(buffer.slice(0, 8192)));
+      const lowerText = sampleText.toLowerCase();
+
+      const hasPhpEval = lowerText.includes("eval(base64_decode(") || lowerText.includes("eval(gzinflate(") || lowerText.includes("assert(base64_decode(");
+      const hasWebshellSig = lowerText.includes("c99shell") || lowerText.includes("r57shell") || lowerText.includes("b374k") || lowerText.includes("wso_version") || lowerText.includes("alfa team");
+      const hasShellExecution = (lowerText.includes("passthru(") || lowerText.includes("shell_exec(") || lowerText.includes("system(")) && lowerText.includes("$_get");
+
+      if (hasPhpEval || hasWebshellSig || hasShellExecution) {
+        return {
+          name: "Backdoor.WebShell",
+          reason: "Karakteristik Web Shell / Backdoor server tersembunyi ditemukan dalam berkas teks",
+          category: "Malware",
+        };
+      }
+    }
+
+    // 7. Zip Archive Inspection (Detect embedded executables inside ZIP)
+    const isZip = header.length >= 4 && header[0] === 0x50 && header[1] === 0x4b && (header[2] === 0x03 || header[2] === 0x05 || header[2] === 0x07);
+    if (isZip) {
+      // Scan archive metadata chunk for dangerous file extensions
+      const zipInspectSize = Math.min(buffer.byteLength, 65536);
+      const zipText = new TextDecoder("ascii", { fatal: false }).decode(new Uint8Array(buffer.slice(0, zipInspectSize)));
+      const lowerZip = zipText.toLowerCase();
+
+      for (const dangerous of ["exe", "scr", "bat", "cmd", "vbs", "ps1", "jar"]) {
+        if (lowerZip.includes(`.${dangerous}`)) {
+          return {
+            name: "Archive.ContainsExecutable",
+            reason: `Arsip ZIP berisi program biner executable (.${dangerous}) yang dilarang`,
+            category: "Malware",
+          };
+        }
+      }
+    }
+
+    // 8. Ransomware Note / Extortion heuristic in text/markdown files
+    if (["txt", "html", "htm", "rtf", "md"].includes(ext) || lowerName.includes("readme") || lowerName.includes("decrypt") || lowerName.includes("recover")) {
+      const sampleText = new TextDecoder("utf-8", { fatal: false }).decode(new Uint8Array(buffer.slice(0, 4096)));
+      const lowerText = sampleText.toLowerCase();
+
+      const isRansomDemand =
+        (lowerText.includes("all your files have been encrypted") || lowerText.includes("your personal files are encrypted") || lowerText.includes("files are encrypted")) &&
+        (lowerText.includes("bitcoin") || lowerText.includes("decrypt") || lowerText.includes("ransom") || lowerText.includes("tor browser") || lowerText.includes(".onion"));
+
+      if (isRansomDemand) {
+        return {
+          name: "Ransomware.ExtortionNote",
+          reason: "Catatan pemerasan Ransomware terdeteksi (indikasi berkas telah dikompromikan malware)",
+          category: "Ransomware",
         };
       }
     }
@@ -335,14 +458,15 @@ class GuardianEngine {
         sha256,
         verdict: "threat",
         name: `Blocked.Binary.${ext.toUpperCase()}`,
-        reason: `Format berkas executable (.${ext}) diblokir oleh protokol pertahanan DEFCON 5`,
+        reason: `Format berkas executable/skrip (.${ext}) diblokir oleh protokol pertahanan DEFCON 5`,
       };
     }
 
-    // 3. Check Disguised PE / MZ / ELF header in any file
+    // 3. Check Disguised PE / MZ / ELF / Mach-O header in any file regardless of extension
     const isMz = header.length >= 2 && header[0] === 0x4d && header[1] === 0x5a;
     const isElf = header.length >= 4 && header[0] === 0x7f && header[1] === 0x45 && header[2] === 0x4c && header[3] === 0x46;
-    if (isMz || isElf) {
+    const isJavaMachO = header.length >= 4 && header[0] === 0xca && header[1] === 0xfe && header[2] === 0xba && header[3] === 0xbe;
+    if (isMz || isElf || isJavaMachO) {
       this.addLog("Disguised Executable", `Biner executable terdeteksi: ${file.name}`, "threat");
       return {
         sha256,
@@ -352,7 +476,7 @@ class GuardianEngine {
       };
     }
 
-    // 4. Check signature database
+    // 4. Check signature database (MalwareBazaar, URLhaus, EICAR)
     const hit = this.signatures.get(sha256.toLowerCase());
     if (hit) {
       this.addLog("Signature Match", `${hit.name} terdeteksi pada ${file.name}`, "threat");
@@ -364,8 +488,8 @@ class GuardianEngine {
       };
     }
 
-    // 5. Check heuristics
-    const heur = this.checkHeuristics(file.name, header);
+    // 5. Deep Heuristic & Payload Analysis
+    const heur = this.checkHeuristics(file.name, header, buffer);
     if (heur) {
       this.addLog("Heuristic Hit", `${heur.name}: ${file.name}`, "threat");
       return {
@@ -376,7 +500,7 @@ class GuardianEngine {
       };
     }
 
-    this.addLog("Check Bersih", `${file.name} lolos verifikasi signature & heuristik`, "clean");
+    this.addLog("Check Bersih", `${file.name} lolos verifikasi signature & heuristik multi-engine`, "clean");
     return {
       sha256,
       verdict: "clean",
