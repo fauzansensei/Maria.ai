@@ -344,37 +344,44 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
 
   const groundingLinks: Array<{ title?: string; uri: string }> = [];
 
-  for await (const chunk of responseStream) {
-    if (chunk.text) {
-      yield {
-        type: 'chunk',
-        text: stripEmojis(chunk.text),
-        model: successfulModel,
-      };
-    }
+  try {
+    for await (const chunk of responseStream) {
+      if (chunk.text) {
+        yield {
+          type: 'chunk',
+          text: stripEmojis(chunk.text),
+          model: successfulModel,
+        };
+      }
 
-    const groundingChunks =
-      chunk.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-    for (const gChunk of groundingChunks) {
-      if (gChunk.web?.uri) {
-        const link = {
-          title: gChunk.web.title || gChunk.web.uri,
-          uri: gChunk.web.uri,
-        };
-        if (!groundingLinks.some((l) => l.uri === link.uri)) {
-          groundingLinks.push(link);
+      const groundingChunks =
+        chunk.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+      for (const gChunk of groundingChunks) {
+        if (gChunk.web?.uri) {
+          const link = {
+            title: gChunk.web.title || gChunk.web.uri,
+            uri: gChunk.web.uri,
+          };
+          if (!groundingLinks.some((l) => l.uri === link.uri)) {
+            groundingLinks.push(link);
+          }
         }
-      }
-      if (gChunk.maps?.uri) {
-        const link = {
-          title: gChunk.maps.title || 'Buka di Google Maps',
-          uri: gChunk.maps.uri,
-        };
-        if (!groundingLinks.some((l) => l.uri === link.uri)) {
-          groundingLinks.push(link);
+        if (gChunk.maps?.uri) {
+          const link = {
+            title: gChunk.maps.title || 'Buka di Google Maps',
+            uri: gChunk.maps.uri,
+          };
+          if (!groundingLinks.some((l) => l.uri === link.uri)) {
+            groundingLinks.push(link);
+          }
         }
       }
     }
+  } catch (iterErr: any) {
+    const errMsg = String(iterErr?.message || iterErr);
+    // If the stream ends abruptly or encounters an incomplete trailing JSON segment,
+    // gracefully conclude without failing the tokens already delivered
+    console.warn('Gracefully recovered from stream chunk iteration notice:', errMsg);
   }
 
   yield {

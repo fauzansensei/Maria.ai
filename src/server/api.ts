@@ -43,6 +43,91 @@ apiRouter.post('/defcon/test', async (req: Request, res: Response) => {
   }
 });
 
+// VirusTotal Status Endpoint
+apiRouter.get('/virustotal/status', (_req: Request, res: Response) => {
+  const apiKey = process.env.VIRUSTOTAL_API_KEY || process.env.VT_API_KEY || '';
+  sendJson(res, 200, {
+    configured: Boolean(apiKey && apiKey.length >= 20),
+    variableName: 'VIRUSTOTAL_API_KEY',
+  });
+});
+
+// VirusTotal Live Hash Lookup Endpoint (v3 Files API)
+apiRouter.get(['/virustotal/check/:hash', '/virustotal/check-hash/:hash'], async (req: Request, res: Response) => {
+  const apiKey = process.env.VIRUSTOTAL_API_KEY || process.env.VT_API_KEY || '';
+  const hash = req.params.hash?.trim().toLowerCase();
+
+  if (!hash || hash.length !== 64) {
+    sendJson(res, 400, { error: 'Format hash SHA-256 tidak valid (harus 64 karakter heksadesimal).' });
+    return;
+  }
+
+  if (!apiKey) {
+    sendJson(res, 200, {
+      configured: false,
+      message: 'VIRUSTOTAL_API_KEY belum dikonfigurasi di secrets.',
+    });
+    return;
+  }
+
+  try {
+    const vtRes = await fetch(`https://www.virustotal.com/api/v3/files/${hash}`, {
+      headers: {
+        'x-apikey': apiKey,
+        'Accept': 'application/json',
+      },
+      signal: AbortSignal.timeout(6000),
+    });
+
+    if (vtRes.status === 404) {
+      sendJson(res, 200, {
+        configured: true,
+        found: false,
+        message: 'Berkas belum pernah dilaporkan di database global VirusTotal.',
+      });
+      return;
+    }
+
+    if (!vtRes.ok) {
+      const errText = await vtRes.text();
+      sendJson(res, vtRes.status, {
+        configured: true,
+        error: `VirusTotal API error (${vtRes.status}): ${errText.slice(0, 200)}`,
+      });
+      return;
+    }
+
+    const data = await vtRes.json();
+    const attrs = data?.data?.attributes || {};
+    const stats = attrs.last_analysis_stats || {};
+    const maliciousCount = stats.malicious || 0;
+    const suspiciousCount = stats.suspicious || 0;
+    const harmlessCount = stats.harmless || 0;
+    const undetectedCount = stats.undetected || 0;
+    const totalVendors = maliciousCount + suspiciousCount + harmlessCount + undetectedCount;
+
+    sendJson(res, 200, {
+      configured: true,
+      found: true,
+      sha256: hash,
+      verdict: maliciousCount > 0 ? 'threat' : suspiciousCount > 1 ? 'suspicious' : 'clean',
+      malicious: maliciousCount,
+      suspicious: suspiciousCount,
+      harmless: harmlessCount,
+      undetected: undetectedCount,
+      totalVendors,
+      threatName: attrs.meaningful_name || attrs.popular_threat_classification?.suggested_threat_label || null,
+      reputation: attrs.reputation || 0,
+      scanDate: attrs.last_analysis_date,
+    });
+  } catch (err: any) {
+    sendJson(res, 500, {
+      configured: true,
+      error: `Gagal menghubungi VirusTotal: ${err?.message || err}`,
+    });
+  }
+});
+
 // Health Check
 apiRouter.get('/health', (_req: Request, res: Response) => {
   sendJson(res, 200, {
@@ -74,26 +159,61 @@ apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
       'X-Accel-Buffering': 'no',
     });
 
-    const stream = generateChatResponseStream({
-      messages,
-      mode,
-      systemInstruction,
-      location,
-      webSearch: webSearch !== false,
-      deviceTime,
-    });
+    let tokensSent = 0;
+    try {
+      const stream = generateChatResponseStream({
+        messages,
+        mode,
+        systemInstruction,
+        location,
+        webSearch: webSearch !== false,
+        deviceTime,
+      });
 
-    for await (const chunk of stream) {
-      if (chunk && chunk.text) {
-        chunk.text = sanitizeOutput(chunk.text);
+      for await (const chunk of stream) {
+        if (chunk && chunk.text) {
+          chunk.text = sanitizeOutput(chunk.text);
+          tokensSent++;
+        }
+        res.write(`data: ${JSON.stringify(chunk)}\n\n`);
       }
-      res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-    }
 
-    res.write('data: [DONE]\n\n');
-    res.end();
+      res.write('data: [DONE]\n\n');
+      res.end();
+    } catch (streamErr: any) {
+      console.warn('Chat stream recovered from streaming interruption:', streamErr?.message || streamErr);
+      if (tokensSent > 0) {
+        // Tokens were already streamed to user, conclude stream gracefully
+        res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+        res.write('data: [DONE]\n\n');
+        res.end();
+      } else {
+        // Fall back seamlessly to non-streaming generateChatResponse
+        try {
+          const fallbackRes = await generateChatResponse({
+            messages,
+            mode,
+            systemInstruction,
+            location,
+            withVoice: false,
+            webSearch: webSearch !== false,
+            deviceTime,
+          });
+
+          if (fallbackRes.text) {
+            res.write(`data: ${JSON.stringify({ type: 'chunk', text: sanitizeOutput(fallbackRes.text), model: fallbackRes.model })}\n\n`);
+          }
+          res.write(`data: ${JSON.stringify({ type: 'done', model: fallbackRes.model, groundingLinks: fallbackRes.groundingLinks })}\n\n`);
+          res.write('data: [DONE]\n\n');
+          res.end();
+        } catch (fbErr: any) {
+          res.write(`data: ${JSON.stringify({ type: 'error', error: fbErr?.message || streamErr?.message || 'Gagal memproses stream.' })}\n\n`);
+          res.end();
+        }
+      }
+    }
   } catch (error: any) {
-    console.error('Chat stream error:', error);
+    console.error('Chat stream initialization error:', error);
     if (!res.headersSent) {
       sendJson(res, 500, {
         error: error.message || 'Gagal memproses stream AI.',

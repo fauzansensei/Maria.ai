@@ -856,6 +856,19 @@ function AppContent() {
             }
           }
 
+          // Process any residual trailing line in buffer
+          if (buffer.trim().startsWith('data: ')) {
+            const dataStr = buffer.trim().slice(6);
+            if (dataStr !== '[DONE]') {
+              try {
+                const parsed = JSON.parse(dataStr);
+                if (parsed.type === 'chunk' && parsed.text) {
+                  fullText += parsed.text;
+                }
+              } catch {}
+            }
+          }
+
           // Mark streaming completed
           setMessages((prev) =>
             prev.map((m) => (m.id === streamAiId ? { ...m, isStreaming: false } : m))
