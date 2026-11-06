@@ -28,6 +28,7 @@ import {
   getUserProfile,
 } from './lib/firestoreService.ts';
 import { defconService } from './lib/defconProtectionService.ts';
+import { userMemoryService } from './lib/userMemoryService.ts';
 
 function AppContent() {
   const { user } = useAuth();
@@ -342,7 +343,7 @@ function AppContent() {
             userId: user ? user.uid : 'guest',
             role: 'model',
             content: messageContent,
-            model: imgData.model || 'gemini-nano-banana-2.1',
+            model: imgData.model || 'gemini-3.1-flash-lite-image',
             mode: 'image',
             imageUri: imgData.imageUrl,
             createdAt: new Date(),
@@ -609,6 +610,7 @@ function AppContent() {
       } else {
         setGuestMessages((prev) => [...prev, userMessageObj]);
       }
+      setMessages((prev) => [...prev, userMessageObj]);
 
       // Handle Image Generation & Editing Mode (Explicit Mode OR Auto-Detected Intent from prompt)
       const isAutoImage = isImageIntent(safeContent);
@@ -655,7 +657,7 @@ function AppContent() {
           userId: user ? user.uid : 'guest',
           role: 'model',
           content: messageContent,
-          model: imgData.model || 'gemini-nano-banana-2.1',
+          model: imgData.model || 'gemini-3.1-flash-lite-image',
           mode: 'image',
           imageUri: imgData.imageUrl,
           createdAt: new Date(),
@@ -753,6 +755,11 @@ function AppContent() {
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Jakarta',
       };
 
+      // Auto-extract personal facts and preferences to Maria's permanent memory
+      userMemoryService.extractFromUserText(content);
+      const activeUserName = user?.displayName || settings.username || '';
+      const userMemories = userMemoryService.getFormattedMemoryPrompt(activeUserName);
+
       // Stream SSE response for instant real-time tokens (Zero waiting time!)
       let streamedSuccess = false;
       const streamAiId = `ai_${Date.now()}`;
@@ -770,6 +777,8 @@ function AppContent() {
             location: userLocation,
             webSearch: webSearchEnabled,
             deviceTime,
+            userMemories,
+            userName: activeUserName,
           }),
         });
 
@@ -927,6 +936,8 @@ function AppContent() {
             personaId: settings.voicePersona || 'wanita',
             webSearch: webSearchEnabled,
             deviceTime,
+            userMemories,
+            userName: activeUserName,
           }),
         });
 

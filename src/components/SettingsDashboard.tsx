@@ -22,12 +22,14 @@ import {
   Trash2,
   ExternalLink,
   Cookie,
+  Plus,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useTheme } from '../context/ThemeContext.tsx';
-import { UserSettings } from '../types.ts';
+import { UserSettings, UserMemory } from '../types.ts';
 import { DEFAULT_SETTINGS, TONE_OPTIONS, VOICE_PERSONAS } from '../constants.ts';
 import { speechService, SpeechState } from '../lib/speechService.ts';
+import { userMemoryService } from '../lib/userMemoryService.ts';
 
 interface SettingsDashboardProps {
   isOpen: boolean;
@@ -53,6 +55,14 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
 
   const [activeTab, setActiveTab] = useState<TabType>('general');
   const [speechState, setSpeechState] = useState<SpeechState>(() => speechService.getState());
+  const [memories, setMemories] = useState<UserMemory[]>(() => userMemoryService.getMemories());
+  const [newMemoryText, setNewMemoryText] = useState('');
+  const [newMemoryCategory, setNewMemoryCategory] = useState<UserMemory['category']>('personal');
+
+  useEffect(() => {
+    return userMemoryService.subscribe((updated) => setMemories(updated));
+  }, []);
+
   const [localSettings, setLocalSettings] = useState<UserSettings>(() => {
     try {
       const saved = localStorage.getItem('maria_settings');
@@ -273,6 +283,121 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   onChange={(e) => handleUpdate('memoryEnabled', e.target.checked)}
                   className="w-4 h-4 accent-[#2563eb] rounded"
                 />
+              </div>
+
+              {/* Memori Maria Tentang Anda (Live Context & Personal Facts) */}
+              <div className="p-4 rounded-2xl bg-[#171923] border border-[#27293a] space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Brain className="w-4 h-4 text-[#60a5fa]" />
+                    <span className="text-xs font-semibold text-white">Memori Maria Tentang Anda</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#2563eb]/20 text-[#60a5fa]">
+                      {memories.length} Disimpan
+                    </span>
+                  </div>
+                  {memories.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => userMemoryService.clearMemories()}
+                      className="text-[11px] text-rose-400 hover:text-rose-300 transition hover:underline"
+                    >
+                      Hapus Semua
+                    </button>
+                  )}
+                </div>
+
+                <p className="text-[11px] text-neutral-400 leading-relaxed">
+                  Maria mengingat preferensi, profil, dan fakta personal Anda untuk memberikan pengalaman asisten yang konsisten dan akrab tanpa harus mengulang penjelasan.
+                </p>
+
+                {/* Form Tambah Memori Manual */}
+                <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={newMemoryText}
+                    onChange={(e) => setNewMemoryText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newMemoryText.trim()) {
+                        userMemoryService.addMemory(newMemoryText, newMemoryCategory, 'manual');
+                        setNewMemoryText('');
+                      }
+                    }}
+                    placeholder="Tambah memori baru (contoh: Saya suka bahasa pemrograman TypeScript)..."
+                    className="flex-1 px-3 py-2 bg-[#12141c] border border-[#292c3d] rounded-xl text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#2563eb]"
+                  />
+                  <div className="flex gap-1.5 flex-none">
+                    <select
+                      value={newMemoryCategory}
+                      onChange={(e) => setNewMemoryCategory(e.target.value as any)}
+                      aria-label="Kategori memori"
+                      className="px-2.5 py-2 bg-[#12141c] border border-[#292c3d] rounded-xl text-xs text-neutral-300 focus:outline-none focus:border-[#2563eb]"
+                    >
+                      <option value="personal">Personal</option>
+                      <option value="preferences">Preferensi</option>
+                      <option value="work">Pekerjaan</option>
+                      <option value="technical">Teknis</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (newMemoryText.trim()) {
+                          userMemoryService.addMemory(newMemoryText, newMemoryCategory, 'manual');
+                          setNewMemoryText('');
+                        }
+                      }}
+                      className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#2563eb] text-white hover:bg-[#1d4ed8] transition flex items-center gap-1 cursor-pointer flex-none"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Simpan</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* List Memori Aktif */}
+                <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1 pt-1">
+                  {memories.length === 0 ? (
+                    <div className="p-4 rounded-xl bg-[#12141c] border border-dashed border-[#292c3d] text-center text-[11px] text-neutral-400">
+                      Maria belum memiliki catatan memori khusus tentang Anda. Memori akan terkumpul otomatis saat Anda mengobrol atau dapat ditambahkan secara manual di atas.
+                    </div>
+                  ) : (
+                    memories.map((m) => (
+                      <div
+                        key={m.id}
+                        className="p-2.5 rounded-xl bg-[#12141c] border border-[#262838] flex items-center justify-between gap-3 text-xs group hover:border-[#3b3e52] transition"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span
+                              className={`text-[9.5px] uppercase font-bold px-1.5 py-0.5 rounded ${
+                                m.category === 'personal'
+                                  ? 'bg-blue-500/15 text-blue-400'
+                                  : m.category === 'preferences'
+                                  ? 'bg-purple-500/15 text-purple-400'
+                                  : m.category === 'work'
+                                  ? 'bg-amber-500/15 text-amber-400'
+                                  : 'bg-emerald-500/15 text-emerald-400'
+                              }`}
+                            >
+                              {m.category}
+                            </span>
+                            <span className="text-[10px] text-neutral-500">
+                              {m.source === 'auto' ? 'Deteksi Otomatis' : 'Manual'}
+                            </span>
+                          </div>
+                          <p className="text-white text-[11.5px] leading-snug">{m.text}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => userMemoryService.removeMemory(m.id)}
+                          className="p-1.5 text-neutral-500 hover:text-rose-400 transition rounded-lg hover:bg-rose-500/10 flex-none"
+                          title="Hapus memori ini"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           )}

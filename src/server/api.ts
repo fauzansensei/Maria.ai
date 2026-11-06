@@ -140,7 +140,16 @@ apiRouter.get('/health', (_req: Request, res: Response) => {
 // Real-time Chat Streaming via Server-Sent Events (SSE)
 apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
   try {
-    const { messages, mode, systemInstruction, location, webSearch, deviceTime } = req.body || {};
+    const {
+      messages,
+      mode,
+      systemInstruction,
+      location,
+      webSearch,
+      deviceTime,
+      userMemories,
+      userName,
+    } = req.body || {};
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       sendJson(res, 400, { error: 'Daftar pesan tidak boleh kosong.' });
@@ -168,6 +177,8 @@ apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
         location,
         webSearch: webSearch !== false,
         deviceTime,
+        userMemories,
+        userName,
       });
 
       for await (const chunk of stream) {
@@ -198,6 +209,8 @@ apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
             withVoice: false,
             webSearch: webSearch !== false,
             deviceTime,
+            userMemories,
+            userName,
           });
 
           if (fallbackRes.text) {
@@ -228,7 +241,19 @@ apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
 // Chat Completion (Standard Fallback)
 apiRouter.post('/chat', async (req: Request, res: Response) => {
   try {
-    const { messages, mode, systemInstruction, location, withVoice, voiceName, personaId, webSearch, deviceTime } = req.body || {};
+    const {
+      messages,
+      mode,
+      systemInstruction,
+      location,
+      withVoice,
+      voiceName,
+      personaId,
+      webSearch,
+      deviceTime,
+      userMemories,
+      userName,
+    } = req.body || {};
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       sendJson(res, 400, { error: 'Daftar pesan tidak boleh kosong.' });
@@ -250,6 +275,8 @@ apiRouter.post('/chat', async (req: Request, res: Response) => {
       personaId,
       webSearch: webSearch !== false,
       deviceTime,
+      userMemories,
+      userName,
     });
 
     // DLP Sanitize Output to prevent secret leaks

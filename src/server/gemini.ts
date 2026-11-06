@@ -48,6 +48,8 @@ export interface GenerateOptions {
   personaId?: string;
   webSearch?: boolean; // Web search is ON by default
   deviceTime?: DeviceTimeInfo;
+  userMemories?: string;
+  userName?: string;
 }
 
 // Helper to strip any emoji characters completely from text
@@ -114,9 +116,21 @@ Kemampuan Studio Gambar & Visual AI:
 ATURAN MUTLAK:
 - DILARANG KERAS MENGGUNAKAN KARAKTER EMOJI ATAU EMOTIKON APAPUN dalam seluruh respon jawaban Anda.`;
 
-// Build dynamic system instruction with device real-time clock and global weather capability
-function buildSystemInstruction(deviceTime?: DeviceTimeInfo, custom?: string): string {
+// Build dynamic system instruction with device real-time clock, global weather capability, and user memories
+function buildSystemInstruction(
+  deviceTime?: DeviceTimeInfo,
+  custom?: string,
+  userMemories?: string,
+  userName?: string
+): string {
   let instruction = custom || BASE_MARIA_INSTRUCTION;
+
+  // Append user memory context so Maria always remembers the user
+  if (userMemories && userMemories.trim()) {
+    instruction = `${instruction}\n\n${userMemories.trim()}`;
+  } else if (userName && userName.trim()) {
+    instruction = `${instruction}\n\nPROFIL PENGGUNA:\n- Nama Pengguna: ${userName.trim()}\nKenali dan sapa pengguna dengan sopan dan bersahabat.`;
+  }
 
   if (deviceTime?.localTime || deviceTime?.localDate || deviceTime?.timeZone) {
     const timeSnippet = `
@@ -251,11 +265,25 @@ function sanitizeConversationTurns(messages: ChatMessageTurn[]) {
 // Real-time token streaming generator for blazing-fast responses
 export async function* generateChatResponseStream(options: GenerateOptions) {
   const ai = getGeminiClient();
-  const { messages, mode = 'search', systemInstruction, location, webSearch = true, deviceTime } = options;
+  const {
+    messages,
+    mode = 'search',
+    systemInstruction,
+    location,
+    webSearch = true,
+    deviceTime,
+    userMemories,
+    userName,
+  } = options;
 
   let modelName = 'gemini-3.8-flash';
   const config: any = {};
-  const activeSystemInstruction = buildSystemInstruction(deviceTime, systemInstruction);
+  const activeSystemInstruction = buildSystemInstruction(
+    deviceTime,
+    systemInstruction,
+    userMemories,
+    userName
+  );
   const isSearchActive = webSearch !== false;
 
   if (mode === 'thinking') {
@@ -393,11 +421,25 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
 
 export async function generateChatResponse(options: GenerateOptions) {
   const ai = getGeminiClient();
-  const { messages, mode = 'search', systemInstruction, location, webSearch = true, deviceTime } = options;
+  const {
+    messages,
+    mode = 'search',
+    systemInstruction,
+    location,
+    webSearch = true,
+    deviceTime,
+    userMemories,
+    userName,
+  } = options;
 
   let modelName = 'gemini-3.8-flash';
   const config: any = {};
-  const activeSystemInstruction = buildSystemInstruction(deviceTime, systemInstruction);
+  const activeSystemInstruction = buildSystemInstruction(
+    deviceTime,
+    systemInstruction,
+    userMemories,
+    userName
+  );
   const isSearchActive = webSearch !== false;
 
   if (mode === 'thinking') {
@@ -514,7 +556,7 @@ export interface GenerateImageOptions {
   aspectRatio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:4';
   baseImage?: string; // base64 data string or data URL for image editing
   mimeType?: string;
-  engine?: 'nano-banana' | 'flash-lite' | 'free' | 'auto';
+  engine?: 'nano-banana-2' | 'flash-image' | 'nano-banana-2.1' | 'nano-banana' | 'flash-lite' | 'free' | 'auto';
 }
 
 // Generate aesthetic vector SVG illustration when external API rate limit is reached
@@ -648,7 +690,19 @@ async function generateFreeTrialImage(prompt: string, aspectRatio: string = '1:1
 let isGeminiImageQuotaExhausted = false;
 
 export async function generateAiImage(options: GenerateImageOptions) {
-  const { prompt, imageSize = '1K', aspectRatio = '1:1', baseImage, mimeType = 'image/jpeg', engine = 'auto' } = options;
+  const {
+    prompt,
+    imageSize = '1K',
+    aspectRatio = '1:1',
+    baseImage,
+    mimeType = 'image/jpeg',
+    engine = 'nano-banana-2',
+  } = options;
+
+  // Reset in-memory quota flag when user explicitly requests Gemini nano banana models
+  if (engine === 'nano-banana-2' || engine === 'flash-image' || engine === 'nano-banana' || engine === 'nano-banana-2.1') {
+    isGeminiImageQuotaExhausted = false;
+  }
 
   // If user explicitly chose Free Trial engine OR if free-tier key has quota 0 for Gemini image models
   const shouldUseFreeEngine = engine === 'free' || (engine === 'auto' && isGeminiImageQuotaExhausted);
@@ -678,11 +732,11 @@ export async function generateAiImage(options: GenerateImageOptions) {
     const cleanBase64 = baseImage.includes(',') ? baseImage.split(',')[1].trim() : baseImage.trim();
     const detectedMime = mimeType || (baseImage.includes('data:image/png') ? 'image/png' : 'image/jpeg');
 
-    // 1. Try gemini-nano-banana-2.1 for high-fidelity image editing
+    // 1. Primary: Gemini Nano Banana 2 (Gemini 3.1 Flash Image)
     try {
       const ai = getGeminiClient();
       const response = await ai.models.generateContent({
-        model: 'gemini-nano-banana-2.1',
+        model: 'gemini-3.1-flash-lite-image',
         contents: {
           parts: [
             {
@@ -699,7 +753,6 @@ export async function generateAiImage(options: GenerateImageOptions) {
         config: {
           imageConfig: {
             aspectRatio,
-            imageSize,
           },
         },
       });
@@ -709,7 +762,8 @@ export async function generateAiImage(options: GenerateImageOptions) {
         if (part.inlineData?.data) {
           return {
             imageUrl: `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`,
-            model: 'gemini-nano-banana-2.1',
+            model: 'gemini-3.1-flash-lite-image',
+            notice: 'Diedit via Gemini Nano Banana 2 (Gemini 3.1 Flash Image).',
           };
         }
       }
@@ -718,11 +772,11 @@ export async function generateAiImage(options: GenerateImageOptions) {
         isGeminiImageQuotaExhausted = true;
       }
 
-      // 2. Try gemini-3.1-flash-lite-image
+      // 2. Try gemini-nano-banana-2.1
       try {
         const ai = getGeminiClient();
         const fallbackResponse = await ai.models.generateContent({
-          model: 'gemini-3.1-flash-lite-image',
+          model: 'gemini-nano-banana-2.1',
           contents: {
             parts: [
               {
@@ -736,6 +790,12 @@ export async function generateAiImage(options: GenerateImageOptions) {
               },
             ],
           },
+          config: {
+            imageConfig: {
+              aspectRatio,
+              imageSize,
+            },
+          },
         });
 
         const parts = fallbackResponse.candidates?.[0]?.content?.parts || [];
@@ -743,7 +803,8 @@ export async function generateAiImage(options: GenerateImageOptions) {
           if (part.inlineData?.data) {
             return {
               imageUrl: `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`,
-              model: 'gemini-3.1-flash-lite-image',
+              model: 'gemini-nano-banana-2.1',
+              notice: 'Diedit via Gemini Nano Banana 2.1.',
             };
           }
         }
@@ -755,7 +816,7 @@ export async function generateAiImage(options: GenerateImageOptions) {
           return {
             imageUrl: freeImageUrl,
             model: 'flux-free-trial',
-            notice: 'Diedit menggunakan Engine Free Trial (100% Gratis & Bebas Kuota). Untuk kualitas Google Nano Banana 2.1, aktifkan billing di Settings > Secrets.',
+            notice: 'Diedit menggunakan Engine Free Trial (100% Gratis & Bebas Kuota).',
           };
         } catch {
           return {
@@ -768,19 +829,18 @@ export async function generateAiImage(options: GenerateImageOptions) {
     }
   }
 
-  // Standard Text-to-Image Creation with Gemini
+  // Standard Text-to-Image Creation: Primary model is Gemini Nano Banana 2 (Gemini 3.1 Flash Image)
   try {
     const ai = getGeminiClient();
+    const primaryModel = engine === 'nano-banana-2.1' ? 'gemini-nano-banana-2.1' : 'gemini-3.1-flash-lite-image';
+
     const response = await ai.models.generateContent({
-      model: 'gemini-nano-banana-2.1',
+      model: primaryModel,
       contents: {
         parts: [{ text: prompt }],
       },
       config: {
-        imageConfig: {
-          aspectRatio,
-          imageSize,
-        },
+        imageConfig: primaryModel === 'gemini-nano-banana-2.1' ? { aspectRatio, imageSize } : { aspectRatio },
       },
     });
 
@@ -789,7 +849,8 @@ export async function generateAiImage(options: GenerateImageOptions) {
       if (part.inlineData?.data) {
         return {
           imageUrl: `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`,
-          model: 'gemini-nano-banana-2.1',
+          model: primaryModel,
+          notice: `Dihasilkan oleh Gemini Nano Banana 2 (Gemini 3.1 Flash Image).`,
         };
       }
     }
@@ -798,18 +859,17 @@ export async function generateAiImage(options: GenerateImageOptions) {
       isGeminiImageQuotaExhausted = true;
     }
 
-    // 2. Try Flash Lite Image Model
+    // 2. Try secondary Gemini image model
     try {
       const ai = getGeminiClient();
+      const secondaryModel = engine === 'nano-banana-2.1' ? 'gemini-3.1-flash-lite-image' : 'gemini-nano-banana-2.1';
       const fallbackResponse = await ai.models.generateContent({
-        model: 'gemini-3.1-flash-lite-image',
+        model: secondaryModel,
         contents: {
           parts: [{ text: prompt }],
         },
         config: {
-          imageConfig: {
-            aspectRatio,
-          },
+          imageConfig: secondaryModel === 'gemini-nano-banana-2.1' ? { aspectRatio, imageSize } : { aspectRatio },
         },
       });
 
@@ -818,7 +878,7 @@ export async function generateAiImage(options: GenerateImageOptions) {
         if (part.inlineData?.data) {
           return {
             imageUrl: `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`,
-            model: 'gemini-3.1-flash-lite-image',
+            model: secondaryModel,
           };
         }
       }
@@ -829,7 +889,7 @@ export async function generateAiImage(options: GenerateImageOptions) {
         return {
           imageUrl: freeImageUrl,
           model: 'flux-free-trial',
-          notice: 'Dihasilkan via Engine Free Trial (100% Gratis & Bebas Kuota). Untuk kualitas Google Nano Banana 2.1, aktifkan billing di Settings > Secrets.',
+          notice: 'Dihasilkan via Engine Free Trial (100% Gratis & Bebas Kuota).',
         };
       } catch {
         return {

@@ -310,28 +310,132 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
     setThemeDark((prev) => !prev);
   };
 
+  const [selectedDay, setSelectedDay] = useState<number>(() => Math.floor(Date.now() / 86_400_000));
+
   const week = useMemo(() => {
     const today = Math.floor(Date.now() / 86_400_000);
     const days = Array.from({ length: 7 }, (_, i) => today - 6 + i);
-    return days.map((d) => ({
-      d,
-      v: snap?.byDay[String(d)] ?? 0,
-      label: new Date(d * 86_400_000).toLocaleDateString("id-ID", {
-        weekday: "short",
-        timeZone: "UTC",
-      }),
-    }));
+    return days.map((d) => {
+      const v = snap?.byDay[String(d)] ?? 0;
+      const dateObj = new Date(d * 86_400_000);
+      return {
+        d,
+        v,
+        label: dateObj.toLocaleDateString("id-ID", {
+          weekday: "short",
+          timeZone: "UTC",
+        }),
+        fullDate: dateObj.toLocaleDateString("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          timeZone: "UTC",
+        }),
+      };
+    });
   }, [snap]);
 
-  const cats = useMemo(() => {
-    const entries = Object.entries(snap?.byCategory ?? {}).sort((a, b) => b[1] - a[1]);
-    const sum = entries.reduce((a, [, v]) => a + v, 0) || 1;
-    return entries.map(([n, v], i) => ({
+  const selectedDayInfo = useMemo(() => {
+    const currentWeekItem = week.find((w) => w.d === selectedDay);
+    const totalBlocked = currentWeekItem?.v ?? 0;
+
+    // Filter logs for selectedDay (ts is in seconds)
+    const dayLogs = (snap?.log ?? []).filter((l) => {
+      const day = Math.floor((l.ts * 1000) / 86_400_000);
+      return day === selectedDay;
+    });
+
+    // Filter quarantined items for selectedDay (quarantined_at is in seconds)
+    const dayQuarantine = (snap?.quarantine ?? []).filter((q) => {
+      const day = Math.floor((q.quarantined_at * 1000) / 86_400_000);
+      return day === selectedDay;
+    });
+
+    // Breakdown categories
+    const catCounts: Record<string, number> = {};
+    for (const q of dayQuarantine) {
+      const cat = q.category || "Malware";
+      catCounts[cat] = (catCounts[cat] || 0) + 1;
+    }
+    for (const l of dayLogs) {
+      if (l.status === "threat" || l.status === "removed") {
+        const cat = l.detail.includes("EICAR")
+          ? "EICAR Test"
+          : l.detail.includes("Injection")
+          ? "Prompt Injection"
+          : l.detail.includes("Tracker")
+          ? "Adware & Tracker"
+          : l.detail.includes("XSS")
+          ? "XSS Sanitized"
+          : "Malware";
+        catCounts[cat] = (catCounts[cat] || 0) + 1;
+      }
+    }
+
+    return {
+      day: selectedDay,
+      label: currentWeekItem?.label || "Hari Ini",
+      fullDate: currentWeekItem?.fullDate || "",
+      totalBlocked: Math.max(totalBlocked, dayQuarantine.length),
+      dayLogs,
+      dayQuarantine,
+      catCounts,
+    };
+  }, [selectedDay, week, snap]);
+
+  const dayCats = useMemo(() => {
+    const baseCats: Record<string, { count: number; color: string; label: string }> = {
+      Malware: { count: 0, color: "#f43f5e", label: "Malware & Trojan" },
+      Phishing: { count: 0, color: "#f59e0b", label: "Phishing & Fraud" },
+      Adware: { count: 0, color: "#0ea5e9", label: "Adware & Tracker" },
+      Spyware: { count: 0, color: "#a855f7", label: "Spyware & Stealer" },
+      CryptoMiner: { count: 0, color: "#06b6d4", label: "CryptoMiner" },
+      Ransomware: { count: 0, color: "#dc2626", label: "Ransomware" },
+    };
+
+    // 1. Tally from quarantine on selected day
+    for (const q of selectedDayInfo.dayQuarantine) {
+      const cat = (q.category || "Malware").toLowerCase();
+      if (cat.includes("phish") || cat.includes("credential")) baseCats.Phishing.count++;
+      else if (cat.includes("ad") || cat.includes("tracker")) baseCats.Adware.count++;
+      else if (cat.includes("spy") || cat.includes("keylog")) baseCats.Spyware.count++;
+      else if (cat.includes("miner") || cat.includes("crypto")) baseCats.CryptoMiner.count++;
+      else if (cat.includes("ransom") || cat.includes("locker")) baseCats.Ransomware.count++;
+      else baseCats.Malware.count++;
+    }
+
+    // 2. Tally from logs on selected day
+    for (const l of selectedDayInfo.dayLogs) {
+      if (l.status === "threat" || l.status === "removed") {
+        const text = `${l.title} ${l.detail}`.toLowerCase();
+        if (text.includes("phish") || text.includes("credential") || text.includes("scam")) baseCats.Phishing.count++;
+        else if (text.includes("ad") || text.includes("tracker") || text.includes("telemetry") || text.includes("doubleclick")) baseCats.Adware.count++;
+        else if (text.includes("spy") || text.includes("keylog") || text.includes("stealer")) baseCats.Spyware.count++;
+        else if (text.includes("miner") || text.includes("crypto") || text.includes("coinhive")) baseCats.CryptoMiner.count++;
+        else if (text.includes("ransom") || text.includes("locker")) baseCats.Ransomware.count++;
+        else baseCats.Malware.count++;
+      }
+    }
+
+    // Fallback: if day has recorded threats in week (w.v > 0) but individual items weren't categorized, attribute to Malware
+    const totalCount = Object.values(baseCats).reduce((sum, item) => sum + item.count, 0);
+    if (selectedDayInfo.totalBlocked > 0 && totalCount === 0) {
+      baseCats.Malware.count = selectedDayInfo.totalBlocked;
+    }
+
+    const effectiveTotal = Math.max(1, Object.values(baseCats).reduce((sum, item) => sum + item.count, 0));
+    const hasThreats = Object.values(baseCats).some((item) => item.count > 0);
+
+    return Object.entries(baseCats).map(([n, data]) => ({
       n,
-      pct: Math.round((v / sum) * 100),
-      color: CAT_COLORS[i % CAT_COLORS.length],
+      label: data.label,
+      count: data.count,
+      pct: hasThreats ? Math.round((data.count / effectiveTotal) * 100) : 0,
+      color: data.color,
     }));
-  }, [snap]);
+  }, [selectedDayInfo]);
+
+  const cats = dayCats;
 
   if (!isOpen) return null;
 
@@ -968,86 +1072,207 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
             {/* 7-Day Activity Chart (Derived Strictly from Real Activity Logs) */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="font-semibold text-[11px]">Aktivitas Deteksi 7 Hari Terakhir</span>
-                <span className={`text-[10px] ${themeDark ? "text-[#94a3b8]" : "text-[#64748b]"}`}>
+                <span className="font-semibold text-[11px] flex items-center gap-1">
+                  <span>Aktivitas Deteksi 7 Hari Terakhir</span>
+                  <span className="text-[10px] font-normal opacity-70">(Pencet batang untuk spesifikasi)</span>
+                </span>
+                <span className={`text-[10px] font-mono ${themeDark ? "text-[#94a3b8]" : "text-[#64748b]"}`}>
                   {week.reduce((a, b) => a + b.v, 0) === 0 ? "0 Insiden (Sistem Bersih)" : `${week.reduce((a, b) => a + b.v, 0)} Ancaman`}
                 </span>
               </div>
 
-              {/* 7-Day Bars */}
+              {/* Interactive 7-Day Bars */}
               <div className={`flex items-end gap-2 h-[72px] px-2 pt-3 pb-1 rounded-xl border ${
                 themeDark ? "bg-[#0f172a]/60 border-[#334155]/60" : "bg-slate-50 border-slate-200"
               }`}>
                 {week.map((w, i) => {
+                  const isSelected = w.d === selectedDay;
                   const hasThreat = w.v > 0;
-                  const barHeight = hasThreat ? Math.max(25, (w.v / maxBar) * 100) : 12;
+                  const barHeight = hasThreat ? Math.max(28, (w.v / maxBar) * 100) : 14;
                   return (
-                    <div
+                    <button
                       key={w.d}
+                      type="button"
+                      onClick={() => setSelectedDay(w.d)}
                       style={{ height: `${barHeight}%` }}
-                      title={`${w.label}: ${w.v} ancaman`}
-                      className={`flex-1 rounded-t-[5px] rounded-b-[2px] transition-all duration-300 ${
+                      title={`${w.label} (${w.fullDate}): ${w.v} ancaman diblokir. Klik untuk rincian.`}
+                      aria-label={`${w.label}: ${w.v} ancaman`}
+                      className={`flex-1 rounded-t-[5px] rounded-b-[2px] transition-all duration-200 cursor-pointer relative focus:outline-none ${
+                        isSelected
+                          ? "ring-2 ring-white scale-105 z-10 shadow-[0_0_10px_rgba(255,255,255,0.7)]"
+                          : "hover:scale-102 hover:brightness-110"
+                      } ${
                         hasThreat
                           ? "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]"
                           : i === 6
                           ? "bg-[#10b981] opacity-90 shadow-[0_0_6px_rgba(16,185,129,0.4)]"
                           : "bg-[#0ea5e9]/60 hover:bg-[#0ea5e9]"
                       }`}
-                    />
+                    >
+                      {isSelected && (
+                        <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                      )}
+                    </button>
                   );
                 })}
               </div>
 
               {/* Day Labels */}
               <div className={`flex gap-2 text-[10px] mt-1 ${themeDark ? "text-[#94a3b8]" : "text-[#64748b]"}`}>
-                {week.map((w) => (
-                  <span key={w.d} className="flex-1 text-center font-medium">
-                    {w.label}
+                {week.map((w) => {
+                  const isSelected = w.d === selectedDay;
+                  return (
+                    <button
+                      key={w.d}
+                      type="button"
+                      onClick={() => setSelectedDay(w.d)}
+                      className={`flex-1 text-center font-medium py-0.5 rounded transition ${
+                        isSelected
+                          ? "text-[#0ea5e9] font-bold underline underline-offset-2"
+                          : "hover:text-white"
+                      }`}
+                    >
+                      {w.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Selected Day Status Strip */}
+              <div className={`flex items-center justify-between px-2 py-1.5 mt-2 rounded-lg text-[11px] border ${
+                themeDark ? "bg-[#0b0f19] border-[#1e2638]" : "bg-slate-100 border-slate-200"
+              }`}>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className={`w-2 h-2 rounded-full flex-none ${selectedDayInfo.totalBlocked > 0 ? "bg-rose-500 animate-pulse" : "bg-emerald-400"}`} />
+                  <span className="font-semibold truncate">
+                    {selectedDayInfo.label}, {selectedDayInfo.fullDate}
                   </span>
-                ))}
+                </div>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase flex-none font-mono ${
+                    selectedDayInfo.totalBlocked > 0
+                      ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                      : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                  }`}
+                >
+                  {selectedDayInfo.totalBlocked > 0
+                    ? `${selectedDayInfo.totalBlocked} Diblokir`
+                    : "100% Bersih"}
+                </span>
               </div>
             </div>
 
-            {/* Genuine Threat Categories Distribution (Real Quarantine Breakdown) */}
-            <div>
+            {/* Dynamic Threat Categories Distribution (Strictly reactive to selected day) */}
+            <div className={`p-3 rounded-xl border ${themeDark ? "bg-[#141926] border-[#222c3f]" : "bg-slate-50 border-slate-200"}`}>
               <div className="flex items-center justify-between mb-2">
                 <span className="font-semibold text-[11px]">Distribusi Kategori Ancaman</span>
-                <span className={`text-[10px] ${themeDark ? "text-[#94a3b8]" : "text-[#64748b]"}`}>
-                  {threats === 0 ? "Bebas Infeksi (0%)" : "Berdasarkan Vault Karantina"}
+                <span className={`text-[10px] font-mono ${selectedDayInfo.totalBlocked > 0 ? "text-rose-400 font-semibold" : themeDark ? "text-[#94a3b8]" : "text-[#64748b]"}`}>
+                  {selectedDayInfo.totalBlocked > 0 ? `${selectedDayInfo.label}: ${selectedDayInfo.totalBlocked} ancaman` : "Bebas Infeksi (0%)"}
                 </span>
               </div>
 
-              <div className="flex flex-col gap-1.5">
+              <div className="space-y-2">
                 {cats.map((c) => {
-                  const isClean = threats === 0 || c.pct === 0;
+                  const hasCount = c.count > 0;
                   return (
-                    <div key={c.n} className="grid grid-cols-[86px_1fr_36px] items-center gap-2 text-[11px]">
-                      <span className="truncate font-medium">{c.n}</span>
-                      <div className={`h-1.5 rounded-full overflow-hidden ${themeDark ? "bg-[#334155]" : "bg-[#e2e8f0]"}`}>
+                    <div key={c.n} className="grid grid-cols-[92px_1fr_54px] items-center gap-2 text-[11px]">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <span className="w-2 h-2 rounded-full flex-none" style={{ backgroundColor: c.color }} />
+                        <span className="truncate font-medium">{c.n}</span>
+                      </div>
+                      <div className={`h-2 rounded-full overflow-hidden ${themeDark ? "bg-[#1e2638]" : "bg-slate-200"}`}>
                         <div
                           className="h-full rounded-full transition-all duration-300"
                           style={{
-                            width: isClean ? "0%" : `${c.pct}%`,
-                            background: c.color,
+                            width: `${c.pct}%`,
+                            backgroundColor: c.color,
                           }}
                         />
                       </div>
                       <span
-                        className={`text-right font-mono font-semibold ${
-                          isClean
-                            ? "text-[#10b981]"
+                        className={`text-right font-mono text-[10px] font-semibold ${
+                          hasCount
+                            ? "text-rose-400"
                             : themeDark
-                            ? "text-[#94a3b8]"
-                            : "text-[#64748b]"
+                            ? "text-[#64748b]"
+                            : "text-[#94a3b8]"
                         }`}
                       >
-                        {isClean ? "0%" : `${c.pct}%`}
+                        {hasCount ? `${c.pct}% (${c.count})` : "0%"}
                       </span>
                     </div>
                   );
                 })}
               </div>
             </div>
+
+            {/* Itemized Blocked Threats for Selected Day */}
+            {selectedDayInfo.totalBlocked > 0 ? (
+              <div className={`p-3 rounded-xl border ${themeDark ? "bg-[#141926] border-[#222c3f]" : "bg-slate-50 border-slate-200"}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-semibold text-[11px]">Daftar Berkas & Request Dicegat</span>
+                  <span className="text-[10px] text-rose-400 font-mono font-bold">{selectedDayInfo.totalBlocked} Item</span>
+                </div>
+
+                <div className="max-h-[130px] overflow-y-auto space-y-1.5 pr-1">
+                  {selectedDayInfo.dayQuarantine.map((q) => (
+                    <div
+                      key={q.id}
+                      className={`p-2 rounded-lg text-[10.5px] border flex items-center justify-between gap-2 ${
+                        themeDark ? "bg-[#0b0f19] border-[#1e2638]" : "bg-white border-slate-200"
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold truncate text-rose-400 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3 flex-none" />
+                          <span className="truncate">{q.name}</span>
+                        </div>
+                        <div className={`text-[9.5px] truncate mt-0.5 ${themeDark ? "text-slate-400" : "text-slate-500"}`}>
+                          {q.category} · {q.original_path}
+                        </div>
+                      </div>
+                      <span className="text-[9px] uppercase font-mono font-bold text-rose-400 bg-rose-500/15 border border-rose-500/30 px-1.5 py-0.5 rounded flex-none">
+                        Karantina
+                      </span>
+                    </div>
+                  ))}
+
+                  {selectedDayInfo.dayLogs
+                    .filter((l) => l.status === "threat" || l.status === "removed")
+                    .map((l, idx) => (
+                      <div
+                        key={`log_${idx}`}
+                        className={`p-2 rounded-lg text-[10.5px] border flex items-center justify-between gap-2 ${
+                          themeDark ? "bg-[#0b0f19] border-[#1e2638]" : "bg-white border-slate-200"
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold truncate text-rose-400 flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3 flex-none" />
+                            <span className="truncate">{l.title}</span>
+                          </div>
+                          <div className={`text-[9.5px] truncate mt-0.5 ${themeDark ? "text-slate-400" : "text-slate-500"}`}>
+                            {fmtTime(l.ts)} · {l.detail}
+                          </div>
+                        </div>
+                        <span className="text-[9px] uppercase font-mono font-bold text-rose-400 bg-rose-500/15 border border-rose-500/30 px-1.5 py-0.5 rounded flex-none">
+                          Diblokir
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            ) : (
+              <div className={`p-2.5 rounded-xl border flex items-center gap-2.5 ${themeDark ? "bg-[#141926] border-[#222c3f]" : "bg-slate-50 border-slate-200"}`}>
+                <CheckCircle className="w-4 h-4 text-emerald-400 flex-none" />
+                <div className="text-[11px] leading-snug">
+                  <span className="font-semibold text-emerald-400 block">Sistem 100% Bersih & Terlindungi</span>
+                  <span className={`text-[10px] ${themeDark ? "text-slate-400" : "text-slate-500"}`}>
+                    Tidak ada ancaman atau request mencurigakan yang dicegat pada {selectedDayInfo.label}.
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Operational Summary Grid */}
             <div className={`grid grid-cols-3 gap-2 pt-2 border-t ${themeDark ? "border-[#334155]/60" : "border-[#e2e8f0]"}`}>

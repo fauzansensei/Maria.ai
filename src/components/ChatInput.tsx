@@ -16,6 +16,7 @@ import {
   Wand2,
   ShieldAlert,
   Play,
+  Files,
 } from 'lucide-react';
 import { AiMode, MediaAttachment } from '../types/index.ts';
 import { speechService } from '../lib/speechService.ts';
@@ -84,6 +85,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const videoInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const allFileInputRef = useRef<HTMLInputElement>(null);
 
   // Sync loadedText into contentEditable
   useEffect(() => {
@@ -285,116 +287,99 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     setHasSelection(false);
   };
 
-  // Process files into MediaAttachment objects with DEFCON 5 Real-Time Protection Inspection
+  // Process files concurrently into MediaAttachment objects with DEFCON 5 Real-Time Protection Inspection
   const processFiles = useCallback(async (files: FileList | File[]) => {
-    const newAttachments: MediaAttachment[] = [];
+    const filesArr = Array.from(files);
+    if (filesArr.length === 0) return;
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+    const results = await Promise.all(
+      filesArr.map(async (file) => {
+        // 1. DEFCON 5 Real-Time Threat Interception
+        try {
+          const securityCheck = await guardianEngine.checkFile(file);
+          if (securityCheck.verdict === 'threat') {
+            const cat = securityCheck.name?.includes('EICAR')
+              ? 'EICAR Test'
+              : securityCheck.name?.includes('Binary')
+              ? 'Executable'
+              : 'Malware';
 
-      // 1. DEFCON 5 Real-Time Threat Interception
-      try {
-        const securityCheck = await guardianEngine.checkFile(file);
-        if (securityCheck.verdict === 'threat') {
-          const cat = securityCheck.name?.includes('EICAR')
-            ? 'EICAR Test'
-            : securityCheck.name?.includes('Binary')
-            ? 'Executable'
-            : 'Malware';
+            guardianEngine.quarantineThreat(
+              file.name,
+              `chat/uploads/${file.name}`,
+              securityCheck.sha256,
+              file.size,
+              cat
+            );
 
-          // Quarantine immediately into vault
-          guardianEngine.quarantineThreat(
-            file.name,
-            `chat/uploads/${file.name}`,
-            securityCheck.sha256,
-            file.size,
-            cat
-          );
-
-          // Alert user on UI
-          setDefconAlert({
-            filename: file.name,
-            threatName: securityCheck.name || 'Berkas Berbahaya Terdeteksi',
-            reason: securityCheck.reason || 'Dideteksi oleh protokol pertahanan DEFCON 5',
-          });
-
-          // Soft audio alert
-          try {
-            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(440, ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(220, ctx.currentTime + 0.22);
-            gain.gain.setValueAtTime(0.08, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start();
-            osc.stop(ctx.currentTime + 0.22);
-          } catch {}
-
-          // Do NOT attach malicious or test virus file to chat
-          continue;
-        }
-      } catch (secErr) {
-        console.error('Error during DEFCON security scan:', secErr);
-      }
-
-      const mediaType = getMediaType(file);
-
-      try {
-        const dataUrl = await readFileAsDataUrl(file);
-        const base64Data = extractBase64(dataUrl);
-        const originalUrl = URL.createObjectURL(file);
-        const attId = `att_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-
-        storeOriginalMedia(attId, originalUrl);
-        storeOriginalMedia(file.name, originalUrl);
-        await storeOriginalMediaBlob(attId, file);
-        await storeOriginalMediaBlob(file.name, file);
-
-        let previewUrl = '';
-        if (mediaType === 'image') {
-          previewUrl = await generateImageThumbnail(file, 480, 0.72);
-        } else if (mediaType === 'video') {
-          previewUrl = await generateVideoThumbnail(file);
+            setDefconAlert({
+              filename: file.name,
+              threatName: securityCheck.name || 'Berkas Berbahaya Terdeteksi',
+              reason: securityCheck.reason || 'Dideteksi oleh protokol pertahanan DEFCON 5',
+            });
+            return null;
+          }
+        } catch (secErr) {
+          console.error('Error during DEFCON security scan:', secErr);
         }
 
-        let detectedMime = file.type;
-        if (!detectedMime) {
-          const lowerName = file.name.toLowerCase();
-          if (lowerName.endsWith('.md') || lowerName.endsWith('.markdown')) detectedMime = 'text/markdown';
-          else if (lowerName.endsWith('.txt')) detectedMime = 'text/plain';
-          else if (lowerName.endsWith('.json')) detectedMime = 'application/json';
-          else if (lowerName.endsWith('.csv')) detectedMime = 'text/csv';
-          else if (lowerName.endsWith('.pdf')) detectedMime = 'application/pdf';
-          else if (lowerName.endsWith('.mp4')) detectedMime = 'video/mp4';
-          else if (lowerName.endsWith('.webm')) detectedMime = 'video/webm';
-          else if (lowerName.endsWith('.mov')) detectedMime = 'video/quicktime';
-          else if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) detectedMime = 'image/jpeg';
-          else if (lowerName.endsWith('.png')) detectedMime = 'image/png';
-          else if (lowerName.endsWith('.webp')) detectedMime = 'image/webp';
-          else detectedMime = mediaType === 'video' ? 'video/mp4' : mediaType === 'image' ? 'image/jpeg' : 'text/plain';
+        const mediaType = getMediaType(file);
+
+        try {
+          const dataUrl = await readFileAsDataUrl(file);
+          const base64Data = extractBase64(dataUrl);
+          const originalUrl = URL.createObjectURL(file);
+          const attId = `att_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+          storeOriginalMedia(attId, originalUrl);
+          storeOriginalMedia(file.name, originalUrl);
+          await storeOriginalMediaBlob(attId, file);
+          await storeOriginalMediaBlob(file.name, file);
+
+          let previewUrl = '';
+          if (mediaType === 'image') {
+            previewUrl = await generateImageThumbnail(file, 480, 0.72);
+          } else if (mediaType === 'video') {
+            previewUrl = await generateVideoThumbnail(file);
+          }
+
+          let detectedMime = file.type;
+          if (!detectedMime) {
+            const lowerName = file.name.toLowerCase();
+            if (lowerName.endsWith('.md') || lowerName.endsWith('.markdown')) detectedMime = 'text/markdown';
+            else if (lowerName.endsWith('.txt')) detectedMime = 'text/plain';
+            else if (lowerName.endsWith('.json')) detectedMime = 'application/json';
+            else if (lowerName.endsWith('.csv')) detectedMime = 'text/csv';
+            else if (lowerName.endsWith('.pdf')) detectedMime = 'application/pdf';
+            else if (lowerName.endsWith('.mp4')) detectedMime = 'video/mp4';
+            else if (lowerName.endsWith('.webm')) detectedMime = 'video/webm';
+            else if (lowerName.endsWith('.mov')) detectedMime = 'video/quicktime';
+            else if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) detectedMime = 'image/jpeg';
+            else if (lowerName.endsWith('.png')) detectedMime = 'image/png';
+            else if (lowerName.endsWith('.webp')) detectedMime = 'image/webp';
+            else detectedMime = mediaType === 'video' ? 'video/mp4' : mediaType === 'image' ? 'image/jpeg' : 'application/octet-stream';
+          }
+
+          return {
+            id: attId,
+            name: file.name,
+            size: file.size,
+            mimeType: detectedMime,
+            type: mediaType,
+            previewUrl: previewUrl || originalUrl,
+            originalUrl: originalUrl || dataUrl,
+            base64Data,
+          } as MediaAttachment;
+        } catch (err) {
+          console.error('Error processing file:', err);
+          return null;
         }
+      })
+    );
 
-        newAttachments.push({
-          id: attId,
-          name: file.name,
-          size: file.size,
-          mimeType: detectedMime,
-          type: mediaType,
-          previewUrl: previewUrl || originalUrl,
-          originalUrl: originalUrl || dataUrl,
-          base64Data,
-        });
-      } catch (err) {
-        console.error('Error processing file:', err);
-      }
-    }
-
-    if (newAttachments.length > 0) {
-      setAttachments((prev) => [...prev, ...newAttachments]);
+    const validAttachments = results.filter((a): a is MediaAttachment => a !== null);
+    if (validAttachments.length > 0) {
+      setAttachments((prev) => [...prev, ...validAttachments]);
     }
   }, []);
 
@@ -528,7 +513,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         onClose={() => setLightboxMedia(null)}
       />
 
-      {/* Hidden file inputs */}
+      {/* Hidden file inputs with full multi-file capability */}
+      <input
+        ref={allFileInputRef}
+        type="file"
+        accept="*/*"
+        multiple
+        className="hidden"
+        onChange={handleMediaFileChange}
+      />
       <input
         ref={mediaInputRef}
         type="file"
@@ -556,7 +549,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       <input
         ref={docInputRef}
         type="file"
-        accept=".pdf,.txt,.md,.markdown,.json,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.py,.js,.ts,.html,.css,.xml,.yaml,.yml,.sql"
+        accept="*/*"
         multiple
         className="hidden"
         onChange={handleMediaFileChange}
@@ -684,7 +677,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               </div>
             </button>
 
-            {/* Dokumen & Berkas Teks */}
+            {/* Unggah Berkas & Dokumen (Multi-Select) */}
             <button
               type="button"
               onClick={() => docInputRef.current?.click()}
@@ -694,8 +687,33 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 <FileText className="w-4 h-4 text-white" />
               </div>
               <div className="min-w-0">
-                <div className="font-semibold truncate">Unggah Dokumen & Berkas</div>
-                <div className="text-[10px] text-slate-400">PDF, Markdown (.md), TXT, JSON, CSV, Kode</div>
+                <div className="font-semibold truncate flex items-center gap-1.5">
+                  <span>Unggah Dokumen & Berkas</span>
+                  <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold">
+                    Multi-Upload
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-400">PDF, Markdown (.md), TXT, JSON, CSV, Kode (pilih banyak sekaligus)</div>
+              </div>
+            </button>
+
+            {/* Pilih Semua Jenis Berkas Sekaligus (Universal Multi-Picker) */}
+            <button
+              type="button"
+              onClick={() => allFileInputRef.current?.click()}
+              className="col-span-2 flex items-center gap-2.5 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 text-left transition-colors border border-dashed border-slate-300 dark:border-slate-700"
+            >
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Files className="w-4 h-4 text-white" />
+              </div>
+              <div className="min-w-0">
+                <div className="font-semibold truncate flex items-center gap-1.5">
+                  <span>Pilih Bebas Banyak Berkas</span>
+                  <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 font-bold">
+                    Bebas Jumlah
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-400">Pilih 2, 3, atau lebih berkas/foto/dokumen bersamaan</div>
               </div>
             </button>
           </div>

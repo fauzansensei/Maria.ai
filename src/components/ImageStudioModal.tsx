@@ -34,7 +34,7 @@ export const ImageStudioModal: React.FC<ImageStudioModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'create' | 'edit'>(initialBaseImage ? 'edit' : 'create');
   const [prompt, setPrompt] = useState(initialPrompt || '');
-  const [engine, setEngine] = useState<'free' | 'nano-banana'>('free'); // Default to free trial for zero-quota friction
+  const [engine, setEngine] = useState<'nano-banana-2' | 'nano-banana-2.1' | 'free'>('free'); // Default to free trial (zero quota friction)
   const [aspectRatio, setAspectRatio] = useState<'1:1' | '16:9' | '9:16' | '4:3' | '3:4'>('1:1');
   const [imageSize, setImageSize] = useState<'1K' | '2K' | '4K'>('1K');
   const [baseImage, setBaseImage] = useState<string | null>(initialBaseImage);
@@ -121,7 +121,7 @@ export const ImageStudioModal: React.FC<ImageStudioModalProps> = ({
       const data = await res.json();
       const resultObj = {
         imageUrl: data.imageUrl,
-        model: data.model || (engine === 'free' ? 'flux-free-trial' : 'gemini-nano-banana-2.1'),
+        model: data.model || (engine === 'free' ? 'flux-free-trial' : engine === 'nano-banana-2' ? 'gemini-3.1-flash-lite-image' : 'gemini-nano-banana-2.1'),
         notice: data.notice,
         prompt: prompt.trim(),
       };
@@ -253,13 +253,61 @@ export const ImageStudioModal: React.FC<ImageStudioModalProps> = ({
             {/* Engine / Tier Selection */}
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                <span>Pilih Model & Engine:</span>
-                <span className="text-[11px] font-normal text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                  <Zap className="w-3 h-3" />
-                  Free Trial Siap Digunakan
+                <span>Pilih Engine Model AI:</span>
+                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold">
+                  {engine === 'nano-banana-2' ? 'Gemini 3.1 Flash Image (Aktif)' : engine === 'nano-banana-2.1' ? 'Nano Banana 2.1 4K' : 'Free Trial'}
                 </span>
               </label>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setEngine('nano-banana-2')}
+                  className={`p-3 rounded-2xl border text-left transition-all relative ${
+                    engine === 'nano-banana-2'
+                      ? 'border-blue-600 bg-blue-50/70 dark:bg-blue-950/30 ring-2 ring-blue-500/30'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 bg-white dark:bg-[#0f172a]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+                      Nano Banana 2
+                    </span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                      engine === 'nano-banana-2'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                    }`}>
+                      {engine === 'nano-banana-2' ? 'Terpilih' : 'Google'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                    Gemini 3.1 Flash Image resmi Google. Generasi gambar ultra cepat & presisi.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setEngine('nano-banana-2.1')}
+                  className={`p-3 rounded-2xl border text-left transition-all relative ${
+                    engine === 'nano-banana-2.1'
+                      ? 'border-blue-600 bg-blue-50/70 dark:bg-blue-950/30 ring-2 ring-blue-500/30'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 bg-white dark:bg-[#0f172a]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">
+                      Nano Banana 2.1
+                    </span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
+                      Pro 4K
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                    Resolusi gambar tinggi hingga 4K bertenaga Google AI Studio.
+                  </p>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setEngine('free')}
@@ -271,36 +319,14 @@ export const ImageStudioModal: React.FC<ImageStudioModalProps> = ({
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-bold text-slate-900 dark:text-white">
-                      Free Trial (Flux AI)
+                      Free Trial (Flux)
                     </span>
                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
                       Gratis
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-                    100% bebas kuota & tanpa kartu kredit. Ideal untuk eksplorasi cepat.
-                  </p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setEngine('nano-banana')}
-                  className={`p-3 rounded-2xl border text-left transition-all relative ${
-                    engine === 'nano-banana'
-                      ? 'border-blue-600 bg-blue-50/60 dark:bg-blue-950/20 ring-2 ring-blue-500/20'
-                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 bg-white dark:bg-[#0f172a]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold text-slate-900 dark:text-white">
-                      Nano Banana 2.1
-                    </span>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                      Google Pro
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-                    Resolusi tinggi hingga 4K bertenaga Google AI Studio.
+                    Cadangan 100% bebas kuota jika kuota API habis.
                   </p>
                 </button>
               </div>
@@ -422,10 +448,10 @@ export const ImageStudioModal: React.FC<ImageStudioModalProps> = ({
                 </div>
               </div>
 
-              {engine === 'nano-banana' && (
+              {engine === 'nano-banana-2.1' && (
                 <div>
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 block">
-                    Resolusi Gambar (Gemini Nano):
+                    Resolusi Gambar (Nano Banana 2.1 Pro):
                   </label>
                   <div className="grid grid-cols-3 gap-1.5">
                     {(['1K', '2K', '4K'] as const).map((sz) => (
