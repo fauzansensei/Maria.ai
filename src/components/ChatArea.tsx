@@ -17,7 +17,7 @@ import { MessageItem } from './MessageItem.tsx';
 import { ChatInput } from './ChatInput.tsx';
 import { MariaLogo } from './MariaLogo.tsx';
 import { speechService, SpeechState } from '../lib/speechService.ts';
-import { DefconShieldModal, DefconLevel } from './DefconShieldModal.tsx';
+import { DefconLevel } from './DefconShieldModal.tsx';
 import { defconService, DefconState } from '../lib/defconProtectionService.ts';
 import { guardianEngine, type Snapshot } from '../lib/guardian/guardianEngine.ts';
 
@@ -81,7 +81,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const [speechState, setSpeechState] = useState<SpeechState>(() => speechService.getState());
   const [showNotifications, setShowNotifications] = useState(false);
   const [showVoicePopover, setShowVoicePopover] = useState(false);
-  const [showDefconModal, setShowDefconModal] = useState(false);
   const [defconState, setDefconState] = useState<DefconState>(() => defconService.getState());
   const [defconLevel, setDefconLevel] = useState<DefconLevel>(() => defconService.getState().currentLevel);
   const [guardianSnap, setGuardianSnap] = useState<Snapshot | null>(() => guardianEngine.getSnapshot());
@@ -209,10 +208,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         <div className="flex items-center gap-2">
           {/* DEFCON Shield Badge Button */}
           <button
-            onClick={() => {
-              onOpenDefcon?.();
-              setShowDefconModal(true);
-            }}
+            onClick={() => onOpenDefcon?.()}
             title="Buka Sistem Keamanan Maria DEFCON Shield (Anti-DDoS, Malware & Prompt Injection)"
             className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95 ${
               defconLevel === 5
@@ -401,17 +397,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           loadedText={loadedInputText}
           onClearLoadedText={handleClearLoadedText}
           onOpenImageStudio={() => onOpenImageStudio?.()}
-          onOpenDefconModal={() => setShowDefconModal(true)}
+          onOpenDefconModal={() => onOpenDefcon?.()}
         />
       </div>
-
-      {/* Maria DEFCON Shield Security Modal */}
-      <DefconShieldModal
-        isOpen={showDefconModal}
-        onClose={() => setShowDefconModal(false)}
-        currentLevel={defconLevel}
-        onLevelChange={handleDefconLevelChange}
-      />
     </div>
   );
 };
