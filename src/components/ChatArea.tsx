@@ -46,6 +46,7 @@ interface ChatAreaProps {
   userName?: string | null;
   activeConnectingAction?: LaunchAction | null;
   onOpenImageStudio?: (baseImage?: string, prompt?: string) => void;
+  onOpenDefcon?: () => void;
 }
 
 interface NotificationItem {
@@ -74,6 +75,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   userName,
   activeConnectingAction,
   onOpenImageStudio,
+  onOpenDefcon,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [speechState, setSpeechState] = useState<SpeechState>(() => speechService.getState());
@@ -207,7 +209,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         <div className="flex items-center gap-2">
           {/* DEFCON Shield Badge Button */}
           <button
-            onClick={() => setShowDefconModal(true)}
+            onClick={() => {
+              onOpenDefcon?.();
+              setShowDefconModal(true);
+            }}
             title="Buka Sistem Keamanan Maria DEFCON Shield (Anti-DDoS, Malware & Prompt Injection)"
             className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95 ${
               defconLevel === 5

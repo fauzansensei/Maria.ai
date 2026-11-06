@@ -9,6 +9,7 @@ import { ScienceScoutModal } from './components/ScienceScoutModal.tsx';
 import { SettingsDashboard } from './components/SettingsDashboard.tsx';
 import { TwoFactorModal } from './components/TwoFactorModal.tsx';
 import { ImageStudioModal } from './components/ImageStudioModal.tsx';
+import { DefconShieldModal } from './components/DefconShieldModal.tsx';
 import { Conversation, Message, AiMode, UserSettings, MediaAttachment } from './types/index.ts';
 import { DEFAULT_SETTINGS, VOICE_PERSONAS } from './constants.ts';
 import { speechService } from './lib/speechService.ts';
@@ -55,6 +56,7 @@ function AppContent() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [is2FAOpen, setIs2FAOpen] = useState(false);
   const [isImageStudioOpen, setIsImageStudioOpen] = useState(false);
+  const [isDefconOpen, setIsDefconOpen] = useState(false);
   const [studioBaseImage, setStudioBaseImage] = useState<string | null>(null);
   const [studioPrompt, setStudioPrompt] = useState<string>('');
 
@@ -1040,6 +1042,7 @@ function AppContent() {
         onNavigateView={(view) => setActiveView(view)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenImageStudio={() => handleOpenImageStudio()}
+        onOpenDefcon={() => setIsDefconOpen(true)}
       />
 
       {/* Main Workspace: Chat, Library, or Discover View */}
@@ -1056,6 +1059,7 @@ function AppContent() {
             onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
             onOpenScienceScout={() => setIsScienceScoutOpen(true)}
             onOpenSettings={() => setIsSettingsOpen(true)}
+            onOpenDefcon={() => setIsDefconOpen(true)}
             speechSpeed={settings.speechSpeed || '1x'}
             voicePersona={settings.voicePersona || 'wanita'}
             onSelectVoicePersona={(p) => {
@@ -1113,6 +1117,7 @@ function AppContent() {
         onClearHistoryRequest={() => setIs2FAOpen(true)}
         settings={settings}
         onUpdateSettings={handleUpdateSettings}
+        onOpenDefcon={() => setIsDefconOpen(true)}
       />
 
       {/* 2FA Security Modal for Purging History */}
@@ -1131,6 +1136,12 @@ function AppContent() {
         onSendToChat={handleSendStudioImageToChat}
         initialBaseImage={studioBaseImage}
         initialPrompt={studioPrompt}
+      />
+
+      {/* Maria AI DEFCON 5 Real-Time Protection Shield Modal */}
+      <DefconShieldModal
+        isOpen={isDefconOpen}
+        onClose={() => setIsDefconOpen(false)}
       />
     </div>
   );

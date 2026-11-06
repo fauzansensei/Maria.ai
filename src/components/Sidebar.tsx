@@ -60,6 +60,7 @@ interface SidebarProps {
   onNavigateView: (view: 'chat' | 'library' | 'discover') => void;
   onOpenSettings: () => void;
   onOpenImageStudio?: () => void;
+  onOpenDefcon?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -77,6 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onNavigateView,
   onOpenSettings,
   onOpenImageStudio,
+  onOpenDefcon,
 }) => {
   const { user, signIn, signOut } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -246,6 +248,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-900/60 text-purple-300 font-semibold border border-purple-700/50">
                 Baru
+              </span>
+            </button>
+
+            <button
+              onClick={() => {
+                onOpenDefcon?.();
+                onClose();
+              }}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-emerald-300 hover:bg-[#064e3b]/40 hover:text-emerald-200 transition-all border border-emerald-500/30 bg-emerald-950/25 group shadow-xs"
+            >
+              <div className="flex items-center gap-2.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+                <span className="font-bold">DEFCON 5 Shield</span>
+              </div>
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-900/80 text-emerald-300 font-extrabold border border-emerald-500/50 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Kebal
               </span>
             </button>
 
