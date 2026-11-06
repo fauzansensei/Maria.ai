@@ -963,60 +963,8 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
             </div>
           </>
         ) : (
-          /* Tab Content: Statistics (Real VirusTotal Live Intelligence & Device Health) */
+          /* Tab Content: Statistics (Real Activity & Threat Distribution) */
           <div className="space-y-3.5 text-xs">
-            {/* Live Threat Intelligence Provider Header */}
-            <div
-              className={`p-2.5 rounded-xl border flex items-center justify-between ${
-                themeDark ? "bg-[#1e293b]/70 border-[#334155]" : "bg-[#f1f5f9] border-[#e2e8f0]"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-[#10b981] shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse" />
-                <div>
-                  <div className="font-semibold text-[11px] flex items-center gap-1">
-                    <span>VirusTotal v3 Cloud Intelligence</span>
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#10b981]/20 text-[#10b981] font-bold">
-                      LIVE
-                    </span>
-                  </div>
-                  <div className={`text-[10px] ${themeDark ? "text-[#94a3b8]" : "text-[#64748b]"}`}>
-                    72+ Vendor Global (Kaspersky, Bitdefender, Microsoft, ESET, CrowdStrike)
-                  </div>
-                </div>
-              </div>
-              <Globe className="w-4 h-4 text-[#0ea5e9] opacity-80" />
-            </div>
-
-            {/* Current Device Health Status Banner */}
-            {threats === 0 ? (
-              <div
-                className={`p-3 rounded-xl border text-center ${
-                  themeDark
-                    ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-300"
-                    : "bg-emerald-50 border-emerald-200 text-emerald-800"
-                }`}
-              >
-                <div className="flex items-center justify-center gap-1.5 font-bold text-sm">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  <span>Status Keamanan: 100% Bersih & Terlindungi</span>
-                </div>
-                <p className={`text-[11px] mt-1 ${themeDark ? "text-slate-300" : "text-slate-600"}`}>
-                  Tidak ada ancaman aktif. Semua berkas yang diunggah dan ditransfer terverifikasi bebas malware.
-                </p>
-              </div>
-            ) : (
-              <div className="p-3 rounded-xl border bg-rose-500/10 border-rose-500/30 text-rose-300 text-center">
-                <div className="flex items-center justify-center gap-1.5 font-bold text-sm">
-                  <AlertTriangle className="w-4 h-4 text-rose-400" />
-                  <span>{threats} Berkas Berbahaya Terdeteksi & Dikarantina</span>
-                </div>
-                <p className="text-[11px] mt-1 opacity-90">
-                  DEFCON 5 berhasil memblokir ancaman dan mengamankan sistem Anda.
-                </p>
-              </div>
-            )}
-
             {/* 7-Day Activity Chart (Derived Strictly from Real Activity Logs) */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
