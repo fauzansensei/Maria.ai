@@ -11,32 +11,35 @@ function expressApiPlugin(): Plugin {
     name: 'express-api-plugin',
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
-        if (req.url && req.url.startsWith('/api')) {
-          try {
-            const { apiApp } = await import('./src/server/api.ts');
-            apiApp(req as any, res as any, (err?: any) => {
-              if (err) {
-                console.error('API Error in Vite middleware:', err);
-                if (!res.headersSent) {
-                  res.statusCode = 500;
+        // ONLY intercept /api calls. Never intercept or rate-limit static modules, HTML, CSS, or scripts!
+        if (!req.url || !req.url.startsWith('/api')) {
+          return next();
+        }
+
+        try {
+          const { defconAntiDdosMiddleware } = await import('./src/server/defcon/guard.ts');
+          defconAntiDdosMiddleware(req as any, res as any, () => {
+            import('./src/server/api.ts').then(({ apiApp }) => {
+              apiApp(req as any, res as any, (err?: any) => {
+                if (err) {
+                  console.error('API Error in Vite middleware:', err);
+                  if (!res.headersSent) {
+                    res.statusCode = 500;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({ error: err.message || 'Internal Server Error' }));
+                  }
+                } else if (!res.headersSent) {
+                  res.statusCode = 404;
                   res.setHeader('Content-Type', 'application/json');
-                  res.end(JSON.stringify({ error: err.message || 'Internal Server Error' }));
+                  res.end(JSON.stringify({ error: 'Endpoint API tidak ditemukan.' }));
                 }
-              } else if (!res.headersSent) {
-                res.statusCode = 404;
-                res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify({ error: 'Endpoint API tidak ditemukan.' }));
-              }
+              });
+            }).catch((importErr) => {
+              console.error('Failed to import apiApp:', importErr);
+              next();
             });
-          } catch (err: any) {
-            console.error('Error handling API request in Vite middleware:', err);
-            if (!res.headersSent) {
-              res.statusCode = 500;
-              res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({ error: err?.message || 'Gagal memproses API.' }));
-            }
-          }
-        } else {
+          });
+        } catch (err) {
           next();
         }
       });

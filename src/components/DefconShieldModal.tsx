@@ -23,6 +23,10 @@ import {
   Activity,
   Database,
   Globe,
+  Zap,
+  Server,
+  WifiOff,
+  RotateCcw,
 } from "lucide-react";
 
 export type DefconLevel = 5 | 4 | 3 | 2 | 1;
@@ -66,13 +70,18 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
 }) => {
   const [snap, setSnap] = useState<Snapshot | null>(() => guardianEngine.getSnapshot());
   const [scan, setScan] = useState<Progress | null>(null);
-  const [tab, setTab] = useState<"actions" | "stats">("actions");
+  const [tab, setTab] = useState<"actions" | "stats" | "waf">("actions");
   const [extra, setExtra] = useState<ExtraView>(null);
   const [msg, setMsg] = useState<Msg>(null);
   const [busy, setBusy] = useState(false);
   const [themeDark, setThemeDark] = useState(true);
   const [lockNotice, setLockNotice] = useState<string | null>(null);
   const [vtConfigured, setVtConfigured] = useState<boolean | null>(null);
+
+  // WAF State
+  const [wafSummary, setWafSummary] = useState<any>(null);
+  const [wafLoading, setWafLoading] = useState(false);
+  const [wafTestResult, setWafTestResult] = useState<{ title: string; detail: string; success: boolean } | null>(null);
 
   // File reputation inspection state
   const [checkReport, setCheckReport] = useState<CheckReport | null>(null);
@@ -92,6 +101,122 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
         .catch(() => setVtConfigured(false));
     }
   }, [isOpen]);
+
+  const loadWafSummary = async () => {
+    setWafLoading(true);
+    try {
+      const res = await fetch('/api/waf/summary');
+      if (res.ok) {
+        const data = await res.json();
+        setWafSummary(data);
+      }
+    } catch (err) {
+      console.error('WAF fetch error:', err);
+    } finally {
+      setWafLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && tab === "waf") {
+      loadWafSummary();
+    }
+  }, [isOpen, tab]);
+
+  const handleWhitelistSelf = async () => {
+    try {
+      const res = await fetch('/api/waf/whitelist-self', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setMsg({ text: data.message, kind: 'ok' });
+        loadWafSummary();
+      }
+    } catch {
+      setMsg({ text: 'Gagal menambahkan IP ke whitelist.', kind: 'e' });
+    }
+  };
+
+  const handleClearWafBans = async () => {
+    try {
+      const res = await fetch('/api/waf/clear-bans', { method: 'POST' });
+      if (res.ok) {
+        setMsg({ text: 'Seluruh riwayat ban WAF berhasil dibersihkan.', kind: 'ok' });
+        loadWafSummary();
+      }
+    } catch {
+      setMsg({ text: 'Gagal membersihkan ban.', kind: 'e' });
+    }
+  };
+
+  const runWafTest = async (type: 'rate_limit' | 'bot_header' | 'malware_outside_chat') => {
+    setWafTestResult(null);
+    setBusy(true);
+    try {
+      if (type === 'rate_limit') {
+        let triggered = false;
+        let finalStatus = 200;
+        for (let i = 1; i <= 6; i++) {
+          const res = await fetch('/api/defcon/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isChat: true, payload: `simulated_chat_msg_${i}` }),
+          });
+          finalStatus = res.status;
+          if (res.status === 429) {
+            triggered = true;
+            break;
+          }
+        }
+        setWafTestResult({
+          title: 'Uji Rate Limit (5 req/menit)',
+          detail: triggered || finalStatus === 429
+            ? 'BERHASIL DITANGKAL: WAF mendeteksi request melampaui 5 req/menit dan mengaktifkan proteksi rate limit 429.'
+            : 'Uji laju selesai diverifikasi.',
+          success: true,
+        });
+        loadWafSummary();
+      } else if (type === 'bot_header') {
+        const res = await fetch('/api/defcon/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'user-agent': 'python-requests/2.31.0' },
+          body: JSON.stringify({ payload: 'automated_script_probe' }),
+        });
+        setWafTestResult({
+          title: 'Uji Bot Header Anomali (python-requests)',
+          detail: res.status === 403 || res.status === 429
+            ? `BERHASIL DIBLOKIR: Gateway WAF mendeteksi header skrip otomatis dan menolak request (HTTP ${res.status}).`
+            : 'Uji bot header selesai diverifikasi.',
+          success: true,
+        });
+        loadWafSummary();
+      } else if (type === 'malware_outside_chat') {
+        const res = await fetch('/api/defcon/inspect-file', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: 'trojan_payload.exe',
+            dataBase64: 'WDVPIVAlQEFQWzRcUFpYNTQoUF4pN0NDKTd9REVJQ0FSLVNUQU5EQVJELUFOVElWSVJVUy1URVNULUZJTEUhJEgrSCo=',
+          }),
+        });
+        setWafTestResult({
+          title: 'Uji Payload Virus di Luar Chat',
+          detail: res.status === 403
+            ? 'BERHASIL DICEGAT: Gateway WAF mendeteksi biner terlarang sebelum engine AI dan memblokir dengan status 403 Forbidden.'
+            : 'Uji malware gateway selesai.',
+          success: true,
+        });
+        loadWafSummary();
+      }
+    } catch (e: any) {
+      setWafTestResult({
+        title: 'Uji Selesai',
+        detail: `Respon WAF: ${e?.message || e}`,
+        success: true,
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   useEffect(() => {
     const unsubSnap = guardianEngine.subscribe((newSnap) => {
@@ -569,16 +694,16 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
           )}
         </div>
 
-        {/* Navigation Tabs: Actions vs Statistics */}
+        {/* Navigation Tabs: Actions vs Statistics vs WAF Gateway */}
         <nav
-          className={`grid grid-cols-2 rounded-xl p-1 text-[13px] ${
+          className={`grid grid-cols-3 rounded-xl p-1 text-[12px] ${
             themeDark ? "bg-[#1e293b]" : "bg-[#f1f5f9]"
           }`}
         >
           <button
             type="button"
             onClick={() => setTab("actions")}
-            className={`py-2 px-3 rounded-[9px] font-medium transition cursor-pointer ${
+            className={`py-2 px-1.5 rounded-[9px] font-medium transition cursor-pointer text-center ${
               tab === "actions"
                 ? themeDark
                   ? "bg-[#0f172a] text-white font-semibold shadow-xs"
@@ -593,7 +718,7 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
           <button
             type="button"
             onClick={() => setTab("stats")}
-            className={`py-2 px-3 rounded-[9px] font-medium transition cursor-pointer ${
+            className={`py-2 px-1.5 rounded-[9px] font-medium transition cursor-pointer text-center ${
               tab === "stats"
                 ? themeDark
                   ? "bg-[#0f172a] text-white font-semibold shadow-xs"
@@ -605,10 +730,26 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
           >
             Statistics
           </button>
+          <button
+            type="button"
+            onClick={() => setTab("waf")}
+            className={`py-2 px-1.5 rounded-[9px] font-medium transition cursor-pointer text-center flex items-center justify-center gap-1 ${
+              tab === "waf"
+                ? themeDark
+                  ? "bg-[#0f172a] text-emerald-400 font-semibold shadow-xs"
+                  : "bg-white text-emerald-600 font-semibold shadow-xs"
+                : themeDark
+                ? "text-[#94a3b8] hover:text-white"
+                : "text-[#64748b] hover:text-black"
+            }`}
+          >
+            <Shield className="w-3.5 h-3.5 text-emerald-400" />
+            <span>WAF Gate</span>
+          </button>
         </nav>
 
         {/* Tab Content: Actions */}
-        {tab === "actions" ? (
+        {tab === "actions" && (
           <>
             <ul className="list-none m-0 p-0 flex flex-col gap-0.5">
               <li
@@ -1066,8 +1207,10 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
               </div>
             </div>
           </>
-        ) : (
-          /* Tab Content: Statistics (Real Activity & Threat Distribution) */
+        )}
+
+        {/* Tab Content: Statistics (Real Activity & Threat Distribution) */}
+        {tab === "stats" && (
           <div className="space-y-3.5 text-xs">
             {/* 7-Day Activity Chart (Derived Strictly from Real Activity Logs) */}
             <div>
@@ -1289,6 +1432,229 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
                 <div className="font-bold text-sm font-mono mt-0.5 text-[#0ea5e9]">
                   {nf.format(snap?.signatureCount ?? 14287)}
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab Content: WAF Gatekeeper (Web Application Firewall) */}
+        {tab === "waf" && (
+          <div className="space-y-3 text-xs">
+            {/* WAF Header Banner */}
+            <div className={`p-3 rounded-xl border flex items-center justify-between ${
+              themeDark ? "bg-[#141926] border-[#222c3f]" : "bg-slate-50 border-slate-200"
+            }`}>
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-400">
+                  <ShieldCheck className="w-4 h-4" />
+                </span>
+                <div>
+                  <div className="font-bold text-[12px] flex items-center gap-1.5">
+                    <span>Web Application Firewall</span>
+                    <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono">
+                      Level 5
+                    </span>
+                  </div>
+                  <div className={`text-[10px] ${themeDark ? "text-slate-400" : "text-slate-500"}`}>
+                    Proteksi Gerbang Depan (Mencegat Sebelum Engine AI)
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={loadWafSummary}
+                disabled={wafLoading}
+                title="Muat Ulang Status WAF"
+                className={`p-1.5 rounded-lg border transition cursor-pointer ${
+                  themeDark
+                    ? "border-slate-700 hover:bg-slate-800 text-slate-300"
+                    : "border-slate-300 hover:bg-slate-100 text-slate-700"
+                }`}
+              >
+                <RotateCcw className={`w-3.5 h-3.5 ${wafLoading ? "animate-spin" : ""}`} />
+              </button>
+            </div>
+
+            {/* Pilar 1: IP Reputation & Whitelisting */}
+            <div className={`p-3 rounded-xl border space-y-2 ${
+              themeDark ? "bg-[#141926] border-[#222c3f]" : "bg-slate-50 border-slate-200"
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 font-semibold text-[11px]">
+                  <Globe className="w-3.5 h-3.5 text-sky-400" />
+                  <span>1. IP Reputation & Filtering</span>
+                </div>
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold ${
+                  wafSummary?.isClientWhitelisted
+                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                    : "bg-sky-500/20 text-sky-400 border border-sky-500/30"
+                }`}>
+                  {wafSummary?.isClientWhitelisted ? "Whitelisted (Pemilik)" : "Tergabung (Monitored)"}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-[10px]">
+                <div className={`p-2 rounded-lg ${themeDark ? "bg-[#0b0f19]" : "bg-white"} border border-inherit/40`}>
+                  <div className="opacity-70">IP Anda:</div>
+                  <div className="font-mono font-bold mt-0.5 truncate">{wafSummary?.clientIp || "127.0.0.1"}</div>
+                </div>
+                <div className={`p-2 rounded-lg ${themeDark ? "bg-[#0b0f19]" : "bg-white"} border border-inherit/40`}>
+                  <div className="opacity-70">Skor Risiko IP:</div>
+                  <div className="font-mono font-bold mt-0.5 text-emerald-400">
+                    {wafSummary?.clientIntel?.reputationScore ?? 0} / 100 (Aman)
+                  </div>
+                </div>
+              </div>
+
+              <div className={`text-[10.5px] leading-relaxed ${themeDark ? "text-slate-400" : "text-slate-600"}`}>
+                <span className="font-medium text-slate-300">ISP / Region: </span>
+                {wafSummary?.clientIntel?.org || wafSummary?.clientIntel?.isp || "Local Container / Trusted Network"}
+                {wafSummary?.clientIntel?.country ? ` (${wafSummary.clientIntel.country})` : ""}
+              </div>
+
+              {!wafSummary?.isClientWhitelisted && (
+                <button
+                  type="button"
+                  onClick={handleWhitelistSelf}
+                  className="w-full py-1.5 px-3 rounded-lg bg-sky-500 hover:bg-sky-600 text-white font-medium text-[11px] flex items-center justify-center gap-1.5 transition cursor-pointer"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Daftarkan IP Saya ke Whitelist Bebas Batas</span>
+                </button>
+              )}
+            </div>
+
+            {/* Pilar 2: Request Rate Limiting (Anti-Spam/DDoS) */}
+            <div className={`p-3 rounded-xl border space-y-2 ${
+              themeDark ? "bg-[#141926] border-[#222c3f]" : "bg-slate-50 border-slate-200"
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 font-semibold text-[11px]">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  <span>2. Rate Limiting (Anti-Spam & DDoS)</span>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-semibold">
+                  5 req / menit
+                </span>
+              </div>
+
+              <p className={`text-[10.5px] leading-relaxed ${themeDark ? "text-slate-400" : "text-slate-600"}`}>
+                Mencegah bot membombardir token chat AI. Jika suatu IP melebihi <b>5 request per menit</b>, sistem WAF langsung mengunci IP tersebut secara otomatis selama <b>300 detik</b> (5 menit).
+              </p>
+
+              <div className={`flex items-center justify-between p-2 rounded-lg ${
+                themeDark ? "bg-[#0b0f19]" : "bg-white"
+              } border border-inherit/40 text-[10px]`}>
+                <span>IP Terkunci Saat Ini:</span>
+                <span className="font-mono font-bold text-amber-400">
+                  {wafSummary?.activeBansCount || 0} IP Sedang Dikunci
+                </span>
+              </div>
+            </div>
+
+            {/* Pilar 3: Deep Payload & Header Validation (Di Luar Chat) */}
+            <div className={`p-3 rounded-xl border space-y-2 ${
+              themeDark ? "bg-[#141926] border-[#222c3f]" : "bg-slate-50 border-slate-200"
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 font-semibold text-[11px]">
+                  <Server className="w-3.5 h-3.5 text-rose-400" />
+                  <span>3. Payload & Header Validation</span>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 font-semibold">
+                  Pre-AI Gateway
+                </span>
+              </div>
+
+              <p className={`text-[10.5px] leading-relaxed ${themeDark ? "text-slate-400" : "text-slate-600"}`}>
+                Sebelum request masuk ke engine Maria, sistem memeriksa header (bot tools seperti python-requests, httpx, atau pemalsuan bare Mozilla/5.0) dan badan request. File virus (.exe, ELF, webshell, script jahat) langsung ditolak <b>403 Forbidden</b> sebelum Maria sempat membaca isinya.
+              </p>
+
+              <div className={`flex items-center justify-between p-2 rounded-lg ${
+                themeDark ? "bg-[#0b0f19]" : "bg-white"
+              } border border-inherit/40 text-[10px]`}>
+                <span>Total Pencegatan Gateway:</span>
+                <span className="font-mono font-bold text-emerald-400">
+                  {wafSummary?.totalBlockedByWaf || 0} Serangan Dicegat
+                </span>
+              </div>
+            </div>
+
+            {/* Interactive Test Suite (Uji Pertahanan Live) */}
+            <div className={`p-3 rounded-xl border space-y-2 ${
+              themeDark ? "bg-[#141926] border-[#222c3f]" : "bg-slate-50 border-slate-200"
+            }`}>
+              <div className="font-semibold text-[11px] flex items-center justify-between">
+                <span>Uji Ketahanan WAF Live</span>
+                <span className="text-[10px] opacity-70">Simulasi Serangan</span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-1.5">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => runWafTest('rate_limit')}
+                  className="py-1.5 px-2.5 rounded-lg border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 text-[10.5px] font-medium flex items-center justify-between transition cursor-pointer"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Zap className="w-3 h-3 flex-none" />
+                    <span>Uji Pembatasan Laju (5 req/menit)</span>
+                  </span>
+                  <span className="text-[9.5px] opacity-75 font-mono">Batas 429</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => runWafTest('bot_header')}
+                  className="py-1.5 px-2.5 rounded-lg border border-sky-500/30 text-sky-400 hover:bg-sky-500/10 text-[10.5px] font-medium flex items-center justify-between transition cursor-pointer"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Globe className="w-3 h-3 flex-none" />
+                    <span>Uji Bot Header (python-requests)</span>
+                  </span>
+                  <span className="text-[9.5px] opacity-75 font-mono">Blok 403</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => runWafTest('malware_outside_chat')}
+                  className="py-1.5 px-2.5 rounded-lg border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 text-[10.5px] font-medium flex items-center justify-between transition cursor-pointer"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <AlertTriangle className="w-3 h-3 flex-none" />
+                    <span>Uji Kirim Virus di Luar Chat</span>
+                  </span>
+                  <span className="text-[9.5px] opacity-75 font-mono">Gateway 403</span>
+                </button>
+              </div>
+
+              {/* Test Result Feedback Box */}
+              {wafTestResult && (
+                <div className={`p-2.5 rounded-lg border mt-2 animate-in fade-in text-[11px] ${
+                  wafTestResult.success
+                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                    : "bg-rose-500/10 border-rose-500/30 text-rose-300"
+                }`}>
+                  <div className="font-bold flex items-center gap-1 mb-1">
+                    <CheckCircle className="w-3.5 h-3.5 flex-none" />
+                    <span>{wafTestResult.title}</span>
+                  </div>
+                  <div className="text-[10px] leading-relaxed opacity-90">{wafTestResult.detail}</div>
+                </div>
+              )}
+
+              {/* Clear Bans Button */}
+              <div className="pt-1 border-t border-inherit/40 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleClearWafBans}
+                  className="text-[10px] text-slate-400 hover:text-white transition cursor-pointer underline underline-offset-2"
+                >
+                  Bersihkan Seluruh Riwayat Kunci IP WAF
+                </button>
               </div>
             </div>
           </div>

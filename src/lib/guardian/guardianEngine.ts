@@ -212,7 +212,8 @@ class GuardianEngine {
     // Tally real threats from logs based on actual timestamps
     for (const l of this.log) {
       if (l.status === "threat") {
-        const d = String(Math.floor((l.ts * 1000) / 86_400_000));
+        const tsMs = l.ts > 1e11 ? l.ts : l.ts * 1000;
+        const d = String(Math.floor(tsMs / 86_400_000));
         if (byDay[d] !== undefined) {
           byDay[d]++;
         }

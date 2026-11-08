@@ -14,10 +14,11 @@ export const TTL_SEC: Record<Exclude<ActionName, 'log' | 'reject_request'>, numb
   block_temp: 3600, // 1 jam, selalu kedaluwarsa
 };
 
-// Tangga eskalasi: kesalahan terburuk = satu request ditolak, bukan user terblokir
+// Tangga eskalasi: malware langsung block_temp, flood memicu rate limit/block_temp
 export function pickAction(v: Verdict, offenses: number, verified: boolean): ActionName {
+  if (v.kind === 'malware_upload' && v.confidence >= 0.9 && !verified) return 'block_temp';
   if (v.kind === 'rate_abuse') return v.confidence >= 0.8 ? 'rate_limit' : 'log';
-  if (v.confidence >= 0.9 && offenses >= 2 && !verified) return 'block_temp'; // harus berulang
+  if (v.confidence >= 0.9 && offenses >= 2 && !verified) return 'block_temp'; // berulang
   if (v.confidence >= 0.7) return 'reject_request';
   return 'log';
 }

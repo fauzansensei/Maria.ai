@@ -5,13 +5,21 @@ import {
   generateAiImage,
   generateSpeechAudio,
 } from './gemini.ts';
-import { guard, sanitizeOutput, getDefconSummary } from './defcon/guard.ts';
+import { guard, sanitizeOutput, getDefconSummary, defconUniversalFilePayloadMiddleware, clientIp } from './defcon/guard.ts';
+import { wafEngine, wafGatekeeperMiddleware } from './defcon/waf.ts';
+import { defconStore } from './defcon/store.ts';
 
 export const apiApp = express();
 export const apiRouter = express.Router();
 
 apiApp.use(express.json({ limit: '50mb' }));
 apiApp.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Universal DEFCON 5 Inbound File & Virus Scanner (Scans all requests outside and inside chat)
+apiApp.use(defconUniversalFilePayloadMiddleware);
+
+// Web Application Firewall (WAF) Gatekeeper (IP Reputation, 5 req/min Rate Limit, Pre-AI Payload Validation)
+apiApp.use(wafGatekeeperMiddleware);
 
 // Helper to safely send JSON responses in any middleware context
 function sendJson(res: any, statusCode: number, data: any) {
@@ -34,12 +42,125 @@ apiRouter.get('/defcon', async (_req: Request, res: Response) => {
   }
 });
 
-// Test trigger for DEFCON Shield verification
+// WAF Status & Summary Endpoint
+apiRouter.get('/waf/summary', async (req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    const client = clientIp(req);
+    const intel = await wafEngine.checkIpReputation(client);
+    const summary = wafEngine.getWafSummary();
+    sendJson(res, 200, {
+      ...summary,
+      clientIp: client,
+      clientIntel: intel,
+      isClientWhitelisted: wafEngine.isWhitelisted(client),
+    });
+  } catch (err: any) {
+    sendJson(res, 500, { error: err?.message || 'Gagal memuat status WAF.' });
+  }
+});
+
+// Whitelist current client IP (Owner Quick-Whitelist)
+apiRouter.post('/waf/whitelist-self', (req: Request, res: Response) => {
+  const client = clientIp(req);
+  wafEngine.addWhitelistIp(client);
+  sendJson(res, 200, {
+    status: 'success',
+    whitelistedIp: client,
+    message: `Alamat IP Anda (${client}) berhasil dimasukkan ke whitelist pemilik. Anda bebas dari batasan rate limit WAF.`,
+  });
+});
+
+// Clear WAF Bans / Active Lockouts
+apiRouter.post('/waf/clear-bans', (_req: Request, res: Response) => {
+  defconStore.clearAll();
+  sendJson(res, 200, {
+    status: 'success',
+    message: 'Semua riwayat penguncian & blokir IP WAF telah dibersihkan.',
+  });
+});
+
+// Helper to extract uploaded file buffers from chat messages
+function extractUploadsFromMessages(messages: any[]): { name: string; data: Buffer }[] {
+  const uploads: { name: string; data: Buffer }[] = [];
+  if (!Array.isArray(messages)) return uploads;
+
+  for (const msg of messages) {
+    if (Array.isArray(msg?.attachments)) {
+      for (const att of msg.attachments) {
+        if (att && att.data && typeof att.data === 'string') {
+          try {
+            const cleanB64 = att.data.replace(/^data:[^;]+;base64,/, '');
+            const buf = Buffer.from(cleanB64, 'base64');
+            uploads.push({
+              name: att.name || 'uploaded_payload.bin',
+              data: buf,
+            });
+          } catch (e) {
+            console.warn('DEFCON attachment extraction error:', e);
+          }
+        }
+      }
+    }
+  }
+  return uploads;
+}
+
+// Test trigger for DEFCON Shield verification (supports prompt, flood, and malware tests)
 apiRouter.post('/defcon/test', async (req: Request, res: Response) => {
-  const { payload } = req.body || {};
-  const isAllowed = await guard(req, res, { message: payload || 'test' });
+  const { payload, filename, fileBase64, isChat } = req.body || {};
+  const uploads: { name: string; data: Buffer }[] = [];
+
+  if (fileBase64 && typeof fileBase64 === 'string') {
+    try {
+      const cleanB64 = fileBase64.replace(/^data:[^;]+;base64,/, '');
+      uploads.push({
+        name: filename || 'test_payload.bin',
+        data: Buffer.from(cleanB64, 'base64'),
+      });
+    } catch {}
+  }
+
+  const isAllowed = await guard(req, res, {
+    message: payload,
+    uploads: uploads.length > 0 ? uploads : undefined,
+    isChat: Boolean(isChat),
+    isTest: true,
+  });
+
   if (isAllowed) {
-    sendJson(res, 200, { status: 'passed', message: 'Payload terverifikasi bersih dan lolos pengawasan DEFCON.' });
+    sendJson(res, 200, {
+      status: 'passed',
+      message: 'Payload terverifikasi bersih dan lolos pengawasan DEFCON 5.',
+    });
+  }
+});
+
+// Dedicated DEFCON File Inspection API
+apiRouter.post('/defcon/inspect-file', async (req: Request, res: Response) => {
+  const { name, dataBase64 } = req.body || {};
+  if (!dataBase64 || typeof dataBase64 !== 'string') {
+    sendJson(res, 400, { error: 'dataBase64 diperlukan untuk inspeksi biner.' });
+    return;
+  }
+
+  try {
+    const cleanB64 = dataBase64.replace(/^data:[^;]+;base64,/, '');
+    const buf = Buffer.from(cleanB64, 'base64');
+    const filename = name || 'uploaded_sample.bin';
+    const isAllowed = await guard(req, res, {
+      uploads: [{ name: filename, data: buf }],
+      isTest: true,
+    });
+
+    if (isAllowed) {
+      sendJson(res, 200, {
+        verdict: 'clean',
+        message: `${filename} lolos inspeksi heuristik & signature DEFCON 5.`,
+      });
+    }
+  } catch (err: any) {
+    sendJson(res, 500, { error: err?.message || 'Gagal memproses inspeksi berkas.' });
   }
 });
 
@@ -156,9 +277,14 @@ apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
       return;
     }
 
-    // DEFCON 5 Guard inspection before calling Gemini
+    // DEFCON 5 Guard inspection before calling Gemini (inspects text, uploads & floods)
     const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user')?.content || '';
-    const isAllowed = await guard(req, res, { message: lastUserMsg });
+    const uploads = extractUploadsFromMessages(messages);
+    const isAllowed = await guard(req, res, {
+      message: lastUserMsg,
+      uploads: uploads.length > 0 ? uploads : undefined,
+      isChat: true,
+    });
     if (!isAllowed) return;
 
     res.writeHead(200, {
@@ -260,9 +386,14 @@ apiRouter.post('/chat', async (req: Request, res: Response) => {
       return;
     }
 
-    // DEFCON 5 Guard inspection before calling Gemini
+    // DEFCON 5 Guard inspection before calling Gemini (inspects text, uploads & floods)
     const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user')?.content || '';
-    const isAllowed = await guard(req, res, { message: lastUserMsg });
+    const uploads = extractUploadsFromMessages(messages);
+    const isAllowed = await guard(req, res, {
+      message: lastUserMsg,
+      uploads: uploads.length > 0 ? uploads : undefined,
+      isChat: true,
+    });
     if (!isAllowed) return;
 
     const result = await generateChatResponse({

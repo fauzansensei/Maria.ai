@@ -47,6 +47,22 @@ class DefconStore {
     return Math.ceil(remainingMs / 1000);
   }
 
+  // Get detailed block info including reason
+  public async getBlockInfo(source: string): Promise<{ blocked: boolean; remainingSec: number; reason?: string }> {
+    const entry = this.blocklist.get(source);
+    if (!entry) return { blocked: false, remainingSec: 0 };
+    const remainingMs = entry.expiresAt - Date.now();
+    if (remainingMs <= 0) {
+      this.blocklist.delete(source);
+      return { blocked: false, remainingSec: 0 };
+    }
+    return {
+      blocked: true,
+      remainingSec: Math.ceil(remainingMs / 1000),
+      reason: entry.reason,
+    };
+  }
+
   // Log a security event
   public async logEvent(
     v: Verdict,
@@ -140,6 +156,7 @@ export const blockTemp = (source: string, ttlSec: number, reason: string) =>
   defconStore.blockTemp(source, ttlSec, reason);
 
 export const blockedFor = (source: string) => defconStore.blockedFor(source);
+export const getBlockInfo = (source: string) => defconStore.getBlockInfo(source);
 
 export const logEvent = (
   v: Verdict,
