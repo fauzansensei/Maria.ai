@@ -292,15 +292,39 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     setHasSelection(false);
   };
 
-  // Process files concurrently into MediaAttachment objects with DEFCON 5 Real-Time Protection Inspection
+  // Process files concurrently into MediaAttachment objects with offline pre-loading & DEFCON 5 inspection
   const processFiles = useCallback(async (files: FileList | File[]) => {
     const filesArr = Array.from(files);
     if (filesArr.length === 0) return;
 
-    const results = await Promise.all(
-      filesArr.map(async (file) => {
-        // 1. DEFCON 5 Real-Time Threat Interception
+    // 1. Immediately create pending attachments with local blob URL and isLoading: true
+    // so user instantly sees the preview card with the loading circular spinner (like in video)
+    const pendingItems = filesArr.map((file) => {
+      const attId = `att_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const mediaType = getMediaType(file);
+      const tempUrl = URL.createObjectURL(file);
+      const item: MediaAttachment = {
+        id: attId,
+        name: file.name,
+        size: file.size,
+        mimeType: file.type || (mediaType === 'video' ? 'video/mp4' : mediaType === 'image' ? 'image/jpeg' : 'application/octet-stream'),
+        type: mediaType,
+        previewUrl: tempUrl,
+        originalUrl: tempUrl,
+        base64Data: '',
+        isLoading: true,
+        progress: 15,
+      };
+      return { file, id: attId, initialAtt: item };
+    });
+
+    setAttachments((prev) => [...prev, ...pendingItems.map((p) => p.initialAtt)]);
+
+    // 2. Concurrently read, scan, and prepare 100% offline Base64 data for the AI
+    await Promise.all(
+      pendingItems.map(async ({ file, id }) => {
         try {
+          // A. DEFCON 5 Threat Inspection
           const securityCheck = await guardianEngine.checkFile(file);
           if (securityCheck.verdict === 'threat') {
             const cat = securityCheck.name?.includes('EICAR')
@@ -322,25 +346,23 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               threatName: securityCheck.name || 'Berkas Berbahaya Terdeteksi',
               reason: securityCheck.reason || 'Dideteksi oleh protokol pertahanan DEFCON 5',
             });
-            return null;
+
+            // Remove quarantined threat immediately
+            setAttachments((prev) => prev.filter((a) => a.id !== id));
+            return;
           }
-        } catch (secErr) {
-          console.error('Error during DEFCON security scan:', secErr);
-        }
 
-        const mediaType = getMediaType(file);
-
-        try {
+          // B. Read file as Data URL to get 100% offline Base64
           const dataUrl = await readFileAsDataUrl(file);
           const base64Data = extractBase64(dataUrl);
           const originalUrl = URL.createObjectURL(file);
-          const attId = `att_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
-          storeOriginalMedia(attId, originalUrl);
+          storeOriginalMedia(id, originalUrl);
           storeOriginalMedia(file.name, originalUrl);
-          await storeOriginalMediaBlob(attId, file);
+          await storeOriginalMediaBlob(id, file);
           await storeOriginalMediaBlob(file.name, file);
 
+          const mediaType = getMediaType(file);
           let previewUrl = '';
           if (mediaType === 'image') {
             previewUrl = await generateImageThumbnail(file, 480, 0.72);
@@ -365,27 +387,28 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             else detectedMime = mediaType === 'video' ? 'video/mp4' : mediaType === 'image' ? 'image/jpeg' : 'application/octet-stream';
           }
 
-          return {
-            id: attId,
-            name: file.name,
-            size: file.size,
-            mimeType: detectedMime,
-            type: mediaType,
-            previewUrl: previewUrl || originalUrl,
-            originalUrl: originalUrl || dataUrl,
-            base64Data,
-          } as MediaAttachment;
+          // Complete loading state - offline data is 100% ready for submission!
+          setAttachments((prev) =>
+            prev.map((a) =>
+              a.id === id
+                ? {
+                    ...a,
+                    previewUrl: previewUrl || originalUrl,
+                    originalUrl: originalUrl || dataUrl,
+                    base64Data,
+                    mimeType: detectedMime,
+                    isLoading: false,
+                    progress: 100,
+                  }
+                : a
+            )
+          );
         } catch (err) {
-          console.error('Error processing file:', err);
-          return null;
+          console.error('Error processing file offline:', err);
+          setAttachments((prev) => prev.filter((a) => a.id !== id));
         }
       })
     );
-
-    const validAttachments = results.filter((a): a is MediaAttachment => a !== null);
-    if (validAttachments.length > 0) {
-      setAttachments((prev) => [...prev, ...validAttachments]);
-    }
   }, []);
 
   const handleMediaFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -421,8 +444,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   // Submit Handler
   const handleSubmit = () => {
+    const isAnyUploading = attachments.some((a) => a.isLoading);
     const rawContent = getFormattedMarkdown();
-    if ((!rawContent.trim() && attachments.length === 0) || isLoading) return;
+    if ((!rawContent.trim() && attachments.length === 0) || isLoading || isAnyUploading) return;
 
     const contentToSend = autoFormatMarkdown(rawContent);
 
@@ -450,7 +474,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit();
+      const isAnyUploading = attachments.some((a) => a.isLoading);
+      if (!isAnyUploading && !isLoading) {
+        handleSubmit();
+      }
     }
   };
 
@@ -508,6 +535,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
+  const isAnyUploading = attachments.some((a) => a.isLoading);
   const hasInput = text.trim().length > 0 || attachments.length > 0;
   const isFormattingActive = hasFormattingSyntax(text);
 
@@ -668,19 +696,21 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
 
-      {/* Attachments Preview Tray - Clean, theme-adaptive chip cards */}
+      {/* Attachments Preview Tray - Gemini-style rounded cards with circular loading spinner & instant offline preparation */}
       {attachments.length > 0 && (
-        <div className="mb-2 p-2 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 flex flex-wrap gap-2 items-center shadow-xs animate-in fade-in">
+        <div className="mb-2 p-1.5 flex items-center gap-2.5 overflow-x-auto max-w-full select-none animate-in fade-in">
           {attachments.map((att) => (
             <div
               key={att.id}
-              className="relative group flex items-center gap-2.5 p-1.5 pr-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs max-w-xs transition-all hover:border-slate-300 dark:hover:border-slate-600"
+              className="relative group rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shadow-sm shrink-0 flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20"
             >
+              {/* Media Preview */}
               {att.type === 'image' ? (
                 <img
-                  src={att.originalUrl || att.previewUrl}
+                  src={att.previewUrl || att.originalUrl}
                   alt={att.name}
                   onClick={() =>
+                    !att.isLoading &&
                     setLightboxMedia({
                       url: att.originalUrl || att.previewUrl,
                       type: 'image',
@@ -688,11 +718,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                       size: att.size,
                     })
                   }
-                  className="w-10 h-10 rounded-lg object-cover cursor-pointer hover:opacity-90"
+                  className={`w-full h-full object-cover transition-opacity ${
+                    att.isLoading ? 'opacity-50' : 'cursor-pointer hover:opacity-90'
+                  }`}
                 />
               ) : att.type === 'video' ? (
                 <div
                   onClick={() =>
+                    !att.isLoading &&
                     setLightboxMedia({
                       url: att.originalUrl || att.previewUrl,
                       type: 'video',
@@ -700,37 +733,61 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                       size: att.size,
                     })
                   }
-                  className="relative w-10 h-10 rounded-lg overflow-hidden bg-slate-900 flex items-center justify-center cursor-pointer group/vid shrink-0"
+                  className={`w-full h-full relative overflow-hidden flex items-center justify-center bg-slate-950 ${
+                    att.isLoading ? 'opacity-50' : 'cursor-pointer'
+                  }`}
                 >
                   {att.previewUrl && att.previewUrl.startsWith('data:image/') ? (
                     <img src={att.previewUrl} alt={att.name} className="w-full h-full object-cover" />
                   ) : (
-                    <Film className="w-5 h-5 text-white/60" />
+                    <Film className="w-6 h-6 text-white/70" />
                   )}
-                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                    <Play className="w-4 h-4 text-white fill-current" />
-                  </div>
+                  {!att.isLoading && (
+                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                      <Play className="w-4 h-4 text-white fill-current" />
+                    </div>
+                  )}
                 </div>
               ) : (
-                <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600 dark:text-blue-300 shrink-0">
-                  <FileText className="w-5 h-5" />
+                <div className="w-full h-full p-2 flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-center">
+                  <FileText className="w-6 h-6 text-blue-500 mb-0.5" />
+                  <span className="text-[9px] font-semibold truncate max-w-[56px]">
+                    {att.name}
+                  </span>
                 </div>
               )}
-              <div className="min-w-0 text-xs">
-                <div className="font-semibold truncate max-w-[130px] text-slate-900 dark:text-white">
-                  {att.name}
+
+              {/* Circular Loading Spinner while file is downloading/processing offline data (Matching Video) */}
+              {att.isLoading && (
+                <div className="absolute inset-0 bg-black/55 backdrop-blur-[0.5px] flex flex-col items-center justify-center z-10">
+                  <div className="relative w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center">
+                    <svg className="w-6 h-6 sm:w-7 sm:h-7 animate-spin text-white" viewBox="0 0 24 24" fill="none">
+                      <circle
+                        className="opacity-30"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                      />
+                      <path
+                        className="opacity-95"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                      />
+                    </svg>
+                  </div>
                 </div>
-                <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-                  {formatBytes(att.size)} • Asli
-                </div>
-              </div>
+              )}
+
+              {/* Close Button on Top Right (Matching Video) */}
               <button
                 type="button"
                 onClick={() => removeAttachment(att.id)}
-                className="p-1 rounded-full text-slate-400 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-700 ml-1 transition-colors"
-                title="Hapus lampiran"
+                aria-label="Hapus Lampiran"
+                className="w-5 h-5 rounded-full bg-black/75 hover:bg-black text-white flex items-center justify-center absolute top-1 right-1 z-20 shadow-md cursor-pointer transition-transform active:scale-90"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-3 h-3 stroke-[2.5]" />
               </button>
             </div>
           ))}
@@ -835,15 +892,26 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
           {/* Send Button OR Waveform Voice Button */}
           {hasInput ? (
-            <button
-              type="button"
-              disabled={isLoading}
-              onClick={() => handleSubmit()}
-              title="Kirim pesan (*bold* otomatis diformat)"
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-900 hover:bg-slate-800 active:scale-95 text-white flex items-center justify-center shadow-md shrink-0 transition-all font-bold border border-slate-900"
-            >
-              <Send className="w-4 h-4 ml-0.5 text-white" />
-            </button>
+            isAnyUploading ? (
+              <button
+                type="button"
+                disabled={true}
+                title="Sedang memproses & memverifikasi berkas offline..."
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 flex items-center justify-center shadow-xs shrink-0 cursor-not-allowed border border-slate-300 dark:border-slate-600 transition-all"
+              >
+                <div className="w-4 h-4 border-2 border-slate-400 border-t-slate-800 dark:border-t-white rounded-full animate-spin" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={() => handleSubmit()}
+                title="Kirim pesan (*bold* otomatis diformat)"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-900 hover:bg-slate-800 active:scale-95 text-white flex items-center justify-center shadow-md shrink-0 transition-all font-bold border border-slate-900 cursor-pointer"
+              >
+                <Send className="w-4 h-4 ml-0.5 text-white" />
+              </button>
+            )
           ) : (
             <button
               type="button"

@@ -360,35 +360,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         )}
       </div>
 
-      {/* Floating Active Speech Bar (When speaking or generating audio) */}
-      {(speechState.isSpeaking || speechState.isLoading) && (
-        <div className="max-w-xl mx-auto w-full px-4 pt-1 animate-in fade-in slide-in-from-bottom-2">
-          <div className="flex items-center justify-between py-2 px-3.5 rounded-full bg-white dark:bg-[#0e172e] border border-blue-500/40 shadow-lg text-xs">
-            <div className="flex items-center gap-2.5">
-              {speechState.isLoading ? (
-                <Loader2 className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" />
-              ) : (
-                <Volume2 className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-pulse" />
-              )}
-              <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-slate-900 dark:text-white">
-                  {speechState.isLoading ? 'Menyiapkan Suara Maria AI...' : `${currentPersona.label} sedang berbicara`}
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium flex items-center gap-1">
-                  <span>AI Voice Engine</span>
-                </span>
-              </div>
-            </div>
-            <button
-              onClick={() => speechService.stopSpeaking()}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-[#15223e] text-slate-700 dark:text-slate-200 hover:text-red-600 text-[11px] font-semibold transition-colors"
-            >
-              <VolumeX className="w-3.5 h-3.5" />
-              <span>Hentikan</span>
-            </button>
-          </div>
-        </div>
-      )}
+
 
       {/* Bottom Chat Input Dock (Pure White Background) */}
       <div className="shrink-0 pt-2 pb-2 bg-white border-t border-slate-200 shadow-xs">

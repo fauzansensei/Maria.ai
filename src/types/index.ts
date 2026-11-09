@@ -15,6 +15,8 @@ export interface MediaAttachment {
   originalUrl?: string;
   base64Data: string;
   duration?: number;
+  isLoading?: boolean;
+  progress?: number;
 }
 
 import { LaunchAction } from '../lib/actionLauncher.ts';
