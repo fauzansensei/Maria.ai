@@ -662,14 +662,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-extrabold text-xs text-rose-700 dark:text-rose-300 uppercase tracking-wide">
-                  DEFCON 5 Shield: Berkas Berbahaya Dicegat
+                  Spy Guard: Berkas Berbahaya Dicegat
                 </span>
                 <span className="px-2 py-0.5 rounded-full bg-rose-200/90 dark:bg-rose-900 text-rose-800 dark:text-rose-200 text-[10px] font-bold">
                   {defconAlert.threatName}
                 </span>
               </div>
               <p className="text-xs text-rose-900 dark:text-rose-200 mt-1 leading-snug">
-                Berkas <strong>"{defconAlert.filename}"</strong> berhasil dinetralisir dan dipindahkan ke <strong>Ruang Karantina Guardian Antivirus</strong>. Berkas berbahaya tidak diunggah ke ruang obrolan.
+                Berkas <strong>"{defconAlert.filename}"</strong> berhasil dinetralisir dan dipindahkan ke <strong>Ruang Karantina Spy Guard</strong>. Berkas berbahaya tidak diunggah ke ruang obrolan.
               </p>
               <div className="text-[10px] text-rose-700 dark:text-rose-400 mt-1 font-medium">
                 Alasan: {defconAlert.reason}
@@ -680,7 +680,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   onClick={onOpenDefconModal}
                   className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-[11px] font-bold shadow-xs transition-all cursor-pointer"
                 >
-                  <span>Buka Ruang Karantina DEFCON 5</span>
+                  <span>Buka Ruang Karantina Spy Guard</span>
                 </button>
               )}
             </div>

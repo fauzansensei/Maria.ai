@@ -213,7 +213,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           {/* DEFCON Shield Badge Button */}
           <button
             onClick={() => onOpenDefcon?.()}
-            title="Buka Sistem Keamanan Maria DEFCON Shield (Anti-DDoS, Malware & Prompt Injection)"
+            title="Buka Sistem Keamanan Maria Spy Guard (Anti-Malware, Spyware & WAF)"
             className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95 ${
               defconLevel === 5
                 ? 'border-[#a7f3d0] bg-[#ecfdf5] text-[#059669] hover:bg-emerald-100/80 hover:border-emerald-300'
@@ -227,7 +227,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>DEFCON {defconLevel}</span>
+            <span>Spy Guard</span>
             {guardianSnap && guardianSnap.quarantine.length > 0 ? (
               <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-rose-600 text-white text-[9px] font-extrabold animate-pulse">
                 {guardianSnap.quarantine.length}

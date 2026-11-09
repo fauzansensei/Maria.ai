@@ -553,9 +553,9 @@ function AppContent() {
   ) => {
     if ((!content.trim() && (!attachments || attachments.length === 0)) || isLoading) return;
 
-    // DEFCON Rate Limiter / Flood check
+    // Spy Guard Rate Limiter / Flood check
     if (!defconService.checkRateLimit()) {
-      alert('⚠️ DEFCON 5: Lonjakan flood request terdeteksi dan ditahan untuk menjaga stabilitas server.');
+      alert('⚠️ Spy Guard: Lonjakan flood request terdeteksi dan ditahan untuk menjaga stabilitas server.');
       return;
     }
 

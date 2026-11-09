@@ -195,7 +195,7 @@ export const ImageStudioModal: React.FC<ImageStudioModalProps> = ({
                   Studio Gambar AI Maria
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700/50">
-                  DEFCON 5
+                  Spy Guard
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">

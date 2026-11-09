@@ -699,7 +699,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
           {/* TAB 5: PRIVACY & DATA */}
           {activeTab === 'privacy' && (
             <div className="space-y-4">
-              {/* DEFCON 5 Shield Card */}
+              {/* Spy Guard Security Card */}
               <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-bold shrink-0">
@@ -707,14 +707,14 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   </div>
                   <div>
                     <div className="text-xs font-bold text-white flex items-center gap-2">
-                      <span>Sistem Keamanan DEFCON 5 Shield</span>
+                      <span>Sistem Keamanan Spy Guard</span>
                       <span className="text-[10px] px-2 py-0.2 rounded-full bg-emerald-500/20 text-emerald-400 font-extrabold border border-emerald-500/40 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                         Kebal Aktif 100%
                       </span>
                     </div>
                     <div className="text-[11px] text-neutral-300 mt-0.5">
-                      Perlindungan real-time: Anti-DDoS, Malware, Prompt Injection & VirusTotal v3 Live Intelligence
+                      Perlindungan real-time: Anti-Malware, Spyware, Prompt Injection & VirusTotal v3 Live Intelligence
                     </div>
                   </div>
                 </div>
@@ -727,7 +727,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   className="py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer"
                 >
                   <Shield className="w-3.5 h-3.5" />
-                  <span>Buka DEFCON</span>
+                  <span>Buka Spy Guard</span>
                 </button>
               </div>
 
