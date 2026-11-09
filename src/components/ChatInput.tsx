@@ -560,41 +560,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         onChange={handleMediaFileChange}
       />
 
-      {/* Top Controls Row: Web Search Toggle & Live Preview */}
-      <div className="flex items-center justify-between gap-2 mb-2 px-1 text-xs">
-        {/* Web Search Always Active Toggle */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={toggleWebSearch}
-            title={
-              webSearchActive
-                ? 'Pencarian Web selalu aktif (Google Grounding). Klik untuk mematikan.'
-                : 'Pencarian Web mati. Klik untuk mengaktifkan.'
-            }
-            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold transition-all shadow-2xs ${
-              webSearchActive
-                ? 'bg-slate-900 text-white border-2 border-slate-900'
-                : 'bg-white hover:bg-slate-100 text-slate-600 border-2 border-slate-300'
-            }`}
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${
-                webSearchActive ? 'bg-emerald-400 animate-pulse' : 'bg-slate-400'
-              }`}
-            />
-            <Globe className="w-3.5 h-3.5" />
-            <span>{webSearchActive ? 'Cari Web: Aktif' : 'Cari Web: Nonaktif'}</span>
-          </button>
-        </div>
 
-        {/* Active Mode indicator badge if non-standard */}
-        {activeMode !== 'general' && activeMode !== 'search' && (
-          <span className="text-[10px] font-semibold text-slate-700 uppercase tracking-wider">
-            Mode {activeMode}
-          </span>
-        )}
-      </div>
 
       {/* Live WhatsApp Format Preview Badge */}
       {isFormattingActive && (
