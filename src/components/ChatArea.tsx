@@ -46,6 +46,8 @@ interface ChatAreaProps {
   userName?: string | null;
   activeConnectingAction?: LaunchAction | null;
   onOpenImageStudio?: (baseImage?: string, prompt?: string) => void;
+  onOpenMusicVoice?: () => void;
+  onOpenCanvasCode?: () => void;
   onOpenDefcon?: () => void;
 }
 
@@ -75,6 +77,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   userName,
   activeConnectingAction,
   onOpenImageStudio,
+  onOpenMusicVoice,
+  onOpenCanvasCode,
   onOpenDefcon,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -397,6 +401,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           loadedText={loadedInputText}
           onClearLoadedText={handleClearLoadedText}
           onOpenImageStudio={() => onOpenImageStudio?.()}
+          onOpenMusicVoice={onOpenMusicVoice}
+          onOpenCanvasCode={onOpenCanvasCode}
           onOpenDefconModal={() => onOpenDefcon?.()}
         />
       </div>

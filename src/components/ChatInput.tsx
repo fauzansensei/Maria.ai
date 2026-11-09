@@ -33,6 +33,7 @@ import {
   storeOriginalMediaBlob,
 } from '../lib/mediaUtils.ts';
 import { MediaLightboxModal, LightboxMedia } from './MediaLightboxModal.tsx';
+import { ActionBottomSheet } from './ActionBottomSheet.tsx';
 
 interface ChatInputProps {
   onSendMessage: (
@@ -47,6 +48,8 @@ interface ChatInputProps {
   onModeChange: (mode: AiMode) => void;
   onOpenScienceScout?: () => void;
   onOpenImageStudio?: () => void;
+  onOpenMusicVoice?: () => void;
+  onOpenCanvasCode?: () => void;
   onOpenDefconModal?: () => void;
   loadedText?: string;
   onClearLoadedText?: () => void;
@@ -60,6 +63,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   loadedText,
   onClearLoadedText,
   onOpenImageStudio,
+  onOpenMusicVoice,
+  onOpenCanvasCode,
   onOpenDefconModal,
 }) => {
   const [text, setText] = useState('');
@@ -618,107 +623,40 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
 
-      {/* Attachments Menu Popover */}
-      {isAttachmentOpen && (
-        <div className="mb-2 p-2 rounded-2xl bg-white dark:bg-[#0f172a] border-2 border-white dark:border-white shadow-2xl animate-in fade-in zoom-in-95 duration-150 text-xs">
-          <div className="grid grid-cols-2 gap-1.5">
-            {/* Studio Gambar AI (Buat & Edit) */}
-            <button
-              type="button"
-              onClick={() => {
-                setIsAttachmentOpen(false);
-                onOpenImageStudio?.();
-              }}
-              className="col-span-2 flex items-center gap-2.5 p-2.5 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/40 dark:hover:to-indigo-900/40 text-blue-950 dark:text-blue-100 border border-blue-200/80 dark:border-blue-800/60 text-left transition-all shadow-2xs"
-            >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                <Wand2 className="w-4 h-4 text-white" />
-              </div>
-              <div className="min-w-0">
-                <div className="font-bold truncate flex items-center gap-1.5">
-                  <span>Studio Gambar AI</span>
-                  <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-blue-600 text-white font-semibold">
-                    Free / Pro
-                  </span>
-                </div>
-                <div className="text-[10px] text-blue-700/80 dark:text-blue-300/80">
-                  Buat & edit gambar via Gemini Nano Banana 2.1 & Free Trial
-                </div>
-              </div>
-            </button>
-
-            {/* Foto & Video (Galeri Bersatu) */}
-            <button
-              type="button"
-              onClick={() => mediaInputRef.current?.click()}
-              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1e293b] text-slate-800 dark:text-slate-200 text-left transition-colors"
-            >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-500 to-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                <ImageIcon className="w-4 h-4 text-white" />
-              </div>
-              <div className="min-w-0">
-                <div className="font-semibold truncate">Foto & Video</div>
-                <div className="text-[10px] text-slate-400">Pilih dari galeri</div>
-              </div>
-            </button>
-
-            {/* Kamera Langsung */}
-            <button
-              type="button"
-              onClick={() => cameraInputRef.current?.click()}
-              className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1e293b] text-slate-800 dark:text-slate-200 text-left transition-colors"
-            >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                <Camera className="w-4 h-4 text-white" />
-              </div>
-              <div className="min-w-0">
-                <div className="font-semibold truncate">Ambil Kamera</div>
-                <div className="text-[10px] text-slate-400">Foto instan</div>
-              </div>
-            </button>
-
-            {/* Unggah Berkas & Dokumen (Multi-Select) */}
-            <button
-              type="button"
-              onClick={() => docInputRef.current?.click()}
-              className="col-span-2 flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1e293b] text-slate-800 dark:text-slate-200 text-left transition-colors border border-slate-200/60 dark:border-slate-800/60"
-            >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-500 to-teal-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                <FileText className="w-4 h-4 text-white" />
-              </div>
-              <div className="min-w-0">
-                <div className="font-semibold truncate flex items-center gap-1.5">
-                  <span>Unggah Dokumen & Berkas</span>
-                  <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold">
-                    Multi-Upload
-                  </span>
-                </div>
-                <div className="text-[10px] text-slate-400">PDF, Markdown (.md), TXT, JSON, CSV, Kode (pilih banyak sekaligus)</div>
-              </div>
-            </button>
-
-            {/* Pilih Semua Jenis Berkas Sekaligus (Universal Multi-Picker) */}
-            <button
-              type="button"
-              onClick={() => allFileInputRef.current?.click()}
-              className="col-span-2 flex items-center gap-2.5 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 text-left transition-colors border border-dashed border-slate-300 dark:border-slate-700"
-            >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                <Files className="w-4 h-4 text-white" />
-              </div>
-              <div className="min-w-0">
-                <div className="font-semibold truncate flex items-center gap-1.5">
-                  <span>Pilih Bebas Banyak Berkas</span>
-                  <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 font-bold">
-                    Bebas Jumlah
-                  </span>
-                </div>
-                <div className="text-[10px] text-slate-400">Pilih 2, 3, atau lebih berkas/foto/dokumen bersamaan</div>
-              </div>
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Action Bottom Sheet (Image 2 Design with full interactive controls) */}
+      <ActionBottomSheet
+        isOpen={isAttachmentOpen}
+        onClose={() => setIsAttachmentOpen(false)}
+        onSelectPhotosVideos={() => mediaInputRef.current?.click()}
+        onSelectCamera={() => cameraInputRef.current?.click()}
+        onSelectVoice={() => {
+          setIsAttachmentOpen(false);
+          toggleRecording();
+        }}
+        onSelectFiles={() => allFileInputRef.current?.click()}
+        onOpenImageStudio={() => {
+          setIsAttachmentOpen(false);
+          onOpenImageStudio?.();
+        }}
+        onOpenMusicVoice={() => {
+          setIsAttachmentOpen(false);
+          onOpenMusicVoice?.();
+        }}
+        onOpenCanvasCode={() => {
+          setIsAttachmentOpen(false);
+          onOpenCanvasCode?.();
+        }}
+        deepResearchActive={activeMode === 'thinking'}
+        onToggleDeepResearch={() => {
+          if (activeMode === 'thinking') {
+            onModeChange(webSearchActive ? 'search' : 'general');
+          } else {
+            onModeChange('thinking');
+          }
+        }}
+        webSearchActive={webSearchActive}
+        onToggleWebSearch={toggleWebSearch}
+      />
 
       {/* Real-Time DEFCON 5 Threat Intercepted & Quarantined Banner */}
       {defconAlert && (

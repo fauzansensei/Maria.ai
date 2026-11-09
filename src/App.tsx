@@ -10,6 +10,8 @@ import { SettingsDashboard } from './components/SettingsDashboard.tsx';
 import { TwoFactorModal } from './components/TwoFactorModal.tsx';
 import { ImageStudioModal } from './components/ImageStudioModal.tsx';
 import { DefconShieldModal } from './components/DefconShieldModal.tsx';
+import { MusicVoiceModal } from './components/MusicVoiceModal.tsx';
+import { CanvasCodeModal } from './components/CanvasCodeModal.tsx';
 import { Conversation, Message, AiMode, UserSettings, MediaAttachment } from './types/index.ts';
 import { DEFAULT_SETTINGS, VOICE_PERSONAS } from './constants.ts';
 import { speechService } from './lib/speechService.ts';
@@ -58,6 +60,8 @@ function AppContent() {
   const [is2FAOpen, setIs2FAOpen] = useState(false);
   const [isImageStudioOpen, setIsImageStudioOpen] = useState(false);
   const [isDefconOpen, setIsDefconOpen] = useState(false);
+  const [isMusicVoiceOpen, setIsMusicVoiceOpen] = useState(false);
+  const [isCanvasCodeOpen, setIsCanvasCodeOpen] = useState(false);
   const [studioBaseImage, setStudioBaseImage] = useState<string | null>(null);
   const [studioPrompt, setStudioPrompt] = useState<string>('');
 
@@ -1085,6 +1089,8 @@ function AppContent() {
             userName={user?.displayName}
             activeConnectingAction={activeConnectingAction}
             onOpenImageStudio={handleOpenImageStudio}
+            onOpenMusicVoice={() => setIsMusicVoiceOpen(true)}
+            onOpenCanvasCode={() => setIsCanvasCodeOpen(true)}
           />
         )}
 
@@ -1153,6 +1159,24 @@ function AppContent() {
       <DefconShieldModal
         isOpen={isDefconOpen}
         onClose={() => setIsDefconOpen(false)}
+      />
+
+      {/* Maria AI Music & Voice Audio Studio Modal */}
+      <MusicVoiceModal
+        isOpen={isMusicVoiceOpen}
+        onClose={() => setIsMusicVoiceOpen(false)}
+        onSendToChat={(prompt) => {
+          handleSendMessage(prompt, 'general');
+        }}
+      />
+
+      {/* Maria AI Interactive Canvas & Code Modal */}
+      <CanvasCodeModal
+        isOpen={isCanvasCodeOpen}
+        onClose={() => setIsCanvasCodeOpen(false)}
+        onSendToChat={(content) => {
+          handleSendMessage(content, 'general');
+        }}
       />
     </div>
   );
