@@ -413,8 +413,16 @@ function AppContent() {
             if (ct.includes('application/json')) {
               const errData = await response.json();
               if (errData.error) errMessage = errData.error;
+            } else if (response.status === 429) {
+              errMessage = 'Batas frekuensi permintaan tercapai (Rate limit). Tunggu 1 menit lalu coba kembali.';
+            } else if (response.status === 403) {
+              errMessage = 'Permintaan diblokir oleh sistem keamanan Spy Guard.';
+            } else if (response.status === 503) {
+              errMessage = 'Layanan AI sedang sibuk (503). Silakan coba kirim ulang.';
+            } else if (response.status >= 500) {
+              errMessage = 'Server AI sedang memproses permintaan. Silakan coba kirim ulang.';
             } else {
-              errMessage = 'Layanan AI sedang menyinkronkan server. Silakan coba kembali.';
+              errMessage = `Koneksi ke server AI terganggu (HTTP ${response.status}). Silakan coba kirim ulang.`;
             }
           } else if (lastFetchError?.message) {
             errMessage = `Koneksi terputus: ${lastFetchError.message}`;
@@ -961,6 +969,16 @@ function AppContent() {
             if (ct.includes('application/json')) {
               const errData = await response.json();
               if (errData.error) errMessage = errData.error;
+            } else if (response.status === 429) {
+              errMessage = 'Terlalu banyak permintaan (Rate limit 30 req/menit). Tunggu 1 menit lalu coba kembali.';
+            } else if (response.status === 403) {
+              errMessage = 'Permintaan diblokir oleh sistem keamanan Spy Guard.';
+            } else if (response.status === 503) {
+              errMessage = 'Layanan AI sedang sibuk (503). Silakan coba kirim ulang.';
+            } else if (response.status >= 500) {
+              errMessage = 'Server AI sedang memproses pembaruan. Silakan coba kirim ulang.';
+            } else {
+              errMessage = `Server merespon dengan status ${response.status}. Silakan coba kirim ulang.`;
             }
           } catch {}
           throw new Error(errMessage);
@@ -970,7 +988,7 @@ function AppContent() {
         if (ct.includes('application/json')) {
           data = await response.json();
         } else {
-          throw new Error('Layanan AI sedang menyinkronkan data. Silakan coba sesaat lagi.');
+          throw new Error('Format balasan server tidak sesuai.');
         }
 
         const modelMessageObj: Message = {
