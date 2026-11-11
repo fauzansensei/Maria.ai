@@ -31,6 +31,7 @@ import {
   generateVideoThumbnail,
   storeOriginalMedia,
   storeOriginalMediaBlob,
+  storeMediaBase64,
 } from '../lib/mediaUtils.ts';
 import { MediaLightboxModal, LightboxMedia } from './MediaLightboxModal.tsx';
 import { ActionBottomSheet } from './ActionBottomSheet.tsx';
@@ -363,6 +364,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
           storeOriginalMedia(id, originalUrl);
           storeOriginalMedia(file.name, originalUrl);
+          storeMediaBase64(id, base64Data);
+          storeMediaBase64(file.name, base64Data);
           await storeOriginalMediaBlob(id, file);
           await storeOriginalMediaBlob(file.name, file);
 
@@ -374,8 +377,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             previewUrl = await generateVideoThumbnail(file);
           }
 
-          let detectedMime = file.type;
-          if (!detectedMime) {
+          let detectedMime = (file.type || '').split(';')[0].trim().toLowerCase();
+          if (!detectedMime || detectedMime === 'application/octet-stream') {
             const lowerName = file.name.toLowerCase();
             if (lowerName.endsWith('.md') || lowerName.endsWith('.markdown')) detectedMime = 'text/markdown';
             else if (lowerName.endsWith('.txt')) detectedMime = 'text/plain';
@@ -385,6 +388,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             else if (lowerName.endsWith('.mp4')) detectedMime = 'video/mp4';
             else if (lowerName.endsWith('.webm')) detectedMime = 'video/webm';
             else if (lowerName.endsWith('.mov')) detectedMime = 'video/quicktime';
+            else if (lowerName.endsWith('.3gp')) detectedMime = 'video/3gpp';
+            else if (lowerName.endsWith('.avi')) detectedMime = 'video/x-msvideo';
+            else if (lowerName.endsWith('.mkv')) detectedMime = 'video/webm';
             else if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) detectedMime = 'image/jpeg';
             else if (lowerName.endsWith('.png')) detectedMime = 'image/png';
             else if (lowerName.endsWith('.webp')) detectedMime = 'image/webp';

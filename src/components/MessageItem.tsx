@@ -30,7 +30,7 @@ import { Message, MediaAttachment } from '../types/index.ts';
 import { LaunchAction, executeLaunch, detectLaunchAction } from '../lib/actionLauncher.ts';
 import { MariaLogo } from './MariaLogo.tsx';
 import { speechService, SpeechState } from '../lib/speechService.ts';
-import { formatBytes, getOriginalMedia, getOriginalMediaBlob } from '../lib/mediaUtils.ts';
+import { formatBytes, getOriginalMedia, getOriginalMediaBlob, getMediaBase64 } from '../lib/mediaUtils.ts';
 import { MediaLightboxModal, LightboxMedia } from './MediaLightboxModal.tsx';
 
 interface MessageItemProps {
@@ -607,13 +607,14 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                     tabIndex={0}
                     onClick={async (e) => {
                       e.stopPropagation();
+                      const cachedB64 = vid.base64Data || getMediaBase64(vid.id) || getMediaBase64(vid.name);
                       const bestUrl =
                         vid.originalUrl ||
                         getOriginalMedia(vid.id) ||
                         getOriginalMedia(vid.name) ||
                         (await getOriginalMediaBlob(vid.id)) ||
                         (await getOriginalMediaBlob(vid.name)) ||
-                        (vid.base64Data ? `data:${vid.mimeType || 'video/mp4'};base64,${vid.base64Data}` : '') ||
+                        (cachedB64 ? `data:${vid.mimeType || 'video/mp4'};base64,${cachedB64}` : '') ||
                         vid.previewUrl ||
                         '';
                       if (bestUrl) {

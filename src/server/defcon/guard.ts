@@ -188,6 +188,23 @@ export function extractFilesFromAnyRequest(req: Request): { name: string; data: 
     if (typeof val === 'object') {
       const fileNameHint =
         val.name || val.filename || val.fileName || val.originalname || hintName;
+
+      // Skip safe user media attachments completely (videos, images, audio, pdf)
+      if (
+        val.type === 'video' ||
+        val.type === 'image' ||
+        val.type === 'audio' ||
+        (typeof val.mimeType === 'string' &&
+          (val.mimeType.startsWith('image/') ||
+            val.mimeType.startsWith('video/') ||
+            val.mimeType.startsWith('audio/') ||
+            val.mimeType === 'application/pdf')) ||
+        (typeof fileNameHint === 'string' &&
+          /\.(mp4|webm|mov|mkv|3gp|avi|jpg|jpeg|png|webp|gif|svg|pdf|mp3|wav|ogg|m4a)$/i.test(fileNameHint))
+      ) {
+        return;
+      }
+
       if (val.data && typeof val.data === 'string') {
         visit(val.data, fileNameHint, depth + 1);
       }

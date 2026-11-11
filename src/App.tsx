@@ -19,6 +19,7 @@ import { speechService } from './lib/speechService.ts';
 import { optimizeCookies, pruneLocalStorageBloat } from './lib/storageOptimizer.ts';
 import { detectLaunchAction, executeLaunch, LaunchAction } from './lib/actionLauncher.ts';
 import { isImageIntent, extractImagePrompt } from './lib/imageIntent.ts';
+import { getMediaBase64 } from './lib/mediaUtils.ts';
 import {
   subscribeConversations,
   subscribeMessages,
@@ -314,7 +315,7 @@ function AppContent() {
         attachments: m.attachments?.map((a) => ({
           type: a.type,
           mimeType: a.mimeType,
-          data: a.base64Data,
+          data: a.base64Data || getMediaBase64(a.id) || getMediaBase64(a.name) || '',
           name: a.name,
           size: a.size,
         })),
@@ -741,7 +742,7 @@ function AppContent() {
           attachments: m.attachments?.map((a) => ({
             type: a.type,
             mimeType: a.mimeType,
-            data: a.base64Data,
+            data: a.base64Data || getMediaBase64(a.id) || getMediaBase64(a.name) || '',
             name: a.name,
             size: a.size,
           })),
@@ -756,7 +757,7 @@ function AppContent() {
           attachments: attachments?.map((a) => ({
             type: a.type,
             mimeType: a.mimeType,
-            data: a.base64Data,
+            data: a.base64Data || getMediaBase64(a.id) || getMediaBase64(a.name) || '',
             name: a.name,
             size: a.size,
           })),

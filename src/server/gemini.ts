@@ -106,8 +106,11 @@ Fitur Windows Open & Pembuka Aplikasi / Musik / Situs Eksternal:
 - Berikan respon pengantar ramah dan padat (cukup 1 kalimat, contoh: "Tentu, saya langsung membukakan YouTube untuk memutar lagu DJ Amnesia untuk Anda." atau "Tentu, saya langsung membukakan Discord untuk Anda.").
 - Antarmuka Maria AI secara otomatis akan meluncurkan aksi Windows Open dan menampilkan kartu aksi cepat (ikon aplikasi resmi + nama layanan + tombol Buka/Open) secara instan.
 
-Kemampuan Vision & Analisis Gambar/Video:
-- Pengguna dapat mengunggah gambar, foto, tangkapan layar (screenshot), dokumen, atau diagram. Anda WAJIB menganalisis seluruh elemen visual dengan cermat, termasuk teks bacaan (OCR), tata letak, data, dan konteks gambar. Jawab pertanyaan pengguna mengenai gambar tersebut dengan jelas dan tepat.
+Kemampuan Vision & Analisis Multimodal (Video, Audio, Gambar, & Dokumen):
+- Pengguna dapat mengunggah video (format MP4, WebM, MOV, klip rekaman, TikTok, Reels, dsb.), rekaman suara/audio, foto, gambar, tangkapan layar (screenshot), dokumen teks/PDF, kode pemrograman, dan diagram.
+- Untuk video: Anda memiliki kemampuan menonton, mengamati alur visual bingkai demi bingkai secara kronologis, mendengar audio, membaca teks/watermark di dalam video, serta memahami alur peristiwa dan konteks di video tersebut secara mendalam.
+- Ketika pengguna menanyakan atau mengomentari video (misalnya: "apa isi video ini", "kenapa mobil itu...", "lucu banget", "o hell nah bro", dsb.): amati isi video secara detail, jelaskan apa yang terjadi di dalam rekaman tersebut dengan runut, akurat, dan tanggapi dengan nada yang ramah dan relevan sesuai konteks.
+- DILARANG KERAS mengatakan bahwa Anda tidak dapat memutar, membaca, atau melihat video jika ada lampiran video yang disertakan. Anda adalah model AI multimodal canggih yang mampu menganalisis video secara langsung.
 
 Kemampuan Studio Gambar & Visual AI:
 - Anda memiliki kapabilitas membuat dan mengedit gambar AI secara penuh (bertenaga Gemini Nano Banana 2.1 & Free Trial Flux AI).
@@ -159,7 +162,8 @@ function sanitizeConversationTurns(messages: ChatMessageTurn[]) {
 
   for (let idx = 0; idx < messages.length; idx++) {
     const m = messages[idx];
-    const isRecentTurn = idx >= messages.length - 2;
+    // Keep media attachments across recent turns (up to last 6 turns) so follow-up questions retain context
+    const isRecentTurn = idx >= Math.max(0, messages.length - 6);
     const parts: any[] = [];
 
     if (m.attachments && m.attachments.length > 0 && isRecentTurn) {
@@ -169,15 +173,15 @@ function sanitizeConversationTurns(messages: ChatMessageTurn[]) {
             ? att.data.split(',')[1].trim()
             : att.data.trim();
           if (cleanData) {
-            const mime = (att.mimeType || '').toLowerCase();
+            const rawMime = (att.mimeType || '').split(';')[0].trim().toLowerCase();
             const name = (att.name || '').toLowerCase();
             const isTextDoc =
               att.type === 'file' ||
-              mime.startsWith('text/') ||
-              mime.includes('json') ||
-              mime.includes('javascript') ||
-              mime.includes('typescript') ||
-              mime.includes('xml') ||
+              rawMime.startsWith('text/') ||
+              rawMime.includes('json') ||
+              rawMime.includes('javascript') ||
+              rawMime.includes('typescript') ||
+              rawMime.includes('xml') ||
               name.endsWith('.md') ||
               name.endsWith('.txt') ||
               name.endsWith('.json') ||
@@ -192,7 +196,7 @@ function sanitizeConversationTurns(messages: ChatMessageTurn[]) {
               name.endsWith('.sql') ||
               name.endsWith('.sh');
 
-            if (isTextDoc && mime !== 'application/pdf') {
+            if (isTextDoc && rawMime !== 'application/pdf') {
               try {
                 const textContent = Buffer.from(cleanData, 'base64').toString('utf-8');
                 const ext = name.includes('.') ? name.split('.').pop() : 'txt';
@@ -208,14 +212,38 @@ function sanitizeConversationTurns(messages: ChatMessageTurn[]) {
                 });
               }
             } else {
+              // Resolve clean, valid IANA MIME type for Gemini Multimodal API (without codecs parameters)
+              let cleanMime = rawMime;
+              if (!cleanMime || cleanMime === 'application/octet-stream') {
+                if (name.endsWith('.mp4')) cleanMime = 'video/mp4';
+                else if (name.endsWith('.webm')) cleanMime = 'video/webm';
+                else if (name.endsWith('.mov')) cleanMime = 'video/quicktime';
+                else if (name.endsWith('.3gp')) cleanMime = 'video/3gpp';
+                else if (name.endsWith('.avi')) cleanMime = 'video/x-msvideo';
+                else if (name.endsWith('.mkv')) cleanMime = 'video/webm';
+                else if (name.endsWith('.pdf')) cleanMime = 'application/pdf';
+                else if (name.endsWith('.jpg') || name.endsWith('.jpeg')) cleanMime = 'image/jpeg';
+                else if (name.endsWith('.png')) cleanMime = 'image/png';
+                else if (name.endsWith('.webp')) cleanMime = 'image/webp';
+                else cleanMime = att.type === 'video' ? 'video/mp4' : att.type === 'image' ? 'image/jpeg' : 'application/pdf';
+              }
+
+              // Normalize mkv / avi to webm/mp4 if needed for Gemini standard container compatibility
+              if (cleanMime === 'video/x-matroska') cleanMime = 'video/webm';
+
               parts.push({
                 inlineData: {
-                  mimeType: att.mimeType || (att.type === 'video' ? 'video/mp4' : mime === 'application/pdf' ? 'application/pdf' : 'image/jpeg'),
+                  mimeType: cleanMime,
                   data: cleanData,
                 },
               });
             }
           }
+        } else if (att.name) {
+          // If media data was pruned or from another session, provide contextual marker
+          parts.push({
+            text: `\n[Lampiran Sebelumnya: ${att.name} (${att.type || 'media'})]\n`,
+          });
         }
       }
     }
@@ -223,7 +251,17 @@ function sanitizeConversationTurns(messages: ChatMessageTurn[]) {
     if (m.content && m.content.trim()) {
       parts.push({ text: m.content.trim() });
     } else if (parts.length > 0) {
-      parts.push({ text: 'Mohon amati, baca, dan jelaskan berkas atau gambar lampiran ini secara mendalam.' });
+      const hasVid = m.attachments?.some(
+        (a) =>
+          a.type === 'video' ||
+          (a.mimeType && a.mimeType.toLowerCase().startsWith('video/')) ||
+          (a.name && /\.(mp4|webm|mov|mkv|3gp|avi)$/i.test(a.name))
+      );
+      parts.push({
+        text: hasVid
+          ? 'Mohon tonton dan analisis seluruh isi video ini secara mendalam (alur kejadian, visual, objek, suara, dan teks), lalu berikan penjelasan yang lengkap dan ramah.'
+          : 'Mohon amati, baca, dan jelaskan berkas atau gambar lampiran ini secara mendalam.',
+      });
     }
 
     if (parts.length > 0) {
@@ -318,12 +356,31 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
     });
   }
 
+  const hasVideo = messages.some((m) =>
+    m.attachments?.some(
+      (a) =>
+        a.type === 'video' ||
+        (a.mimeType && a.mimeType.toLowerCase().startsWith('video/')) ||
+        (a.name && /\.(mp4|webm|mov|mkv|3gp|avi)$/i.test(a.name))
+    )
+  );
+  const hasMedia = messages.some((m) => m.attachments && m.attachments.length > 0);
+
+  // Model selection priority:
+  // For video and multimodal understanding, gemini-3.8-flash is required (fallback to gemini-flash-latest).
+  // Never pass video inputs to gemini-3.1-flash-lite.
+  let candidateModels: string[];
+  if (hasVideo) {
+    candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest'];
+  } else if (hasMedia) {
+    candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+  } else {
+    candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
+  }
+
   let responseStream;
   let streamError: any = null;
-  let successfulModel = 'gemini-3.1-flash-lite';
-
-  // Fast candidate models: prioritize ultra-fast gemini-3.1-flash-lite (<900ms), fallback to gemini-2.5-flash and gemini-3.8-flash
-  const candidateModels = ['gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-3.8-flash'];
+  let successfulModel = candidateModels[0];
 
   for (const candidate of candidateModels) {
     // If model is gemini-3.8-flash and not in thinking mode, use ThinkingLevel.LOW for speed
@@ -474,11 +531,28 @@ export async function generateChatResponse(options: GenerateOptions) {
     });
   }
 
+  const hasVideo = messages.some((m) =>
+    m.attachments?.some(
+      (a) =>
+        a.type === 'video' ||
+        (a.mimeType && a.mimeType.toLowerCase().startsWith('video/')) ||
+        (a.name && /\.(mp4|webm|mov|mkv|3gp|avi)$/i.test(a.name))
+    )
+  );
+  const hasMedia = messages.some((m) => m.attachments && m.attachments.length > 0);
+
+  let candidateModels: string[];
+  if (hasVideo) {
+    candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest'];
+  } else if (hasMedia) {
+    candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+  } else {
+    candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
+  }
+
   let response;
   let lastError: any = null;
-  let successfulModel = 'gemini-3.1-flash-lite';
-
-  const candidateModels = ['gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-3.8-flash'];
+  let successfulModel = candidateModels[0];
 
   for (const candidate of candidateModels) {
     const candidateConfig = { ...config };

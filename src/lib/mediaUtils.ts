@@ -44,6 +44,63 @@ export function getOriginalMedia(id: string): string | undefined {
   return originalMediaCache.get(id);
 }
 
+// In-memory store for 100% original base64 media strings so full video/image data is never lost across turns
+const base64MediaCache = new Map<string, string>();
+
+export function storeMediaBase64(key: string, base64: string): void {
+  if (!key || !base64) return;
+  if (base64MediaCache.size > 250) {
+    const firstKey = base64MediaCache.keys().next().value;
+    if (firstKey) base64MediaCache.delete(firstKey);
+  }
+  base64MediaCache.set(key, base64);
+}
+
+export function getMediaBase64(key: string): string | undefined {
+  if (!key) return undefined;
+  return base64MediaCache.get(key);
+}
+
+export async function resolveMediaBase64(key: string): Promise<string | undefined> {
+  if (!key) return undefined;
+  const memoryCached = base64MediaCache.get(key);
+  if (memoryCached) return memoryCached;
+
+  try {
+    const db = await getMediaDB();
+    if (!db) return undefined;
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.get(key);
+      req.onsuccess = async () => {
+        const result = req.result;
+        if (!result) {
+          resolve(undefined);
+        } else if (result instanceof Blob || result instanceof File) {
+          try {
+            const dataUrl = await readFileAsDataUrl(result as File);
+            const b64 = extractBase64(dataUrl);
+            storeMediaBase64(key, b64);
+            resolve(b64);
+          } catch {
+            resolve(undefined);
+          }
+        } else if (typeof result === 'string') {
+          const b64 = extractBase64(result);
+          storeMediaBase64(key, b64);
+          resolve(b64);
+        } else {
+          resolve(undefined);
+        }
+      };
+      req.onerror = () => resolve(undefined);
+    });
+  } catch {
+    return undefined;
+  }
+}
+
 // Persistent IndexedDB store for 100% uncompressed raw Blobs/Files
 const DB_NAME = 'maria_highres_media_db';
 const STORE_NAME = 'original_media';

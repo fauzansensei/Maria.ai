@@ -13,8 +13,8 @@ import { spyGuardMiddleware, BAD_PATTERNS, MAX_REQ_PER_MINUTE, ipRequests } from
 export const apiApp = express();
 export const apiRouter = express.Router();
 
-apiApp.use(express.json({ limit: '50mb' }));
-apiApp.use(express.urlencoded({ extended: true, limit: '50mb' }));
+apiApp.use(express.json({ limit: '100mb' }));
+apiApp.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // 1. Spy Guard (Bot Guard, Anti-DDoS 30 req/min & Anti-Injection Regex Gateway)
 apiApp.use(spyGuardMiddleware);
@@ -125,6 +125,8 @@ function extractUploadsFromMessages(messages: any[]): { name: string; data: Buff
           att.type === 'video' ||
           att.type === 'image' ||
           att.type === 'audio' ||
+          (typeof att.name === 'string' &&
+            /\.(mp4|webm|mov|mkv|3gp|avi|jpg|jpeg|png|webp|gif|svg|pdf|mp3|wav|ogg|m4a)$/i.test(att.name)) ||
           (att.mimeType &&
             (att.mimeType.startsWith('image/') ||
               att.mimeType.startsWith('video/') ||
