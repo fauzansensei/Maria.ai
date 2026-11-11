@@ -75,6 +75,8 @@ export interface UserSettings {
   vpnTunnelActive?: boolean;
   soarAutoLock?: boolean;
   deepSearch?: boolean;
+  isPlus?: boolean;
+  plusPlan?: "free" | "monthly" | "yearly";
 }
 
 export type CyberLogLevel = "INFO" | "WARN" | "CRITICAL" | "BLOCKED";

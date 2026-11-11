@@ -49,6 +49,8 @@ interface ChatAreaProps {
   onOpenMusicVoice?: () => void;
   onOpenCanvasCode?: () => void;
   onOpenDefcon?: () => void;
+  isPlus?: boolean;
+  onOpenPlusModal?: () => void;
 }
 
 interface NotificationItem {
@@ -80,6 +82,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   onOpenMusicVoice,
   onOpenCanvasCode,
   onOpenDefcon,
+  isPlus = false,
+  onOpenPlusModal,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [speechState, setSpeechState] = useState<SpeechState>(() => speechService.getState());
@@ -185,16 +189,26 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
           <div className="flex items-center gap-2">
             <MariaLogo size="sm" withOnlineDot={true} />
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-[#0f172a] text-sm sm:text-base tracking-tight">
-                  Maria AI
-                </span>
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full bg-[#6366f1] text-white text-[9px] font-extrabold tracking-wide uppercase shadow-2xs">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-[#0f172a] text-sm sm:text-base tracking-tight">
+                Maria AI
+              </span>
+              {isPlus ? (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full bg-[#6366f1] text-white text-[9px] font-extrabold tracking-wide uppercase shadow-2xs animate-in fade-in">
                   <Sparkles className="w-2.5 h-2.5 fill-white" />
                   <span>PLUS</span>
                 </span>
-              </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onOpenPlusModal}
+                  title="Tingkatkan ke Maria PLUS untuk membuka fitur berbayar"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50/80 hover:bg-indigo-100/90 border border-indigo-200 text-indigo-700 text-[10px] font-bold tracking-tight transition-colors cursor-pointer"
+                >
+                  <Sparkles className="w-2.5 h-2.5 text-indigo-600 fill-indigo-600" />
+                  <span>Upgrade</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -302,24 +316,17 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       {/* Main Chat Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
         {messages.length === 0 ? (
-          /* Empty State Hero: Exact match to Screenshot */
+          /* Empty State Hero: Exact match to Image 2 */
           <div className="flex-1 flex flex-col items-center justify-center px-4 -mt-10 sm:-mt-16 animate-in fade-in duration-300 select-none">
             {/* Centered Maria Squircle Logo */}
-            <div className="mb-4">
+            <div className="mb-6">
               <MariaLogo size="hero" glow={false} />
             </div>
 
-            {/* Brand Title: Maria AI */}
-            <div className="text-center mb-1">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0f172a] tracking-tight">
-                Maria AI
-              </h1>
-            </div>
-
-            {/* Subheading: Dari mana kita harus mulai? */}
-            <p className="text-sm font-medium text-slate-500 text-center mt-1">
+            {/* Title: Dari mana kita harus mulai? (Exact match to Image 2) */}
+            <h1 className="text-xl sm:text-2xl font-bold text-[#0f172a] tracking-tight text-center">
               Dari mana kita harus mulai?
-            </p>
+            </h1>
           </div>
         ) : (
           /* Message Stream (Neat independent bubbles with generous bottom padding for typewriter text) */
@@ -376,6 +383,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           onOpenMusicVoice={onOpenMusicVoice}
           onOpenCanvasCode={onOpenCanvasCode}
           onOpenDefconModal={() => onOpenDefcon?.()}
+          isPlus={isPlus}
+          onOpenPlusModal={onOpenPlusModal}
         />
       </div>
     </div>

@@ -61,6 +61,8 @@ interface SidebarProps {
   onOpenSettings: () => void;
   onOpenImageStudio?: () => void;
   onOpenDefcon?: () => void;
+  isPlus?: boolean;
+  onOpenPlusModal?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -79,6 +81,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenSettings,
   onOpenImageStudio,
   onOpenDefcon,
+  isPlus = false,
+  onOpenPlusModal,
 }) => {
   const { user, signIn, signOut } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -360,20 +364,50 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Sticky Footer: MARIA Plus Banner & Account Cell */}
         <div className="p-3 border-t border-[#1b1c26] bg-[#111218] space-y-2.5">
           {/* MARIA Plus Card Banner */}
-          <div className="p-3 rounded-2xl bg-gradient-to-r from-[#201235] via-[#2a1746] to-[#18112b] border border-[#53268e]/50 shadow-md">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-bold text-[#d8b4fe] flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[#c084fc]" />
-                MARIA Plus Aktif
-              </span>
-              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-[#7c3aed]/30 text-[#e9d5ff]">
-                PRO
-              </span>
+          {isPlus ? (
+            <div
+              onClick={onOpenPlusModal}
+              className="p-3 rounded-2xl bg-gradient-to-r from-[#201235] via-[#2a1746] to-[#18112b] border border-[#53268e]/60 shadow-md cursor-pointer hover:border-[#7c3aed] transition-colors"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-[#d8b4fe] flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#c084fc]" />
+                  MARIA PLUS Aktif
+                </span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#7c3aed] text-white">
+                  VIP
+                </span>
+              </div>
+              <p className="text-[11px] text-purple-200/80 leading-tight">
+                Akses tanpa batas, model Gemini Pro & fitur eksklusif aktif. Klik untuk kelola langganan.
+              </p>
             </div>
-            <p className="text-[11px] text-neutral-300 leading-tight">
-              Anda menikmati akses prioritas tinggi tanpa batas.
-            </p>
-          </div>
+          ) : (
+            <div
+              onClick={onOpenPlusModal}
+              className="p-3 rounded-2xl bg-gradient-to-br from-[#1e1e2d] to-[#141522] border border-violet-500/30 hover:border-violet-500/60 shadow-md cursor-pointer transition-all group"
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-violet-400 group-hover:rotate-12 transition-transform" />
+                  Upgrade ke Maria PLUS
+                </span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-600/30 text-violet-300 border border-violet-500/30">
+                  BARU
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-tight mb-2">
+                Buka Deep Research, Studio Musik & Suara, Gambar 4K, dan VIP speed.
+              </p>
+              <button
+                type="button"
+                className="w-full py-1.5 px-2.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-medium text-[11px] flex items-center justify-center gap-1.5 shadow-sm transition-all"
+              >
+                <Sparkles className="w-3 h-3 text-amber-300" />
+                Lihat Paket Langganan
+              </button>
+            </div>
+          )}
 
           {/* User Account / Google Login Area */}
           {!user ? (

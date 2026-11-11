@@ -54,6 +54,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
   cyberModeEnabled: true,
   defconLevel: "DEFCON 5",
   autonomousSelfHealing: true,
+  isPlus: false,
+  plusPlan: "free",
 };
 
 export interface VoicePersonaOption {

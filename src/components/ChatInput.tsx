@@ -53,6 +53,8 @@ interface ChatInputProps {
   onOpenDefconModal?: () => void;
   loadedText?: string;
   onClearLoadedText?: () => void;
+  isPlus?: boolean;
+  onOpenPlusModal?: () => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -66,6 +68,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onOpenMusicVoice,
   onOpenCanvasCode,
   onOpenDefconModal,
+  isPlus = false,
+  onOpenPlusModal,
 }) => {
   const [text, setText] = useState('');
   const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
@@ -650,6 +654,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         }}
         webSearchActive={webSearchActive}
         onToggleWebSearch={toggleWebSearch}
+        isPlus={isPlus}
+        onOpenPlusModal={onOpenPlusModal}
       />
 
       {/* Real-Time DEFCON 5 Threat Intercepted & Quarantined Banner */}

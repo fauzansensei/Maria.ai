@@ -30,6 +30,8 @@ export interface ActionBottomSheetProps {
   onToggleDeepResearch: () => void;
   webSearchActive: boolean;
   onToggleWebSearch: () => void;
+  isPlus?: boolean;
+  onOpenPlusModal?: () => void;
 }
 
 export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({
@@ -46,6 +48,8 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({
   onToggleDeepResearch,
   webSearchActive,
   onToggleWebSearch,
+  isPlus = false,
+  onOpenPlusModal,
 }) => {
   if (!isOpen) return null;
 
@@ -164,6 +168,24 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({
 
         {/* Feature Action List Items */}
         <div className="space-y-1.5 pt-1 border-t border-slate-800/80">
+          {!isPlus && (
+            <div
+              onClick={() => {
+                onClose();
+                onOpenPlusModal?.();
+              }}
+              className="mb-2 p-2.5 rounded-2xl bg-gradient-to-r from-indigo-950/60 to-purple-950/60 border border-indigo-500/30 flex items-center justify-between cursor-pointer hover:border-indigo-500/60 transition group"
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-indigo-400 group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-semibold text-indigo-200">Buka Semua Fitur Cerdas dengan Maria PLUS</span>
+              </div>
+              <span className="text-[10px] font-bold text-white bg-indigo-600 px-2 py-0.5 rounded-full shadow-xs">
+                Upgrade
+              </span>
+            </div>
+          )}
+
           {/* 1. Images (Gambar AI) */}
           <button
             type="button"
@@ -178,8 +200,11 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({
                 <Wand2 className="w-5 h-5" />
               </div>
               <div className="min-w-0">
-                <div className="text-sm font-semibold text-slate-100 group-hover:text-white truncate">
-                  Images (Gambar AI)
+                <div className="text-sm font-semibold text-slate-100 group-hover:text-white truncate flex items-center gap-1.5">
+                  <span>Images (Gambar AI)</span>
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-bold">
+                    Free / 4K
+                  </span>
                 </div>
                 <div className="text-xs text-slate-400 truncate mt-0.5">
                   Buat dan edit gambar HD dengan model Gemini 3.1
@@ -191,7 +216,14 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({
 
           {/* 2. Deep Research (Pencarian Mendalam) - With Toggle Switch */}
           <div
-            onClick={onToggleDeepResearch}
+            onClick={() => {
+              if (!isPlus) {
+                onClose();
+                onOpenPlusModal?.();
+                return;
+              }
+              onToggleDeepResearch();
+            }}
             className="w-full flex items-center justify-between p-3 rounded-2xl hover:bg-[#1c1e28] active:bg-[#222432] transition-colors text-left cursor-pointer select-none"
           >
             <div className="flex items-center gap-3.5 min-w-0">
@@ -199,8 +231,13 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({
                 <Sparkles className="w-5 h-5" />
               </div>
               <div className="min-w-0">
-                <div className="text-sm font-semibold text-slate-100 truncate">
-                  Deep Research (Pencarian Mendalam)
+                <div className="text-sm font-semibold text-slate-100 truncate flex items-center gap-1.5">
+                  <span>Deep Research (Pencarian Mendalam)</span>
+                  {!isPlus && (
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-bold border border-indigo-500/30">
+                      PLUS
+                    </span>
+                  )}
                 </div>
                 <div className="text-xs text-slate-400 truncate mt-0.5">
                   Laporan riset & analisis komprehensif
@@ -214,6 +251,11 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({
               aria-checked={deepResearchActive}
               onClick={(e) => {
                 e.stopPropagation();
+                if (!isPlus) {
+                  onClose();
+                  onOpenPlusModal?.();
+                  return;
+                }
                 onToggleDeepResearch();
               }}
               className={`w-12 h-7 rounded-full p-1 transition-colors duration-200 ease-in-out shrink-0 ml-2 focus:outline-none cursor-pointer ${
@@ -281,8 +323,13 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({
                 <Music2 className="w-5 h-5" />
               </div>
               <div className="min-w-0">
-                <div className="text-sm font-semibold text-slate-100 group-hover:text-white truncate">
-                  Music & Voice (Audio)
+                <div className="text-sm font-semibold text-slate-100 group-hover:text-white truncate flex items-center gap-1.5">
+                  <span>Music & Voice (Audio)</span>
+                  {!isPlus && (
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-bold border border-indigo-500/30">
+                      PLUS
+                    </span>
+                  )}
                 </div>
                 <div className="text-xs text-slate-400 truncate mt-0.5">
                   Buat lirik lagu, trek audio, atau memo suara
@@ -306,8 +353,13 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({
                 <Layout className="w-5 h-5" />
               </div>
               <div className="min-w-0">
-                <div className="text-sm font-semibold text-slate-100 group-hover:text-white truncate">
-                  Canvas & Code
+                <div className="text-sm font-semibold text-slate-100 group-hover:text-white truncate flex items-center gap-1.5">
+                  <span>Canvas & Code</span>
+                  {!isPlus && (
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-bold border border-indigo-500/30">
+                      PLUS
+                    </span>
+                  )}
                 </div>
                 <div className="text-xs text-slate-400 truncate mt-0.5">
                   Tulis kode, dokumen, atau buat presentasi

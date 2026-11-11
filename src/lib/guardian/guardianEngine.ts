@@ -405,6 +405,24 @@ class GuardianEngine {
           category: "Malware",
         };
       }
+
+      // 6b. Spy Guard BAD_PATTERNS (Anti-Injection & DDoS Script Detection)
+      if (
+        /import\s+requests/i.test(sampleText) ||
+        /while\s+true\s*:/i.test(sampleText) ||
+        /union\s+select/i.test(sampleText) ||
+        /ignore\s+(all\s+)?previous\s+instructions/i.test(sampleText) ||
+        /eval\(/i.test(sampleText) ||
+        /curl\s+-X\s+POST/i.test(sampleText) ||
+        /system\s*\(/i.test(sampleText) ||
+        /exec\s*\(/i.test(sampleText)
+      ) {
+        return {
+          name: "SpyGuard.ScriptInjection.BadPattern",
+          reason: "Pola skrip berbahaya terdeteksi oleh Spy Guard (Anti-DDoS, Prompt Injection, atau Eksekusi Skrip Ilegal)",
+          category: "Malware",
+        };
+      }
     }
 
     // 7. Zip Archive Inspection (Detect embedded executables inside ZIP)

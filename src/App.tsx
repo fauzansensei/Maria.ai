@@ -12,6 +12,7 @@ import { ImageStudioModal } from './components/ImageStudioModal.tsx';
 import { DefconShieldModal } from './components/DefconShieldModal.tsx';
 import { MusicVoiceModal } from './components/MusicVoiceModal.tsx';
 import { CanvasCodeModal } from './components/CanvasCodeModal.tsx';
+import { MariaPlusModal } from './components/MariaPlusModal.tsx';
 import { Conversation, Message, AiMode, UserSettings, MediaAttachment } from './types/index.ts';
 import { DEFAULT_SETTINGS, VOICE_PERSONAS } from './constants.ts';
 import { speechService } from './lib/speechService.ts';
@@ -62,6 +63,7 @@ function AppContent() {
   const [isDefconOpen, setIsDefconOpen] = useState(false);
   const [isMusicVoiceOpen, setIsMusicVoiceOpen] = useState(false);
   const [isCanvasCodeOpen, setIsCanvasCodeOpen] = useState(false);
+  const [isPlusModalOpen, setIsPlusModalOpen] = useState(false);
   const [studioBaseImage, setStudioBaseImage] = useState<string | null>(null);
   const [studioPrompt, setStudioPrompt] = useState<string>('');
 
@@ -85,6 +87,13 @@ function AppContent() {
         localStorage.setItem('maria_settings', JSON.stringify(updated));
       } catch {}
       return updated;
+    });
+  };
+
+  const handleTogglePlus = (active: boolean) => {
+    handleUpdateSettings({
+      isPlus: active,
+      plusPlan: active ? 'yearly' : 'free',
     });
   };
 
@@ -1058,6 +1067,8 @@ function AppContent() {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenImageStudio={() => handleOpenImageStudio()}
         onOpenDefcon={() => setIsDefconOpen(true)}
+        isPlus={Boolean(settings.isPlus)}
+        onOpenPlusModal={() => setIsPlusModalOpen(true)}
       />
 
       {/* Main Workspace: Chat, Library, or Discover View */}
@@ -1091,6 +1102,8 @@ function AppContent() {
             onOpenImageStudio={handleOpenImageStudio}
             onOpenMusicVoice={() => setIsMusicVoiceOpen(true)}
             onOpenCanvasCode={() => setIsCanvasCodeOpen(true)}
+            isPlus={Boolean(settings.isPlus)}
+            onOpenPlusModal={() => setIsPlusModalOpen(true)}
           />
         )}
 
@@ -1135,6 +1148,7 @@ function AppContent() {
         settings={settings}
         onUpdateSettings={handleUpdateSettings}
         onOpenDefcon={() => setIsDefconOpen(true)}
+        onOpenPlusModal={() => setIsPlusModalOpen(true)}
       />
 
       {/* 2FA Security Modal for Purging History */}
@@ -1177,6 +1191,14 @@ function AppContent() {
         onSendToChat={(content) => {
           handleSendMessage(content, 'general');
         }}
+      />
+
+      {/* Maria PLUS Subscription & Plan Upgrade Modal */}
+      <MariaPlusModal
+        isOpen={isPlusModalOpen}
+        onClose={() => setIsPlusModalOpen(false)}
+        isPlus={Boolean(settings.isPlus)}
+        onTogglePlus={handleTogglePlus}
       />
     </div>
   );

@@ -38,6 +38,7 @@ interface SettingsDashboardProps {
   settings?: UserSettings;
   onUpdateSettings?: (patch: Partial<UserSettings>) => void;
   onOpenDefcon?: () => void;
+  onOpenPlusModal?: () => void;
 }
 
 type TabType = 'general' | 'ai-memory' | 'voice' | 'chat' | 'privacy' | 'integrations' | 'account';
@@ -49,6 +50,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
   settings: propSettings,
   onUpdateSettings,
   onOpenDefcon,
+  onOpenPlusModal,
 }) => {
   const { user, signIn, signOut } = useAuth();
   const { theme, setTheme, isDark } = useTheme();
@@ -835,9 +837,15 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                     <div>
                       <div className="text-sm font-bold text-white flex items-center gap-2">
                         {user.displayName || 'Pengguna Maria AI'}
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#7c3aed]/20 text-[#a78bfa] border border-[#7c3aed]/40">
-                          MARIA Plus ✨
-                        </span>
+                        {settings.isPlus ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#7c3aed]/20 text-[#a78bfa] border border-[#7c3aed]/40">
+                            MARIA Plus ✨
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                            Gratis
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs text-neutral-400">{user.email}</div>
                     </div>
@@ -845,7 +853,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
 
                   <button
                     onClick={signOut}
-                    className="py-1.5 px-3 rounded-xl bg-[#262838] hover:bg-rose-500/20 text-neutral-300 hover:text-rose-400 text-xs font-medium transition-colors"
+                    className="py-1.5 px-3 rounded-xl bg-[#262838] hover:bg-rose-500/20 text-neutral-300 hover:text-rose-400 text-xs font-medium transition-colors cursor-pointer"
                   >
                     Keluar Akun
                   </button>
@@ -881,6 +889,57 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = ({
                   </button>
                 </div>
               )}
+
+              {/* Maria PLUS Subscription Card */}
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-[#1a152e] via-[#161726] to-[#12131d] border border-indigo-500/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
+                      <Sparkles className="w-4 h-4 fill-indigo-400" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white flex items-center gap-2">
+                        <span>Status Langganan Maria</span>
+                        {settings.isPlus ? (
+                          <span className="px-2 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/40">
+                            PLUS AKTIF
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.2 rounded-full bg-slate-800 text-slate-400 text-[10px] font-medium border border-slate-700">
+                            VERSI GRATIS
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        {settings.isPlus
+                          ? 'Akses tak terbatas ke Deep Research, Studio Musik, Gambar 4K & VIP Priority.'
+                          : 'Buka fitur eksklusif cerdas dengan upgrade ke opsi berbayar Maria PLUS.'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-3">
+                  <div className="text-[11px] text-slate-400">
+                    {settings.isPlus ? 'Paket: Tahunan Pro (VIP)' : 'Mulai dari Rp 33.250 / bln'}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onOpenPlusModal?.();
+                    }}
+                    className={`py-1.5 px-3.5 rounded-xl font-bold text-xs shadow-md transition cursor-pointer flex items-center gap-1.5 ${
+                      settings.isPlus
+                        ? 'bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-500/30'
+                        : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white'
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>{settings.isPlus ? 'Kelola Maria PLUS' : 'Upgrade ke Maria PLUS'}</span>
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>

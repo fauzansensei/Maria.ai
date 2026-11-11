@@ -176,10 +176,10 @@ export class WafEngine {
   }
 
   /**
-   * Pillar 2: Strict Rate Limiting (5 requests per minute for AI endpoints)
-   * If exceeded, IP is locked for 300 seconds (5 minutes)
+   * Pillar 2: Strict Rate Limiting (30 requests per minute for AI endpoints)
+   * If exceeded, IP is locked for 60-300 seconds
    */
-  public checkAiRateLimit(source: string, max = 5, windowMs = 60000, ignoreWhitelist = false): { allowed: boolean; count: number; retryAfter?: number } {
+  public checkAiRateLimit(source: string, max = 30, windowMs = 60000, ignoreWhitelist = false): { allowed: boolean; count: number; retryAfter?: number } {
     if (!ignoreWhitelist && this.isWhitelisted(source)) {
       return { allowed: true, count: 1 };
     }
@@ -264,9 +264,9 @@ export class WafEngine {
         ['malware_upload', 'rate_abuse', 'waf_ip_reputation', 'waf_bot_header'].includes(e.kind)
       ),
       rules: {
-        aiRateLimit: '5 requests / 60 detik (Auto 300s lock)',
+        aiRateLimit: '30 requests / 60 detik (Spy Guard Anti-DDoS Bot Protection)',
         ipIntelligence: 'Active (Botnet, Proxy & Datacenter ASN Filter)',
-        payloadInspection: 'Active (Pre-AI Binary & Script Gateway Neutralization)',
+        payloadInspection: 'Active (Anti-Injection & Pre-AI Script Neutralization)',
       },
     };
   }

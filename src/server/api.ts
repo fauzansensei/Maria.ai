@@ -8,6 +8,7 @@ import {
 import { guard, sanitizeOutput, getDefconSummary, defconUniversalFilePayloadMiddleware, clientIp } from './defcon/guard.ts';
 import { wafEngine, wafGatekeeperMiddleware } from './defcon/waf.ts';
 import { defconStore } from './defcon/store.ts';
+import { spyGuardMiddleware, BAD_PATTERNS, MAX_REQ_PER_MINUTE, ipRequests } from './spyGuardMiddleware.ts';
 
 export const apiApp = express();
 export const apiRouter = express.Router();
@@ -15,10 +16,13 @@ export const apiRouter = express.Router();
 apiApp.use(express.json({ limit: '50mb' }));
 apiApp.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Universal DEFCON 5 Inbound File & Virus Scanner (Scans all requests outside and inside chat)
+// 1. Spy Guard (Bot Guard, Anti-DDoS 30 req/min & Anti-Injection Regex Gateway)
+apiApp.use(spyGuardMiddleware);
+
+// 2. Universal DEFCON 5 Inbound File & Virus Scanner (Scans all requests outside and inside chat)
 apiApp.use(defconUniversalFilePayloadMiddleware);
 
-// Web Application Firewall (WAF) Gatekeeper (IP Reputation, 5 req/min Rate Limit, Pre-AI Payload Validation)
+// 3. Web Application Firewall (WAF) Gatekeeper (IP Reputation & Pre-AI Payload Validation)
 apiApp.use(wafGatekeeperMiddleware);
 
 // Helper to safely send JSON responses in any middleware context
@@ -40,6 +44,33 @@ apiRouter.get('/defcon', async (_req: Request, res: Response) => {
   } catch (err: any) {
     sendJson(res, 500, { error: err?.message || 'Gagal memuat status DEFCON.' });
   }
+});
+
+// Spy Guard Status Endpoint (30 req/min & Anti-Injection Rules)
+apiRouter.get('/spyguard/status', (req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const client = clientIp(req);
+  const reqData = ipRequests.get(client) || { count: 0, lastReset: Date.now() };
+  sendJson(res, 200, {
+    status: 'active',
+    clientIp: client,
+    maxReqPerMinute: MAX_REQ_PER_MINUTE,
+    currentReqCount: reqData.count,
+    badPatternsCount: BAD_PATTERNS.length,
+    badPatterns: [
+      'import requests (Skrip DDoS Python)',
+      'while true: (Looping tanpa henti DDoS)',
+      '<script> (XSS Cross Site Scripting)',
+      'union select (SQL Injection)',
+      'ignore previous instructions (Prompt Injection)',
+      'eval( (Eksekusi kode ilegal)',
+      'base64_decode (Obfuscated script)',
+      'curl -X POST (Automated probe)',
+      'system( (Command injection)',
+      'exec( (Eksekusi script)',
+    ],
+    trackedIpsCount: ipRequests.size,
+  });
 });
 
 // WAF Status & Summary Endpoint
@@ -74,9 +105,10 @@ apiRouter.post('/waf/whitelist-self', (req: Request, res: Response) => {
 // Clear WAF Bans / Active Lockouts
 apiRouter.post('/waf/clear-bans', (_req: Request, res: Response) => {
   defconStore.clearAll();
+  ipRequests.clear();
   sendJson(res, 200, {
     status: 'success',
-    message: 'Semua riwayat penguncian & blokir IP WAF telah dibersihkan.',
+    message: 'Semua riwayat penguncian & blokir IP WAF serta rate limit telah dibersihkan.',
   });
 });
 
