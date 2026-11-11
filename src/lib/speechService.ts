@@ -1,5 +1,6 @@
 // Maria AI Unified Speech & TTS Service
-// Exclusively powered by Gemini AI Voice Engine (Aoede, Kore, Puck, Fenrir, Zephyr, Charon) & Neural AI Voices
+// Powered by Gemini AI Voice Engine (Aoede, Kore, Puck, Fenrir, Zephyr, Charon) & Web Audio API
+// High-fidelity, zero-latency playback immune to browser autoplay blocking
 
 export interface SpeechState {
   isSpeaking: boolean;
@@ -13,7 +14,9 @@ export interface SpeechState {
 type SpeechListener = (state: SpeechState) => void;
 
 class MariaSpeechService {
-  private currentAudio: HTMLAudioElement | null = null;
+  private audioCtx: AudioContext | null = null;
+  private currentSourceNode: AudioBufferSourceNode | null = null;
+  private reusableAudio: HTMLAudioElement | null = null;
   private listeners: Set<SpeechListener> = new Set();
   private ttsCache: Map<string, string> = new Map();
   private state: SpeechState = {
@@ -24,6 +27,21 @@ class MariaSpeechService {
     activeModel: null,
     error: null,
   };
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      // Lazy init audio context on first touch
+      const initContext = () => {
+        this.unlockAudio();
+        window.removeEventListener('click', initContext);
+        window.removeEventListener('keydown', initContext);
+        window.removeEventListener('touchstart', initContext);
+      };
+      window.addEventListener('click', initContext, { once: true });
+      window.addEventListener('keydown', initContext, { once: true });
+      window.addEventListener('touchstart', initContext, { once: true });
+    }
+  }
 
   public subscribe(listener: SpeechListener): () => void {
     this.listeners.add(listener);
@@ -60,38 +78,49 @@ class MariaSpeechService {
       .trim();
   }
 
-  // Pre-unlocks audio context and HTML5 Audio permissions during a user interaction gesture
+  /**
+   * Pre-unlocks Web Audio Context & HTML5 Audio within user interaction gesture.
+   * This guarantees that when asynchronous TTS arrives, audio plays without autoplay blocking.
+   */
   public unlockAudio() {
     try {
-      if (typeof window !== 'undefined') {
-        const silentAudio = new Audio(
-          'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=='
-        );
-        silentAudio.volume = 0.01;
-        silentAudio.play().then(() => {
-          silentAudio.pause();
-        }).catch(() => {});
+      if (typeof window === 'undefined') return;
 
-        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioCtx) {
-          const ctx = new AudioCtx();
-          if (ctx.state === 'suspended') {
-            ctx.resume().catch(() => {});
-          }
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        if (!this.audioCtx) {
+          this.audioCtx = new AudioCtx();
+        }
+        if (this.audioCtx.state === 'suspended') {
+          this.audioCtx.resume().catch(() => {});
         }
       }
-    } catch {
-      // Ignore background unlock issues
+
+      if (!this.reusableAudio) {
+        this.reusableAudio = new Audio();
+        this.reusableAudio.volume = 1.0;
+      }
+    } catch (e) {
+      console.warn('Audio unlock warning:', e);
     }
   }
 
   public stopSpeaking() {
-    if (this.currentAudio) {
+    // 1. Stop Web Audio API source node
+    if (this.currentSourceNode) {
       try {
-        this.currentAudio.pause();
-        this.currentAudio.currentTime = 0;
+        this.currentSourceNode.stop();
+        this.currentSourceNode.disconnect();
       } catch {}
-      this.currentAudio = null;
+      this.currentSourceNode = null;
+    }
+
+    // 2. Stop HTML5 audio element
+    if (this.reusableAudio) {
+      try {
+        this.reusableAudio.pause();
+        this.reusableAudio.currentTime = 0;
+      } catch {}
     }
 
     this.setState({
@@ -114,6 +143,7 @@ class MariaSpeechService {
     }
   ): Promise<boolean> {
     this.stopSpeaking();
+    this.unlockAudio();
     const speedMultiplier = this.parseSpeed(options?.speed);
     const messageId = options?.messageId || null;
     return this.playAudioUrl(audioUrl, speedMultiplier, messageId, options?.personaId, options?.model);
@@ -170,6 +200,7 @@ class MariaSpeechService {
     }
   ): Promise<boolean> {
     this.stopSpeaking();
+    this.unlockAudio();
 
     const messageId = options?.messageId || null;
     const speedMultiplier = this.parseSpeed(options?.speed);
@@ -202,7 +233,7 @@ class MariaSpeechService {
       }
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 45000);
+      const timeoutId = setTimeout(() => controller.abort(), 35000);
 
       const res = await fetch('/api/tts', {
         method: 'POST',
@@ -253,14 +284,15 @@ class MariaSpeechService {
         });
         return false;
       }
-    } catch {
+    } catch (err: any) {
+      console.warn('TTS request error:', err);
       this.setState({
         isSpeaking: false,
         isLoading: false,
         activeMessageId: null,
         currentEngine: null,
         activeModel: null,
-        error: 'Koneksi ke Gemini AI Voice Engine sedang sibuk.',
+        error: 'Koneksi ke Gemini AI Voice Engine terganggu.',
       });
       return false;
     }
@@ -276,26 +308,91 @@ class MariaSpeechService {
     return false;
   }
 
-  private playAudioUrl(
+  /**
+   * Helper to convert base64 data URI or raw base64 to ArrayBuffer
+   */
+  private base64ToArrayBuffer(base64Data: string): ArrayBuffer {
+    const clean = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
+    const binary = window.atob(clean);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  /**
+   * Play audio with Web Audio API as primary (zero autoplay blocks, instant decode)
+   * with seamless fallback to HTMLAudioElement
+   */
+  private async playAudioUrl(
     audioUrl: string,
     speed: number,
     messageId: string | null,
     _personaId?: string,
     modelName?: string
   ): Promise<boolean> {
+    if (typeof window === 'undefined') return false;
+
+    // Ensure audio context is running
+    this.unlockAudio();
+
+    // 1. PRIMARY: Web Audio API (Guaranteed playback even after long async network delays)
+    if (this.audioCtx && audioUrl.startsWith('data:audio/')) {
+      try {
+        if (this.audioCtx.state === 'suspended') {
+          await this.audioCtx.resume();
+        }
+
+        const arrayBuffer = this.base64ToArrayBuffer(audioUrl);
+        // decodeAudioData creates PCM AudioBuffer
+        const audioBuffer = await this.audioCtx.decodeAudioData(arrayBuffer);
+
+        const sourceNode = this.audioCtx.createBufferSource();
+        sourceNode.buffer = audioBuffer;
+        sourceNode.playbackRate.value = Math.min(2.0, Math.max(0.5, speed));
+
+        this.currentSourceNode = sourceNode;
+
+        sourceNode.onended = () => {
+          if (this.currentSourceNode === sourceNode) {
+            this.currentSourceNode = null;
+            this.setState({
+              isSpeaking: false,
+              isLoading: false,
+              activeMessageId: null,
+              currentEngine: null,
+              activeModel: null,
+            });
+          }
+        };
+
+        sourceNode.connect(this.audioCtx.destination);
+        sourceNode.start(0);
+
+        this.setState({
+          isLoading: false,
+          isSpeaking: true,
+          activeMessageId: messageId,
+          currentEngine: 'gemini',
+          activeModel: modelName || 'gemini-3.8-flash-lite-tts',
+          error: null,
+        });
+
+        return true;
+      } catch (decodeErr) {
+        console.warn('Web Audio API playback failed, falling back to HTMLAudioElement:', decodeErr);
+      }
+    }
+
+    // 2. FALLBACK: Reusable HTML5 Audio Element
     return new Promise((resolve) => {
       try {
-        const audio = new Audio();
-        this.currentAudio = audio;
+        const audio = this.reusableAudio || new Audio();
+        this.reusableAudio = audio;
         audio.src = audioUrl;
-
-        // Apply clean playback rate chosen by user (0.75x, 1x, 1.25x, 1.5x)
         audio.playbackRate = Math.min(2.0, Math.max(0.5, speed));
-        try {
-          (audio as any).preservesPitch = true;
-          (audio as any).webkitPreservesPitch = true;
-          (audio as any).mozPreservesPitch = true;
-        } catch {}
 
         audio.onplay = () => {
           this.setState({
@@ -320,29 +417,29 @@ class MariaSpeechService {
         };
 
         audio.onerror = (e) => {
-          console.warn('Audio playback error on AI model audio element:', e);
-          this.currentAudio = null;
+          console.warn('HTMLAudioElement playback error:', e);
           this.setState({
             isSpeaking: false,
             isLoading: false,
             activeMessageId: null,
             currentEngine: null,
             activeModel: null,
-            error: 'Gagal memutar audio model Gemini AI.',
+            error: 'Gagal memutar audio.',
           });
           resolve(false);
         };
 
-        audio.play().catch((err) => {
-          console.warn('Autoplay prevented on AI model audio:', err);
-          this.currentAudio = null;
+        audio.play().then(() => {
+          resolve(true);
+        }).catch((err) => {
+          console.warn('HTMLAudioElement play() catch:', err);
           this.setState({
             isSpeaking: false,
             isLoading: false,
             activeMessageId: null,
             currentEngine: null,
             activeModel: null,
-            error: 'Pemutaran audio otomatis ditahan oleh peramban.',
+            error: 'Pemutaran audio ditahan oleh peramban.',
           });
           resolve(false);
         });

@@ -122,10 +122,21 @@ export function extractFilesFromAnyRequest(req: Request): { name: string; data: 
       // 1. Data URI e.g. data:image/png;base64,... or data:application/octet-stream;base64,...
       if (s.startsWith('data:') && s.includes(';base64,')) {
         try {
-          const b64 = s.split(';base64,')[1];
-          const buf = Buffer.from(b64, 'base64');
-          if (buf.length > 0) {
-            uploads.push({ name: hintName, data: buf });
+          const mimeMatch = s.match(/^data:([^;]+);base64,/);
+          const mime = mimeMatch ? mimeMatch[1].toLowerCase() : '';
+          const isSafeMedia =
+            mime.startsWith('image/') ||
+            mime.startsWith('video/') ||
+            mime.startsWith('audio/') ||
+            mime === 'application/pdf';
+
+          // Safe user media is excluded from binary malware scanning
+          if (!isSafeMedia) {
+            const b64 = s.split(';base64,')[1];
+            const buf = Buffer.from(b64, 'base64');
+            if (buf.length > 0) {
+              uploads.push({ name: hintName, data: buf });
+            }
           }
         } catch {}
         return;

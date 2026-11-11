@@ -344,13 +344,13 @@ export async function wafGatekeeperMiddleware(req: Request, res: Response, next:
     });
   }
 
-  // 3. Pillar 2: Strict Rate Limiting on AI Chat & Token Endpoints (5 req/min)
+  // 3. Pillar 2: Strict Rate Limiting on AI Chat & Token Endpoints (30 req/min Spy Guard)
   if (
     url.includes('/chat') ||
     url.includes('/generate-image') ||
     (isExplicitTest && (req.body?.isChat || String(req.body?.payload || '').startsWith('simulated_chat_msg')))
   ) {
-    const rateCheck = wafEngine.checkAiRateLimit(targetSource, 5, 60000, isExplicitTest);
+    const rateCheck = wafEngine.checkAiRateLimit(targetSource, 30, 60000, isExplicitTest);
     if (!rateCheck.allowed) {
       if (!isExplicitTest) {
         await blockTemp(source, 300, 'waf_ai_token_exhaustion_lock');
@@ -360,7 +360,7 @@ export async function wafGatekeeperMiddleware(req: Request, res: Response, next:
       const verdict: Verdict = {
         kind: 'rate_abuse',
         confidence: 0.98,
-        evidence: [`rate-limit-exceeded:>${rateCheck.count}req/60s (limit 5)`],
+        evidence: [`rate-limit-exceeded:>${rateCheck.count}req/60s (limit 30)`],
         source: targetSource,
       };
       await logEvent(verdict, 'block_temp', true, mode, 'waf_ai_token_drain_blocked');
@@ -370,7 +370,7 @@ export async function wafGatekeeperMiddleware(req: Request, res: Response, next:
         error: 'waf_rate_limit_exceeded',
         status: 429,
         banned: true,
-        message: `Maria WAF: Batas aman tercapai (${rateCheck.count} request/menit, batas: 5 req/menit). Alamat IP ${targetSource} DIKUNCI sementara selama 300 detik untuk mencegah pemborosan token AI.`,
+        message: `Maria WAF: Batas aman tercapai (${rateCheck.count} request/menit, batas: 30 req/menit). Alamat IP ${targetSource} DIKUNCI sementara selama 300 detik untuk mencegah pemborosan token AI.`,
         retryAfter: 300,
       });
     }

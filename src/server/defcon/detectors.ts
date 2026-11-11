@@ -112,10 +112,18 @@ const EICAR_HASH = '275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651
 const BLOCKED_EXTENSIONS = [
   'exe', 'scr', 'bat', 'cmd', 'com', 'pif', 'vbs', 'vbe', 'js', 'jse', 'wsf', 'wsh',
   'ps1', 'psm1', 'msi', 'msp', 'reg', 'hta', 'cpl', 'msc', 'inf',
-  'elf', 'bin', 'so', 'sh', 'bash', 'zsh', 'command',
+  'elf', 'so', 'sh', 'bash', 'zsh', 'command',
   'jar', 'apk', 'dex',
   'php', 'phtml', 'php3', 'php4', 'php5', 'phps', 'asp', 'aspx', 'jsp', 'cgi', 'pl', 'py'
 ];
+
+// Legitimate user media extensions that are always safe
+const SAFE_MEDIA_EXTENSIONS = new Set([
+  'mp4', 'webm', 'mov', 'avi', 'mkv', 'm4v',
+  'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico',
+  'mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac', 'weba',
+  'pdf', 'txt', 'csv', 'json', 'md'
+]);
 
 const DOUBLE_EXT = /\.(pdf|docx?|xlsx?|pptx?|jpe?g|png|gif|txt|mp4|webp)\.(exe|scr|bat|cmd|com|js|vbs|ps1|jar|apk|msi|sh|bin)$/i;
 
@@ -167,6 +175,11 @@ export function detectBadUpload(name: string, data: Buffer, source: string): Ver
       evidence: [`known-malware-hash:${hash.slice(0, 12)}`],
       source,
     };
+  }
+
+  // If file has a standard safe media/document extension and is not malware, pass safely
+  if (SAFE_MEDIA_EXTENSIONS.has(ext) && !DOUBLE_EXT.test(lowerName)) {
+    return null;
   }
 
   // 3. Prohibited Executable / Binary Extensions

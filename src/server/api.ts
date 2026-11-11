@@ -120,12 +120,25 @@ function extractUploadsFromMessages(messages: any[]): { name: string; data: Buff
   for (const msg of messages) {
     if (Array.isArray(msg?.attachments)) {
       for (const att of msg.attachments) {
+        // Skip safe media attachments (videos, images, audio, pdf)
+        const isSafeMedia =
+          att.type === 'video' ||
+          att.type === 'image' ||
+          att.type === 'audio' ||
+          (att.mimeType &&
+            (att.mimeType.startsWith('image/') ||
+              att.mimeType.startsWith('video/') ||
+              att.mimeType.startsWith('audio/') ||
+              att.mimeType === 'application/pdf'));
+
+        if (isSafeMedia) continue;
+
         if (att && att.data && typeof att.data === 'string') {
           try {
             const cleanB64 = att.data.replace(/^data:[^;]+;base64,/, '');
             const buf = Buffer.from(cleanB64, 'base64');
             uploads.push({
-              name: att.name || 'uploaded_payload.bin',
+              name: att.name || 'uploaded_payload.dat',
               data: buf,
             });
           } catch (e) {

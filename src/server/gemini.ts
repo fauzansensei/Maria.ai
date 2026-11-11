@@ -1029,8 +1029,8 @@ export async function generateSpeechAudio(
       serverAudioCache.set(cacheKey, result);
       return result;
     }
-  } catch {
-    // Smoothly fall back to Neural Voice without noise
+  } catch (ttsErr: any) {
+    console.warn('Gemini TTS generation error, falling back to neural voice:', ttsErr?.message || ttsErr);
   }
 
   // 3. Fallback to Neural Voice (MsEdgeTTS) if Gemini TTS rate limit is reached

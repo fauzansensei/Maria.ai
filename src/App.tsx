@@ -907,6 +907,24 @@ function AppContent() {
           );
 
           if (fullText.trim()) {
+            const finalLaunchAction = launchAction || detectLaunchAction(fullText);
+            if (finalLaunchAction && !launchAction) {
+              setActiveConnectingAction(finalLaunchAction);
+              executeLaunch(finalLaunchAction);
+            }
+
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === streamAiId
+                  ? {
+                      ...m,
+                      isStreaming: false,
+                      launchAction: finalLaunchAction ? { ...finalLaunchAction } : m.launchAction,
+                    }
+                  : m
+              )
+            );
+
             if (user && currentConvId) {
               await addMessage(currentConvId, user.uid, {
                 role: 'model',
@@ -914,7 +932,7 @@ function AppContent() {
                 model: streamModel,
                 groundingLinks:
                   streamGroundingLinks.length > 0 ? streamGroundingLinks : undefined,
-                launchAction: launchAction ? { ...launchAction } : undefined,
+                launchAction: finalLaunchAction ? { ...finalLaunchAction } : undefined,
               });
             }
 
@@ -991,6 +1009,12 @@ function AppContent() {
           throw new Error('Format balasan server tidak sesuai.');
         }
 
+        const finalLaunchAction = launchAction || detectLaunchAction(data.text || '');
+        if (finalLaunchAction && !launchAction) {
+          setActiveConnectingAction(finalLaunchAction);
+          executeLaunch(finalLaunchAction);
+        }
+
         const modelMessageObj: Message = {
           id: `ai_${Date.now()}`,
           conversationId: currentConvId || 'guest_conv',
@@ -1001,7 +1025,7 @@ function AppContent() {
           mode,
           groundingLinks: data.groundingLinks,
           audioUri: data.audioUrl,
-          launchAction: launchAction || undefined,
+          launchAction: finalLaunchAction ? { ...finalLaunchAction } : undefined,
           createdAt: new Date(),
         };
 

@@ -193,30 +193,63 @@ export function spyGuardMiddleware(req: Request, res: Response, next: NextFuncti
     }
   }
 
-  // Cek juga body request (chat prompt / JSON payloads)
+  // Periodic memory pruning to avoid leak
+  if (ipRequests.size > 2000) {
+    for (const [key, val] of ipRequests.entries()) {
+      if (now - val.lastReset > 300000) {
+        ipRequests.delete(key);
+      }
+    }
+  }
+
+  // Cek juga body request (Hanya periksa teks pesan pengguna, bukan data biner base64 video/audio)
   if (req.body && (req.method === 'POST' || req.method === 'PUT')) {
     try {
-      const bodyStr = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
-      for (const pattern of BAD_PATTERNS) {
-        if (pattern.test(bodyStr)) {
-          console.warn(`🚨 [BOT GUARD] Pola berbahaya terdeteksi di body dari IP: ${ip} [${pattern}]`);
-          defconStore.logEvent(
-            {
-              kind: 'prompt_injection',
-              confidence: 0.98,
-              evidence: [`bad_pattern_body:${pattern.toString()}`],
-              source: ip,
-            },
-            'block_temp',
-            true,
-            'enforce',
-            'Injection Payload Intercepted'
-          );
-          defconStore.blockTemp(ip, 300, 'bad_pattern_body');
+      const isChatEndpoint = pathname.includes('/chat') || pathname.includes('/tts');
 
-          return sendSpyGuardJson(res, 403, {
-            error: 'Ancaman terdeteksi. Akses ditolak.',
-          });
+      let textToCheck = '';
+      if (typeof req.body === 'string') {
+        textToCheck = req.body;
+      } else if (req.body && typeof req.body === 'object') {
+        if (typeof req.body.message === 'string') {
+          textToCheck = req.body.message;
+        } else if (Array.isArray(req.body.messages)) {
+          const lastUserMsg = [...req.body.messages].reverse().find((m: any) => m && m.role === 'user');
+          textToCheck = typeof lastUserMsg?.content === 'string' ? lastUserMsg.content : '';
+        } else if (typeof req.body.prompt === 'string') {
+          textToCheck = req.body.prompt;
+        } else if (typeof req.body.text === 'string') {
+          textToCheck = req.body.text;
+        }
+      }
+
+      if (textToCheck) {
+        // Pada pesan chat, hanya tangkal prompt injection nyata (jangan blokir kode pemrograman atau lampiran berkas)
+        const patternsToCheck = isChatEndpoint
+          ? [/ignore\s+(all\s+)?previous\s+instructions/i]
+          : BAD_PATTERNS;
+
+        for (const pattern of patternsToCheck) {
+          if (pattern.test(textToCheck)) {
+            console.warn(`🚨 [BOT GUARD] Pola berbahaya terdeteksi di teks prompt dari IP: ${ip} [${pattern}]`);
+            defconStore.logEvent(
+              {
+                kind: 'prompt_injection',
+                confidence: 0.98,
+                evidence: [`bad_pattern_prompt:${pattern.toString()}`],
+                source: ip,
+              },
+              'block_temp',
+              true,
+              'enforce',
+              'Injection Payload Intercepted'
+            );
+            defconStore.blockTemp(ip, 300, 'bad_pattern_prompt');
+
+            return sendSpyGuardJson(res, 403, {
+              error: 'Ancaman terdeteksi. Akses ditolak.',
+            });
+          }
         }
       }
     } catch {}

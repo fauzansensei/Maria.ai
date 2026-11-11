@@ -287,10 +287,6 @@ const ServiceIcon: React.FC<{ icon: LaunchAction['icon']; className?: string }> 
 
 // Sleek Gemini Action Card (Windows Open Engine)
 const GeminiActionCard: React.FC<{ action: LaunchAction }> = ({ action }) => {
-  const handleOpen = () => {
-    executeLaunch(action);
-  };
-
   return (
     <div className="mt-3 p-3 sm:p-3.5 rounded-2xl bg-[#1e2330] border border-slate-700/60 shadow-md flex items-center justify-between gap-3 text-white animate-in fade-in">
       <div className="flex items-center gap-3 min-w-0">
@@ -311,7 +307,6 @@ const GeminiActionCard: React.FC<{ action: LaunchAction }> = ({ action }) => {
         href={action.url}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={handleOpen}
         className="px-4 py-1.5 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 text-white font-semibold text-xs tracking-tight border border-white/20 transition-all cursor-pointer shrink-0 inline-flex items-center gap-1.5 no-underline"
       >
         <span>Buka</span>
