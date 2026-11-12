@@ -393,6 +393,15 @@ apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
           res.write('data: [DONE]\n\n');
           res.end();
         } catch (fbErr: any) {
+          const errMsg = String(fbErr?.message || streamErr?.message || '');
+          if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota') || errMsg.includes('kuota')) {
+            const quotaReply = 'Mohon maaf, saat ini batas kuota harian Gemini API (429) pada kunci gratis Anda sedang mencapai batas maksimum dari Google akibat lonjakan permintaan atau pengujian paket. Kuota akan otomatis dipulihkan oleh Google, atau Anda dapat menyetel kunci billing di Google AI Studio untuk akses tanpa batas.';
+            res.write(`data: ${JSON.stringify({ type: 'chunk', text: quotaReply, model: 'system-notice' })}\n\n`);
+            res.write(`data: ${JSON.stringify({ type: 'done', model: 'system-notice' })}\n\n`);
+            res.write('data: [DONE]\n\n');
+            res.end();
+            return;
+          }
           res.write(`data: ${JSON.stringify({ type: 'error', error: fbErr?.message || streamErr?.message || 'Gagal memproses stream.' })}\n\n`);
           res.end();
         }
@@ -470,7 +479,11 @@ apiRouter.post('/chat', async (req: Request, res: Response) => {
     if (rawMsg.includes('503') || rawMsg.includes('high demand') || rawMsg.includes('UNAVAILABLE')) {
       cleanMsg = 'Server AI Google sedang mengalami lonjakan permintaan (503). Sistem sedang mengalihkan ke model cadangan, silakan coba kirim ulang.';
     } else if (rawMsg.includes('429') || rawMsg.includes('quota') || rawMsg.includes('RESOURCE_EXHAUSTED')) {
-      cleanMsg = 'Batas kuota model tercapai (429). Silakan tunggu beberapa saat atau periksa kuota Google AI Studio Anda.';
+      sendJson(res, 200, {
+        text: 'Mohon maaf, saat ini batas kuota harian Gemini API (429) pada kunci gratis Anda sedang mencapai batas maksimum dari Google akibat lonjakan permintaan atau pengujian paket. Kuota akan otomatis dipulihkan secara berkala oleh Google, atau Anda dapat menyetel kunci billing di Google AI Studio untuk akses tanpa batas.',
+        model: 'system-notice',
+      });
+      return;
     }
     sendJson(res, 500, {
       error: cleanMsg,

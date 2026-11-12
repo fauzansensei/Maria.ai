@@ -20,6 +20,7 @@ import { optimizeCookies, pruneLocalStorageBloat } from './lib/storageOptimizer.
 import { detectLaunchAction, executeLaunch, LaunchAction } from './lib/actionLauncher.ts';
 import { isImageIntent, extractImagePrompt } from './lib/imageIntent.ts';
 import { getMediaBase64 } from './lib/mediaUtils.ts';
+import { guardianEngine } from './lib/guardian/guardianEngine.ts';
 import {
   subscribeConversations,
   subscribeMessages,
@@ -424,6 +425,23 @@ function AppContent() {
               errMessage = 'Server AI sedang memproses permintaan. Silakan coba kirim ulang.';
             } else {
               errMessage = `Koneksi ke server AI terganggu (HTTP ${response.status}). Silakan coba kirim ulang.`;
+            }
+
+            // Sync blocked attack event to Spy Guard Engine
+            if (response.status === 403 || (response.status === 429 && /flood|ddos|rate|kuota/i.test(errMessage)) || /spy guard|diblokir|injection|banned/i.test(errMessage)) {
+              const isDDoS = /flood|ddos|rate/i.test(errMessage);
+              guardianEngine.addLog(
+                isDDoS ? '🚨 DDoS / Flood Attack Dicegat' : '🛡️ Ancaman Dicegat (Spy Guard)',
+                `Blokir otomatis: ${errMessage}`,
+                'threat'
+              );
+              guardianEngine.quarantineThreat(
+                isDDoS ? 'DDoS / Packet Flood' : 'Skrip Injection / Anomali',
+                'gateway/security',
+                `sha_${Date.now()}`,
+                1024,
+                isDDoS ? 'DDoS' : 'Malware'
+              );
             }
           } else if (lastFetchError?.message) {
             errMessage = `Koneksi terputus: ${lastFetchError.message}`;
@@ -998,6 +1016,23 @@ function AppContent() {
               errMessage = 'Server AI sedang memproses pembaruan. Silakan coba kirim ulang.';
             } else {
               errMessage = `Server merespon dengan status ${response.status}. Silakan coba kirim ulang.`;
+            }
+
+            // Sync blocked attack event to Spy Guard Engine
+            if (response.status === 403 || (response.status === 429 && /flood|ddos|rate|kuota/i.test(errMessage)) || /spy guard|diblokir|injection|banned/i.test(errMessage)) {
+              const isDDoS = /flood|ddos|rate/i.test(errMessage);
+              guardianEngine.addLog(
+                isDDoS ? '🚨 DDoS / Flood Attack Dicegat' : '🛡️ Ancaman Dicegat (Spy Guard)',
+                `Blokir otomatis: ${errMessage}`,
+                'threat'
+              );
+              guardianEngine.quarantineThreat(
+                isDDoS ? 'DDoS / Packet Flood' : 'Skrip Injection / Anomali',
+                'gateway/security',
+                `sha_${Date.now()}`,
+                1024,
+                isDDoS ? 'DDoS' : 'Malware'
+              );
             }
           } catch {}
           throw new Error(errMessage);

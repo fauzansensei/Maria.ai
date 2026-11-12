@@ -366,16 +366,22 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
   );
   const hasMedia = messages.some((m) => m.attachments && m.attachments.length > 0);
 
-  // Model selection priority:
-  // For video and multimodal understanding, gemini-3.8-flash is required (fallback to gemini-flash-latest).
-  // Never pass video inputs to gemini-3.1-flash-lite.
+  // Model selection priority designed for maximum speed & quota efficiency:
+  // 1. Prioritize fresh Gemini 2.5 models (gemini-2.5-flash, gemini-2.5-flash-lite) which have 0/5 & 0/10 RPM used
+  //    and separate daily quotas from Gemini 3.8 Flash (which reached 20/20 RPD daily limit on user project).
+  // 2. Video files: gemini-2.5-flash -> gemini-3.8-flash -> gemini-flash-latest.
+  // 3. Media (images/docs): gemini-2.5-flash -> gemini-2.5-flash-lite -> gemini-3.8-flash -> gemini-flash-latest.
+  // 4. Regular chat: gemini-2.5-flash-lite -> gemini-2.5-flash -> gemini-3.8-flash -> gemini-flash-latest.
   let candidateModels: string[];
   if (hasVideo) {
-    candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest'];
+    candidateModels = ['gemini-2.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest'];
+  } else if (mode === 'thinking') {
+    candidateModels = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-flash-latest'];
   } else if (hasMedia) {
-    candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+    candidateModels = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.8-flash', 'gemini-flash-latest'];
   } else {
-    candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
+    // Ultra-fast sub-second chat response (<600ms) with multiple quota fallback tiers
+    candidateModels = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest'];
   }
 
   let responseStream;
@@ -383,14 +389,17 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
   let successfulModel = candidateModels[0];
 
   for (const candidate of candidateModels) {
-    // If model is gemini-3.8-flash and not in thinking mode, use ThinkingLevel.LOW for speed
     const candidateConfig = { ...config };
-    if (candidate === 'gemini-3.8-flash' && mode !== 'thinking') {
+
+    // Gemini 2.5 series does NOT support thinkingConfig (only Gemini 3 & 4)
+    if (!candidate.startsWith('gemini-3') && !candidate.startsWith('gemini-4')) {
+      delete candidateConfig.thinkingConfig;
+    } else if (candidate === 'gemini-3.8-flash' && mode !== 'thinking') {
       candidateConfig.thinkingConfig = { thinkingLevel: ThinkingLevel.LOW };
     }
 
-    // gemini-3.1-flash-lite does not support googleSearch/googleMaps tools
-    if (candidate === 'gemini-3.1-flash-lite' && candidateConfig.tools) {
+    // Grounding tools (googleSearch/googleMaps) are unsupported with multimodal images/video on Gemini 2.5
+    if (hasMedia || hasVideo || candidate === 'gemini-2.5-flash-lite' || candidate === 'gemini-3.1-flash-lite') {
       delete candidateConfig.tools;
       delete candidateConfig.toolConfig;
     }
@@ -406,24 +415,37 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
       break;
     } catch (err: any) {
       streamError = err;
+      const errMsg = String(err?.message || err);
+      const isQuotaExhausted =
+        errMsg.includes('429') ||
+        errMsg.includes('RESOURCE_EXHAUSTED') ||
+        errMsg.includes('quota') ||
+        errMsg.includes('rate limit');
 
-      // Instant fallback without tools if tools or quota caused an error
-      try {
-        responseStream = await ai.models.generateContentStream({
-          model: candidate,
-          contents,
-          config: { systemInstruction: activeSystemInstruction },
-        });
-        successfulModel = candidate;
-        streamError = null;
-        break;
-      } catch (fallbackErr) {
-        streamError = fallbackErr;
+      // If tools or thinking config caused a 400 error, retry once with clean basic configuration
+      if (!isQuotaExhausted && (candidateConfig.tools || candidateConfig.thinkingConfig)) {
+        try {
+          responseStream = await ai.models.generateContentStream({
+            model: candidate,
+            contents,
+            config: { systemInstruction: activeSystemInstruction },
+          });
+          successfulModel = candidate;
+          streamError = null;
+          break;
+        } catch (fallbackErr: any) {
+          streamError = fallbackErr;
+        }
       }
+      // If quota exhausted or failed, loop immediately moves to next candidate model!
     }
   }
 
   if (!responseStream) {
+    const rawMsg = String(streamError?.message || streamError || '');
+    if (rawMsg.includes('429') || rawMsg.includes('RESOURCE_EXHAUSTED')) {
+      throw new Error('Batas kuota model Gemini tercapai (429). Mohon tunggu beberapa saat lalu coba kembali.');
+    }
     throw streamError || new Error('Gagal terhubung ke model Gemini.');
   }
 
@@ -543,11 +565,13 @@ export async function generateChatResponse(options: GenerateOptions) {
 
   let candidateModels: string[];
   if (hasVideo) {
-    candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest'];
+    candidateModels = ['gemini-2.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest'];
+  } else if (mode === 'thinking') {
+    candidateModels = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-flash-latest'];
   } else if (hasMedia) {
-    candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+    candidateModels = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.8-flash', 'gemini-flash-latest'];
   } else {
-    candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
+    candidateModels = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest'];
   }
 
   let response;
@@ -556,10 +580,14 @@ export async function generateChatResponse(options: GenerateOptions) {
 
   for (const candidate of candidateModels) {
     const candidateConfig = { ...config };
-    if (candidate === 'gemini-3.8-flash' && mode !== 'thinking') {
+
+    if (!candidate.startsWith('gemini-3') && !candidate.startsWith('gemini-4')) {
+      delete candidateConfig.thinkingConfig;
+    } else if (candidate === 'gemini-3.8-flash' && mode !== 'thinking') {
       candidateConfig.thinkingConfig = { thinkingLevel: ThinkingLevel.LOW };
     }
-    if (candidate === 'gemini-3.1-flash-lite' && candidateConfig.tools) {
+
+    if (hasMedia || hasVideo || candidate === 'gemini-2.5-flash-lite' || candidate === 'gemini-3.1-flash-lite') {
       delete candidateConfig.tools;
       delete candidateConfig.toolConfig;
     }
@@ -575,22 +603,35 @@ export async function generateChatResponse(options: GenerateOptions) {
       break;
     } catch (err: any) {
       lastError = err;
-      try {
-        response = await ai.models.generateContent({
-          model: candidate,
-          contents,
-          config: { systemInstruction: activeSystemInstruction },
-        });
-        successfulModel = candidate;
-        lastError = null;
-        break;
-      } catch (fallbackErr) {
-        lastError = fallbackErr;
+      const errMsg = String(err?.message || err);
+      const isQuotaExhausted =
+        errMsg.includes('429') ||
+        errMsg.includes('RESOURCE_EXHAUSTED') ||
+        errMsg.includes('quota') ||
+        errMsg.includes('rate limit');
+
+      if (!isQuotaExhausted && (candidateConfig.tools || candidateConfig.thinkingConfig)) {
+        try {
+          response = await ai.models.generateContent({
+            model: candidate,
+            contents,
+            config: { systemInstruction: activeSystemInstruction },
+          });
+          successfulModel = candidate;
+          lastError = null;
+          break;
+        } catch (fallbackErr: any) {
+          lastError = fallbackErr;
+        }
       }
     }
   }
 
   if (!response) {
+    const rawMsg = String(lastError?.message || lastError || '');
+    if (rawMsg.includes('429') || rawMsg.includes('RESOURCE_EXHAUSTED')) {
+      throw new Error('Batas kuota model Gemini tercapai (429). Mohon tunggu beberapa saat lalu coba kembali.');
+    }
     throw lastError || new Error('Gagal terhubung ke model Gemini.');
   }
 

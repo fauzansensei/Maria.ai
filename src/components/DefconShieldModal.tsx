@@ -80,6 +80,7 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
   const [themeDark, setThemeDark] = useState(true);
   const [lockNotice, setLockNotice] = useState<string | null>(null);
   const [vtConfigured, setVtConfigured] = useState<boolean | null>(null);
+  const [serverSummary, setServerSummary] = useState<any>(null);
 
   // WAF State
   const [wafSummary, setWafSummary] = useState<any>(null);
@@ -102,6 +103,11 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
         .then((res) => res.json())
         .then((data) => setVtConfigured(Boolean(data.configured)))
         .catch(() => setVtConfigured(false));
+
+      fetch("/api/defcon")
+        .then((res) => res.json())
+        .then((data) => setServerSummary(data))
+        .catch(() => {});
     }
   }, [isOpen]);
 
@@ -471,8 +477,18 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
   const week = useMemo(() => {
     const today = Math.floor(Date.now() / 86_400_000);
     const days = Array.from({ length: 7 }, (_, i) => today - 6 + i);
+
+    // Aggregate server-side blocked events (DDoS, rate limit, injections) by day
+    const serverEventsByDay: Record<string, number> = {};
+    for (const ev of serverSummary?.events ?? []) {
+      if (ev.applied) {
+        const d = String(Math.floor(ev.at / 86_400_000));
+        serverEventsByDay[d] = (serverEventsByDay[d] || 0) + 1;
+      }
+    }
+
     return days.map((d) => {
-      const v = snap?.byDay[String(d)] ?? 0;
+      const v = (snap?.byDay[String(d)] ?? 0) + (serverEventsByDay[String(d)] ?? 0);
       const dateObj = new Date(d * 86_400_000);
       return {
         d,
@@ -489,16 +505,33 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
         }),
       };
     });
-  }, [snap]);
+  }, [snap, serverSummary]);
 
   const selectedDayInfo = useMemo(() => {
     const currentWeekItem = week.find((w) => w.d === selectedDay);
     const totalBlocked = currentWeekItem?.v ?? 0;
 
-    const dayLogs = (snap?.log ?? []).filter((l) => {
+    const clientDayLogs = (snap?.log ?? []).filter((l) => {
       const day = Math.floor((l.ts * 1000) / 86_400_000);
       return day === selectedDay;
     });
+
+    const serverDayLogs = (serverSummary?.events ?? [])
+      .filter((e: any) => Math.floor(e.at / 86_400_000) === selectedDay)
+      .map((e: any) => ({
+        ts: Math.floor(e.at / 1000),
+        title:
+          e.kind === "rate_abuse"
+            ? "🚨 DDoS / Flood Attack Dicegat"
+            : e.kind === "prompt_injection"
+            ? "🛡️ Injection Script Dicegat"
+            : "🛡️ Ancaman Gateway Dicegat",
+        detail: `IP ${e.source} · ${e.evidence?.join(", ") || e.reason || "Dideteksi oleh Spy Guard Gateway"}`,
+        status: "threat" as const,
+        serverEvent: e,
+      }));
+
+    const dayLogs = [...serverDayLogs, ...clientDayLogs];
 
     const dayQuarantine = (snap?.quarantine ?? []).filter((q) => {
       const day = Math.floor((q.quarantined_at * 1000) / 86_400_000);
@@ -509,11 +542,34 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
       day: selectedDay,
       label: currentWeekItem?.label || "Hari Ini",
       fullDate: currentWeekItem?.fullDate || "",
-      totalBlocked: Math.max(totalBlocked, dayQuarantine.length),
+      totalBlocked: Math.max(totalBlocked, dayQuarantine.length + serverDayLogs.length),
       dayLogs,
       dayQuarantine,
     };
-  }, [selectedDay, week, snap]);
+  }, [selectedDay, week, snap, serverSummary]);
+
+  const combinedScanLogs = useMemo(() => {
+    const clientLogs = (snap?.log ?? []).map((l) => ({
+      ts: l.ts > 1e11 ? Math.floor(l.ts / 1000) : l.ts,
+      title: l.title,
+      detail: l.detail,
+      status: l.status,
+    }));
+
+    const serverLogs = (serverSummary?.events ?? []).map((e: any) => ({
+      ts: Math.floor(e.at / 1000),
+      title:
+        e.kind === "rate_abuse"
+          ? "🚨 DDoS / Flood Attack Dicegat"
+          : e.kind === "prompt_injection"
+          ? "🛡️ Injection Script Dicegat"
+          : "🛡️ Ancaman Gateway Dicegat",
+      detail: `IP ${e.source} · ${e.evidence?.join(", ") || e.reason || "Dideteksi oleh Spy Guard Gateway"}`,
+      status: "threat" as const,
+    }));
+
+    return [...serverLogs, ...clientLogs].sort((a, b) => b.ts - a.ts);
+  }, [snap, serverSummary]);
 
   const dayCats = useMemo(() => {
     const baseCats: Record<string, { count: number; color: string; label: string }> = {
@@ -521,7 +577,7 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
       Phishing: { count: 0, color: "#f59e0b", label: "Phishing & Fraud" },
       Adware: { count: 0, color: "#0ea5e9", label: "Adware & Tracker" },
       Spyware: { count: 0, color: "#a855f7", label: "Spyware & Stealer" },
-      CryptoMiner: { count: 0, color: "#06b6d4", label: "CryptoMiner" },
+      DDoS: { count: 0, color: "#ef4444", label: "DDoS & Flood Attack" },
       Ransomware: { count: 0, color: "#dc2626", label: "Ransomware" },
     };
 
@@ -530,7 +586,7 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
       if (cat.includes("phish") || cat.includes("credential")) baseCats.Phishing.count++;
       else if (cat.includes("ad") || cat.includes("tracker")) baseCats.Adware.count++;
       else if (cat.includes("spy") || cat.includes("keylog")) baseCats.Spyware.count++;
-      else if (cat.includes("miner") || cat.includes("crypto")) baseCats.CryptoMiner.count++;
+      else if (cat.includes("ddos") || cat.includes("flood") || cat.includes("rate")) baseCats.DDoS.count++;
       else if (cat.includes("ransom") || cat.includes("locker")) baseCats.Ransomware.count++;
       else baseCats.Malware.count++;
     }
@@ -538,10 +594,10 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
     for (const l of selectedDayInfo.dayLogs) {
       if (l.status === "threat" || l.status === "removed") {
         const text = `${l.title} ${l.detail}`.toLowerCase();
-        if (text.includes("phish") || text.includes("credential") || text.includes("scam")) baseCats.Phishing.count++;
+        if (text.includes("ddos") || text.includes("flood") || text.includes("rate_abuse")) baseCats.DDoS.count++;
+        else if (text.includes("phish") || text.includes("credential") || text.includes("scam")) baseCats.Phishing.count++;
         else if (text.includes("ad") || text.includes("tracker") || text.includes("telemetry")) baseCats.Adware.count++;
         else if (text.includes("spy") || text.includes("keylog")) baseCats.Spyware.count++;
-        else if (text.includes("miner") || text.includes("crypto")) baseCats.CryptoMiner.count++;
         else if (text.includes("ransom") || text.includes("locker")) baseCats.Ransomware.count++;
         else baseCats.Malware.count++;
       }
@@ -549,7 +605,7 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
 
     const totalCount = Object.values(baseCats).reduce((sum, item) => sum + item.count, 0);
     if (selectedDayInfo.totalBlocked > 0 && totalCount === 0) {
-      baseCats.Malware.count = selectedDayInfo.totalBlocked;
+      baseCats.DDoS.count = selectedDayInfo.totalBlocked;
     }
 
     const effectiveTotal = Math.max(1, Object.values(baseCats).reduce((sum, item) => sum + item.count, 0));
@@ -566,7 +622,8 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
 
   if (!isOpen) return null;
 
-  const threats = snap?.quarantine.length ?? 0;
+  const serverThreatsCount = (serverSummary?.events ?? []).filter((e: any) => e.applied).length;
+  const threats = (snap?.quarantine.length ?? 0) + serverThreatsCount;
   const scanning = scan !== null || snap?.scanning;
   const pct =
     scan && scan.phase === "scanning" && scan.total > 0
@@ -1003,12 +1060,12 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
             </div>
 
             <div className="max-h-[220px] overflow-y-auto space-y-1.5">
-              {snap?.log.length === 0 ? (
+              {combinedScanLogs.length === 0 ? (
                 <div className={`text-xs text-center py-6 ${themeDark ? "text-[#9ca3af]" : "text-[#64748b]"}`}>
                   Belum ada riwayat aktivitas
                 </div>
               ) : (
-                snap?.log.slice(0, 40).map((l, i) => (
+                combinedScanLogs.slice(0, 50).map((l, i) => (
                   <div
                     key={i}
                     className={`flex justify-between items-center gap-2 text-xs rounded-lg p-2 ${
