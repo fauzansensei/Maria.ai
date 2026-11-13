@@ -12,7 +12,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { Message, Conversation, AiMode, MediaAttachment, VoicePersonaGender, LaunchAction } from '../types/index.ts';
-import { VOICE_PERSONAS } from '../constants.ts';
+import { VOICE_PERSONAS, PROMPT_STARTERS } from '../constants.ts';
 import { MessageItem } from './MessageItem.tsx';
 import { ChatInput } from './ChatInput.tsx';
 import { MariaLogo } from './MariaLogo.tsx';
@@ -20,6 +20,8 @@ import { speechService, SpeechState } from '../lib/speechService.ts';
 import { DefconLevel } from './DefconShieldModal.tsx';
 import { defconService, DefconState } from '../lib/defconProtectionService.ts';
 import { guardianEngine, type Snapshot } from '../lib/guardian/guardianEngine.ts';
+import { useTheme } from '../context/ThemeContext.tsx';
+import { useLanguage } from '../context/LanguageContext.tsx';
 
 interface ChatAreaProps {
   activeConversation: Conversation | null;
@@ -42,6 +44,7 @@ interface ChatAreaProps {
   voicePersona?: VoicePersonaGender;
   onSelectVoicePersona?: (p: VoicePersonaGender) => void;
   onEditMessage?: (messageId: string, newContent: string, resend: boolean) => void;
+  onRegenerateMessage?: (messageId: string) => void;
   userPhoto?: string | null;
   userName?: string | null;
   activeConnectingAction?: LaunchAction | null;
@@ -51,6 +54,11 @@ interface ChatAreaProps {
   onOpenDefcon?: () => void;
   isPlus?: boolean;
   onOpenPlusModal?: () => void;
+  enterToSend?: boolean;
+  voiceLanguage?: 'auto' | 'id-ID' | 'en-US';
+  webSearchDefault?: boolean;
+  homepageSuggestions?: boolean;
+  temporaryChat?: boolean;
 }
 
 interface NotificationItem {
@@ -60,7 +68,7 @@ interface NotificationItem {
   read: boolean;
 }
 
-export const ChatArea: React.FC<ChatAreaProps> = ({
+export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
   activeConversation,
   messages,
   isLoading,
@@ -75,6 +83,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   voicePersona = 'wanita',
   onSelectVoicePersona,
   onEditMessage,
+  onRegenerateMessage,
   userPhoto,
   userName,
   activeConnectingAction,
@@ -84,7 +93,14 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   onOpenDefcon,
   isPlus = false,
   onOpenPlusModal,
+  enterToSend = true,
+  voiceLanguage = 'auto',
+  webSearchDefault = true,
+  homepageSuggestions = true,
+  temporaryChat = false,
 }) => {
+  const { isDark } = useTheme();
+  const { isEn } = useLanguage();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [speechState, setSpeechState] = useState<SpeechState>(() => speechService.getState());
   const [showNotifications, setShowNotifications] = useState(false);
@@ -114,9 +130,21 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
   const [loadedInputText, setLoadedInputText] = useState('');
 
+  const handleLoadToInput = useCallback((txt: string) => {
+    setLoadedInputText(txt);
+  }, []);
+
   const handleClearLoadedText = useCallback(() => {
     setLoadedInputText('');
   }, []);
+
+  const handleOpenImageStudioEmpty = useCallback(() => {
+    onOpenImageStudio?.();
+  }, [onOpenImageStudio]);
+
+  const handleOpenDefconModal = useCallback(() => {
+    onOpenDefcon?.();
+  }, [onOpenDefcon]);
 
   useEffect(() => {
     return speechService.subscribe((state) => {
@@ -132,20 +160,20 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     return [
       {
         id: 'notif-1',
-        title: 'Cloud Firestore aktif & tersinkronisasi',
-        time: 'Baru saja',
+        title: isEn ? 'Cloud Firestore active & synced' : 'Cloud Firestore aktif & tersinkronisasi',
+        time: isEn ? 'Just now' : 'Baru saja',
         read: false,
       },
       {
         id: 'notif-2',
-        title: 'Model Gemini 3.5 Flash & 6 Karakter Suara AI aktif',
-        time: '5m lalu',
+        title: isEn ? 'Gemini 3.8 Flash & 6 AI Voice Personas active' : 'Model Gemini 3.5 Flash & 6 Karakter Suara AI aktif',
+        time: isEn ? '5m ago' : '5m lalu',
         read: false,
       },
       {
         id: 'notif-3',
-        title: 'Sistem DEFCON 5 Shield mengamankan koneksi',
-        time: '1j lalu',
+        title: isEn ? 'DEFCON 5 Shield securing connection' : 'Sistem DEFCON 5 Shield mengamankan koneksi',
+        time: isEn ? '1h ago' : '1j lalu',
         read: true,
       },
     ];
@@ -170,18 +198,45 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
   const currentPersona = VOICE_PERSONAS.find((p) => p.id === voicePersona) || VOICE_PERSONAS[0];
 
+  const localizeNotif = (n: NotificationItem) => {
+    if (!isEn) return n;
+    if (n.id === 'notif-1') return { ...n, title: 'Cloud Firestore active & synced', time: 'Just now' };
+    if (n.id === 'notif-2') return { ...n, title: 'Gemini 3.8 Flash & 6 AI Voice Personas active', time: '5m ago' };
+    if (n.id === 'notif-3') return { ...n, title: 'DEFCON 5 Shield securing connection', time: '1h ago' };
+    return n;
+  };
+
+  const enStarters: Record<string, { title: string; text: string }> = {
+    'starter-1': {
+      title: 'Professional Email',
+      text: 'Please help me draft a polite, professional customer complaint response email that offers a product replacement solution.',
+    },
+    'starter-2': {
+      title: 'Business Idea Analysis',
+      text: 'I have a zero-waste eco-friendly coffee shop business idea. Please provide a concise SWOT analysis and innovative digital marketing strategy.',
+    },
+    'starter-3': {
+      title: 'Grammar Polish',
+      text: 'Please rewrite this paragraph so it sounds polished, professional, and persuasive for my portfolio: "I really love learning new things and work great in a team."',
+    },
+    'starter-4': {
+      title: '30-Day Study Plan',
+      text: 'I want to learn project management fundamentals and Agile methodology in 30 days as a beginner. Please create a clean weekly study syllabus.',
+    },
+  };
+
   return (
-    <div className="flex-1 flex flex-col h-full bg-white text-gray-900 relative overflow-hidden select-none">
+    <div className={`flex-1 flex flex-col h-full relative overflow-hidden select-none ${isDark ? 'bg-[#0e0f12] text-slate-100' : 'bg-white text-gray-900'}`}>
       {/* Top Bar Header (Sticky, always visible on mobile & desktop) */}
-      <header className="sticky top-0 h-14 px-3 sm:px-4 border-b border-gray-100 bg-white/95 backdrop-blur-md flex items-center justify-between shrink-0 z-30 select-none shadow-2xs">
+      <header className={`sticky top-0 h-14 px-3 sm:px-4 border-b flex items-center justify-between shrink-0 z-30 select-none shadow-2xs ${isDark ? 'border-[#1e2028] bg-[#0e0f12]' : 'border-gray-100 bg-white'}`}>
         {/* Left: Hamburger Button (only shown when sidebar is closed/collapsed) + Maria AI Logo & PLUS Badge */}
         <div className="flex items-center gap-2 sm:gap-2.5">
           {!isSidebarOpen && (
             <button
               onClick={onToggleSidebar}
-              title="Buka Menu"
-              aria-label="Buka Menu"
-              className="w-9 h-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-800 hover:bg-gray-50 active:scale-95 transition-all shadow-xs shrink-0 animate-in fade-in duration-150"
+              title={isEn ? 'Open Menu' : 'Buka Menu'}
+              aria-label={isEn ? 'Open Menu' : 'Buka Menu'}
+              className={`w-9 h-9 rounded-xl border flex items-center justify-center active:scale-95 shadow-xs shrink-0 ${isDark ? 'border-[#262834] bg-[#171820] text-slate-200 hover:bg-[#1f212b]' : 'border-gray-200 bg-white text-gray-800 hover:bg-gray-50'}`}
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -190,7 +245,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           <div className="flex items-center gap-2">
             <MariaLogo size="sm" withOnlineDot={true} />
             <div className="flex items-center gap-2">
-              <span className="font-bold text-[#0f172a] text-sm sm:text-base tracking-tight">
+              <span className={`font-bold text-sm sm:text-base tracking-tight ${isDark ? 'text-white' : 'text-[#0f172a]'}`}>
                 Maria AI
               </span>
               {isPlus ? (
@@ -202,10 +257,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 <button
                   type="button"
                   onClick={onOpenPlusModal}
-                  title="Tingkatkan ke Maria PLUS untuk membuka fitur berbayar"
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50/80 hover:bg-indigo-100/90 border border-indigo-200 text-indigo-700 text-[10px] font-bold tracking-tight transition-colors cursor-pointer"
+                  title={isEn ? 'Upgrade to Maria PLUS to unlock pro features' : 'Tingkatkan ke Maria PLUS untuk membuka fitur berbayar'}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50/80 dark:bg-indigo-500/15 hover:bg-indigo-100/90 dark:hover:bg-indigo-500/25 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold tracking-tight cursor-pointer"
                 >
-                  <Sparkles className="w-2.5 h-2.5 text-indigo-600 fill-indigo-600" />
+                  <Sparkles className="w-2.5 h-2.5 text-indigo-600 dark:text-indigo-400 fill-current" />
                   <span>Upgrade</span>
                 </button>
               )}
@@ -213,22 +268,27 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           </div>
         </div>
 
-        {/* Center: Conversation Title if active (desktop only) */}
-        {activeConversation && (
-          <div className="hidden md:flex items-center gap-2">
-            <span className="text-xs font-medium text-gray-500 truncate max-w-xs">
+        {/* Center: Conversation Title or Temporary Chat badge */}
+        <div className="hidden md:flex items-center gap-2">
+          {temporaryChat && (
+            <span className="px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 text-amber-700 dark:text-amber-300 text-[10px] font-semibold">
+              {isEn ? 'Temporary Chat' : 'Obrolan Sementara'}
+            </span>
+          )}
+          {activeConversation && !temporaryChat && (
+            <span className={`text-xs font-medium truncate max-w-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
               {activeConversation.title}
             </span>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Right: DEFCON 5 Status Shield Badge & Notifications Bell with conditional badge */}
         <div className="flex items-center gap-2">
           {/* DEFCON Shield Badge Button */}
           <button
             onClick={() => onOpenDefcon?.()}
-            title="Buka Sistem Keamanan Maria Spy Guard (Anti-Malware, Spyware & WAF)"
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95 ${
+            title={isEn ? 'Open Maria Spy Guard Security System (Anti-Malware, Spyware & WAF)' : 'Buka Sistem Keamanan Maria Spy Guard (Anti-Malware, Spyware & WAF)'}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold shadow-xs transition-colors duration-100 cursor-pointer active:scale-95 ${
               defconLevel === 5
                 ? 'border-[#a7f3d0] bg-[#ecfdf5] text-[#059669] hover:bg-emerald-100/80 hover:border-emerald-300'
                 : defconLevel === 4
@@ -257,8 +317,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           <div className="relative">
             <button
               onClick={() => setShowNotifications((prev) => !prev)}
-              title="Notifikasi"
-              className="w-9 h-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-700 hover:bg-gray-50 transition-colors shadow-xs relative"
+              title={isEn ? 'Notifications' : 'Notifikasi'}
+              className={`w-9 h-9 rounded-xl border flex items-center justify-center shadow-xs relative ${isDark ? 'border-[#262834] bg-[#171820] text-slate-200 hover:bg-[#1f212b]' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
             >
               <Bell className="w-4 h-4" />
               {unreadCount > 0 && (
@@ -270,29 +330,31 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
             {/* Notifications Popover */}
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-2xl shadow-2xl p-3 z-50 text-xs animate-in fade-in zoom-in-95">
-                <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-                  <span className="font-bold text-gray-900 flex items-center gap-1.5">
-                    <Bell className="w-3.5 h-3.5 text-emerald-600" /> Notifikasi
+              <div className={`absolute right-0 mt-2 w-72 border rounded-2xl shadow-2xl p-3 z-50 text-xs ${isDark ? 'bg-[#181a22] border-[#2a2d3a]' : 'bg-white border-gray-200'}`}>
+                <div className={`flex items-center justify-between pb-2 border-b ${isDark ? 'border-[#262834]' : 'border-gray-100'}`}>
+                  <span className={`font-bold flex items-center gap-1.5 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    <Bell className="w-3.5 h-3.5 text-emerald-600" /> {isEn ? 'Notifications' : 'Notifikasi'}
                   </span>
                   {unreadCount > 0 && (
                     <button
                       onClick={markAllRead}
                       className="text-[10px] text-emerald-600 hover:underline"
                     >
-                      Tandai dibaca
+                      {isEn ? 'Mark all read' : 'Tandai dibaca'}
                     </button>
                   )}
                 </div>
 
                 <div className="space-y-2 pt-2 max-h-56 overflow-y-auto">
-                  {notifications.map((n) => (
+                  {notifications.map((rawN) => {
+                    const n = localizeNotif(rawN);
+                    return (
                     <div
                       key={n.id}
-                      className={`p-2 rounded-xl border transition-colors ${
+                      className={`p-2 rounded-xl border ${
                         n.read
-                          ? 'bg-gray-50 border-transparent text-gray-400'
-                          : 'bg-emerald-50/60 border-emerald-100 text-gray-800'
+                          ? isDark ? 'bg-[#12131a] border-transparent text-slate-500' : 'bg-gray-50 border-transparent text-gray-400'
+                          : isDark ? 'bg-emerald-950/30 border-emerald-500/20 text-slate-100' : 'bg-emerald-50/60 border-emerald-100 text-gray-800'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-1">
@@ -305,7 +367,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                         {n.time}
                       </span>
                     </div>
-                  ))}
+                  );})}
                 </div>
               </div>
             )}
@@ -317,20 +379,39 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
         {messages.length === 0 ? (
           /* Empty State Hero: Exact match to Image 2 */
-          <div className="flex-1 flex flex-col items-center justify-center px-4 -mt-10 sm:-mt-16 animate-in fade-in duration-300 select-none">
+          <div className="flex-1 flex flex-col items-center justify-center px-4 -mt-10 sm:-mt-16 select-none">
             {/* Centered Maria Squircle Logo */}
             <div className="mb-6">
               <MariaLogo size="hero" glow={false} />
             </div>
 
-            {/* Title: Dari mana kita harus mulai? (Exact match to Image 2) */}
-            <h1 className="text-xl sm:text-2xl font-bold text-[#0f172a] tracking-tight text-center">
-              Dari mana kita harus mulai?
+            {/* Title: Dari mana kita harus mulai? */}
+            <h1 className={`text-xl sm:text-2xl font-bold tracking-tight text-center ${isDark ? 'text-white' : 'text-[#0f172a]'}`}>
+              {isEn ? 'Where should we start?' : 'Dari mana kita harus mulai?'}
             </h1>
+
+            {homepageSuggestions && (
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2 max-w-xl">
+                {PROMPT_STARTERS.map((starter) => {
+                  const sTitle = isEn && enStarters[starter.id] ? enStarters[starter.id].title : starter.title;
+                  const sText = isEn && enStarters[starter.id] ? enStarters[starter.id].text : starter.text;
+                  return (
+                  <button
+                    key={starter.id}
+                    type="button"
+                    onClick={() => onSendMessage(sText, activeMode, undefined, undefined, webSearchDefault)}
+                    className={`px-3 py-1.5 rounded-full border text-xs font-medium cursor-pointer ${isDark ? 'bg-[#171920] hover:bg-[#1f222b] border-[#2a2d3a] text-slate-200' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
+                  >
+                    {sTitle}
+                  </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         ) : (
-          /* Message Stream (Neat independent bubbles with generous bottom padding for typewriter text) */
-          <div className="max-w-4xl mx-auto w-full pt-4 pb-28 sm:pb-36 px-2 sm:px-4 space-y-3">
+          /* Message Stream */
+          <div className="max-w-4xl mx-auto w-full pt-4 pb-28 sm:pb-36 px-1 sm:px-4 space-y-2">
             {messages.map((message) => (
               <MessageItem
                 key={message.id}
@@ -339,24 +420,27 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 userName={userName}
                 speechSpeed={speechSpeed}
                 onEditMessage={onEditMessage}
-                onLoadToInput={(txt) => setLoadedInputText(txt)}
+                onRegenerateMessage={onRegenerateMessage}
+                onLoadToInput={handleLoadToInput}
                 onOpenImageStudio={onOpenImageStudio}
               />
             ))}
 
             {/* Loading Indicator */}
             {isLoading && (
-              <div className="py-4 px-6 flex items-center gap-3 animate-in fade-in">
+              <div className="py-3 px-4 sm:px-6 flex items-center gap-3 animate-in fade-in">
                 <MariaLogo size="sm" />
                 {activeConnectingAction ? (
-                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#1e2330] border border-slate-700 text-xs text-white shadow-sm">
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-[#1e2330] border border-slate-700 text-xs text-white shadow-sm">
                     <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping shrink-0" />
                     <span className="font-medium">{activeConnectingAction.statusText}...</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white dark:bg-[#0e172e] border border-blue-200/80 dark:border-[#1e2d4d] text-xs text-blue-900 dark:text-blue-200 shadow-sm">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping" />
-                    <span className="font-medium">Maria sedang mencari & merumuskan jawaban...</span>
+                  <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
+                    <span className="font-medium">
+                      {isEn ? 'Maria is thinking & formulating a response...' : 'Maria sedang berpikir & merumuskan jawaban...'}
+                    </span>
                   </div>
                 )}
               </div>
@@ -367,10 +451,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         )}
       </div>
 
-
-
-      {/* Bottom Chat Input Dock (Pure White Background) */}
-      <div className="shrink-0 pt-2 pb-2 bg-white border-t border-slate-200 shadow-xs">
+      {/* Bottom Chat Input Dock */}
+      <div className={`shrink-0 pt-2 pb-2 border-t shadow-xs ${isDark ? 'bg-[#0e0f12] border-[#1e2028]' : 'bg-white border-slate-200'}`}>
         <ChatInput
           onSendMessage={onSendMessage}
           isLoading={isLoading}
@@ -379,14 +461,17 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           onOpenScienceScout={onOpenScienceScout}
           loadedText={loadedInputText}
           onClearLoadedText={handleClearLoadedText}
-          onOpenImageStudio={() => onOpenImageStudio?.()}
+          onOpenImageStudio={handleOpenImageStudioEmpty}
           onOpenMusicVoice={onOpenMusicVoice}
           onOpenCanvasCode={onOpenCanvasCode}
-          onOpenDefconModal={() => onOpenDefcon?.()}
+          onOpenDefconModal={handleOpenDefconModal}
           isPlus={isPlus}
           onOpenPlusModal={onOpenPlusModal}
+          enterToSend={enterToSend}
+          voiceLanguage={voiceLanguage}
+          webSearchDefault={webSearchDefault}
         />
       </div>
     </div>
   );
-};
+});

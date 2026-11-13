@@ -3,6 +3,7 @@ import {
   detectBadUpload,
   detectBadUrls,
   detectFlood,
+  detectGlobalBurst,
   detectTokenDrain,
   detectBotSignatures,
   detectPromptInjection,
@@ -61,7 +62,7 @@ export const clientIp = (req: Request): string => {
     return cfIp.trim();
   }
 
-  // 2. Vercel edge header
+  // 2. Vercel edge header (tamper-proof)
   const vercelForwarded = req.headers['x-vercel-forwarded-for'];
   if (typeof vercelForwarded === 'string' && vercelForwarded.trim()) {
     const parts = vercelForwarded.split(',').map((p) => p.trim()).filter(Boolean);
@@ -73,22 +74,22 @@ export const clientIp = (req: Request): string => {
     return realIp.trim();
   }
 
-  // 3. X-Forwarded-For header: first entry is client IP
+  // 3. Physical TCP socket address if available and non-loopback
+  const socketAddress = req.socket?.remoteAddress?.replace(/^::ffff:/, '');
+  if (socketAddress && socketAddress !== '127.0.0.1' && socketAddress !== '::1') {
+    return socketAddress;
+  }
+
+  // 4. X-Forwarded-For header: prefer rightmost proxy-appended entry over leftmost spoofable header
   const rawXff = req.headers['x-forwarded-for'];
   if (typeof rawXff === 'string' && rawXff.trim()) {
     const list = rawXff.split(',').map((s) => s.trim()).filter(Boolean);
     if (list.length > 0) {
-      return list[0];
+      return list[list.length - 1];
     }
   }
 
-  // 4. Physical TCP socket address
-  const socketAddress = req.socket?.remoteAddress;
-  if (socketAddress) {
-    return socketAddress.replace(/^::ffff:/, '');
-  }
-
-  return 'unknown';
+  return socketAddress || 'unknown';
 };
 
 /**
@@ -405,18 +406,37 @@ export function defconAntiDdosMiddleware(req: Request, res: Response, next: Next
   const mode = getMode();
   if (mode === 'off') return next();
 
-  // NEVER block normal page navigation, HTML, CSS, JS, fonts, images, or Vite modules!
+  // Never block static frontend bundle assets (JS, CSS, fonts, images, media)
   const url = req.originalUrl || req.url || '';
-  if (!url.startsWith('/api') && req.method === 'GET') {
+  const pathname = url.split('?')[0];
+  const isStaticAsset =
+    pathname.startsWith('/assets/') ||
+    pathname.startsWith('/@') ||
+    pathname.startsWith('/src/') ||
+    pathname.startsWith('/node_modules/') ||
+    /\.(js|mjs|css|map|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|eot|mp4|webm|mp3|wav)$/i.test(pathname);
+
+  if (isStaticAsset && req.method === 'GET') {
+    return next();
+  }
+
+  // Never rate-limit Spy Guard / health status polling endpoints
+  if (
+    pathname === '/api/health' ||
+    pathname === '/api/defcon' ||
+    pathname === '/api/waf/summary' ||
+    pathname === '/api/spyguard/status'
+  ) {
     return next();
   }
 
   const source = clientIp(req);
-  if (ALLOW_IPS.has(source)) return next();
+  const isExplicitTest = Boolean(req.headers['x-defcon-test'] || url.includes('/defcon/test'));
+  const isAllowlisted = !isExplicitTest && ALLOW_IPS.has(source);
 
-  // 1. Instant check if IP is actively banned
+  // 1. Instant check if IP is actively banned (skip temp IP ban for local owner unless explicit test)
   getBlockInfo(source).then(async (blockInfo) => {
-    if (blockInfo.blocked && blockInfo.remainingSec > 0) {
+    if (!isAllowlisted && blockInfo.blocked && blockInfo.remainingSec > 0) {
       res.setHeader('Retry-After', blockInfo.remainingSec);
       return sendSafeJson(res, 403, {
         error: 'ip_banned',
@@ -428,27 +448,46 @@ export function defconAntiDdosMiddleware(req: Request, res: Response, next: Next
       });
     }
 
-    // 2. Automated bot script flood inspection (e.g. python-requests flood, curl loop)
+    // 2. Automated bot script flood inspection (e.g. python-requests flood, bare Mozilla/5.0 spoofing)
+    // Checked even for allowlisted sources so automated script floods are always caught
     const botVerdict = detectBotSignatures(req.headers, source);
     if (botVerdict && mode === 'enforce') {
-      // BAN IP for 300 seconds
-      await blockTemp(source, 300, 'automated_bot_ban');
+      if (!isAllowlisted) {
+        await blockTemp(source, 300, 'automated_bot_ban');
+      }
       await logEvent(botVerdict, 'block_temp', true, mode, 'automated_script_bot_ban');
       res.setHeader('Retry-After', 300);
       return sendSafeJson(res, 429, {
         error: 'rate_abuse',
         status: 429,
         banned: true,
-        message: `DEFCON 5 Shield: Skrip/bot otomatis terdeteksi (${botVerdict.evidence.join(', ')}). Alamat IP ${source} LANGSUNG DIBLOKIR selama 300 detik agar tidak dapat mengirim request/berkas berbahaya lagi.`,
+        message: `DEFCON 5 Shield: Skrip/bot otomatis terdeteksi (${botVerdict.evidence.join(', ')}). Permintaan DIBLOKIR.`,
         retryAfter: 300,
       });
     }
 
-    // 3. Strict Rate Limit Flood Check on API endpoints:
-    // Max 30 requests in 5 seconds (burst)
+    // 3. Distributed/spoofed-XFF global burst check (caught even if proxied via loopback)
+    const globalBurstVerdict = detectGlobalBurst(45, 5000);
+    if (globalBurstVerdict && mode === 'enforce') {
+      if (!isAllowlisted) {
+        await blockTemp(source, 300, 'rate_limit_exceeded_ban');
+      }
+      await logEvent(globalBurstVerdict, 'block_temp', true, mode, 'distributed_flood_ban');
+      res.setHeader('Retry-After', 300);
+      return sendSafeJson(res, 429, {
+        error: 'rate_abuse',
+        status: 429,
+        banned: true,
+        message: `DEFCON 5 Shield: Lonjakan DDoS terdistribusi terdeteksi (${globalBurstVerdict.evidence.join(', ')}). Akses DIBLOKIR sementara.`,
+        retryAfter: 300,
+      });
+    }
+
+    if (isAllowlisted) return next();
+
+    // 4. Strict Per-IP Rate Limit Flood Check
     const floodVerdict = detectFlood(source, 30, 5000);
     if (floodVerdict && mode === 'enforce') {
-      // Rate limit breached: IMMEDIATELY BAN THE IP FOR 300 SECONDS!
       await blockTemp(source, 300, 'rate_limit_exceeded_ban');
       await logEvent(floodVerdict, 'block_temp', true, mode, 'rate_limit_flood_ip_ban');
       res.setHeader('Retry-After', 300);
@@ -456,7 +495,7 @@ export function defconAntiDdosMiddleware(req: Request, res: Response, next: Next
         error: 'rate_abuse',
         status: 429,
         banned: true,
-        message: `DEFCON 5 Shield: Alamat IP Anda (${source}) melampaui batasan rate limit (>${floodVerdict.evidence.join(', ')}). Alamat IP LANGSUNG DIBLOKIR selama 300 detik agar tidak dapat mengirim berkas berbahaya lagi.`,
+        message: `DEFCON 5 Shield: Serangan flood terdeteksi (${floodVerdict.evidence.join(', ')}). Alamat IP ${source} LANGSUNG DIBLOKIR selama 300 detik.`,
         retryAfter: 300,
       });
     }
@@ -541,7 +580,7 @@ export async function getDefconSummary() {
   const level = await currentLevel();
   const mode = getMode();
   const stats = defconStore.getStats();
-  const events = defconStore.getEvents(30);
+  const events = defconStore.getEvents(100);
 
   return {
     level,

@@ -22,6 +22,7 @@ import { Conversation } from '../types/index.ts';
 import { useAuth } from '../context/AuthContext.tsx';
 import { MariaLogo } from './MariaLogo.tsx';
 import { ChatPopover } from './ChatPopover.tsx';
+import { useLanguage } from '../context/LanguageContext.tsx';
 
 // Official Google 4-color G icon (Matches Image 3)
 const GoogleIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
@@ -65,7 +66,7 @@ interface SidebarProps {
   onOpenPlusModal?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({
+export const Sidebar: React.FC<SidebarProps> = React.memo(({
   conversations,
   activeConvId,
   onSelectConversation,
@@ -85,7 +86,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenPlusModal,
 }) => {
   const { user, signIn, signOut } = useAuth();
+  const { isEn } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
+  const [copiedToast, setCopiedToast] = useState(false);
 
   // Floating Popover State
   const [popoverTarget, setPopoverTarget] = useState<{
@@ -146,14 +149,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (navigator.share) {
       navigator.share({
         title: conv.title,
-        text: `Lihat percakapan ini di Maria AI: "${conv.title}"`,
+        text: isEn ? `View this chat on Maria AI: "${conv.title}"` : `Lihat percakapan ini di Maria AI: "${conv.title}"`,
         url: window.location.href,
       }).catch(() => {});
     } else {
-      navigator.clipboard.writeText(
-        `Maria AI Percakapan: "${conv.title}"\n${window.location.href}`
-      );
-      alert('Tautan percakapan berhasil disalin ke papan klip!');
+      navigator.clipboard?.writeText(
+        `${isEn ? 'Maria AI Chat' : 'Maria AI Percakapan'}: "${conv.title}"\n${window.location.href}`
+      ).catch(() => {});
+      setCopiedToast(true);
+      setTimeout(() => setCopiedToast(false), 2400);
     }
   };
 
@@ -163,14 +167,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {isOpen && (
         <div
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px] transition-opacity animate-in fade-in duration-200"
+          className="fixed inset-0 z-40 bg-black/55 animate-in fade-in duration-100"
         />
       )}
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 bg-[#0a1128] text-slate-200 border-r border-[#1e293b] flex flex-col transition-transform duration-300 ease-in-out select-none shadow-2xl ${
-          isOpen ? 'translate-x-0 w-72 sm:w-80' : '-translate-x-full w-72 sm:w-80'
+        className={`fixed inset-y-0 left-0 z-50 w-72 sm:w-80 bg-[#0a1128] text-slate-200 border-r border-[#1e293b] flex flex-col transition-transform duration-150 ease-out will-change-transform select-none shadow-2xl ${
+          isOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
         }`}
       >
         {/* Header Atas: [M] Maria AI + Arrow Left */}
@@ -186,12 +190,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <button
             onClick={onClose}
-            title="Tutup Menu"
+            title={isEn ? 'Close Menu' : 'Tutup Menu'}
             className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-[#15203b] transition-colors"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
         </div>
+
+        {copiedToast && (
+          <div className="mx-3.5 mt-2 px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[11px] font-medium flex items-center gap-1.5">
+            <Check className="w-3.5 h-3.5 shrink-0" />
+            <span>{isEn ? 'Chat link copied to clipboard!' : 'Tautan percakapan disalin ke papan klip!'}</span>
+          </div>
+        )}
 
         {/* Action Button: Navy Blue "New Chat" (Matches Sky Host) */}
         <div className="p-3.5 space-y-2 bg-[#0a1128]">
@@ -201,7 +212,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onNavigateView('chat');
               onClose();
             }}
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs tracking-wide shadow-lg shadow-blue-900/30 transition-all duration-200 active:scale-[0.98]"
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs tracking-wide shadow-lg shadow-blue-900/30 transition-colors duration-100 active:scale-[0.98]"
           >
             <MessageSquarePlus className="w-4 h-4" />
             <span>New Chat</span>
@@ -214,7 +225,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onNavigateView('library');
                 onClose();
               }}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors duration-100 ${
                 activeView === 'library'
                   ? 'bg-[#15223e] text-blue-400 font-semibold border border-blue-500/30'
                   : 'text-slate-300 hover:bg-[#121c35] hover:text-white'
@@ -229,7 +240,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onNavigateView('discover');
                 onClose();
               }}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors duration-100 ${
                 activeView === 'discover'
                   ? 'bg-[#15223e] text-sky-400 font-semibold border border-blue-500/30'
                   : 'text-slate-300 hover:bg-[#121c35] hover:text-white'
@@ -244,14 +255,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onOpenImageStudio?.();
                 onClose();
               }}
-              className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-[#121c35] hover:text-white transition-all group"
+              className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-[#121c35] hover:text-white transition-colors duration-100 group"
             >
               <div className="flex items-center gap-2.5">
                 <Wand2 className="w-4 h-4 text-purple-400 group-hover:rotate-12 transition-transform" />
-                <span>Studio Gambar AI</span>
+                <span>{isEn ? 'AI Image Studio' : 'Studio Gambar AI'}</span>
               </div>
               <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-900/60 text-purple-300 font-semibold border border-purple-700/50">
-                Baru
+                {isEn ? 'New' : 'Baru'}
               </span>
             </button>
 
@@ -260,10 +271,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onOpenSettings();
                 onClose();
               }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-[#121c35] hover:text-white transition-all"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-[#121c35] hover:text-white transition-colors duration-100"
             >
               <Settings className="w-4 h-4 text-slate-400" />
-              <span>Pengaturan</span>
+              <span>{isEn ? 'Settings' : 'Pengaturan'}</span>
             </button>
           </div>
         </div>
@@ -271,7 +282,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Riwayat Chat Header & Search */}
         <div className="px-3.5 pb-2 space-y-2">
           <div className="flex items-center justify-between text-[11px] font-bold tracking-wider text-slate-400 uppercase pt-2">
-            <span>RIWAYAT CHAT</span>
+            <span>{isEn ? 'CHAT HISTORY' : 'RIWAYAT CHAT'}</span>
             <span className="text-[10px] bg-[#121c35] px-2 py-0.5 rounded-full text-blue-300 border border-[#1e2d4d]">
               {conversations.length}
             </span>
@@ -284,7 +295,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari riwayat percakapan..."
+              placeholder={isEn ? 'Search chat history...' : 'Cari riwayat percakapan...'}
               className="w-full pl-9 pr-7 py-2 bg-[#0e172e] border border-[#1e2d4d] rounded-xl text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all"
             />
             {searchQuery && (
@@ -303,8 +314,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {filteredConversations.length === 0 ? (
             <div className="py-12 text-center text-xs text-slate-400 px-4 leading-relaxed">
               {searchQuery
-                ? 'Tidak ada riwayat percakapan yang cocok dengan pencarian.'
-                : 'Belum ada obrolan. Mulai percakapan pertama Anda!'}
+                ? (isEn ? 'No chat history matches your search.' : 'Tidak ada riwayat percakapan yang cocok dengan pencarian.')
+                : (isEn ? 'No chats yet. Start your first conversation!' : 'Belum ada obrolan. Mulai percakapan pertama Anda!')}
             </div>
           ) : (
             filteredConversations.map((conv) => {
@@ -319,7 +330,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onNavigateView('chat');
                     onClose();
                   }}
-                  className={`group relative flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl cursor-pointer text-xs transition-all ${
+                  className={`group relative flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl cursor-pointer text-xs transition-colors duration-100 ${
                     isActive
                       ? 'bg-[#15223e] text-white font-medium border border-blue-500/40 shadow-xs'
                       : 'text-slate-300 hover:bg-[#0e172e] hover:text-white'
@@ -372,14 +383,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-bold text-[#d8b4fe] flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-[#c084fc]" />
-                  MARIA PLUS Aktif
+                  {isEn ? 'MARIA PLUS Active' : 'MARIA PLUS Aktif'}
                 </span>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#7c3aed] text-white">
                   VIP
                 </span>
               </div>
               <p className="text-[11px] text-purple-200/80 leading-tight">
-                Akses tanpa batas, model Gemini Pro & fitur eksklusif aktif. Klik untuk kelola langganan.
+                {isEn ? 'Unlimited access, Gemini Pro models & exclusive features active. Click to manage.' : 'Akses tanpa batas, model Gemini Pro & fitur eksklusif aktif. Klik untuk kelola langganan.'}
               </p>
             </div>
           ) : (
@@ -390,21 +401,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-bold text-white flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-violet-400 group-hover:rotate-12 transition-transform" />
-                  Upgrade ke Maria PLUS
+                  {isEn ? 'Upgrade to Maria PLUS' : 'Upgrade ke Maria PLUS'}
                 </span>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-600/30 text-violet-300 border border-violet-500/30">
-                  BARU
+                  {isEn ? 'NEW' : 'BARU'}
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 leading-tight mb-2">
-                Buka Deep Research, Studio Musik & Suara, Gambar 4K, dan VIP speed.
+                {isEn ? 'Unlock Deep Research, Music & Voice Studio, 4K Images, and VIP speed.' : 'Buka Deep Research, Studio Musik & Suara, Gambar 4K, dan VIP speed.'}
               </p>
               <button
                 type="button"
                 className="w-full py-1.5 px-2.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-medium text-[11px] flex items-center justify-center gap-1.5 shadow-sm transition-all"
               >
                 <Sparkles className="w-3 h-3 text-amber-300" />
-                Lihat Paket Langganan
+                {isEn ? 'View Plans' : 'Lihat Paket Langganan'}
               </button>
             </div>
           )}
@@ -462,7 +473,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {showAccountMenu && (
                 <div className="absolute bottom-full left-0 right-0 mb-2 bg-[#0e172e] border border-[#1e2d4d] rounded-xl shadow-2xl p-1.5 text-xs text-slate-200 space-y-1 z-50">
                   <div className="px-3 py-1.5 text-[11px] text-slate-400 border-b border-[#1b2540]">
-                    Status: <span className="text-blue-400 font-medium">Cloud Firestore Terhubung</span>
+                    Status: <span className="text-blue-400 font-medium">{isEn ? 'Cloud Firestore Connected' : 'Cloud Firestore Terhubung'}</span>
                   </div>
                   <button
                     onClick={() => {
@@ -472,7 +483,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#15223e] text-left transition-colors"
                   >
                     <Settings className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Pengaturan Akun</span>
+                    <span>{isEn ? 'Account Settings' : 'Pengaturan Akun'}</span>
                   </button>
                   <button
                     onClick={() => {
@@ -482,7 +493,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-rose-500/15 text-rose-400 text-left transition-colors"
                   >
                     <LogOut className="w-3.5 h-3.5" />
-                    <span>Keluar Akun</span>
+                    <span>{isEn ? 'Sign Out' : 'Keluar Akun'}</span>
                   </button>
                 </div>
               )}
@@ -492,11 +503,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Legal and Security Footer Links */}
           <div className="text-[10px] text-slate-400 text-center pt-1">
             <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-slate-500 text-[10px]">
-              <a href="/help.html" className="hover:text-slate-300 transition-colors">Bantuan</a>
+              <a href="/help.html" className="hover:text-slate-300 transition-colors">{isEn ? 'Help' : 'Bantuan'}</a>
               <span>•</span>
-              <a href="/privacy.html" className="hover:text-slate-300 transition-colors">Privasi</a>
+              <a href="/privacy.html" className="hover:text-slate-300 transition-colors">{isEn ? 'Privacy' : 'Privasi'}</a>
               <span>•</span>
-              <a href="/terms.html" className="hover:text-slate-300 transition-colors">Ketentuan</a>
+              <a href="/terms.html" className="hover:text-slate-300 transition-colors">{isEn ? 'Terms' : 'Ketentuan'}</a>
               <span>•</span>
               <a
                 href="/cookies.html"
@@ -504,7 +515,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 rel="noopener noreferrer"
                 className="hover:text-slate-300 transition-colors"
               >
-                Cookie
+                {isEn ? 'Cookies' : 'Cookie'}
               </a>
             </div>
           </div>
@@ -533,4 +544,4 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
     </>
   );
-};
+});

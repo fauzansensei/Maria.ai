@@ -181,7 +181,7 @@ export const ImageStudioModal: React.FC<ImageStudioModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/80 animate-in fade-in duration-100">
       <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col bg-white dark:bg-[#0c1222] border-2 border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-[#0f172a]/70">
@@ -538,7 +538,7 @@ export const ImageStudioModal: React.FC<ImageStudioModalProps> = ({
                     <button
                       type="button"
                       onClick={handleDownload}
-                      className="p-2 rounded-xl bg-slate-950/80 backdrop-blur-md text-white hover:bg-blue-600 transition-colors shadow-sm"
+                      className="p-2 rounded-xl bg-slate-950/90 text-white hover:bg-blue-600 transition-colors shadow-sm"
                       title="Download Gambar"
                     >
                       <Download className="w-4 h-4" />
@@ -546,7 +546,7 @@ export const ImageStudioModal: React.FC<ImageStudioModalProps> = ({
                     <button
                       type="button"
                       onClick={handleCopyLink}
-                      className="p-2 rounded-xl bg-slate-950/80 backdrop-blur-md text-white hover:bg-blue-600 transition-colors shadow-sm"
+                      className="p-2 rounded-xl bg-slate-950/90 text-white hover:bg-blue-600 transition-colors shadow-sm"
                       title="Salin Data"
                     >
                       {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}

@@ -98,17 +98,23 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
   const checkFileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      fetch("/api/virustotal/status")
-        .then((res) => res.json())
-        .then((data) => setVtConfigured(Boolean(data.configured)))
-        .catch(() => setVtConfigured(false));
+    if (!isOpen) return;
 
-      fetch("/api/defcon")
+    const fetchStatus = () => {
+      fetch("/api/defcon", { cache: "no-store" })
         .then((res) => res.json())
         .then((data) => setServerSummary(data))
         .catch(() => {});
-    }
+    };
+
+    fetch("/api/virustotal/status")
+      .then((res) => res.json())
+      .then((data) => setVtConfigured(Boolean(data.configured)))
+      .catch(() => setVtConfigured(false));
+
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 2500);
+    return () => clearInterval(interval);
   }, [isOpen]);
 
   const loadWafSummary = async () => {
@@ -487,6 +493,13 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
       }
     }
 
+    const totalServerBlocked = serverSummary?.stats?.totalBlocked ?? 0;
+    const recentEventsBlocked = (serverSummary?.events ?? []).filter((e: any) => e.applied).length;
+    const extraCumulative = Math.max(0, totalServerBlocked - recentEventsBlocked);
+    if (extraCumulative > 0) {
+      serverEventsByDay[String(today)] = (serverEventsByDay[String(today)] || 0) + extraCumulative;
+    }
+
     return days.map((d) => {
       const v = (snap?.byDay[String(d)] ?? 0) + (serverEventsByDay[String(d)] ?? 0);
       const dateObj = new Date(d * 86_400_000);
@@ -622,7 +635,8 @@ export const DefconShieldModal: React.FC<DefconShieldModalProps> = ({
 
   if (!isOpen) return null;
 
-  const serverThreatsCount = (serverSummary?.events ?? []).filter((e: any) => e.applied).length;
+  const recentAppliedCount = (serverSummary?.events ?? []).filter((e: any) => e.applied).length;
+  const serverThreatsCount = Math.max(serverSummary?.stats?.totalBlocked ?? 0, recentAppliedCount);
   const threats = (snap?.quarantine.length ?? 0) + serverThreatsCount;
   const scanning = scan !== null || snap?.scanning;
   const pct =

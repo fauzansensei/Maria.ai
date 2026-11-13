@@ -44,57 +44,134 @@ function sendSpyGuardJson(res: any, statusCode: number, data: any) {
   res.end(JSON.stringify(data));
 }
 
+const globalFloodWindow: number[] = [];
+const bareUaHits: number[] = [];
+
 /**
- * Extract client IP Address
- * Prioritas: x-forwarded-for -> x-real-ip -> socket address
+ * Extract client IP Address with anti-spoofing priority
  */
 export function getSpyGuardIp(req: Request | any): string {
-  const forwardedFor = req.headers?.['x-forwarded-for'];
-  const realIp = req.headers?.['x-real-ip'];
-  const socketIp = req.socket?.remoteAddress;
+  const cfIp = req.headers?.['cf-connecting-ip'];
+  if (cfIp && typeof cfIp === 'string' && cfIp.trim()) return cfIp.trim();
 
-  if (forwardedFor && typeof forwardedFor === 'string') {
-    return forwardedFor.split(',')[0].trim();
+  const vercelIp = req.headers?.['x-vercel-forwarded-for'];
+  if (vercelIp && typeof vercelIp === 'string' && vercelIp.trim()) {
+    const parts = vercelIp.split(',').map((s: string) => s.trim()).filter(Boolean);
+    if (parts.length > 0) return parts[parts.length - 1];
   }
-  if (Array.isArray(forwardedFor) && forwardedFor.length > 0) {
-    return forwardedFor[0].trim();
-  }
-  if (realIp && typeof realIp === 'string') {
+
+  const realIp = req.headers?.['x-real-ip'];
+  if (realIp && typeof realIp === 'string' && realIp.trim()) {
     return realIp.trim();
   }
-  if (socketIp && typeof socketIp === 'string') {
-    return socketIp.replace(/^::ffff:/, '').trim();
+
+  const socketIp = req.socket?.remoteAddress?.replace(/^::ffff:/, '').trim();
+  if (socketIp && socketIp !== '127.0.0.1' && socketIp !== '::1') {
+    return socketIp;
   }
-  return 'unknown-ip';
+
+  const forwardedFor = req.headers?.['x-forwarded-for'];
+  if (forwardedFor && typeof forwardedFor === 'string') {
+    const list = forwardedFor.split(',').map((s: string) => s.trim()).filter(Boolean);
+    if (list.length > 0) return list[list.length - 1];
+  }
+  if (Array.isArray(forwardedFor) && forwardedFor.length > 0) {
+    return forwardedFor[forwardedFor.length - 1].trim();
+  }
+
+  return socketIp || 'unknown-ip';
 }
 
 /**
  * Spy Guard Gatekeeper Middleware for Express & Vite
  */
 export function spyGuardMiddleware(req: Request, res: Response, next: NextFunction) {
-  // Hanya pantau rute API (/api/*)
   const url = req.originalUrl || req.url || '';
-  if (!url.startsWith('/api') && req.method === 'GET') {
+  const pathname = url.split('?')[0];
+
+  // Skip static bundle files (JS, CSS, fonts, images, media)
+  const isStaticAsset =
+    pathname.startsWith('/assets/') ||
+    pathname.startsWith('/@') ||
+    pathname.startsWith('/src/') ||
+    pathname.startsWith('/node_modules/') ||
+    /\.(js|mjs|css|map|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|eot|mp4|webm|mp3|wav)$/i.test(pathname);
+
+  if (isStaticAsset && req.method === 'GET') {
     return next();
   }
 
-  // Bypass if testing endpoint itself calls whitelist, clear-bans, or health
+  // Bypass polling, health & self-management endpoints
   if (
-    url === '/api/health' ||
-    url === '/api/waf/summary' ||
-    url === '/api/waf/clear-bans' ||
-    url === '/api/waf/whitelist-self' ||
-    url === '/api/defcon' ||
-    url === '/api/spyguard/status'
+    pathname === '/api/health' ||
+    pathname === '/api/waf/summary' ||
+    pathname === '/api/waf/clear-bans' ||
+    pathname === '/api/waf/whitelist-self' ||
+    pathname === '/api/defcon' ||
+    pathname === '/api/spyguard/status'
   ) {
     return next();
   }
 
   const ip = getSpyGuardIp(req);
   const now = Date.now();
+  const userAgent = String(req.headers?.['user-agent'] || '');
+  const uaLower = userAgent.toLowerCase().trim();
 
   // ==========================================
-  // A. CEK RATE LIMIT (Deteksi Skrip DDoS)
+  // A0. DETEKSI BOT / SPOOFED BARE MOZILLA/5.0 & FLOOD GLOBAL (Anti XFF Spoofing)
+  // ==========================================
+  const isBareMozilla = uaLower === 'mozilla/5.0';
+
+  if (isBareMozilla) {
+    while (bareUaHits.length > 0 && now - bareUaHits[0] > 10000) bareUaHits.shift();
+    bareUaHits.push(now);
+    if (bareUaHits.length >= 2) {
+      defconStore.logEvent(
+        {
+          kind: 'rate_abuse',
+          confidence: 0.97,
+          evidence: [`spoofed-bot-ua:${userAgent}`, `burst:${bareUaHits.length}req/10s`],
+          source: ip,
+        },
+        'block_temp',
+        true,
+        'enforce',
+        'DDoS Bot (Spoofed Mozilla/5.0) Blocked by Spy Guard'
+      );
+      defconStore.blockTemp(ip, 300, 'spoofed_mozilla_bot');
+      res.setHeader('Retry-After', '60');
+      return sendSpyGuardJson(res, 429, {
+        error: 'Permintaan bot otomatis (DDoS/Spoofed Header) diblokir oleh Spy Guard.',
+      });
+    }
+  }
+
+  // Track global flood bursts in 5s window to defeat rotating X-Forwarded-For spoofing
+  while (globalFloodWindow.length > 0 && now - globalFloodWindow[0] > 5000) globalFloodWindow.shift();
+  globalFloodWindow.push(now);
+  if (globalFloodWindow.length > 45) {
+    defconStore.logEvent(
+      {
+        kind: 'rate_abuse',
+        confidence: 0.99,
+        evidence: [`distributed_ddos_burst:${globalFloodWindow.length}req/5s`],
+        source: ip,
+      },
+      'block_temp',
+      true,
+      'enforce',
+      'Distributed HTTP Flood Blocked by Spy Guard'
+    );
+    defconStore.blockTemp(ip, 300, 'distributed_ddos_burst');
+    res.setHeader('Retry-After', '60');
+    return sendSpyGuardJson(res, 429, {
+      error: 'Lonjakan DDoS terdeteksi. Akses diblokir sementara oleh Spy Guard.',
+    });
+  }
+
+  // ==========================================
+  // A. CEK RATE LIMIT PER IP (Deteksi Skrip DDoS)
   // ==========================================
   const reqData = ipRequests.get(ip) || { count: 0, lastReset: now };
 
@@ -135,9 +212,6 @@ export function spyGuardMiddleware(req: Request, res: Response, next: NextFuncti
   // ==========================================
   // B. CEK TEKS BERBAHAYA (Deteksi Skrip Asing / Injection)
   // ==========================================
-  const userAgent = String(req.headers?.['user-agent'] || '');
-  const pathname = url.split('?')[0];
-
   // Gabungkan URL dan User-Agent untuk dicek pakai Regex
   const targetString = `${pathname} ${userAgent}`;
 

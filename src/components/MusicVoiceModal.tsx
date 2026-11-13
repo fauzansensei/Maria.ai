@@ -124,9 +124,9 @@ Adalah melodi terindah dalam laguku`
       role="dialog"
       aria-modal="true"
       aria-label="Studio Musik & Audio Maria"
-      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in select-none"
+      className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-100 select-none"
     >
-      <div className="w-full max-w-xl bg-[#14151b] border border-slate-800 rounded-3xl shadow-2xl text-white overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
+      <div className="w-full max-w-xl bg-[#14151b] border border-slate-800 rounded-3xl shadow-2xl text-white overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
           <div className="flex items-center gap-3">

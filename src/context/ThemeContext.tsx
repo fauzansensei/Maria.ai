@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 export type Theme = 'dark' | 'light' | 'system';
 
@@ -16,59 +16,103 @@ const ThemeContext = createContext<ThemeContextType>({
   toggleTheme: () => {},
 });
 
+const resolveIsDark = (targetTheme: Theme): boolean => {
+  try {
+    if (targetTheme === 'system') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return targetTheme === 'dark';
+  } catch {
+    return false;
+  }
+};
+
+const applyThemeToDom = (darkActive: boolean) => {
+  try {
+    const root = document.documentElement;
+    const isCurrentlyDark = root.classList.contains('dark');
+    if (isCurrentlyDark === darkActive) return;
+    if (darkActive) {
+      root.classList.add('dark');
+      document.body?.classList.add('dark');
+      root.style.colorScheme = 'dark';
+    } else {
+      root.classList.remove('dark');
+      document.body?.classList.remove('dark');
+      root.style.colorScheme = 'light';
+    }
+  } catch {}
+};
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<Theme>(() => {
-    const saved = localStorage.getItem('maria_theme') as Theme;
-    return saved || 'light'; // Clean minimalist light aesthetic matching user screenshot
+    try {
+      const saved = localStorage.getItem('maria_theme') as Theme;
+      return saved || 'light';
+    } catch {
+      return 'light';
+    }
   });
 
-  const [isDark, setIsDark] = useState<boolean>(false);
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    try {
+      const saved = (localStorage.getItem('maria_theme') as Theme) || 'light';
+      const active = resolveIsDark(saved);
+      applyThemeToDom(active);
+      return active;
+    } catch {
+      return false;
+    }
+  });
+
+  const themeRef = useRef<Theme>(theme);
+  themeRef.current = theme;
 
   useEffect(() => {
-    const root = document.documentElement;
+    if (theme !== 'system') return;
+
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-    const applyTheme = () => {
-      let darkActive = false;
-      if (theme === 'system') {
-        darkActive = mediaQuery.matches;
-      } else {
-        darkActive = theme === 'dark';
-      }
-
-      setIsDark(darkActive);
-      if (darkActive) {
-        root.classList.add('dark');
-        document.body.classList.add('dark');
-        root.style.colorScheme = 'dark';
-      } else {
-        root.classList.remove('dark');
-        document.body.classList.remove('dark');
-        root.style.colorScheme = 'light';
-      }
-    };
-
-    applyTheme();
-    localStorage.setItem('maria_theme', theme);
-
     const listener = () => {
-      if (theme === 'system') applyTheme();
+      const systemDark = mediaQuery.matches;
+      applyThemeToDom(systemDark);
+      setIsDark(systemDark);
     };
 
     mediaQuery.addEventListener('change', listener);
     return () => mediaQuery.removeEventListener('change', listener);
   }, [theme]);
 
-  const setTheme = (newTheme: Theme) => {
+  const setTheme = useCallback((newTheme: Theme) => {
+    if (newTheme === themeRef.current) return;
+    const darkActive = resolveIsDark(newTheme);
+    themeRef.current = newTheme;
+    applyThemeToDom(darkActive);
+    setIsDark(darkActive);
     setThemeState(newTheme);
-  };
+    try {
+      localStorage.setItem('maria_theme', newTheme);
+    } catch {}
+  }, []);
 
-  const toggleTheme = () => {
-    setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  };
+  const toggleTheme = useCallback(() => {
+    const next: Theme = themeRef.current === 'dark' ? 'light' : 'dark';
+    const darkActive = next === 'dark';
+    themeRef.current = next;
+    applyThemeToDom(darkActive);
+    setIsDark(darkActive);
+    setThemeState(next);
+    try {
+      localStorage.setItem('maria_theme', next);
+    } catch {}
+  }, []);
+
+  const contextValue = useMemo(
+    () => ({ theme, isDark, setTheme, toggleTheme }),
+    [theme, isDark, setTheme, toggleTheme]
+  );
 
   return (
-    <ThemeContext.Provider value={{ theme, isDark, setTheme, toggleTheme }}>
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );

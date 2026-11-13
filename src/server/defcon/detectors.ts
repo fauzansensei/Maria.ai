@@ -298,49 +298,70 @@ export function detectTokenDrain(source: string, max = 10, windowMs = 20000): Ve
 }
 
 const botHits = new Map<string, number[]>();
+const globalBurstHits: number[] = [];
+
+export function detectGlobalBurst(max = 45, windowMs = 5000): Verdict | null {
+  const now = Date.now();
+  while (globalBurstHits.length > 0 && now - globalBurstHits[0] >= windowMs) {
+    globalBurstHits.shift();
+  }
+  globalBurstHits.push(now);
+
+  if (globalBurstHits.length > max) {
+    return {
+      kind: 'rate_abuse',
+      confidence: 0.96,
+      evidence: [`distributed-http-flood:>${max} req/${windowMs / 1000}s`],
+      source: 'distributed-spoofed-flood',
+    };
+  }
+  return null;
+}
 
 export function detectBotSignatures(headers: Record<string, any>, source: string): Verdict | null {
-  const ua = String(headers['user-agent'] || '').toLowerCase();
+  const ua = String(headers['user-agent'] || '').toLowerCase().trim();
 
-  // 1. Python requests, curl, headless scrapers - only flag if making repeated rapid requests (> 3 req / 5s)
+  // 1. Python requests, curl, headless scrapers - flag rapid requests (> 2 req / 5s)
   const isPythonRequests = ua.includes('python-requests') || ua.includes('aiohttp') || ua.includes('httpx') || ua.includes('urllib');
   const isRawCurl = ua.includes('curl/') || ua.includes('wget/') || ua.includes('go-http-client');
 
   if (isPythonRequests || isRawCurl) {
     const now = Date.now();
-    const arr = (botHits.get(source) ?? []).filter((t) => now - t < 5000);
+    const key = `bot:${source}`;
+    const arr = (botHits.get(key) ?? []).filter((t) => now - t < 5000);
     arr.push(now);
-    botHits.set(source, arr);
+    botHits.set(key, arr);
 
-    if (arr.length > 3) {
+    const gKey = '__global_script_bot__';
+    const gArr = (botHits.get(gKey) ?? []).filter((t) => now - t < 5000);
+    gArr.push(now);
+    botHits.set(gKey, gArr);
+
+    if (arr.length > 2 || gArr.length > 3) {
       return {
         kind: 'rate_abuse',
-        confidence: 0.92,
-        evidence: [`automated-script-flood:${ua.slice(0, 30)}:>${arr.length}req/5s`],
+        confidence: 0.94,
+        evidence: [`automated-script-flood:${ua.slice(0, 30)}:${Math.max(arr.length, gArr.length)}req/5s`],
         source,
       };
     }
   }
 
-  // 2. Exact bare script spoofing (headers = {"User-Agent": "Mozilla/5.0"} with no other browser headers)
-  // Only trigger if sent in a rapid flood
+  // 2. Exact bare script spoofing (headers = {"User-Agent": "Mozilla/5.0"})
+  // Real browsers always include OS/engine tokens (e.g. AppleWebKit, Gecko, Chrome, Mobile)
   if (ua === 'mozilla/5.0') {
-    const hasSecChUa = Boolean(headers['sec-ch-ua'] || headers['sec-fetch-dest']);
-    const hasAcceptLang = Boolean(headers['accept-language']);
-    if (!hasSecChUa && !hasAcceptLang) {
-      const now = Date.now();
-      const arr = (botHits.get(source) ?? []).filter((t) => now - t < 5000);
-      arr.push(now);
-      botHits.set(source, arr);
+    const now = Date.now();
+    const arr = (botHits.get('__global_bare_mozilla__') ?? []).filter((t) => now - t < 10000);
+    arr.push(now);
+    botHits.set('__global_bare_mozilla__', arr);
 
-      if (arr.length > 5) {
-        return {
-          kind: 'rate_abuse',
-          confidence: 0.90,
-          evidence: ['bare-mozilla-5.0-script-flood'],
-          source,
-        };
-      }
+    if (arr.length >= 2) {
+      return {
+        kind: 'rate_abuse',
+        confidence: 0.96,
+        evidence: [`bare-mozilla-5.0-spoofed-flood:${arr.length}req/10s`],
+        source,
+      };
     }
   }
 

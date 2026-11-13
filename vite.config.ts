@@ -11,14 +11,26 @@ function expressApiPlugin(): Plugin {
     name: 'express-api-plugin',
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
-        // ONLY intercept /api calls. Never intercept or rate-limit static modules, HTML, CSS, or scripts!
-        if (!req.url || !req.url.startsWith('/api')) {
+        const reqUrl = req.url || '';
+        const ua = String(req.headers['user-agent'] || '').toLowerCase().trim();
+        const isAutomatedRootProbe =
+          reqUrl === '/' &&
+          (ua === 'mozilla/5.0' ||
+            ua.includes('python-requests') ||
+            ua.includes('curl/') ||
+            ua.includes('wget/'));
+
+        // Intercept /api calls and automated bot probes on root /; never interfere with normal browser static loads
+        if (!reqUrl.startsWith('/api') && !isAutomatedRootProbe) {
           return next();
         }
 
         try {
           const { defconAntiDdosMiddleware } = await import('./src/server/defcon/guard.ts');
           defconAntiDdosMiddleware(req as any, res as any, () => {
+            if (!reqUrl.startsWith('/api')) {
+              return next();
+            }
             import('./src/server/api.ts').then(({ apiApp }) => {
               apiApp(req as any, res as any, (err?: any) => {
                 if (err) {

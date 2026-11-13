@@ -6,6 +6,7 @@ interface TwoFactorModalProps {
   onClose: () => void;
   title: string;
   description: string;
+  expectedPin?: string;
   onConfirm: () => void;
 }
 
@@ -14,10 +15,11 @@ export const TwoFactorModal: React.FC<TwoFactorModalProps> = ({
   onClose,
   title,
   description,
+  expectedPin,
   onConfirm,
 }) => {
   const [pin, setPin] = useState(['', '', '', '', '', '']);
-  const [error, setError] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -28,7 +30,7 @@ export const TwoFactorModal: React.FC<TwoFactorModalProps> = ({
     const newPin = [...pin];
     newPin[index] = val;
     setPin(newPin);
-    setError(false);
+    setErrorMsg(null);
 
     // Auto advance focus
     if (val && index < 5) {
@@ -46,18 +48,22 @@ export const TwoFactorModal: React.FC<TwoFactorModalProps> = ({
 
   const handleVerify = () => {
     const fullPin = pin.join('');
-    // Accepts test code 123456 or default any 6 digit input
-    if (fullPin.length === 6) {
-      onConfirm();
-      onClose();
-    } else {
-      setError(true);
+    if (fullPin.length !== 6) {
+      setErrorMsg('Masukkan 6 digit kode keamanan');
+      return;
     }
+    if (expectedPin && expectedPin.length === 6 && fullPin !== expectedPin) {
+      setErrorMsg('PIN keamanan tidak sesuai dengan yang tersimpan di Pengaturan');
+      return;
+    }
+    setPin(['', '', '', '', '', '']);
+    onConfirm();
+    onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-      <div className="relative w-full max-w-sm bg-[#12131a] border border-[#26283b] rounded-2xl shadow-2xl p-6 text-white space-y-5 animate-in fade-in zoom-in-95">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 animate-in fade-in duration-100">
+      <div className="relative w-full max-w-sm bg-[#12131a] border border-[#26283b] rounded-2xl shadow-2xl p-6 text-white space-y-5">
         <button
           onClick={onClose}
           className="absolute right-4 top-4 text-neutral-400 hover:text-white p-1 rounded-lg"
@@ -94,14 +100,16 @@ export const TwoFactorModal: React.FC<TwoFactorModalProps> = ({
               />
             ))}
           </div>
-          {error && (
+          {errorMsg && (
             <div className="flex items-center gap-1.5 text-[11px] text-rose-400">
-              <AlertCircle className="w-3.5 h-3.5" />
-              <span>Masukkan 6 digit kode keamanan</span>
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>{errorMsg}</span>
             </div>
           )}
           <p className="text-[10px] text-slate-400 text-center">
-            Gunakan PIN otentikasi Anda atau masukkan 6 digit bebas untuk konfirmasi.
+            {expectedPin && expectedPin.length === 6
+              ? 'Masukkan PIN 6-digit yang telah Anda atur di menu Pengaturan Privasi.'
+              : 'Masukkan 6 digit kode konfirmasi untuk melanjutkan.'}
           </p>
         </div>
 

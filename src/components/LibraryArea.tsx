@@ -16,6 +16,8 @@ import {
   Clock,
   Sparkles,
 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext.tsx';
+import { useTheme } from '../context/ThemeContext.tsx';
 
 export type LibraryCategory =
   | 'all'
@@ -116,20 +118,22 @@ interface LibraryAreaProps {
   onSelectPrompt?: (prompt: string) => void;
 }
 
-export const LibraryArea: React.FC<LibraryAreaProps> = ({ onBackToChat, onSelectPrompt }) => {
+export const LibraryArea: React.FC<LibraryAreaProps> = React.memo(({ onBackToChat, onSelectPrompt }) => {
+  const { isEn } = useLanguage();
+  const { isDark } = useTheme();
   const [activeCategory, setActiveCategory] = useState<LibraryCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [items, setItems] = useState<LibraryItem[]>(INITIAL_ITEMS);
 
   const categories: { id: LibraryCategory; label: string; icon: React.ReactNode }[] = [
-    { id: 'all', label: 'Semua', icon: <FileText className="w-3.5 h-3.5" /> },
-    { id: 'images', label: 'Gambar', icon: <ImageIcon className="w-3.5 h-3.5" /> },
-    { id: 'documents', label: 'Dokumen', icon: <FileText className="w-3.5 h-3.5" /> },
-    { id: 'audio', label: 'Suara', icon: <Volume2 className="w-3.5 h-3.5" /> },
-    { id: 'bookmarked', label: 'Ditandai', icon: <Bookmark className="w-3.5 h-3.5" /> },
-    { id: 'chat-history', label: 'Riwayat Chat', icon: <MessageSquare className="w-3.5 h-3.5" /> },
-    { id: 'archive', label: 'Arsip', icon: <Archive className="w-3.5 h-3.5" /> },
-    { id: 'formulas', label: 'Formula', icon: <Code2 className="w-3.5 h-3.5" /> },
+    { id: 'all', label: isEn ? 'All' : 'Semua', icon: <FileText className="w-3.5 h-3.5" /> },
+    { id: 'images', label: isEn ? 'Images' : 'Gambar', icon: <ImageIcon className="w-3.5 h-3.5" /> },
+    { id: 'documents', label: isEn ? 'Documents' : 'Dokumen', icon: <FileText className="w-3.5 h-3.5" /> },
+    { id: 'audio', label: isEn ? 'Audio' : 'Suara', icon: <Volume2 className="w-3.5 h-3.5" /> },
+    { id: 'bookmarked', label: isEn ? 'Bookmarked' : 'Ditandai', icon: <Bookmark className="w-3.5 h-3.5" /> },
+    { id: 'chat-history', label: isEn ? 'Chat History' : 'Riwayat Chat', icon: <MessageSquare className="w-3.5 h-3.5" /> },
+    { id: 'archive', label: isEn ? 'Archive' : 'Arsip', icon: <Archive className="w-3.5 h-3.5" /> },
+    { id: 'formulas', label: isEn ? 'Formulas' : 'Formula', icon: <Code2 className="w-3.5 h-3.5" /> },
   ];
 
   const filteredItems = items.filter((item) => {
@@ -145,22 +149,22 @@ export const LibraryArea: React.FC<LibraryAreaProps> = ({ onBackToChat, onSelect
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-[#070d1e] text-slate-900 dark:text-white overflow-hidden">
+    <div className={`flex-1 flex flex-col h-full overflow-hidden ${isDark ? 'bg-[#070d1e] text-white' : 'bg-slate-50 text-slate-900'}`}>
       {/* Header Bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-[#1e293b] bg-white dark:bg-[#0a1128]">
+      <div className={`flex items-center justify-between px-6 py-4 border-b ${isDark ? 'border-[#1e293b] bg-[#0a1128]' : 'border-slate-200 bg-white'}`}>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800/80 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
             <Bookmark className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">Pustaka Maria</h2>
+              <h2 className={`text-base font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>{isEn ? 'Maria Library' : 'Pustaka Maria'}</h2>
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/80">
-                {items.length} Aset
+                {items.length} {isEn ? 'Assets' : 'Aset'}
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Dokumen, gambar tersimpan, rekaman suara, arsip, dan formula riset
+              {isEn ? 'Saved documents, images, voice memos, archives, and research formulas' : 'Dokumen, gambar tersimpan, rekaman suara, arsip, dan formula riset'}
             </p>
           </div>
         </div>
@@ -168,10 +172,10 @@ export const LibraryArea: React.FC<LibraryAreaProps> = ({ onBackToChat, onSelect
         <div className="flex items-center gap-2">
           <button
             onClick={onBackToChat}
-            className="py-1.5 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold shadow-md shadow-blue-900/20 transition-all flex items-center gap-1.5"
+            className="py-1.5 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold shadow-md shadow-blue-900/20 flex items-center gap-1.5"
           >
             <MessageSquare className="w-3.5 h-3.5" />
-            <span>Kembali ke Chat</span>
+            <span>{isEn ? 'Back to Chat' : 'Kembali ke Chat'}</span>
           </button>
         </div>
       </div>
@@ -186,7 +190,7 @@ export const LibraryArea: React.FC<LibraryAreaProps> = ({ onBackToChat, onSelect
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-colors duration-100 ${
                   isActive
                     ? 'bg-blue-600 text-white shadow-sm font-semibold'
                     : 'bg-slate-100 dark:bg-[#15223e] text-slate-600 dark:text-slate-300 hover:text-blue-600'
@@ -206,7 +210,7 @@ export const LibraryArea: React.FC<LibraryAreaProps> = ({ onBackToChat, onSelect
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cari dalam pustaka..."
+            placeholder={isEn ? 'Search library...' : 'Cari dalam pustaka...'}
             className="w-full pl-9 pr-3 py-1.5 bg-slate-50 dark:bg-[#0a1128] border border-slate-200 dark:border-[#1e2d4d] rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
           />
         </div>
@@ -217,14 +221,14 @@ export const LibraryArea: React.FC<LibraryAreaProps> = ({ onBackToChat, onSelect
         {filteredItems.length === 0 ? (
           <div className="h-64 flex flex-col items-center justify-center text-center text-slate-400 space-y-2">
             <Archive className="w-10 h-10 stroke-[1.5]" />
-            <p className="text-xs">Tidak ada aset atau dokumen dalam kategori ini.</p>
+            <p className="text-xs">{isEn ? 'No assets or documents found in this category.' : 'Tidak ada aset atau dokumen dalam kategori ini.'}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredItems.map((item) => (
               <div
                 key={item.id}
-                className="group relative bg-white dark:bg-[#0c1222] border border-slate-200 dark:border-[#1e293b] hover:border-blue-500/50 rounded-2xl p-4.5 transition-all duration-200 flex flex-col justify-between shadow-sm hover:shadow-md"
+                className={`group relative border hover:border-blue-500/50 rounded-2xl p-4.5 flex flex-col justify-between shadow-sm hover:shadow-md ${isDark ? 'bg-[#0c1222] border-[#1e293b]' : 'bg-white border-slate-200'}`}
               >
                 <div>
                   <div className="flex items-start justify-between gap-2 mb-2">
@@ -242,21 +246,21 @@ export const LibraryArea: React.FC<LibraryAreaProps> = ({ onBackToChat, onSelect
                       <img
                         src={item.previewUrl}
                         alt={item.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-150"
                       />
                     </div>
                   )}
 
-                  <h3 className="text-sm font-semibold text-white group-hover:text-[#60a5fa] transition-colors leading-snug mb-1">
+                  <h3 className={`text-sm font-semibold group-hover:text-[#60a5fa] leading-snug mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>
                     {item.title}
                   </h3>
 
-                  <p className="text-xs text-neutral-400 line-clamp-2 leading-relaxed mb-3">
+                  <p className={`text-xs line-clamp-2 leading-relaxed mb-3 ${isDark ? 'text-neutral-400' : 'text-slate-600'}`}>
                     {item.snippet}
                   </p>
                 </div>
 
-                <div className="pt-3 border-t border-[#1f2130] flex items-center justify-between text-xs text-neutral-400">
+                <div className={`pt-3 border-t flex items-center justify-between text-xs text-neutral-400 ${isDark ? 'border-[#1f2130]' : 'border-slate-100'}`}>
                   <span className="text-[11px] text-neutral-500">{item.type}</span>
                   <div className="flex items-center gap-1">
                     <button
@@ -286,4 +290,4 @@ export const LibraryArea: React.FC<LibraryAreaProps> = ({ onBackToChat, onSelect
       </div>
     </div>
   );
-};
+});

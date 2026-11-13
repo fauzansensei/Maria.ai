@@ -23,6 +23,64 @@ export const DEFAULT_WIDGETS = [
   { id: "maria-status", name: "Status Layanan", visible: true, order: 4 },
 ];
 
+export const ACCENT_COLORS: Array<{
+  id: 'blue' | 'cyan' | 'emerald' | 'purple' | 'amber' | 'rose';
+  label: string;
+  hex: string;
+  ring: string;
+}> = [
+  { id: 'blue', label: 'Default (Blue)', hex: '#2563eb', ring: 'ring-blue-500' },
+  { id: 'cyan', label: 'Sky Cyan', hex: '#06b6d4', ring: 'ring-cyan-500' },
+  { id: 'emerald', label: 'Emerald', hex: '#10b981', ring: 'ring-emerald-500' },
+  { id: 'purple', label: 'Violet', hex: '#8b5cf6', ring: 'ring-purple-500' },
+  { id: 'amber', label: 'Amber Gold', hex: '#f59e0b', ring: 'ring-amber-500' },
+  { id: 'rose', label: 'Rose Crimson', hex: '#f43f5e', ring: 'ring-rose-500' },
+];
+
+export const MARIA_PLUGINS: Array<{
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+}> = [
+  {
+    id: 'google-search',
+    name: 'Google Search Grounding',
+    category: 'Pencarian Real-time',
+    description: 'Penelusuran web aktual & fakta berita terbaru langsung dari Google.',
+  },
+  {
+    id: 'google-maps',
+    name: 'Google Maps Explorer',
+    category: 'Lokasi & Navigasi',
+    description: 'Pencarian tempat, rute perjalanan, dan rekomendasi lokasi terdekat.',
+  },
+  {
+    id: 'image-studio',
+    name: 'Studio Gambar AI',
+    category: 'Visual & Kreasi',
+    description: 'Generasi dan penyuntingan gambar bertenaga Nano Banana & Flux.',
+  },
+  {
+    id: 'science-scout',
+    name: 'Science Scout (PubMed / UniProt / PDB)',
+    category: 'Riset Ilmiah',
+    description: 'Akses langsung ke database jurnal biomedis, protein, dan struktur 3D.',
+  },
+  {
+    id: 'voice-engine',
+    name: 'Gemini AI Voice Engine',
+    category: 'Audio & TTS',
+    description: 'Sintesis suara natural 6 karakter persona & dukungan dikte suara.',
+  },
+  {
+    id: 'canvas-code',
+    name: 'Canvas Code & App Launcher',
+    category: 'Produktivitas',
+    description: 'Editor kode interaktif dan peluncur aplikasi Windows Open.',
+  },
+];
+
 export const DEFAULT_SETTINGS: UserSettings = {
   username: "User",
   tone: "Professional",
@@ -34,11 +92,25 @@ export const DEFAULT_SETTINGS: UserSettings = {
   memoryEnabled: true,
   autoMemoryExtraction: true,
   theme: "classic-blue",
+  accentColor: "blue",
+  fastAnswers: false,
+  webSearchDefault: true,
+  homepageSuggestions: true,
+  personalityWarmth: true,
+  personalityEnthusiasm: false,
+  personalityStructured: true,
+  temporaryChat: false,
+  reduceSensitiveContent: false,
+  voiceLanguage: "auto",
+  backgroundVoice: false,
+  speechDictionary: [],
+  enabledPlugins: MARIA_PLUGINS.map((p) => p.id),
   widgets: DEFAULT_WIDGETS,
   notifications: {
     soundEnabled: true,
     statusUpdates: true,
     remindersEnabled: true,
+    inAppNotifications: true,
   },
   elevenlabsApiKey: "",
   elevenlabsVoiceId: "EXAVITQu4vr4xnSDxMaL",
@@ -51,6 +123,12 @@ export const DEFAULT_SETTINGS: UserSettings = {
   geminiVoice: "Aoede",
   voicePersona: "wanita",
   speechSpeed: "1x",
+  enterToSend: true,
+  saveChatHistory: true,
+  dlpEnabled: true,
+  twoFactorEnabled: false,
+  securityPin: "",
+  sessionLockEnabled: false,
   cyberModeEnabled: true,
   defconLevel: "DEFCON 5",
   autonomousSelfHealing: true,

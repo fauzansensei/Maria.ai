@@ -8,6 +8,7 @@ import {
   Trash2,
   Check,
 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext.tsx';
 
 interface ChatPopoverProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ export const ChatPopover: React.FC<ChatPopoverProps> = ({
   onRename,
   onDelete,
 }) => {
+  const { isEn } = useLanguage();
   const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -58,7 +60,7 @@ export const ChatPopover: React.FC<ChatPopoverProps> = ({
         top: `${Math.min(position.top, window.innerHeight - 240)}px`,
         left: `${Math.min(position.left, window.innerWidth - 210)}px`,
       }}
-      className="fixed z-50 w-52 bg-[#171821] text-neutral-200 border border-[#2b2d3d] rounded-2xl shadow-2xl py-2 px-1 text-xs select-none backdrop-blur-md animate-in fade-in zoom-in-95 duration-100"
+      className="fixed z-50 w-52 bg-[#171821] text-neutral-200 border border-[#2b2d3d] rounded-2xl shadow-2xl py-2 px-1 text-xs select-none animate-in fade-in zoom-in-95 duration-100"
     >
       <button
         onClick={() => {
@@ -68,7 +70,7 @@ export const ChatPopover: React.FC<ChatPopoverProps> = ({
         className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#222433] hover:text-white transition-colors text-left"
       >
         <Share2 className="w-4 h-4 text-neutral-400" />
-        <span>Bagikan percakapan</span>
+        <span>{isEn ? 'Share chat' : 'Bagikan percakapan'}</span>
       </button>
 
       <button
@@ -79,7 +81,7 @@ export const ChatPopover: React.FC<ChatPopoverProps> = ({
         className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#222433] hover:text-white transition-colors text-left"
       >
         <Archive className="w-4 h-4 text-neutral-400" />
-        <span>Arsipkan ke Pustaka</span>
+        <span>{isEn ? 'Archive to Library' : 'Arsipkan ke Pustaka'}</span>
       </button>
 
       <button
@@ -92,12 +94,12 @@ export const ChatPopover: React.FC<ChatPopoverProps> = ({
         {isPinned ? (
           <>
             <PinOff className="w-4 h-4 text-amber-400" />
-            <span>Lepas sematan</span>
+            <span>{isEn ? 'Unpin chat' : 'Lepas sematan'}</span>
           </>
         ) : (
           <>
             <Pin className="w-4 h-4 text-neutral-400" />
-            <span>Sematkan obrolan</span>
+            <span>{isEn ? 'Pin chat' : 'Sematkan obrolan'}</span>
           </>
         )}
       </button>
@@ -110,7 +112,7 @@ export const ChatPopover: React.FC<ChatPopoverProps> = ({
         className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#222433] hover:text-white transition-colors text-left"
       >
         <Edit3 className="w-4 h-4 text-neutral-400" />
-        <span>Ganti nama</span>
+        <span>{isEn ? 'Rename' : 'Ganti nama'}</span>
       </button>
 
       <div className="h-px bg-[#262838] my-1 mx-2" />
@@ -123,7 +125,7 @@ export const ChatPopover: React.FC<ChatPopoverProps> = ({
         className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-rose-500/10 text-rose-400 hover:text-rose-300 transition-colors text-left"
       >
         <Trash2 className="w-4 h-4" />
-        <span>Hapus</span>
+        <span>{isEn ? 'Delete' : 'Hapus'}</span>
       </button>
     </div>
   );

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
 import { ThemeProvider, useTheme } from './context/ThemeContext.tsx';
+import { LanguageProvider } from './context/LanguageContext.tsx';
 import { Sidebar } from './components/Sidebar.tsx';
 import { ChatArea } from './components/ChatArea.tsx';
 import { LibraryArea } from './components/LibraryArea.tsx';
@@ -14,7 +15,7 @@ import { MusicVoiceModal } from './components/MusicVoiceModal.tsx';
 import { CanvasCodeModal } from './components/CanvasCodeModal.tsx';
 import { MariaPlusModal } from './components/MariaPlusModal.tsx';
 import { Conversation, Message, AiMode, UserSettings, MediaAttachment } from './types/index.ts';
-import { DEFAULT_SETTINGS, VOICE_PERSONAS } from './constants.ts';
+import { DEFAULT_SETTINGS, VOICE_PERSONAS, ACCENT_COLORS } from './constants.ts';
 import { speechService } from './lib/speechService.ts';
 import { optimizeCookies, pruneLocalStorageBloat } from './lib/storageOptimizer.ts';
 import { detectLaunchAction, executeLaunch, LaunchAction } from './lib/actionLauncher.ts';
@@ -37,7 +38,7 @@ import { userMemoryService } from './lib/userMemoryService.ts';
 
 function AppContent() {
   const { user } = useAuth();
-  const { setTheme } = useTheme();
+  const { setTheme, isDark } = useTheme();
   const [activeConnectingAction, setActiveConnectingAction] = useState<LaunchAction | null>(null);
 
   // Enforce super-compact 1-byte micro cookies and clean storage on launch
@@ -99,6 +100,95 @@ function AppContent() {
     });
   };
 
+  // Apply Accent Color & Speech Dictionary dynamically whenever settings change
+  useEffect(() => {
+    const foundAccent = ACCENT_COLORS.find((a) => a.id === (settings.accentColor || 'blue'));
+    const hex = foundAccent?.hex || '#2563eb';
+    document.documentElement.style.setProperty('--maria-accent', hex);
+    speechService.setDictionary(settings.speechDictionary || []);
+  }, [settings.accentColor, settings.speechDictionary]);
+
+  const shouldAllowEmojis = (cfg: UserSettings): boolean => {
+    return Boolean(
+      cfg.customPrompt?.trim() ||
+        cfg.languageStyle === 'Gaul' ||
+        cfg.languageStyle === 'Santai' ||
+        cfg.tone === 'Friendly' ||
+        cfg.tone === 'Casual' ||
+        cfg.tone === 'Creative' ||
+        cfg.personalityEnthusiasm
+    );
+  };
+
+  const buildSettingsSystemAddendum = (cfg: UserSettings): string => {
+    const toneGuides: Record<string, string> = {
+      Professional: 'Profesional, jelas, objektif, dan terstruktur.',
+      Friendly: 'Ramah, akrab, komunikatif, dan mudah didekati.',
+      Casual: 'Santai, rileks, mengalir natural seperti obrolan sehari-hari tanpa kaku.',
+      Creative: 'Ekspresif, imajinatif, penuh ide segar dan analogi menarik.',
+      Academic: 'Analitis, mendalam, sistematis, dan berlandaskan logika ilmiah.',
+      Warm: 'Hangat, empatik, penuh perhatian, dan menenangkan.',
+      Technical: 'Presisi, teknis, fokus detail implementasi dan terminologi akurat.',
+      Minimalist: 'Sangat ringkas, hemat kata, langsung ke inti tanpa basa-basi.',
+    };
+
+    const styleGuides: Record<string, string> = {
+      Baku: 'Bahasa Indonesia baku dan rapi (gunakan sapaan "Saya" dan "Anda").',
+      Santai: 'Bahasa sehari-hari yang luwes dan akrab (gunakan sapaan "aku/kamu" secara natural).',
+      Gaul: 'Bahasa anak muda Indonesia yang ekspresif dan santai (boleh memakai "gue/lo" atau partikel santai seperti "nih, sih, dong, wkwk" jika cocok).',
+      Puitis: 'Bahasa yang indah, berirama, dan kaya metafora.',
+      Teknis: 'Gaya dokumentasi teknis/engineering yang lugas, to-the-point, dan akurat.',
+    };
+
+    const parts: string[] = [];
+
+    if (cfg.customPrompt?.trim()) {
+      parts.push(
+        `INSTRUKSI KEPRIBADIAN & PROMPT KHUSUS PENGGUNA (WAJIB DIPATUHI 100%, MENGGANTIKAN GAYA BAWAAN BILA BERBEDA):\n${cfg.customPrompt.trim()}`
+      );
+    }
+
+    if (cfg.tone) {
+      parts.push(`- Gaya / Nada Respon Utama (${cfg.tone}): ${toneGuides[cfg.tone] || cfg.tone}`);
+    }
+    if (cfg.languageStyle) {
+      parts.push(`- Gaya Bahasa & Sapaan (${cfg.languageStyle}): ${styleGuides[cfg.languageStyle] || cfg.languageStyle}`);
+    }
+    if (cfg.regionalLanguage?.trim() && cfg.regionalLanguage !== 'Tidak ada') {
+      parts.push(`- Sentuhan Bahasa Daerah: ${cfg.regionalLanguage.trim()}`);
+    }
+    if (cfg.language === 'English') {
+      parts.push('- Bahasa Antarmuka & Respon: English (US) kecuali pengguna menulis dalam Bahasa Indonesia.');
+    }
+    if (cfg.userBio?.trim()) {
+      parts.push(`- Profil & Konteks Pengguna (dari Pengaturan): ${cfg.userBio.trim()}`);
+    }
+    if (cfg.responsePreferences?.trim()) {
+      parts.push(`- Preferensi Format & Gaya Respon Pengguna: ${cfg.responsePreferences.trim()}`);
+    }
+    if (cfg.fastAnswers) {
+      parts.push('- Mode Jawaban Cepat: Berikan jawaban ringkas, padat, langsung ke poin utama.');
+    }
+    if (cfg.personalityWarmth === false) {
+      parts.push('- Kehangatan: Netral dan objektif, minim basa-basi emosional.');
+    } else {
+      parts.push('- Kehangatan: Tunjukkan kehangatan dan empati yang wajar sesuai kepribadian.');
+    }
+    if (cfg.personalityEnthusiasm) {
+      parts.push('- Antusiasme: Berikan respon yang antusias, ekspresif, dan bersemangat.');
+    }
+    if (cfg.personalityStructured === false) {
+      parts.push('- Format Jawaban: Utamakan paragraf naratif yang mengalir tanpa terlalu banyak daftar bullet.');
+    } else if (!cfg.customPrompt?.trim() && cfg.languageStyle !== 'Gaul' && cfg.languageStyle !== 'Santai') {
+      parts.push('- Format Jawaban: Gunakan judul bagian atau daftar poin terstruktur bila penjelasan panjang.');
+    }
+    if (cfg.reduceSensitiveContent) {
+      parts.push('- Filter Keamanan Konten (Safety): Hindari pembahasan topik sensitif, kekerasan eksplisit, atau konten berisiko tinggi.');
+    }
+
+    return parts.join('\n');
+  };
+
   // Keep settings synchronized across external browser tabs
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
@@ -117,19 +207,28 @@ function AppContent() {
   // Local state messages for guest / unauthenticated preview
   const [guestMessages, setGuestMessages] = useState<Message[]>([]);
 
-  // 1. Sync User Profile Theme from Firestore on Login
+  // 1. Sync User Profile Theme from Firestore once per login (never overwrite user selection)
+  const syncedThemeUidRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!user) return;
+    if (!user?.uid) {
+      syncedThemeUidRef.current = null;
+      return;
+    }
+    if (syncedThemeUidRef.current === user.uid) return;
+    syncedThemeUidRef.current = user.uid;
+
+    const themeBeforeFetch = localStorage.getItem('maria_theme');
     getUserProfile(user.uid)
       .then((profile) => {
-        if (profile?.theme) {
+        const themeNow = localStorage.getItem('maria_theme');
+        if (profile?.theme && themeNow === themeBeforeFetch) {
           setTheme(profile.theme);
         }
       })
       .catch((err) => {
         console.warn('Could not sync user profile theme:', err);
       });
-  }, [user, setTheme]);
+  }, [user?.uid, setTheme]);
 
   // 2. Subscribe to User's Firestore Conversations
   useEffect(() => {
@@ -380,6 +479,17 @@ function AppContent() {
         }
       }
 
+      const editNow = new Date();
+      const editDeviceTime = {
+        iso: editNow.toISOString(),
+        localTime: editNow.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        localDate: editNow.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Jakarta',
+      };
+      const editUserName = user?.displayName || settings.username || '';
+      const editUserMemories =
+        settings.memoryEnabled !== false ? userMemoryService.getFormattedMemoryPrompt(editUserName) : '';
+
       // Resilient fetch with automatic retry for transient network reconnections
       let response: Response | null = null;
       let lastFetchError: any = null;
@@ -392,10 +502,16 @@ function AppContent() {
             body: JSON.stringify({
               messages: historyTurns,
               mode: targetMessage.mode || activeMode,
+              systemInstruction: buildSettingsSystemAddendum(settings),
+              webSearch: (settings.webSearchDefault ?? true) && (settings.enabledPlugins?.includes('google-search') ?? true),
+              allowEmojis: shouldAllowEmojis(settings),
               location: undefined,
               withVoice: isVoiceAuto,
               voiceName: activeVoiceName,
               personaId: settings.voicePersona || 'wanita',
+              deviceTime: editDeviceTime,
+              userMemories: editUserMemories,
+              userName: editUserName,
             }),
           });
           if (response.ok) break;
@@ -532,6 +648,24 @@ function AppContent() {
     }
   };
 
+  // Handler: Regenerate AI Response from the preceding user prompt
+  const handleRegenerateMessage = async (modelMessageId: string) => {
+    if (isLoading) return;
+    const currentList = user ? messages : guestMessages;
+    const modelIdx = currentList.findIndex((m) => m.id === modelMessageId);
+    if (modelIdx === -1) return;
+
+    let targetUserMsg: Message | null = null;
+    for (let i = modelIdx - 1; i >= 0; i--) {
+      if (currentList[i].role === 'user') {
+        targetUserMsg = currentList[i];
+        break;
+      }
+    }
+    if (!targetUserMsg) return;
+    await handleEditMessage(targetUserMsg.id, targetUserMsg.content, true);
+  };
+
   // Image Studio Modal Handlers
   const handleOpenImageStudio = (baseImage?: string, prompt?: string) => {
     setStudioBaseImage(baseImage || null);
@@ -613,10 +747,11 @@ function AppContent() {
     setActiveView('chat');
 
     try {
-      let currentConvId = activeConvId;
+      const isEphemeral = Boolean(settings.temporaryChat) || settings.saveChatHistory === false;
+      let currentConvId = isEphemeral ? null : activeConvId;
 
-      // Create conversation if first turn for logged-in user
-      if (user && !currentConvId) {
+      // Create conversation if first turn for logged-in user (skipped in Temporary Chat)
+      if (user && !currentConvId && !isEphemeral) {
         const titleSnippet = safeContent.length > 35 ? safeContent.slice(0, 35) + '...' : (attachments?.[0]?.name || safeContent);
         currentConvId = await createConversation(user.uid, titleSnippet, mode);
         setActiveConvId(currentConvId);
@@ -634,7 +769,7 @@ function AppContent() {
         createdAt: new Date(),
       };
 
-      if (user && currentConvId) {
+      if (user && currentConvId && !isEphemeral) {
         await addMessage(currentConvId, user.uid, {
           role: 'user',
           content,
@@ -795,17 +930,26 @@ function AppContent() {
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Jakarta',
       };
 
-      // Auto-extract personal facts and preferences to Maria's permanent memory
-      userMemoryService.extractFromUserText(content);
+      // Auto-extract personal facts and preferences to Maria's permanent memory (only if memoryEnabled & not temporaryChat)
+      const isEphemeralSession = Boolean(settings.temporaryChat) || settings.saveChatHistory === false;
+      if (settings.memoryEnabled !== false && !isEphemeralSession) {
+        userMemoryService.extractFromUserText(content);
+      }
       const activeUserName = user?.displayName || settings.username || '';
-      const userMemories = userMemoryService.getFormattedMemoryPrompt(activeUserName);
+      const userMemories =
+        settings.memoryEnabled !== false ? userMemoryService.getFormattedMemoryPrompt(activeUserName) : '';
+      const effectiveWebSearch =
+        webSearchEnabled && (settings.enabledPlugins?.includes('google-search') ?? true);
+      const customSystemInstruction = buildSettingsSystemAddendum(settings);
 
       // Stream SSE response for instant real-time tokens (Zero waiting time!)
       let streamedSuccess = false;
       const streamAiId = `ai_${Date.now()}`;
       let fullText = '';
-      let streamModel = webSearchEnabled ? 'gemini-flash-latest' : 'gemini-3.1-flash-lite';
+      let streamModel = effectiveWebSearch ? 'gemini-flash-latest' : 'gemini-3.1-flash-lite';
       let streamGroundingLinks: any[] = [];
+
+      const allowEmojis = shouldAllowEmojis(settings);
 
       try {
         const streamRes = await fetch('/api/chat-stream', {
@@ -814,8 +958,10 @@ function AppContent() {
           body: JSON.stringify({
             messages: historyTurns,
             mode,
+            systemInstruction: customSystemInstruction,
             location: userLocation,
-            webSearch: webSearchEnabled,
+            webSearch: effectiveWebSearch,
+            allowEmojis,
             deviceTime,
             userMemories,
             userName: activeUserName,
@@ -988,11 +1134,13 @@ function AppContent() {
           body: JSON.stringify({
             messages: historyTurns,
             mode,
+            systemInstruction: customSystemInstruction,
             location: userLocation,
             withVoice: isVoiceAuto,
             voiceName: activeVoiceName,
             personaId: settings.voicePersona || 'wanita',
-            webSearch: webSearchEnabled,
+            webSearch: effectiveWebSearch,
+            allowEmojis,
             deviceTime,
             userMemories,
             userName: activeUserName,
@@ -1123,8 +1271,11 @@ function AppContent() {
     }
   };
 
+  const isEnApp = settings.language === 'English';
+
   return (
-    <div className="flex h-[100dvh] w-screen overflow-hidden bg-white dark:bg-[#0e0f12] font-sans">
+    <LanguageProvider language={settings.language || 'Indonesia'}>
+    <div className={`flex h-[100dvh] w-screen overflow-hidden font-sans ${isDark ? 'bg-[#0e0f12] text-white' : 'bg-white text-slate-900'}`}>
       {/* Navigation Sidebar */}
       <Sidebar
         conversations={conversations}
@@ -1150,7 +1301,7 @@ function AppContent() {
       />
 
       {/* Main Workspace: Chat, Library, or Discover View */}
-      <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-white dark:bg-[#0e0f12]">
+      <main className={`flex-1 flex flex-col min-w-0 h-full overflow-hidden ${isDark ? 'bg-[#0e0f12]' : 'bg-white'}`}>
         {activeView === 'chat' && (
           <ChatArea
             activeConversation={activeConversation}
@@ -1174,6 +1325,7 @@ function AppContent() {
               });
             }}
             onEditMessage={handleEditMessage}
+            onRegenerateMessage={handleRegenerateMessage}
             userPhoto={user?.photoURL}
             userName={user?.displayName}
             activeConnectingAction={activeConnectingAction}
@@ -1182,6 +1334,11 @@ function AppContent() {
             onOpenCanvasCode={() => setIsCanvasCodeOpen(true)}
             isPlus={Boolean(settings.isPlus)}
             onOpenPlusModal={() => setIsPlusModalOpen(true)}
+            enterToSend={settings.enterToSend !== false}
+            voiceLanguage={settings.voiceLanguage || 'auto'}
+            webSearchDefault={settings.webSearchDefault !== false}
+            homepageSuggestions={settings.homepageSuggestions !== false}
+            temporaryChat={Boolean(settings.temporaryChat)}
           />
         )}
 
@@ -1227,14 +1384,20 @@ function AppContent() {
         onUpdateSettings={handleUpdateSettings}
         onOpenDefcon={() => setIsDefconOpen(true)}
         onOpenPlusModal={() => setIsPlusModalOpen(true)}
+        conversations={conversations}
       />
 
       {/* 2FA Security Modal for Purging History */}
       <TwoFactorModal
         isOpen={is2FAOpen}
         onClose={() => setIs2FAOpen(false)}
-        title="Otentikasi Keamanan 2FA"
-        description="Masukkan PIN keamanan 6-digit untuk mengonfirmasi penghapusan seluruh riwayat obrolan secara permanen dari server database Cloud Firestore."
+        title={isEnApp ? '2FA Security Authentication' : 'Otentikasi Keamanan 2FA'}
+        description={
+          isEnApp
+            ? 'Enter your 6-digit security PIN to confirm permanent deletion of all chat history from Cloud Firestore.'
+            : 'Masukkan PIN keamanan 6-digit untuk mengonfirmasi penghapusan seluruh riwayat obrolan secara permanen dari server database Cloud Firestore.'
+        }
+        expectedPin={settings.securityPin}
         onConfirm={handleConfirmPurgeAllHistory}
       />
 
@@ -1279,6 +1442,7 @@ function AppContent() {
         onTogglePlus={handleTogglePlus}
       />
     </div>
+    </LanguageProvider>
   );
 }
 

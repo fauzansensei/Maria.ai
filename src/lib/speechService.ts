@@ -19,6 +19,7 @@ class MariaSpeechService {
   private reusableAudio: HTMLAudioElement | null = null;
   private listeners: Set<SpeechListener> = new Set();
   private ttsCache: Map<string, string> = new Map();
+  private speechDictionary: Array<{ term: string; pronunciation?: string }> = [];
   private state: SpeechState = {
     isSpeaking: false,
     isLoading: false,
@@ -30,6 +31,17 @@ class MariaSpeechService {
 
   constructor() {
     if (typeof window !== 'undefined') {
+      // Load saved dictionary from maria_settings if available
+      try {
+        const saved = localStorage.getItem('maria_settings');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed?.speechDictionary)) {
+            this.speechDictionary = parsed.speechDictionary;
+          }
+        }
+      } catch {}
+
       // Lazy init audio context on first touch
       const initContext = () => {
         this.unlockAudio();
@@ -41,6 +53,11 @@ class MariaSpeechService {
       window.addEventListener('keydown', initContext, { once: true });
       window.addEventListener('touchstart', initContext, { once: true });
     }
+  }
+
+  public setDictionary(entries: Array<{ term: string; pronunciation?: string }>) {
+    this.speechDictionary = Array.isArray(entries) ? entries : [];
+    this.ttsCache.clear();
   }
 
   public subscribe(listener: SpeechListener): () => void {
@@ -62,10 +79,10 @@ class MariaSpeechService {
     return { ...this.state };
   }
 
-  // Cleans markdown formatting, links, and code blocks for fluid speech, without any emojis
+  // Cleans markdown formatting, links, and code blocks for fluid speech, applying custom dictionary
   public cleanTextForSpeech(text: string): string {
     if (!text) return '';
-    return text
+    let cleaned = text
       .replace(/```[\s\S]*?```/g, ' bagian kode dilewati ')
       .replace(/`([^`]+)`/g, '$1')
       .replace(/!\[([^\]]*)\]\([^)]+\)/g, '')
@@ -76,6 +93,19 @@ class MariaSpeechService {
       .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{200D}\u{FE0F}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{1F3FB}-\u{1F3FF}]/gu, '')
       .replace(/\s+/g, ' ')
       .trim();
+
+    if (this.speechDictionary.length > 0) {
+      for (const entry of this.speechDictionary) {
+        const term = entry.term?.trim();
+        const pron = entry.pronunciation?.trim();
+        if (term && pron) {
+          const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          cleaned = cleaned.replace(new RegExp(`\\b${escaped}\\b`, 'gi'), pron);
+        }
+      }
+    }
+
+    return cleaned;
   }
 
   /**

@@ -282,10 +282,26 @@ export async function wafGatekeeperMiddleware(req: Request, res: Response, next:
   const mode = getMode();
   if (mode === 'off') return next();
 
-  // ONLY protect API routes, AI endpoints, and form submissions.
-  // Never intercept or block normal static assets, HTML, or Vite bundles!
+  // Skip static bundle files while still inspecting GET / and API calls for bot spoofing
   const url = req.originalUrl || req.url || '';
-  if (!url.startsWith('/api') && req.method === 'GET') {
+  const pathname = url.split('?')[0];
+  const isStaticAsset =
+    pathname.startsWith('/assets/') ||
+    pathname.startsWith('/@') ||
+    pathname.startsWith('/src/') ||
+    pathname.startsWith('/node_modules/') ||
+    /\.(js|mjs|css|map|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|eot|mp4|webm|mp3|wav)$/i.test(pathname);
+
+  if (isStaticAsset && req.method === 'GET') {
+    return next();
+  }
+
+  if (
+    pathname === '/api/health' ||
+    pathname === '/api/defcon' ||
+    pathname === '/api/waf/summary' ||
+    pathname === '/api/spyguard/status'
+  ) {
     return next();
   }
 

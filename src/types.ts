@@ -2,6 +2,14 @@ export type MariaTone = "Professional" | "Friendly" | "Casual" | "Academic" | "C
 export type LanguageStyle = "Baku" | "Gaul" | "Puitis" | "Teknis" | "Santai";
 export type AppTheme = "emerald-green" | "cosmic-purple" | "minimal-dark" | "gold-luxe" | "rose-crimson" | "cyber-cyan" | "classic-blue" | string;
 
+export interface SpeechDictionaryEntry {
+  id: string;
+  term: string;
+  pronunciation?: string;
+}
+
+export type AccentColor = 'blue' | 'cyan' | 'emerald' | 'purple' | 'amber' | 'rose';
+
 export interface NotificationPreferences {
   soundEnabled: boolean;
   statusUpdates: boolean;
@@ -33,18 +41,31 @@ export interface UserSettings {
   regionalLanguage?: string;
   customPrompt: string;
   theme: AppTheme;
+  accentColor?: AccentColor;
   darkMode?: boolean;
   fontSize?: "kecil" | "normal" | "besar";
   interfaceAnimations?: boolean;
   dataCollection?: boolean;
   firebaseSync?: boolean;
   language?: "Indonesia" | "English";
+  fastAnswers?: boolean;
+  webSearchDefault?: boolean;
+  homepageSuggestions?: boolean;
+  personalityWarmth?: boolean;
+  personalityEnthusiasm?: boolean;
+  personalityStructured?: boolean;
+  memorySummary?: string;
+  temporaryChat?: boolean;
+  reduceSensitiveContent?: boolean;
   voiceResponses?: boolean;
   speechSpeed?: "0.75x" | "1x" | "1.25x" | "1.5x";
   voiceEngine?: "gemini";
   ttsModel?: "gemini-3.8-flash-lite-tts";
   geminiVoice?: "Kore" | "Aoede" | "Puck" | "Fenrir" | "Zephyr" | "Charon";
   voicePersona?: VoicePersonaGender;
+  voiceLanguage?: "auto" | "id-ID" | "en-US";
+  backgroundVoice?: boolean;
+  speechDictionary?: SpeechDictionaryEntry[];
   saveChatHistory?: boolean;
   enterToSend?: boolean;
   windowsOpen?: boolean;
@@ -54,6 +75,7 @@ export interface UserSettings {
   responsePreferences?: string;
   widgets?: WidgetLayout[];
   notifications?: NotificationPreferences;
+  enabledPlugins?: string[];
   elevenlabsApiKey?: string;
   elevenlabsVoiceId?: string;
   elevenlabsVoiceModel?: string;

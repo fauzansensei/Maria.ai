@@ -60,7 +60,7 @@ export const MariaPlusModal: React.FC<MariaPlusModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-label="Maria Pricing"
-      className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-start overflow-y-auto overflow-x-hidden p-3 sm:p-6 text-white select-none animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-start overflow-y-auto overflow-x-hidden p-3 sm:p-6 text-white select-none animate-in fade-in duration-100"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
@@ -68,7 +68,7 @@ export const MariaPlusModal: React.FC<MariaPlusModalProps> = ({
       }}
     >
       {/* Top Floating Pill Navigation (Exact match to reference image) */}
-      <div className="sticky top-2 sm:top-4 z-30 mb-4 sm:mb-8 flex items-center justify-between w-auto max-w-full px-3 py-1.5 rounded-full bg-[#121318]/90 border border-white/10 backdrop-blur-xl shadow-2xl">
+      <div className="sticky top-2 sm:top-4 z-30 mb-4 sm:mb-8 flex items-center justify-between w-auto max-w-full px-3 py-1.5 rounded-full bg-[#121318] border border-white/10 shadow-2xl">
         {/* Left Close Pill Button */}
         <button
           type="button"
@@ -150,7 +150,7 @@ export const MariaPlusModal: React.FC<MariaPlusModalProps> = ({
 
         {/* TAB CONTENT: FAQ VIEW */}
         {activeNavTab === 'faq' && (
-          <div className="relative z-10 w-full max-w-2xl bg-[#0f1015]/90 border border-white/10 rounded-[28px] p-6 backdrop-blur-xl shadow-2xl space-y-4 my-6">
+          <div className="relative z-10 w-full max-w-2xl bg-[#0f1015] border border-white/10 rounded-[28px] p-6 shadow-2xl space-y-4 my-6">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <HelpCircle className="w-5 h-5 text-indigo-400" />
@@ -188,7 +188,7 @@ export const MariaPlusModal: React.FC<MariaPlusModalProps> = ({
 
         {/* TAB CONTENT: CONTACT VIEW */}
         {activeNavTab === 'contact' && (
-          <div className="relative z-10 w-full max-w-md bg-[#0f1015]/90 border border-white/10 rounded-[28px] p-6 backdrop-blur-xl shadow-2xl space-y-4 my-6 text-center">
+          <div className="relative z-10 w-full max-w-md bg-[#0f1015] border border-white/10 rounded-[28px] p-6 shadow-2xl space-y-4 my-6 text-center">
             <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center mx-auto text-white">
               <Mail className="w-6 h-6" />
             </div>
@@ -214,7 +214,7 @@ export const MariaPlusModal: React.FC<MariaPlusModalProps> = ({
             {/* 3 Pricing Cards Grid */}
             <div className="relative z-10 w-full grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 mt-16 sm:mt-24 px-1">
               {/* CARD 1: Free Plan */}
-              <div className="flex flex-col justify-between p-6 sm:p-7 rounded-[28px] bg-[#0c0d12]/80 border border-white/10 backdrop-blur-xl shadow-2xl hover:border-white/20 transition-all group">
+              <div className="flex flex-col justify-between p-6 sm:p-7 rounded-[28px] bg-[#0c0d12] border border-white/10 shadow-2xl hover:border-white/20 transition-colors group">
                 <div>
                   <div className="text-xs font-semibold text-neutral-400 tracking-tight">
                     Free Plan
@@ -285,7 +285,7 @@ export const MariaPlusModal: React.FC<MariaPlusModalProps> = ({
               </div>
 
               {/* CARD 2: Standard Plan (Middle Featured / Maria PLUS) */}
-              <div className="relative flex flex-col justify-between p-6 sm:p-7 rounded-[28px] bg-[#0c0d12]/90 border border-white/20 backdrop-blur-2xl shadow-2xl hover:border-white/40 transition-all scale-[1.02] sm:scale-105 z-10 group">
+              <div className="relative flex flex-col justify-between p-6 sm:p-7 rounded-[28px] bg-[#0c0d12] border border-white/20 shadow-2xl hover:border-white/40 transition-colors scale-[1.02] sm:scale-105 z-10 group">
                 {/* Popular Glow Indicator */}
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[10px] font-extrabold uppercase tracking-widest shadow-md">
                   Most Popular
@@ -365,7 +365,7 @@ export const MariaPlusModal: React.FC<MariaPlusModalProps> = ({
               </div>
 
               {/* CARD 3: Pro Plan */}
-              <div className="flex flex-col justify-between p-6 sm:p-7 rounded-[28px] bg-[#0c0d12]/80 border border-white/10 backdrop-blur-xl shadow-2xl hover:border-white/20 transition-all group">
+              <div className="flex flex-col justify-between p-6 sm:p-7 rounded-[28px] bg-[#0c0d12] border border-white/10 shadow-2xl hover:border-white/20 transition-colors group">
                 <div>
                   <div className="text-xs font-semibold text-neutral-400 tracking-tight">
                     Pro Plan

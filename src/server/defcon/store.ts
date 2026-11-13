@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import type { Verdict, ThreatKind } from './types.ts';
 
 export interface SecurityEventRecord extends Verdict {
@@ -16,14 +18,56 @@ interface BlockEntry {
   expiresAt: number; // timestamp in ms
 }
 
-// In-Memory Thread-Safe High-Performance Store with TTL cleanup
+const PERSIST_PATH = path.join('/tmp', 'maria_defcon_store.json');
+
+// In-Memory Thread-Safe High-Performance Store with TTL cleanup & /tmp persistence
 class DefconStore {
   private blocklist = new Map<string, BlockEntry>();
   private events: SecurityEventRecord[] = [];
+  private cumulativeBlocked = 0;
   private knownBadHashes = new Set<string>([
     // Example known malware sample hashes
     'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
   ]);
+
+  constructor() {
+    this.loadFromDisk();
+  }
+
+  private loadFromDisk() {
+    try {
+      if (fs.existsSync(PERSIST_PATH)) {
+        const raw = fs.readFileSync(PERSIST_PATH, 'utf-8');
+        const parsed = JSON.parse(raw);
+        const now = Date.now();
+        if (Array.isArray(parsed.events)) {
+          this.events = parsed.events.filter((e: SecurityEventRecord) => e && e.expiresAt > now).slice(0, 500);
+        }
+        if (typeof parsed.cumulativeBlocked === 'number' && parsed.cumulativeBlocked >= this.events.length) {
+          this.cumulativeBlocked = parsed.cumulativeBlocked;
+        } else {
+          this.cumulativeBlocked = this.events.filter((e) => e.applied).length;
+        }
+      }
+    } catch {
+      // Ignore read errors on serverless / read-only envs
+    }
+  }
+
+  private saveToDisk() {
+    try {
+      fs.writeFileSync(
+        PERSIST_PATH,
+        JSON.stringify({
+          events: this.events.slice(0, 200),
+          cumulativeBlocked: this.cumulativeBlocked,
+        }),
+        'utf-8'
+      );
+    } catch {
+      // Ignore write errors
+    }
+  }
 
   // Block temporary
   public async blockTemp(source: string, ttlSec: number, reason: string): Promise<void> {
@@ -83,12 +127,18 @@ class DefconStore {
       expiresAt: now + 7 * 864e5, // 7 days retention
     };
 
+    if (applied) {
+      this.cumulativeBlocked++;
+    }
+
     this.events.unshift(record);
 
     // Keep memory clean (max 500 records)
     if (this.events.length > 500) {
       this.events = this.events.slice(0, 500);
     }
+
+    this.saveToDisk();
   }
 
   // Serious recent offenses from the same source in the last 10 minutes
@@ -112,7 +162,7 @@ class DefconStore {
   }
 
   // Queries for UI / endpoint
-  public getEvents(limit = 50): SecurityEventRecord[] {
+  public getEvents(limit = 100): SecurityEventRecord[] {
     return this.events.slice(0, limit);
   }
 
@@ -126,19 +176,19 @@ class DefconStore {
       secret_leak: 0,
     };
 
-    let totalBlocked = 0;
+    let eventBlocked = 0;
 
     for (const ev of this.events) {
       if (counts[ev.kind] !== undefined) {
         counts[ev.kind]++;
       }
       if (ev.applied) {
-        totalBlocked++;
+        eventBlocked++;
       }
     }
 
     return {
-      totalBlocked,
+      totalBlocked: Math.max(this.cumulativeBlocked, eventBlocked),
       byKind: counts,
       activeBlocksCount: this.blocklist.size,
     };
@@ -146,7 +196,9 @@ class DefconStore {
 
   public clearAll() {
     this.events = [];
+    this.cumulativeBlocked = 0;
     this.blocklist.clear();
+    this.saveToDisk();
   }
 }
 

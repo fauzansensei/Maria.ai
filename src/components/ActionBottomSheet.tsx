@@ -12,6 +12,7 @@ import {
   Layout,
   ChevronRight,
 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext.tsx';
 
 export interface ActionBottomSheetProps {
   isOpen: boolean;
@@ -51,21 +52,22 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({
   isPlus = false,
   onOpenPlusModal,
 }) => {
+  const { isEn } = useLanguage();
   if (!isOpen) return null;
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Menu Aksi dan Lampiran"
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end justify-center animate-in fade-in duration-200 select-none p-0 sm:p-4"
+      aria-label={isEn ? 'Actions and Attachments Menu' : 'Menu Aksi dan Lampiran'}
+      className="fixed inset-0 z-50 bg-black/70 flex items-end justify-center animate-in fade-in duration-100 select-none p-0 sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
         }
       }}
     >
-      <div className="w-full max-w-lg bg-[#14151b] border-t sm:border border-slate-800/80 rounded-t-[32px] sm:rounded-3xl p-5 pb-6 text-white shadow-2xl animate-in slide-in-from-bottom duration-200">
+      <div className="w-full max-w-lg bg-[#14151b] border-t sm:border border-slate-800/80 rounded-t-[32px] sm:rounded-3xl p-5 pb-6 text-white shadow-2xl animate-in slide-in-from-bottom-4 duration-150 ease-out">
         {/* Top Drag Indicator Pill */}
         <div className="w-12 h-1.5 bg-slate-700/80 rounded-full mx-auto mb-3 cursor-grab" />
 
@@ -88,7 +90,7 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Tutup Menu"
+            aria-label={isEn ? 'Close Menu' : 'Tutup Menu'}
             className="w-8 h-8 rounded-full bg-[#1f212a] hover:bg-[#282a36] text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer active:scale-95"
           >
             <X className="w-4 h-4" />
@@ -178,7 +180,9 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({
             >
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-indigo-400 group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-semibold text-indigo-200">Buka Semua Fitur Cerdas dengan Maria PLUS</span>
+                <span className="text-xs font-semibold text-indigo-200">
+                  {isEn ? 'Unlock all smart features with Maria PLUS' : 'Buka Semua Fitur Cerdas dengan Maria PLUS'}
+                </span>
               </div>
               <span className="text-[10px] font-bold text-white bg-indigo-600 px-2 py-0.5 rounded-full shadow-xs">
                 Upgrade
@@ -201,13 +205,13 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({
               </div>
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-slate-100 group-hover:text-white truncate flex items-center gap-1.5">
-                  <span>Images (Gambar AI)</span>
+                  <span>{isEn ? 'Images (AI Image)' : 'Images (Gambar AI)'}</span>
                   <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-bold">
                     Free / 4K
                   </span>
                 </div>
                 <div className="text-xs text-slate-400 truncate mt-0.5">
-                  Buat dan edit gambar HD dengan model Gemini 3.1
+                  {isEn ? 'Create and edit HD images with Gemini 3.1' : 'Buat dan edit gambar HD dengan model Gemini 3.1'}
                 </div>
               </div>
             </div>
@@ -232,7 +236,7 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({
               </div>
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-slate-100 truncate flex items-center gap-1.5">
-                  <span>Deep Research (Pencarian Mendalam)</span>
+                  <span>{isEn ? 'Deep Research' : 'Deep Research (Pencarian Mendalam)'}</span>
                   {!isPlus && (
                     <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-bold border border-indigo-500/30">
                       PLUS
@@ -240,7 +244,7 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({
                   )}
                 </div>
                 <div className="text-xs text-slate-400 truncate mt-0.5">
-                  Laporan riset & analisis komprehensif
+                  {isEn ? 'Comprehensive research & analysis reports' : 'Laporan riset & analisis komprehensif'}
                 </div>
               </div>
             </div>
@@ -281,10 +285,10 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({
               </div>
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-slate-100 truncate">
-                  Web Search (Pencarian Web)
+                  {isEn ? 'Web Search' : 'Web Search (Pencarian Web)'}
                 </div>
                 <div className="text-xs text-slate-400 truncate mt-0.5">
-                  Akses berita & info live Google Search
+                  {isEn ? 'Access live news & Google Search results' : 'Akses berita & info live Google Search'}
                 </div>
               </div>
             </div>
@@ -332,7 +336,7 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({
                   )}
                 </div>
                 <div className="text-xs text-slate-400 truncate mt-0.5">
-                  Buat lirik lagu, trek audio, atau memo suara
+                  {isEn ? 'Create song lyrics, audio tracks, or voice memos' : 'Buat lirik lagu, trek audio, atau memo suara'}
                 </div>
               </div>
             </div>
@@ -362,7 +366,7 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({
                   )}
                 </div>
                 <div className="text-xs text-slate-400 truncate mt-0.5">
-                  Tulis kode, dokumen, atau buat presentasi
+                  {isEn ? 'Write code, documents, or build presentations' : 'Tulis kode, dokumen, atau buat presentasi'}
                 </div>
               </div>
             </div>

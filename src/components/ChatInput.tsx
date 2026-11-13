@@ -35,6 +35,8 @@ import {
 } from '../lib/mediaUtils.ts';
 import { MediaLightboxModal, LightboxMedia } from './MediaLightboxModal.tsx';
 import { ActionBottomSheet } from './ActionBottomSheet.tsx';
+import { useTheme } from '../context/ThemeContext.tsx';
+import { useLanguage } from '../context/LanguageContext.tsx';
 
 interface ChatInputProps {
   onSendMessage: (
@@ -56,9 +58,12 @@ interface ChatInputProps {
   onClearLoadedText?: () => void;
   isPlus?: boolean;
   onOpenPlusModal?: () => void;
+  enterToSend?: boolean;
+  voiceLanguage?: 'auto' | 'id-ID' | 'en-US';
+  webSearchDefault?: boolean;
 }
 
-export const ChatInput: React.FC<ChatInputProps> = ({
+export const ChatInput: React.FC<ChatInputProps> = React.memo(({
   onSendMessage,
   isLoading,
   activeMode,
@@ -71,7 +76,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onOpenDefconModal,
   isPlus = false,
   onOpenPlusModal,
+  enterToSend = true,
+  voiceLanguage = 'auto',
+  webSearchDefault = true,
 }) => {
+  const { isDark } = useTheme();
+  const { isEn } = useLanguage();
   const [text, setText] = useState('');
   const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
   const [imageSize] = useState<'1K' | '2K' | '4K'>('1K');
@@ -86,8 +96,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   // Web search is ALWAYS ACTIVE by default, can be toggled manually by user
   const [webSearchActive, setWebSearchActive] = useState<boolean>(() => {
     const saved = localStorage.getItem('maria_web_search_active');
-    return saved !== null ? saved === 'true' : true; // Default ON
+    return saved !== null ? saved === 'true' : webSearchDefault;
   });
+
+  useEffect(() => {
+    setWebSearchActive(webSearchDefault);
+  }, [webSearchDefault]);
 
   const editorRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -482,7 +496,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (enterToSend && e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       const isAnyUploading = attachments.some((a) => a.isLoading);
       if (!isAnyUploading && !isLoading) {
@@ -509,7 +523,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
     try {
       const recognition = new SpeechRecognition();
-      recognition.lang = 'id-ID';
+      recognition.lang = voiceLanguage === 'en-US' ? 'en-US' : 'id-ID';
       recognition.continuous = true;
       recognition.interimResults = true;
 
@@ -604,7 +618,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       {isFormattingActive && (
         <div className="flex items-center gap-2 px-3 py-1 mb-2 rounded-full bg-slate-900/95 dark:bg-[#0c1222] border-2 border-white text-xs text-white shadow-xl animate-in fade-in max-w-fit">
           <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">
-            Format Langsung:
+            {isEn ? 'Live Format:' : 'Format Langsung:'}
           </span>
           <div className="text-white font-medium text-xs leading-none">
             <ReactMarkdown
@@ -674,25 +688,29 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-extrabold text-xs text-rose-700 dark:text-rose-300 uppercase tracking-wide">
-                  Spy Guard: Berkas Berbahaya Dicegat
+                  {isEn ? 'Spy Guard: Malicious File Intercepted' : 'Spy Guard: Berkas Berbahaya Dicegat'}
                 </span>
                 <span className="px-2 py-0.5 rounded-full bg-rose-200/90 dark:bg-rose-900 text-rose-800 dark:text-rose-200 text-[10px] font-bold">
                   {defconAlert.threatName}
                 </span>
               </div>
               <p className="text-xs text-rose-900 dark:text-rose-200 mt-1 leading-snug">
-                Berkas <strong>"{defconAlert.filename}"</strong> berhasil dinetralisir dan dipindahkan ke <strong>Ruang Karantina Spy Guard</strong>. Berkas berbahaya tidak diunggah ke ruang obrolan.
+                {isEn ? (
+                  <>File <strong>"{defconAlert.filename}"</strong> was neutralized and moved to the <strong>Spy Guard Quarantine</strong>. Hazardous files are blocked from chat.</>
+                ) : (
+                  <>Berkas <strong>"{defconAlert.filename}"</strong> berhasil dinetralisir dan dipindahkan ke <strong>Ruang Karantina Spy Guard</strong>. Berkas berbahaya tidak diunggah ke ruang obrolan.</>
+                )}
               </p>
               <div className="text-[10px] text-rose-700 dark:text-rose-400 mt-1 font-medium">
-                Alasan: {defconAlert.reason}
+                {isEn ? 'Reason' : 'Alasan'}: {defconAlert.reason}
               </div>
               {onOpenDefconModal && (
                 <button
                   type="button"
                   onClick={onOpenDefconModal}
-                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-[11px] font-bold shadow-xs transition-all cursor-pointer"
+                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-[11px] font-bold shadow-xs cursor-pointer"
                 >
-                  <span>Buka Ruang Karantina Spy Guard</span>
+                  <span>{isEn ? 'Open Spy Guard Quarantine' : 'Buka Ruang Karantina Spy Guard'}</span>
                 </button>
               )}
             </div>
@@ -700,8 +718,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           <button
             type="button"
             onClick={() => setDefconAlert(null)}
-            className="p-1 rounded-lg text-rose-400 hover:text-rose-700 hover:bg-rose-200/60 dark:hover:bg-rose-900/50 transition-colors shrink-0"
-            title="Tutup notifikasi"
+            className="p-1 rounded-lg text-rose-400 hover:text-rose-700 hover:bg-rose-200/60 dark:hover:bg-rose-900/50 shrink-0"
+            title={isEn ? 'Dismiss notice' : 'Tutup notifikasi'}
           >
             <X className="w-4 h-4" />
           </button>
@@ -771,7 +789,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
               {/* Circular Loading Spinner while file is downloading/processing offline data (Matching Video) */}
               {att.isLoading && (
-                <div className="absolute inset-0 bg-black/55 backdrop-blur-[0.5px] flex flex-col items-center justify-center z-10">
+                <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-10">
                   <div className="relative w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center">
                     <svg className="w-6 h-6 sm:w-7 sm:h-7 animate-spin text-white" viewBox="0 0 24 24" fill="none">
                       <circle
@@ -796,8 +814,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               <button
                 type="button"
                 onClick={() => removeAttachment(att.id)}
-                aria-label="Hapus Lampiran"
-                className="w-5 h-5 rounded-full bg-black/75 hover:bg-black text-white flex items-center justify-center absolute top-1 right-1 z-20 shadow-md cursor-pointer transition-transform active:scale-90"
+                aria-label={isEn ? 'Remove Attachment' : 'Hapus Lampiran'}
+                className="w-5 h-5 rounded-full bg-black/75 hover:bg-black text-white flex items-center justify-center absolute top-1 right-1 z-20 shadow-md cursor-pointer active:scale-90"
               >
                 <X className="w-3 h-3 stroke-[2.5]" />
               </button>
@@ -806,33 +824,43 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
 
-      {/* Main Floating Pill Input Bar (Crisp White Capsule on White Dock) */}
-      <div className="relative flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-white border-2 border-slate-300 hover:border-slate-400 focus-within:border-slate-800 focus-within:ring-2 focus-within:ring-slate-200 shadow-sm transition-all duration-200">
+      {/* Main Floating Pill Input Bar (Crisp Capsule in Light & Dark Mode) */}
+      <div
+        className={`relative flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full border-2 shadow-sm ${
+          isDark
+            ? 'bg-[#171920] border-[#2a2d3a] hover:border-[#383c4c] focus-within:border-blue-500/70 focus-within:ring-2 focus-within:ring-blue-500/20'
+            : 'bg-white border-slate-300 hover:border-slate-400 focus-within:border-slate-800 focus-within:ring-2 focus-within:ring-slate-200'
+        }`}
+      >
         {/* Plus Button (+) */}
         <button
           type="button"
           onClick={() => setIsAttachmentOpen((prev) => !prev)}
-          title="Lampiran & Media"
-          className="w-8 h-8 rounded-full bg-transparent hover:bg-slate-100 border border-slate-300 flex items-center justify-center text-slate-700 hover:text-slate-950 transition-colors shrink-0 shadow-xs"
+          title={isEn ? 'Attachments & Media' : 'Lampiran & Media'}
+          className={`w-8 h-8 rounded-full bg-transparent border flex items-center justify-center shrink-0 shadow-xs ${
+            isDark
+              ? 'border-[#343846] text-slate-200 hover:bg-white/10 hover:text-white'
+              : 'border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-950'
+          }`}
         >
           <Plus
-            className={`w-4 h-4 transition-transform duration-200 ${
-              isAttachmentOpen ? 'rotate-45 text-slate-950' : ''
+            className={`w-4 h-4 transition-transform duration-150 ${
+              isAttachmentOpen ? (isDark ? 'rotate-45 text-white' : 'rotate-45 text-slate-950') : ''
             }`}
           />
         </button>
 
         {/* WhatsApp Formatting Floating Mini-Menu (Shown when text is selected/highlighted) */}
         {hasSelection && (
-          <div className="absolute bottom-full left-4 sm:left-8 mb-2 p-1.5 rounded-2xl bg-white border-2 border-slate-300 shadow-2xl flex items-center gap-1.5 z-30 animate-in fade-in zoom-in-95 text-xs">
-            <span className="text-[10px] text-slate-700 font-bold px-1.5 hidden sm:inline">
-              Format WhatsApp:
+          <div className="absolute bottom-full left-4 sm:left-8 mb-2 p-1.5 rounded-2xl bg-white dark:bg-[#1e2029] border-2 border-slate-300 dark:border-[#343846] shadow-2xl flex items-center gap-1.5 z-30 text-xs">
+            <span className="text-[10px] text-slate-700 dark:text-slate-300 font-bold px-1.5 hidden sm:inline">
+              {isEn ? 'WhatsApp Format:' : 'Format WhatsApp:'}
             </span>
             <button
               type="button"
               onClick={() => applyExecCommand('bold')}
-              title="Tebal (*teks*)"
-              className="px-2.5 h-7 rounded-lg font-bold text-slate-900 hover:bg-slate-100 flex items-center justify-center transition-colors gap-1 border border-slate-200"
+              title={isEn ? 'Bold (*text*)' : 'Tebal (*teks*)'}
+              className="px-2.5 h-7 rounded-lg font-bold text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center gap-1 border border-slate-200 dark:border-slate-700"
             >
               <span>B</span>
               <span className="text-[9px] text-slate-500 font-normal hidden sm:inline">*</span>
@@ -840,8 +868,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <button
               type="button"
               onClick={() => applyExecCommand('italic')}
-              title="Miring (_teks_)"
-              className="px-2.5 h-7 rounded-lg italic font-serif text-slate-900 hover:bg-slate-100 flex items-center justify-center transition-colors gap-1 border border-slate-200"
+              title={isEn ? 'Italic (_text_)' : 'Miring (_teks_)'}
+              className="px-2.5 h-7 rounded-lg italic font-serif text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center gap-1 border border-slate-200 dark:border-slate-700"
             >
               <span>I</span>
               <span className="text-[9px] text-slate-500 font-normal hidden sm:inline">_</span>
@@ -849,8 +877,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <button
               type="button"
               onClick={() => applyExecCommand('strikeThrough')}
-              title="Coret (~teks~)"
-              className="px-2.5 h-7 rounded-lg line-through text-slate-900 hover:bg-slate-100 flex items-center justify-center transition-colors gap-1 border border-slate-200"
+              title={isEn ? 'Strikethrough (~text~)' : 'Coret (~teks~)'}
+              className="px-2.5 h-7 rounded-lg line-through text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center gap-1 border border-slate-200 dark:border-slate-700"
             >
               <span>S</span>
               <span className="text-[9px] text-slate-500 font-normal hidden sm:inline">~</span>
@@ -858,8 +886,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <button
               type="button"
               onClick={applyCodeFormat}
-              title="Kode (`teks`)"
-              className="px-2 h-7 rounded-lg font-mono text-[11px] text-slate-900 hover:bg-slate-100 flex items-center justify-center transition-colors border border-slate-200"
+              title={isEn ? 'Code (`text`)' : 'Kode (`teks`)'}
+              className="px-2 h-7 rounded-lg font-mono text-[11px] text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center border border-slate-200 dark:border-slate-700"
             >
               &lt;/&gt;
             </button>
@@ -872,30 +900,36 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           contentEditable
           role="textbox"
           aria-multiline="true"
-          data-placeholder="Tanya Maria..."
+          data-placeholder={isEn ? 'Ask Maria...' : 'Tanya Maria...'}
           onInput={handleEditorInput}
           onSelect={handleSelect}
           onKeyUp={handleSelect}
           onMouseUp={handleSelect}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-          className="flex-1 bg-transparent border-0 py-1.5 px-1.5 text-sm text-[#0f172a] focus:outline-none min-h-[28px] max-h-32 overflow-y-auto leading-relaxed select-text empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 empty:before:pointer-events-none empty:before:select-none break-words"
+          className={`flex-1 bg-transparent border-0 py-1.5 px-1.5 text-sm focus:outline-none min-h-[28px] max-h-32 overflow-y-auto leading-relaxed select-text empty:before:content-[attr(data-placeholder)] empty:before:pointer-events-none empty:before:select-none break-words ${
+            isDark
+              ? 'text-slate-100 empty:before:text-slate-500'
+              : 'text-[#0f172a] empty:before:text-slate-400'
+          }`}
           style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
         />
 
         {/* Right Section: Divider | Mic | Send Button */}
         <div className="flex items-center gap-1.5 shrink-0">
           {/* Subtle Vertical Divider */}
-          <div className="h-5 w-px bg-slate-300 my-auto" />
+          <div className={`h-5 w-px my-auto ${isDark ? 'bg-slate-700' : 'bg-slate-300'}`} />
 
           {/* Microphone Button */}
           <button
             type="button"
             onClick={toggleRecording}
-            title={isRecording ? 'Berhenti mendengarkan' : 'Dikte suara'}
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+            title={isRecording ? (isEn ? 'Stop listening' : 'Berhenti mendengarkan') : (isEn ? 'Voice dictation' : 'Dikte suara')}
+            className={`w-8 h-8 rounded-full flex items-center justify-center ${
               isRecording
                 ? 'bg-rose-500 text-white animate-pulse border-2 border-rose-300'
+                : isDark
+                ? 'text-slate-400 hover:text-white hover:bg-white/10'
                 : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -908,8 +942,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               <button
                 type="button"
                 disabled={true}
-                title="Sedang memproses & memverifikasi berkas offline..."
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 flex items-center justify-center shadow-xs shrink-0 cursor-not-allowed border border-slate-300 dark:border-slate-600 transition-all"
+                title={isEn ? 'Processing & verifying offline file...' : 'Sedang memproses & memverifikasi berkas offline...'}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 flex items-center justify-center shadow-xs shrink-0 cursor-not-allowed border border-slate-300 dark:border-slate-600"
               >
                 <div className="w-4 h-4 border-2 border-slate-400 border-t-slate-800 dark:border-t-white rounded-full animate-spin" />
               </button>
@@ -918,24 +952,28 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 type="button"
                 disabled={isLoading}
                 onClick={() => handleSubmit()}
-                title="Kirim pesan (*bold* otomatis diformat)"
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-900 hover:bg-slate-800 active:scale-95 text-white flex items-center justify-center shadow-md shrink-0 transition-all font-bold border border-slate-900 cursor-pointer"
+                title={isEn ? 'Send message (*bold* auto-formatted)' : 'Kirim pesan (*bold* otomatis diformat)'}
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full active:scale-95 flex items-center justify-center shadow-md shrink-0 font-bold border cursor-pointer ${
+                  isDark
+                    ? 'bg-white hover:bg-slate-200 text-slate-900 border-white'
+                    : 'bg-slate-900 hover:bg-slate-800 text-white border-slate-900'
+                }`}
               >
-                <Send className="w-4 h-4 ml-0.5 text-white" />
+                <Send className="w-4 h-4 ml-0.5" />
               </button>
             )
           ) : (
             <button
               type="button"
               onClick={handleVoiceWaveClick}
-              title="Mode Suara Maria AI"
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-300 flex items-center justify-center shadow-xs shrink-0 hover:bg-emerald-100 transition-colors"
+              title={isEn ? 'Maria AI Voice Mode' : 'Mode Suara Maria AI'}
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 flex items-center justify-center shadow-xs shrink-0 hover:bg-emerald-100 dark:hover:bg-emerald-500/25"
             >
               <div className="flex items-center gap-[2px] h-3.5">
-                <span className="w-[2px] h-2 bg-emerald-600 rounded-full" />
-                <span className="w-[2px] h-3.5 bg-emerald-600 rounded-full" />
-                <span className="w-[2px] h-2.5 bg-emerald-600 rounded-full" />
-                <span className="w-[2px] h-3 bg-emerald-600 rounded-full" />
+                <span className="w-[2px] h-2 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
+                <span className="w-[2px] h-3.5 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
+                <span className="w-[2px] h-2.5 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
+                <span className="w-[2px] h-3 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
               </div>
             </button>
           )}
@@ -943,9 +981,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       </div>
 
       {/* Sub-label Bawah */}
-      <div className="flex items-center justify-center pt-2 pb-1 select-none text-[10px] font-medium tracking-wider text-slate-400 uppercase">
-        <span>MARIA ADALAH AI YANG DAPAT MELAKUKAN KESALAHAN</span>
+      <div className="flex items-center justify-center pt-2 pb-1 select-none text-[10px] font-medium tracking-wider text-slate-400 dark:text-slate-500 uppercase">
+        <span>{isEn ? 'MARIA IS AN AI AND CAN MAKE MISTAKES' : 'MARIA ADALAH AI YANG DAPAT MELAKUKAN KESALAHAN'}</span>
       </div>
     </div>
   );
-};
+});
