@@ -76,12 +76,22 @@ export function getMicroCookie(key: string): string | null {
 export function pruneLocalStorageBloat(): void {
   if (typeof localStorage === 'undefined') return;
   try {
+    const protectedKeys = new Set([
+      'maria_settings',
+      'maria_theme',
+      'maria_user_memories',
+      'maria_notebooks',
+      'maria_projects',
+      'maria_custom_skills',
+      'maria_study_sets',
+      'maria_connectors',
+      'maria_video_storyboards',
+    ]);
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (!key) continue;
-      // If any lingering key has huge data (> 50KB) and is not essential settings
-      if (key !== 'maria_settings' && key !== 'maria_theme') {
+      if (!protectedKeys.has(key)) {
         const item = localStorage.getItem(key);
         if (item && item.length > 50000) {
           keysToRemove.push(key);

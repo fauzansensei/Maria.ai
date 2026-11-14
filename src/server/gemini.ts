@@ -20,7 +20,8 @@ export function getGeminiClient(): GoogleGenAI {
 export interface ChatAttachment {
   type: 'image' | 'video' | 'file';
   mimeType: string;
-  data: string; // base64
+  data?: string; // base64
+  fileUri?: string; // Gemini Files API URI
   name?: string;
   size?: number;
 }
@@ -155,13 +156,40 @@ function sanitizeConversationTurns(messages: ChatMessageTurn[]) {
 
     if (m.attachments && m.attachments.length > 0 && isRecentTurn) {
       for (const att of m.attachments) {
-        if (att.data) {
+        const rawMime = (att.mimeType || '').split(';')[0].trim().toLowerCase();
+        const name = (att.name || '').toLowerCase();
+
+        const resolveCleanMime = (): string => {
+          let cleanMime = rawMime;
+          if (!cleanMime || cleanMime === 'application/octet-stream') {
+            if (name.endsWith('.mp4')) cleanMime = 'video/mp4';
+            else if (name.endsWith('.webm')) cleanMime = 'video/webm';
+            else if (name.endsWith('.mov')) cleanMime = 'video/quicktime';
+            else if (name.endsWith('.3gp')) cleanMime = 'video/3gpp';
+            else if (name.endsWith('.avi')) cleanMime = 'video/x-msvideo';
+            else if (name.endsWith('.mkv')) cleanMime = 'video/webm';
+            else if (name.endsWith('.pdf')) cleanMime = 'application/pdf';
+            else if (name.endsWith('.jpg') || name.endsWith('.jpeg')) cleanMime = 'image/jpeg';
+            else if (name.endsWith('.png')) cleanMime = 'image/png';
+            else if (name.endsWith('.webp')) cleanMime = 'image/webp';
+            else cleanMime = att.type === 'video' ? 'video/mp4' : att.type === 'image' ? 'image/jpeg' : 'application/pdf';
+          }
+          if (cleanMime === 'video/x-matroska') cleanMime = 'video/webm';
+          return cleanMime;
+        };
+
+        if (att.fileUri) {
+          parts.push({
+            fileData: {
+              mimeType: resolveCleanMime(),
+              fileUri: att.fileUri,
+            },
+          });
+        } else if (att.data) {
           const cleanData = att.data.includes(',')
             ? att.data.split(',')[1].trim()
             : att.data.trim();
           if (cleanData) {
-            const rawMime = (att.mimeType || '').split(';')[0].trim().toLowerCase();
-            const name = (att.name || '').toLowerCase();
             const isTextDoc =
               att.type === 'file' ||
               rawMime.startsWith('text/') ||
@@ -199,28 +227,9 @@ function sanitizeConversationTurns(messages: ChatMessageTurn[]) {
                 });
               }
             } else {
-              // Resolve clean, valid IANA MIME type for Gemini Multimodal API (without codecs parameters)
-              let cleanMime = rawMime;
-              if (!cleanMime || cleanMime === 'application/octet-stream') {
-                if (name.endsWith('.mp4')) cleanMime = 'video/mp4';
-                else if (name.endsWith('.webm')) cleanMime = 'video/webm';
-                else if (name.endsWith('.mov')) cleanMime = 'video/quicktime';
-                else if (name.endsWith('.3gp')) cleanMime = 'video/3gpp';
-                else if (name.endsWith('.avi')) cleanMime = 'video/x-msvideo';
-                else if (name.endsWith('.mkv')) cleanMime = 'video/webm';
-                else if (name.endsWith('.pdf')) cleanMime = 'application/pdf';
-                else if (name.endsWith('.jpg') || name.endsWith('.jpeg')) cleanMime = 'image/jpeg';
-                else if (name.endsWith('.png')) cleanMime = 'image/png';
-                else if (name.endsWith('.webp')) cleanMime = 'image/webp';
-                else cleanMime = att.type === 'video' ? 'video/mp4' : att.type === 'image' ? 'image/jpeg' : 'application/pdf';
-              }
-
-              // Normalize mkv / avi to webm/mp4 if needed for Gemini standard container compatibility
-              if (cleanMime === 'video/x-matroska') cleanMime = 'video/webm';
-
               parts.push({
                 inlineData: {
-                  mimeType: cleanMime,
+                  mimeType: resolveCleanMime(),
                   data: cleanData,
                 },
               });
@@ -285,6 +294,50 @@ function sanitizeConversationTurns(messages: ChatMessageTurn[]) {
   }
 
   return alternating;
+}
+
+// Upload large video/media files directly to Gemini Files API and poll until ACTIVE
+export async function uploadMediaFileToGemini(
+  filePath: string,
+  mimeType: string,
+  displayName: string
+): Promise<{ fileUri: string; mimeType: string; name?: string }> {
+  const ai = getGeminiClient();
+  const uploaded = await ai.files.upload({
+    file: filePath,
+    config: {
+      mimeType,
+      displayName,
+    },
+  });
+
+  if (!uploaded.name) {
+    if (!uploaded.uri) throw new Error('Gemini Files API tidak mengembalikan URI berkas.');
+    return { fileUri: uploaded.uri, mimeType: uploaded.mimeType || mimeType };
+  }
+
+  let current = uploaded;
+  const maxAttempts = 45; // up to ~54 seconds for large video indexing
+  for (let i = 0; i < maxAttempts; i++) {
+    if (current.state === 'ACTIVE') {
+      break;
+    }
+    if (current.state === 'FAILED') {
+      throw new Error('Gemini gagal memproses/mengindeks berkas video.');
+    }
+    await new Promise((r) => setTimeout(r, 1200));
+    current = await ai.files.get({ name: uploaded.name });
+  }
+
+  if (current.state !== 'ACTIVE' && !current.uri) {
+    throw new Error('Pemrosesan video di Gemini melampaui batas waktu.');
+  }
+
+  return {
+    fileUri: current.uri || uploaded.uri || '',
+    mimeType: current.mimeType || mimeType,
+    name: current.name,
+  };
 }
 
 // Real-time token streaming generator for blazing-fast responses
@@ -1019,8 +1072,36 @@ export async function editAiImage(options: GenerateImageOptions) {
   return generateAiImage(options);
 }
 
-// In-memory cache for generated speech audio to conserve free-tier rate limits
+// In-memory cache & quota cooldown for generated speech audio to conserve free-tier rate limits
 const serverAudioCache = new Map<string, { audioUrl: string; model: string; voice: string }>();
+let geminiTtsCooldownUntil = 0;
+let geminiTtsLastApiKey = '';
+
+function isGeminiTtsQuotaOrRateError(err: any): boolean {
+  const raw = String(err?.message || err || '');
+  return (
+    err?.status === 429 ||
+    err?.code === 429 ||
+    /429|RESOURCE_EXHAUSTED|quota|rate[- ]limit|exceeded/i.test(raw)
+  );
+}
+
+function parseTtsRetryDelayMs(err: any): number {
+  const raw = String(err?.message || err || '');
+  const secMatch =
+    raw.match(/"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/i) ||
+    raw.match(/retry in\s+(\d+(?:\.\d+)?)s/i);
+  if (secMatch) {
+    const secs = Number(secMatch[1]);
+    if (Number.isFinite(secs) && secs > 0) {
+      return Math.max(60_000, Math.min(secs * 1000, 6 * 60 * 60 * 1000));
+    }
+  }
+  if (/PerDay|Daily|GenerateRequestsPerDay/i.test(raw)) {
+    return 60 * 60 * 1000;
+  }
+  return 5 * 60 * 1000;
+}
 
 export async function generateSpeechAudio(
   text: string,
@@ -1091,55 +1172,70 @@ export async function generateSpeechAudio(
     styleHint = 'Ceria, lincah, ingin tahu, penuh rasa penasaran dalam bahasa Indonesia';
   }
 
-  // 2. PRIMARY: Gemini AI Voice Engine (Satu model saja: gemini-3.8-flash-lite-tts)
-  const targetTtsModel = 'gemini-3.8-flash-lite-tts';
+  // 2. PRIMARY: Gemini AI Voice Engine (bypass silently if free-tier quota cooldown is active)
+  const targetTtsModel =
+    preferredModel === 'gemini-3.8-flash-tts'
+      ? 'gemini-3.8-flash-tts'
+      : 'gemini-3.8-flash-lite-tts';
 
-  const ai = getGeminiClient();
-
-  try {
-    const response = await ai.models.generateContent({
-      model: targetTtsModel,
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              text: cleanText,
-              speechMetadata: {
-                style: styleHint,
-              },
-            },
-          ],
-        },
-      ],
-      config: {
-        responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: selectedVoice },
-          },
-        },
-      },
-    });
-
-    const base64Audio =
-      response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-
-    if (base64Audio) {
-      const result = {
-        audioUrl: `data:audio/wav;base64,${base64Audio}`,
-        model: targetTtsModel,
-        voice: selectedVoice,
-      };
-      if (serverAudioCache.size > 200) serverAudioCache.clear();
-      serverAudioCache.set(cacheKey, result);
-      return result;
-    }
-  } catch (ttsErr: any) {
-    console.warn('Gemini TTS generation error, falling back to neural voice:', ttsErr?.message || ttsErr);
+  const currentApiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '';
+  if (currentApiKey !== geminiTtsLastApiKey) {
+    geminiTtsLastApiKey = currentApiKey;
+    geminiTtsCooldownUntil = 0;
   }
 
-  // 3. Fallback to Neural Voice (MsEdgeTTS) if Gemini TTS rate limit is reached
+  if (currentApiKey && Date.now() >= geminiTtsCooldownUntil) {
+    try {
+      const ai = getGeminiClient();
+      const response = await ai.models.generateContent({
+        model: targetTtsModel,
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                text: cleanText,
+                speechMetadata: {
+                  style: styleHint,
+                },
+              },
+            ],
+          },
+        ],
+        config: {
+          responseModalities: ['AUDIO'],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: selectedVoice },
+            },
+          },
+        },
+      });
+
+      const base64Audio =
+        response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+
+      if (base64Audio) {
+        const result = {
+          audioUrl: `data:audio/wav;base64,${base64Audio}`,
+          model: targetTtsModel,
+          voice: selectedVoice,
+        };
+        if (serverAudioCache.size > 200) serverAudioCache.clear();
+        serverAudioCache.set(cacheKey, result);
+        return result;
+      }
+    } catch (ttsErr: any) {
+      if (isGeminiTtsQuotaOrRateError(ttsErr)) {
+        geminiTtsCooldownUntil = Date.now() + parseTtsRetryDelayMs(ttsErr);
+      } else {
+        geminiTtsCooldownUntil = Date.now() + 30_000;
+      }
+    }
+  }
+
+  // 3. Fallback to Neural Voice (MsEdgeTTS) seamlessly without noisy error telemetry
+  let tts: MsEdgeTTS | null = null;
   try {
     const isMale =
       personaId === 'pria' || personaId === 'remaja-laki' || personaId === 'anak-laki';
@@ -1164,9 +1260,9 @@ export async function generateSpeechAudio(
       rate = 0.98;
     }
 
-    const tts = new MsEdgeTTS();
+    tts = new MsEdgeTTS();
     await tts.setMetadata(edgeVoice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-    const { audioStream } = tts.toStream(cleanText, { pitch, rate });
+    const { audioStream } = tts.toStream(cleanText.slice(0, 4500), { pitch, rate });
     const chunks: Buffer[] = [];
     audioStream.on('data', (c: Buffer) => chunks.push(c));
 
@@ -1176,12 +1272,9 @@ export async function generateSpeechAudio(
         audioStream.on('error', (err: any) => reject(err));
       }),
       new Promise<void>((_, reject) =>
-        setTimeout(() => reject(new Error('Audio generation timeout')), 8000)
+        setTimeout(() => reject(new Error('Audio generation timeout')), 12000)
       ),
     ]);
-    try {
-      tts.close();
-    } catch {}
 
     const buffer = Buffer.concat(chunks);
     if (buffer.length > 0) {
@@ -1196,13 +1289,17 @@ export async function generateSpeechAudio(
     }
   } catch {
     // Fallback error handled gracefully below
+  } finally {
+    try {
+      tts?.close();
+    } catch {}
   }
 
   return {
     audioUrl: null,
     model: 'none',
     voice: selectedVoice,
-    notice: 'Kuota suara AI Gemini sedang mencapai batas laju 3 request/menit (free tier). Suara otomatis kembali siap beberapa detik lagi.',
+    notice: 'Layanan suara AI sedang mencapai batas kuota sementara. Silakan coba putar ulang beberapa saat lagi.',
   };
 }
 

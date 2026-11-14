@@ -3,7 +3,6 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { apiApp } from './src/server/api.ts';
-import { defconAntiDdosMiddleware } from './src/server/defcon/guard.ts';
 
 dotenv.config();
 
@@ -15,9 +14,6 @@ const port = process.env.PORT || 3000;
 
 // Enable reverse proxy trust (e.g. Vercel, Cloudflare, Google Cloud Run)
 app.set('trust proxy', 1);
-
-// Global DEFCON 5 Anti-DDoS & Bot Shield (Catches raw HTTP floods & automated scripts)
-app.use(defconAntiDdosMiddleware);
 
 // Mount API app
 app.use(apiApp);
@@ -49,5 +45,5 @@ app.get('*', (_req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Maria AI production server running on port ${port} with DEFCON 5 Shield active`);
+  console.log(`Maria AI production server running on port ${port}`);
 });

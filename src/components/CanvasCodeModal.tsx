@@ -58,18 +58,18 @@ console.log('Indeks angka 48 ditemukan pada:', binarySearch(data, 48));`
 `# Rencana Arsitektur Maria AI
 
 ## 1. Pendahuluan
-Maria AI menggunakan model multimodal Gemini 3.5 Flash dengan sistem perlindungan **DEFCON 5 Shield**.
+Maria AI menggunakan model multimodal Gemini dengan sinkronisasi cloud real-time.
 
 ### Keunggulan Utama:
 - **Respon Instan**: Real-time streaming tanpa jeda.
 - **Dukungan Multimodal**: Foto, video, audio, dan dokumen.
-- **Keamanan Berlapis**: Deteksi malware dan injeksi prompt otomatis.
+- **Privasi Terjaga**: Enkripsi data dan kontrol akses berbasis akun.
 
 | Komponen | Status | Waktu Respons |
 | :--- | :---: | :--- |
-| Model Gemini 3.5 | Aktif | < 250ms |
+| Model Gemini | Aktif | < 250ms |
 | Cloud Firestore | Sinkron | Terhubung |
-| DEFCON Shield | Aktif | Real-time |`
+| Privasi & 2FA | Aktif | Real-time |`
   );
 
   // 3. Slides tab state
@@ -78,9 +78,9 @@ Maria AI menggunakan model multimodal Gemini 3.5 Flash dengan sistem perlindunga
       title: 'Maria AI: Asisten Masa Depan',
       subtitle: 'Kecerdasan Artifisial Multimodal Canggih',
       bulletPoints: [
-        'Model Gemini 3.5 Flash dengan pemrosesan kilat',
+        'Model Gemini dengan pemrosesan kilat',
         'Pencarian Google Search Grounding live',
-        'Pertahanan keamanan aktif DEFCON 5',
+        'Integrasi Notebook, Proyek, dan Mode Belajar',
       ],
     },
     {
@@ -93,11 +93,11 @@ Maria AI menggunakan model multimodal Gemini 3.5 Flash dengan sistem perlindunga
       ],
     },
     {
-      title: 'Arsitektur & Perlindungan',
-      subtitle: 'Keamanan Data & Privasi Tertinggi',
+      title: 'Arsitektur & Privasi',
+      subtitle: 'Keamanan Data & Kontrol Pengguna',
       bulletPoints: [
         'Enkripsi end-to-end data percakapan',
-        'Karantina berkas malware Guardian Antivirus',
+        'Kontrol obrolan sementara (Temporary Chat)',
         'Otentikasi aman Cloud Firestore & 2FA',
       ],
     },

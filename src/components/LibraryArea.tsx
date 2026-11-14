@@ -15,6 +15,7 @@ import {
   Plus,
   Clock,
   Sparkles,
+  Menu,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext.tsx';
 import { useTheme } from '../context/ThemeContext.tsx';
@@ -59,7 +60,6 @@ const INITIAL_ITEMS: LibraryItem[] = [
     type: 'PNG • 4K HD',
     date: '14 Okt 2026',
     size: '2.4 MB',
-    previewUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80',
     snippet: 'Laboratorium visual futuristik dengan tabung kristal bercahaya cyan.',
     badge: 'AI Image',
   },
@@ -116,9 +116,10 @@ const INITIAL_ITEMS: LibraryItem[] = [
 interface LibraryAreaProps {
   onBackToChat: () => void;
   onSelectPrompt?: (prompt: string) => void;
+  onOpenSidebar?: () => void;
 }
 
-export const LibraryArea: React.FC<LibraryAreaProps> = React.memo(({ onBackToChat, onSelectPrompt }) => {
+export const LibraryArea: React.FC<LibraryAreaProps> = React.memo(({ onBackToChat, onSelectPrompt, onOpenSidebar }) => {
   const { isEn } = useLanguage();
   const { isDark } = useTheme();
   const [activeCategory, setActiveCategory] = useState<LibraryCategory>('all');
@@ -151,8 +152,18 @@ export const LibraryArea: React.FC<LibraryAreaProps> = React.memo(({ onBackToCha
   return (
     <div className={`flex-1 flex flex-col h-full overflow-hidden ${isDark ? 'bg-[#070d1e] text-white' : 'bg-slate-50 text-slate-900'}`}>
       {/* Header Bar */}
-      <div className={`flex items-center justify-between px-6 py-4 border-b ${isDark ? 'border-[#1e293b] bg-[#0a1128]' : 'border-slate-200 bg-white'}`}>
+      <div className={`flex items-center justify-between px-4 sm:px-6 py-4 border-b ${isDark ? 'border-[#1e293b] bg-[#0a1128]' : 'border-slate-200 bg-white'}`}>
         <div className="flex items-center gap-3">
+          {onOpenSidebar && (
+            <button
+              type="button"
+              onClick={onOpenSidebar}
+              aria-label={isEn ? 'Open Menu' : 'Buka Menu'}
+              className="min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#15203b] cursor-pointer"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          )}
           <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800/80 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
             <Bookmark className="w-5 h-5" />
           </div>

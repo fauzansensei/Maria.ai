@@ -77,7 +77,7 @@ export const TwoFactorModal: React.FC<TwoFactorModalProps> = ({
           </div>
           <div>
             <h3 className="text-sm font-bold text-white">{title}</h3>
-            <p className="text-[11px] text-neutral-400">Verifikasi Keamanan Maria DEFCON</p>
+            <p className="text-[11px] text-neutral-400">Verifikasi Keamanan Maria AI</p>
           </div>
         </div>
 

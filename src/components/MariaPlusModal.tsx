@@ -337,7 +337,7 @@ export const MariaPlusModal: React.FC<MariaPlusModalProps> = ({
                       <div className="w-5 h-5 rounded-full bg-[#1c1d25] border border-white/20 flex items-center justify-center shrink-0">
                         <Check className="w-3 h-3 text-white" />
                       </div>
-                      <span className="text-neutral-200">Advanced security features (Spy Guard)</span>
+                      <span className="text-neutral-200">Priority cloud sync &amp; advanced privacy controls</span>
                     </div>
                   </div>
                 </div>

@@ -54,8 +54,8 @@ interface SettingsDashboardProps {
   onClearHistoryRequest: () => void;
   settings?: UserSettings;
   onUpdateSettings?: (patch: Partial<UserSettings>) => void;
-  onOpenDefcon?: () => void;
   onOpenPlusModal?: () => void;
+  onOpenPluginsDirectory?: () => void;
   conversations?: Conversation[];
 }
 
@@ -209,8 +209,8 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
   onClearHistoryRequest,
   settings: propSettings,
   onUpdateSettings,
-  onOpenDefcon,
   onOpenPlusModal,
+  onOpenPluginsDirectory,
   conversations = [],
 }) => {
   const { user, signIn, signOut } = useAuth();
@@ -1610,7 +1610,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
                     type="text"
                     value={dictTerm}
                     onChange={(e) => setDictTerm(e.target.value)}
-                    placeholder={isEn ? 'Original word (e.g., DEFCON)' : 'Kata asli (misal: DEFCON)'}
+                    placeholder={isEn ? 'Original word (e.g., API)' : 'Kata asli (misal: API)'}
                     className={`px-3 py-2 border rounded-xl text-xs focus:outline-none focus:border-[#2563eb] ${
                       isDark
                         ? 'bg-[#12141c] border-[#292c3d] text-white placeholder-neutral-500'
@@ -1622,7 +1622,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
                     value={dictPronunciation}
                     onChange={(e) => setDictPronunciation(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleAddDictionaryEntry()}
-                    placeholder={isEn ? 'Pronunciation (e.g., Defcon)' : 'Cara baca (misal: Defkon)'}
+                    placeholder={isEn ? 'Pronunciation (e.g., A-P-I)' : 'Cara baca (misal: E-Pi-Ai)'}
                     className={`px-3 py-2 border rounded-xl text-xs focus:outline-none focus:border-[#2563eb] ${
                       isDark
                         ? 'bg-[#12141c] border-[#292c3d] text-white placeholder-neutral-500'
@@ -1944,7 +1944,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
                       {isEn ? 'About & Help Maria AI' : 'Tentang & Bantuan Maria AI'}
                     </span>
                   </div>
-                  <span className={`text-[10px] font-mono ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>v2.5 • DEFCON 5</span>
+                  <span className={`text-[10px] font-mono ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>v2.5</span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
                   {[
@@ -1976,41 +1976,6 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
           {/* TAB 5: PRIVACY & DATA */}
           {activeTab === 'privacy' && (
             <div className="space-y-4">
-              {/* Spy Guard Security Card */}
-              <div
-                className={`p-4 rounded-2xl border flex items-center justify-between gap-3 ${
-                  isDark ? 'bg-emerald-950/20 border-emerald-500/30' : 'bg-emerald-50 border-emerald-200'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-bold shrink-0">
-                    <Shield className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className={`text-xs font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      <span>{isEn ? 'Spy Guard Security System' : 'Sistem Keamanan Spy Guard'}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/40">
-                        {isEn ? 'Active' : 'Aktif'}
-                      </span>
-                    </div>
-                    <div className={`text-[11px] mt-0.5 ${isDark ? 'text-neutral-300' : 'text-slate-600'}`}>
-                      Anti-DDoS WAF, Anti-Injection, VirusTotal v3 & Quarantine Engine
-                    </div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    onOpenDefcon?.();
-                  }}
-                  className="py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shrink-0 flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Shield className="w-3.5 h-3.5" />
-                  <span>{isEn ? 'Open Spy Guard' : 'Buka Spy Guard'}</span>
-                </button>
-              </div>
-
               {/* Safety Toggle */}
               <div
                 className={`p-4 rounded-2xl border flex items-center justify-between ${
@@ -2330,13 +2295,27 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
                   isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
                 }`}
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <span className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
                     {isEn ? 'Maria Plugins & Connectors' : 'Plugins & Konektor Maria'}
                   </span>
-                  <span className={`text-[11px] font-mono font-semibold ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`}>
-                    {activePluginIds.length} / {MARIA_PLUGINS.length} {isEn ? 'active' : 'aktif'}
-                  </span>
+                  <div className="flex items-center gap-2.5">
+                    <span className={`text-[11px] font-mono font-semibold tabular-nums ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`}>
+                      {activePluginIds.length} / {MARIA_PLUGINS.length} {isEn ? 'active' : 'aktif'}
+                    </span>
+                    {onOpenPluginsDirectory && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onClose();
+                          onOpenPluginsDirectory();
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold cursor-pointer whitespace-nowrap"
+                      >
+                        {isEn ? 'Browse Plugins >' : 'Direktori Plugin >'}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2">

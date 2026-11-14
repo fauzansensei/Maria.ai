@@ -19,6 +19,8 @@ class MariaSpeechService {
   private reusableAudio: HTMLAudioElement | null = null;
   private listeners: Set<SpeechListener> = new Set();
   private ttsCache: Map<string, string> = new Map();
+  private pendingPrefetches: Set<string> = new Set();
+  private activeAbortController: AbortController | null = null;
   private speechDictionary: Array<{ term: string; pronunciation?: string }> = [];
   private state: SpeechState = {
     isSpeaking: false,
@@ -136,6 +138,14 @@ class MariaSpeechService {
   }
 
   public stopSpeaking() {
+    // 0. Abort any in-flight TTS HTTP request
+    if (this.activeAbortController) {
+      try {
+        this.activeAbortController.abort();
+      } catch {}
+      this.activeAbortController = null;
+    }
+
     // 1. Stop Web Audio API source node
     if (this.currentSourceNode) {
       try {
@@ -196,7 +206,8 @@ class MariaSpeechService {
     const ttsModel = options?.ttsModel || 'gemini-3.8-flash-lite-tts';
     const cacheKey = `${ttsModel}:${voiceName}:${personaId}:${cleanText.slice(0, 300)}`;
 
-    if (this.ttsCache.has(cacheKey)) return;
+    if (this.ttsCache.has(cacheKey) || this.pendingPrefetches.has(cacheKey)) return;
+    this.pendingPrefetches.add(cacheKey);
 
     fetch('/api/tts', {
       method: 'POST',
@@ -208,13 +219,16 @@ class MariaSpeechService {
         model: ttsModel,
       }),
     })
-      .then((res) => res.json())
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.audioUrl) {
           this.ttsCache.set(cacheKey, data.audioUrl);
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        this.pendingPrefetches.delete(cacheKey);
+      });
   }
 
   public async speak(
@@ -254,16 +268,21 @@ class MariaSpeechService {
       error: null,
     });
 
+    const controller = new AbortController();
+    this.activeAbortController = controller;
+    const timeoutId = setTimeout(() => controller.abort(), 35000);
+
     try {
       const cacheKey = `${ttsModel}:${voiceName}:${personaId}:${cleanText.slice(0, 300)}`;
       if (this.ttsCache.has(cacheKey)) {
+        clearTimeout(timeoutId);
+        if (this.activeAbortController === controller) {
+          this.activeAbortController = null;
+        }
         const cachedUrl = this.ttsCache.get(cacheKey)!;
         const played = await this.playAudioUrl(cachedUrl, speedMultiplier, messageId, personaId, ttsModel);
         if (played) return true;
       }
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 35000);
 
       const res = await fetch('/api/tts', {
         method: 'POST',
@@ -278,6 +297,9 @@ class MariaSpeechService {
       });
 
       clearTimeout(timeoutId);
+      if (this.activeAbortController === controller) {
+        this.activeAbortController = null;
+      }
 
       if (res.ok) {
         const data = await res.json();
@@ -310,19 +332,25 @@ class MariaSpeechService {
           activeMessageId: null,
           currentEngine: null,
           activeModel: null,
-          error: errData?.error || 'Gemini AI Voice Engine sedang sibuk. Silakan coba lagi.',
+          error: errData?.error || 'Layanan suara AI sedang sibuk. Silakan coba lagi.',
         });
         return false;
       }
     } catch (err: any) {
-      console.warn('TTS request error:', err);
+      clearTimeout(timeoutId);
+      if (this.activeAbortController === controller) {
+        this.activeAbortController = null;
+      }
+      if (err?.name === 'AbortError') {
+        return false;
+      }
       this.setState({
         isSpeaking: false,
         isLoading: false,
         activeMessageId: null,
         currentEngine: null,
         activeModel: null,
-        error: 'Koneksi ke Gemini AI Voice Engine terganggu.',
+        error: 'Koneksi ke layanan suara AI terganggu.',
       });
       return false;
     }

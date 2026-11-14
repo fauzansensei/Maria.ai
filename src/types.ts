@@ -24,8 +24,6 @@ export interface WidgetLayout {
   order: number;
 }
 
-export type DefconLevel = "DEFCON 5" | "DEFCON 4" | "DEFCON 3" | "DEFCON 2" | "DEFCON 1";
-
 export type VoicePersonaGender =
   | 'wanita'
   | 'pria'
@@ -87,40 +85,10 @@ export interface UserSettings {
   sessionLockEnabled?: boolean;
   backupCodes?: string[];
   lastSecurityCheck?: string;
-  cyberModeEnabled?: boolean;
-  defconLevel?: DefconLevel;
-  autonomousSelfHealing?: boolean;
-  wafStrictness?: "low" | "medium" | "high" | "paranoid";
-  autoCountermeasures?: boolean;
   dlpEnabled?: boolean;
-  edrTelemetry?: boolean;
-  vpnTunnelActive?: boolean;
-  soarAutoLock?: boolean;
   deepSearch?: boolean;
   isPlus?: boolean;
   plusPlan?: "free" | "monthly" | "yearly";
-}
-
-export type CyberLogLevel = "INFO" | "WARN" | "CRITICAL" | "BLOCKED";
-
-export interface CyberLogEntry {
-  id: string;
-  timestamp: string;
-  level: CyberLogLevel;
-  category: "WAF" | "IDS/IPS" | "EDR" | "DLP" | "IAM" | "SIEM" | "VULN" | "SOAR";
-  message: string;
-  sourceIp: string;
-  mitigation: string;
-}
-
-export interface CyberVulnFinding {
-  id: string;
-  title: string;
-  category: string;
-  severity: "low" | "medium" | "high" | "critical";
-  description: string;
-  remediation: string;
-  status: "open" | "patched" | "mitigated";
 }
 
 export interface MessageFile {

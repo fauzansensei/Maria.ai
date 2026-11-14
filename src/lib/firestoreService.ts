@@ -242,17 +242,14 @@ export async function addMessage(
     if (message.mode) {
       dataToSave.mode = message.mode.slice(0, 50);
     }
-    if (message.imageUri) {
-      dataToSave.imageUri = message.imageUri.slice(0, 800000);
+    if (message.imageUri && message.imageUri.length <= 5000) {
+      dataToSave.imageUri = message.imageUri;
     }
     if (message.thinkingProcess) {
       dataToSave.thinkingProcess = message.thinkingProcess.slice(0, 48000);
     }
-    if (message.audioUri) {
-      dataToSave.audioUri = message.audioUri.slice(0, 48000);
-    }
-    if (message.launchAction) {
-      dataToSave.launchAction = message.launchAction;
+    if (message.audioUri && message.audioUri.length <= 48000) {
+      dataToSave.audioUri = message.audioUri;
     }
 
     if (message.attachments && Array.isArray(message.attachments) && message.attachments.length > 0) {

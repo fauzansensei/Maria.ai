@@ -61,6 +61,126 @@ export function getMediaBase64(key: string): string | undefined {
   return base64MediaCache.get(key);
 }
 
+// In-memory store for raw File/Blob objects & Gemini fileUris so large videos never need 33% heavier base64 JSON payloads
+const originalFileCache = new Map<string, Blob>();
+const mediaFileUriCache = new Map<string, string>();
+
+export function storeOriginalFile(key: string, file: Blob): void {
+  if (!key || !file) return;
+  if (originalFileCache.size > 100) {
+    const firstKey = originalFileCache.keys().next().value;
+    if (firstKey) originalFileCache.delete(firstKey);
+  }
+  originalFileCache.set(key, file);
+}
+
+export function getOriginalFile(key: string): Blob | undefined {
+  if (!key) return undefined;
+  return originalFileCache.get(key);
+}
+
+export function storeMediaFileUri(key: string, fileUri: string): void {
+  if (!key || !fileUri) return;
+  mediaFileUriCache.set(key, fileUri);
+}
+
+export function getMediaFileUri(key: string): string | undefined {
+  if (!key) return undefined;
+  return mediaFileUriCache.get(key);
+}
+
+export async function resolveOriginalBlob(key: string): Promise<Blob | null> {
+  if (!key) return null;
+  const mem = originalFileCache.get(key);
+  if (mem) return mem;
+
+  try {
+    const db = await getMediaDB();
+    if (!db) return null;
+    return await new Promise((resolve) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const req = tx.objectStore(STORE_NAME).get(key);
+      req.onsuccess = () => {
+        const res = req.result;
+        if (res instanceof Blob) {
+          originalFileCache.set(key, res);
+          resolve(res);
+        } else {
+          resolve(null);
+        }
+      };
+      req.onerror = () => resolve(null);
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function uploadMediaToGemini(
+  blob: Blob,
+  fileName: string,
+  mimeType: string
+): Promise<{ fileUri: string; mimeType: string }> {
+  const CHUNK_SIZE = 6 * 1024 * 1024; // 6 MB binary chunks stay safely below Cloud Run 32MB limit
+  const totalChunks = Math.max(1, Math.ceil(blob.size / CHUNK_SIZE));
+  const uploadId = `upl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+  for (let i = 0; i < totalChunks; i++) {
+    const start = i * CHUNK_SIZE;
+    const end = Math.min(blob.size, start + CHUNK_SIZE);
+    const slice = blob.slice(start, end);
+
+    let chunkOk = false;
+    let lastErr = '';
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        if (attempt > 0) await new Promise((r) => setTimeout(r, 500));
+        const res = await fetch(
+          `/api/upload-media/chunk?uploadId=${encodeURIComponent(uploadId)}&chunkIndex=${i}&totalChunks=${totalChunks}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/octet-stream' },
+            body: slice,
+          }
+        );
+        if (res.ok) {
+          chunkOk = true;
+          break;
+        }
+        const errData = await res.json().catch(() => ({}));
+        lastErr = errData?.error || `HTTP ${res.status}`;
+      } catch (err: any) {
+        lastErr = err?.message || 'Network error';
+      }
+    }
+    if (!chunkOk) {
+      throw new Error(`Gagal mengunggah bagian video (${i + 1}/${totalChunks}): ${lastErr}`);
+    }
+  }
+
+  const finRes = await fetch('/api/upload-media/finalize', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      uploadId,
+      totalChunks,
+      fileName,
+      mimeType,
+    }),
+  });
+
+  if (!finRes.ok) {
+    const errData = await finRes.json().catch(() => ({}));
+    throw new Error(errData?.error || `Gagal memproses video di server Gemini (HTTP ${finRes.status}).`);
+  }
+
+  const data = await finRes.json();
+  if (!data?.fileUri) {
+    throw new Error('Server tidak mengembalikan referensi fileUri Gemini.');
+  }
+  return { fileUri: data.fileUri, mimeType: data.mimeType || mimeType };
+}
+
 export async function resolveMediaBase64(key: string): Promise<string | undefined> {
   if (!key) return undefined;
   const memoryCached = base64MediaCache.get(key);

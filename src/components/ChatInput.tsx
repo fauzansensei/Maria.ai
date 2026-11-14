@@ -14,14 +14,13 @@ import {
   Camera,
   Type,
   Wand2,
-  ShieldAlert,
+  AlertCircle,
   Play,
   Files,
 } from 'lucide-react';
 import { AiMode, MediaAttachment } from '../types/index.ts';
 import { speechService } from '../lib/speechService.ts';
 import { autoFormatMarkdown, hasFormattingSyntax } from '../lib/formatUtils.ts';
-import { guardianEngine } from '../lib/guardian/guardianEngine.ts';
 import {
   formatBytes,
   getMediaType,
@@ -32,10 +31,21 @@ import {
   storeOriginalMedia,
   storeOriginalMediaBlob,
   storeMediaBase64,
+  storeOriginalFile,
+  storeMediaFileUri,
+  uploadMediaToGemini,
 } from '../lib/mediaUtils.ts';
 import { MediaLightboxModal, LightboxMedia } from './MediaLightboxModal.tsx';
 import { ActionBottomSheet } from './ActionBottomSheet.tsx';
 import { useLanguage } from '../context/LanguageContext.tsx';
+import { loadEnabledConnectors } from '../lib/workspaceStore.ts';
+import {
+  getAllPlugins,
+  loadCustomConnectors,
+  loadConnectorSuggestions,
+  PluginEntry,
+} from '../lib/pluginsCatalog.ts';
+import { PluginBrandIcon } from './PluginBrandIcon.tsx';
 
 interface ChatInputProps {
   onSendMessage: (
@@ -52,7 +62,6 @@ interface ChatInputProps {
   onOpenImageStudio?: () => void;
   onOpenMusicVoice?: () => void;
   onOpenCanvasCode?: () => void;
-  onOpenDefconModal?: () => void;
   loadedText?: string;
   onClearLoadedText?: () => void;
   isPlus?: boolean;
@@ -72,7 +81,6 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
   onOpenImageStudio,
   onOpenMusicVoice,
   onOpenCanvasCode,
-  onOpenDefconModal,
   isPlus = false,
   onOpenPlusModal,
   enterToSend = true,
@@ -86,10 +94,11 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
   const [aspectRatio] = useState<'1:1' | '16:9' | '9:16' | '4:3'>('1:1');
   const [isRecording, setIsRecording] = useState(false);
   const [attachments, setAttachments] = useState<MediaAttachment[]>([]);
-  const [defconAlert, setDefconAlert] = useState<{ filename: string; threatName: string; reason: string } | null>(null);
+  const [uploadAlert, setUploadAlert] = useState<{ filename: string; title: string; reason: string } | null>(null);
   const [lightboxMedia, setLightboxMedia] = useState<LightboxMedia | null>(null);
   const [showFormatToolbar, setShowFormatToolbar] = useState(false);
   const [hasSelection, setHasSelection] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
 
   // Web search is ALWAYS ACTIVE by default, can be toggled manually by user
   const [webSearchActive, setWebSearchActive] = useState<boolean>(() => {
@@ -242,7 +251,30 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
     if (!editorRef.current) return;
     const current = editorRef.current.innerText || '';
     setText(current);
+    const match = current.match(/(?:^|\s)@([a-zA-Z0-9_-]*)$/);
+    setMentionQuery(match ? match[1] : null);
     checkAndApplyInlineFormatting();
+  };
+
+  const handlePickMention = (plugin: PluginEntry) => {
+    if (!editorRef.current) return;
+    const current = editorRef.current.innerText || '';
+    const updated = current.replace(/(?:^|\s)@([a-zA-Z0-9_-]*)$/, (full) => {
+      const lead = full.startsWith(' ') || full.startsWith('\n') ? full[0] : '';
+      return `${lead}${plugin.mentionTag} `;
+    });
+    editorRef.current.innerText = updated;
+    setText(updated);
+    setMentionQuery(null);
+    editorRef.current.focus();
+    const sel = window.getSelection();
+    if (sel) {
+      const range = document.createRange();
+      range.selectNodeContents(editorRef.current);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
   };
 
   // Convert HTML from contentEditable into clean Markdown on submit
@@ -309,13 +341,13 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
     setHasSelection(false);
   };
 
-  // Process files concurrently into MediaAttachment objects with offline pre-loading & DEFCON 5 inspection
+  // Process files concurrently into MediaAttachment objects with offline pre-loading
   const processFiles = useCallback(async (files: FileList | File[]) => {
     const filesArr = Array.from(files);
     if (filesArr.length === 0) return;
 
     // 1. Immediately create pending attachments with local blob URL and isLoading: true
-    // so user instantly sees the preview card with the loading circular spinner (like in video)
+    // so user instantly sees the preview card with the loading circular spinner
     const pendingItems = filesArr.map((file) => {
       const attId = `att_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       const mediaType = getMediaType(file);
@@ -337,51 +369,20 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
 
     setAttachments((prev) => [...prev, ...pendingItems.map((p) => p.initialAtt)]);
 
-    // 2. Concurrently read, scan, and prepare 100% offline Base64 data for the AI
+    // 2. Concurrently read and prepare media/file data for the AI
     await Promise.all(
       pendingItems.map(async ({ file, id }) => {
         try {
-          // A. DEFCON 5 Threat Inspection
-          const securityCheck = await guardianEngine.checkFile(file);
-          if (securityCheck.verdict === 'threat') {
-            const cat = securityCheck.name?.includes('EICAR')
-              ? 'EICAR Test'
-              : securityCheck.name?.includes('Binary')
-              ? 'Executable'
-              : 'Malware';
-
-            guardianEngine.quarantineThreat(
-              file.name,
-              `chat/uploads/${file.name}`,
-              securityCheck.sha256,
-              file.size,
-              cat
-            );
-
-            setDefconAlert({
-              filename: file.name,
-              threatName: securityCheck.name || 'Berkas Berbahaya Terdeteksi',
-              reason: securityCheck.reason || 'Dideteksi oleh protokol pertahanan DEFCON 5',
-            });
-
-            // Remove quarantined threat immediately
-            setAttachments((prev) => prev.filter((a) => a.id !== id));
-            return;
-          }
-
-          // B. Read file as Data URL to get 100% offline Base64
-          const dataUrl = await readFileAsDataUrl(file);
-          const base64Data = extractBase64(dataUrl);
+          // Prepare thumbnail + MIME and avoid giant base64 strings for videos/large files (>6 MB)
+          const mediaType = getMediaType(file);
           const originalUrl = URL.createObjectURL(file);
-
           storeOriginalMedia(id, originalUrl);
           storeOriginalMedia(file.name, originalUrl);
-          storeMediaBase64(id, base64Data);
-          storeMediaBase64(file.name, base64Data);
+          storeOriginalFile(id, file);
+          storeOriginalFile(file.name, file);
           await storeOriginalMediaBlob(id, file);
           await storeOriginalMediaBlob(file.name, file);
 
-          const mediaType = getMediaType(file);
           let previewUrl = '';
           if (mediaType === 'image') {
             previewUrl = await generateImageThumbnail(file, 480, 0.72);
@@ -409,15 +410,58 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
             else detectedMime = mediaType === 'video' ? 'video/mp4' : mediaType === 'image' ? 'image/jpeg' : 'application/octet-stream';
           }
 
-          // Complete loading state - offline data is 100% ready for submission!
+          const shouldUseFilesApi = mediaType === 'video' || file.size > 6 * 1024 * 1024;
+          let base64Data = '';
+          let fileUri: string | undefined;
+
+          if (shouldUseFilesApi) {
+            // Update preview early while uploading chunks to Gemini Files API
+            setAttachments((prev) =>
+              prev.map((a) =>
+                a.id === id
+                  ? {
+                      ...a,
+                      previewUrl: previewUrl || originalUrl,
+                      originalUrl,
+                      mimeType: detectedMime,
+                      progress: 45,
+                    }
+                  : a
+              )
+            );
+            try {
+              const uploaded = await uploadMediaToGemini(file, file.name, detectedMime);
+              fileUri = uploaded.fileUri;
+              storeMediaFileUri(id, uploaded.fileUri);
+              storeMediaFileUri(file.name, uploaded.fileUri);
+            } catch (uploadErr) {
+              // If file is <= 10 MB, gracefully fall back to inline base64; otherwise propagate error
+              if (file.size <= 10 * 1024 * 1024) {
+                const dataUrl = await readFileAsDataUrl(file);
+                base64Data = extractBase64(dataUrl);
+                storeMediaBase64(id, base64Data);
+                storeMediaBase64(file.name, base64Data);
+              } else {
+                throw uploadErr;
+              }
+            }
+          } else {
+            const dataUrl = await readFileAsDataUrl(file);
+            base64Data = extractBase64(dataUrl);
+            storeMediaBase64(id, base64Data);
+            storeMediaBase64(file.name, base64Data);
+          }
+
+          // Complete loading state - data is 100% ready for submission!
           setAttachments((prev) =>
             prev.map((a) =>
               a.id === id
                 ? {
                     ...a,
                     previewUrl: previewUrl || originalUrl,
-                    originalUrl: originalUrl || dataUrl,
+                    originalUrl,
                     base64Data,
+                    fileUri,
                     mimeType: detectedMime,
                     isLoading: false,
                     progress: 100,
@@ -425,13 +469,18 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
                 : a
             )
           );
-        } catch (err) {
-          console.error('Error processing file offline:', err);
+        } catch (err: any) {
+          console.warn('Notice processing uploaded file:', err?.message || err);
           setAttachments((prev) => prev.filter((a) => a.id !== id));
+          setUploadAlert({
+            filename: file.name,
+            title: isEn ? 'Unable to Process File' : 'Gagal Memproses / Mengunggah Berkas',
+            reason: err?.message || (isEn ? 'This file format or size could not be uploaded.' : 'Ukuran atau format berkas tidak dapat diunggah saat ini.'),
+          });
         }
       })
     );
-  }, []);
+  }, [isEn]);
 
   const handleMediaFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -487,6 +536,7 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
       editorRef.current.innerHTML = '';
     }
     setText('');
+    setMentionQuery(null);
     setAttachments([]);
     setIsAttachmentOpen(false);
     setShowFormatToolbar(false);
@@ -494,6 +544,11 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Escape' && mentionQuery !== null) {
+      e.preventDefault();
+      setMentionQuery(null);
+      return;
+    }
     if (enterToSend && e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       const isAnyUploading = attachments.some((a) => a.isLoading);
@@ -561,8 +616,61 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
   const hasInput = text.trim().length > 0 || attachments.length > 0;
   const isFormattingActive = hasFormattingSyntax(text);
 
+  const mentionCandidates = (() => {
+    if (mentionQuery === null) return [];
+    const connectedIds = new Set(loadEnabledConnectors());
+    const all = getAllPlugins(loadCustomConnectors());
+    const allowSuggestions = loadConnectorSuggestions();
+    const q = mentionQuery.toLowerCase();
+    return all
+      .filter((p) => {
+        const isInstalled = p.source === 'core' || connectedIds.has(p.id);
+        if (!allowSuggestions && !isInstalled) return false;
+        if (!q) return isInstalled;
+        return (
+          p.name.toLowerCase().includes(q) ||
+          p.mentionTag.toLowerCase().includes(q)
+        );
+      })
+      .slice(0, 6);
+  })();
+
   return (
-    <div className="max-w-3xl mx-auto w-full px-3 sm:px-4 select-none">
+    <div className="max-w-3xl mx-auto w-full px-3 sm:px-4 select-none relative">
+      {mentionCandidates.length > 0 && (
+        <div className="mb-2 rounded-2xl border border-slate-200 dark:border-[#2a2e3e] bg-white dark:bg-[#161822] shadow-xl p-1.5 max-h-64 overflow-y-auto animate-in fade-in duration-100">
+          <div className="px-2.5 py-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500 flex items-center justify-between">
+            <span>{isEn ? 'Connectors & Plugins' : 'Konektor & Plugin'}</span>
+            <span>@mention</span>
+          </div>
+          {mentionCandidates.map((plugin) => (
+            <button
+              key={plugin.id}
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handlePickMention(plugin);
+              }}
+              className="w-full px-2.5 py-2 rounded-xl flex items-center justify-between gap-3 text-left hover:bg-slate-100 dark:hover:bg-[#222636] cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <PluginBrandIcon id={plugin.id} size="sm" />
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                    {plugin.name}
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                    {isEn ? plugin.shortDescEn : plugin.shortDesc}
+                  </div>
+                </div>
+              </div>
+              <span className="text-[11px] font-mono text-blue-600 dark:text-blue-400 shrink-0">
+                {plugin.mentionTag}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
       <MediaLightboxModal
         media={lightboxMedia}
         onClose={() => setLightboxMedia(null)}
@@ -676,47 +784,26 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
         onOpenPlusModal={onOpenPlusModal}
       />
 
-      {/* Real-Time DEFCON 5 Threat Intercepted & Quarantined Banner */}
-      {defconAlert && (
-        <div className="mb-2.5 p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/70 border-2 border-rose-300 dark:border-rose-600/80 text-rose-950 dark:text-rose-100 shadow-md flex items-start justify-between gap-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
+      {/* File Processing / Upload Error Banner */}
+      {uploadAlert && (
+        <div className="mb-2.5 p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-700 text-rose-950 dark:text-rose-100 shadow-sm flex items-start justify-between gap-3 animate-in fade-in duration-150">
           <div className="flex items-start gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-              <ShieldAlert className="w-4 h-4 animate-pulse" />
+            <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+              <AlertCircle className="w-4 h-4" />
             </div>
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-extrabold text-xs text-rose-700 dark:text-rose-300 uppercase tracking-wide">
-                  {isEn ? 'Spy Guard: Malicious File Intercepted' : 'Spy Guard: Berkas Berbahaya Dicegat'}
-                </span>
-                <span className="px-2 py-0.5 rounded-full bg-rose-200/90 dark:bg-rose-900 text-rose-800 dark:text-rose-200 text-[10px] font-bold">
-                  {defconAlert.threatName}
-                </span>
+              <div className="font-bold text-xs text-rose-700 dark:text-rose-300">
+                {uploadAlert.title}
               </div>
-              <p className="text-xs text-rose-900 dark:text-rose-200 mt-1 leading-snug">
-                {isEn ? (
-                  <>File <strong>"{defconAlert.filename}"</strong> was neutralized and moved to the <strong>Spy Guard Quarantine</strong>. Hazardous files are blocked from chat.</>
-                ) : (
-                  <>Berkas <strong>"{defconAlert.filename}"</strong> berhasil dinetralisir dan dipindahkan ke <strong>Ruang Karantina Spy Guard</strong>. Berkas berbahaya tidak diunggah ke ruang obrolan.</>
-                )}
+              <p className="text-xs text-rose-900 dark:text-rose-200 mt-0.5 leading-snug">
+                {uploadAlert.filename}: {uploadAlert.reason}
               </p>
-              <div className="text-[10px] text-rose-700 dark:text-rose-400 mt-1 font-medium">
-                {isEn ? 'Reason' : 'Alasan'}: {defconAlert.reason}
-              </div>
-              {onOpenDefconModal && (
-                <button
-                  type="button"
-                  onClick={onOpenDefconModal}
-                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-[11px] font-bold shadow-xs cursor-pointer"
-                >
-                  <span>{isEn ? 'Open Spy Guard Quarantine' : 'Buka Ruang Karantina Spy Guard'}</span>
-                </button>
-              )}
             </div>
           </div>
           <button
             type="button"
-            onClick={() => setDefconAlert(null)}
-            className="p-1 rounded-lg text-rose-400 hover:text-rose-700 hover:bg-rose-200/60 dark:hover:bg-rose-900/50 shrink-0"
+            onClick={() => setUploadAlert(null)}
+            className="p-1 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-200/60 dark:hover:bg-rose-900/50 shrink-0 cursor-pointer"
             title={isEn ? 'Dismiss notice' : 'Tutup notifikasi'}
           >
             <X className="w-4 h-4" />

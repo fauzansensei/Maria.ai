@@ -14,6 +14,7 @@ import {
   Star,
   Users,
   Zap,
+  Menu,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext.tsx';
 import { useTheme } from '../context/ThemeContext.tsx';
@@ -94,7 +95,7 @@ const AGENTS: AgentCard[] = [
   },
   {
     id: 'agent-6',
-    name: 'DEFCON Cyber Security Guardian',
+    name: 'Cyber Security Architect',
     category: 'security',
     tagline: 'Audit Keamanan & Zero-Trust',
     description: 'Memeriksa celah keamanan API, audit aturan Firestore, mitigasi injection, dan isolasi identitas.',
@@ -109,9 +110,10 @@ const AGENTS: AgentCard[] = [
 interface DiscoverAreaProps {
   onBackToChat: () => void;
   onLaunchAgent: (prompt: string, title: string) => void;
+  onOpenSidebar?: () => void;
 }
 
-export const DiscoverArea: React.FC<DiscoverAreaProps> = React.memo(({ onBackToChat, onLaunchAgent }) => {
+export const DiscoverArea: React.FC<DiscoverAreaProps> = React.memo(({ onBackToChat, onLaunchAgent, onOpenSidebar }) => {
   const { isEn } = useLanguage();
   const { isDark } = useTheme();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -139,8 +141,18 @@ export const DiscoverArea: React.FC<DiscoverAreaProps> = React.memo(({ onBackToC
   return (
     <div className={`flex-1 flex flex-col h-full overflow-hidden ${isDark ? 'bg-[#0e0f12] text-white' : 'bg-slate-50 text-slate-900'}`}>
       {/* Header Bar */}
-      <div className={`flex items-center justify-between px-6 py-4 border-b ${isDark ? 'border-[#20222f] bg-[#14151b]' : 'border-slate-200 bg-white'}`}>
+      <div className={`flex items-center justify-between px-4 sm:px-6 py-4 border-b ${isDark ? 'border-[#20222f] bg-[#14151b]' : 'border-slate-200 bg-white'}`}>
         <div className="flex items-center gap-3">
+          {onOpenSidebar && (
+            <button
+              type="button"
+              onClick={onOpenSidebar}
+              aria-label={isEn ? 'Open Menu' : 'Buka Menu'}
+              className="min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#1f212c] cursor-pointer"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          )}
           <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-500 dark:text-purple-400 flex items-center justify-center font-bold">
             <Compass className="w-5 h-5" />
           </div>

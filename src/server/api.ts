@@ -1,29 +1,20 @@
 import express, { Request, Response } from 'express';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import {
   generateChatResponse,
   generateChatResponseStream,
   generateAiImage,
   generateSpeechAudio,
+  uploadMediaFileToGemini,
 } from './gemini.ts';
-import { guard, sanitizeOutput, getDefconSummary, defconUniversalFilePayloadMiddleware, clientIp } from './defcon/guard.ts';
-import { wafEngine, wafGatekeeperMiddleware } from './defcon/waf.ts';
-import { defconStore } from './defcon/store.ts';
-import { spyGuardMiddleware, BAD_PATTERNS, MAX_REQ_PER_MINUTE, ipRequests } from './spyGuardMiddleware.ts';
 
 export const apiApp = express();
 export const apiRouter = express.Router();
 
 apiApp.use(express.json({ limit: '100mb' }));
 apiApp.use(express.urlencoded({ extended: true, limit: '100mb' }));
-
-// 1. Spy Guard (Bot Guard, Anti-DDoS 30 req/min & Anti-Injection Regex Gateway)
-apiApp.use(spyGuardMiddleware);
-
-// 2. Universal DEFCON 5 Inbound File & Virus Scanner (Scans all requests outside and inside chat)
-apiApp.use(defconUniversalFilePayloadMiddleware);
-
-// 3. Web Application Firewall (WAF) Gatekeeper (IP Reputation & Pre-AI Payload Validation)
-apiApp.use(wafGatekeeperMiddleware);
 
 // Helper to safely send JSON responses in any middleware context
 function sendJson(res: any, statusCode: number, data: any) {
@@ -35,267 +26,6 @@ function sendJson(res: any, statusCode: number, data: any) {
   res.end(JSON.stringify(data));
 }
 
-// DEFCON 5 Shield Status & Summary Endpoint (Claude revision)
-apiRouter.get('/defcon', async (_req: Request, res: Response) => {
-  res.setHeader('Cache-Control', 'no-store');
-  try {
-    const summary = await getDefconSummary();
-    sendJson(res, 200, summary);
-  } catch (err: any) {
-    sendJson(res, 500, { error: err?.message || 'Gagal memuat status DEFCON.' });
-  }
-});
-
-// Spy Guard Status Endpoint (30 req/min & Anti-Injection Rules)
-apiRouter.get('/spyguard/status', (req: Request, res: Response) => {
-  res.setHeader('Cache-Control', 'no-store');
-  const client = clientIp(req);
-  const reqData = ipRequests.get(client) || { count: 0, lastReset: Date.now() };
-  sendJson(res, 200, {
-    status: 'active',
-    clientIp: client,
-    maxReqPerMinute: MAX_REQ_PER_MINUTE,
-    currentReqCount: reqData.count,
-    badPatternsCount: BAD_PATTERNS.length,
-    badPatterns: [
-      'import requests (Skrip DDoS Python)',
-      'while true: (Looping tanpa henti DDoS)',
-      '<script> (XSS Cross Site Scripting)',
-      'union select (SQL Injection)',
-      'ignore previous instructions (Prompt Injection)',
-      'eval( (Eksekusi kode ilegal)',
-      'base64_decode (Obfuscated script)',
-      'curl -X POST (Automated probe)',
-      'system( (Command injection)',
-      'exec( (Eksekusi script)',
-    ],
-    trackedIpsCount: ipRequests.size,
-  });
-});
-
-// WAF Status & Summary Endpoint
-apiRouter.get('/waf/summary', async (req: Request, res: Response) => {
-  res.setHeader('Cache-Control', 'no-store');
-  try {
-    const client = clientIp(req);
-    const intel = await wafEngine.checkIpReputation(client);
-    const summary = wafEngine.getWafSummary();
-    sendJson(res, 200, {
-      ...summary,
-      clientIp: client,
-      clientIntel: intel,
-      isClientWhitelisted: wafEngine.isWhitelisted(client),
-    });
-  } catch (err: any) {
-    sendJson(res, 500, { error: err?.message || 'Gagal memuat status WAF.' });
-  }
-});
-
-// Whitelist current client IP (Owner Quick-Whitelist)
-apiRouter.post('/waf/whitelist-self', (req: Request, res: Response) => {
-  const client = clientIp(req);
-  wafEngine.addWhitelistIp(client);
-  sendJson(res, 200, {
-    status: 'success',
-    whitelistedIp: client,
-    message: `Alamat IP Anda (${client}) berhasil dimasukkan ke whitelist pemilik. Anda bebas dari batasan rate limit WAF.`,
-  });
-});
-
-// Clear WAF Bans / Active Lockouts
-apiRouter.post('/waf/clear-bans', (_req: Request, res: Response) => {
-  defconStore.clearAll();
-  ipRequests.clear();
-  sendJson(res, 200, {
-    status: 'success',
-    message: 'Semua riwayat penguncian & blokir IP WAF serta rate limit telah dibersihkan.',
-  });
-});
-
-// Helper to extract uploaded file buffers from chat messages
-function extractUploadsFromMessages(messages: any[]): { name: string; data: Buffer }[] {
-  const uploads: { name: string; data: Buffer }[] = [];
-  if (!Array.isArray(messages)) return uploads;
-
-  for (const msg of messages) {
-    if (Array.isArray(msg?.attachments)) {
-      for (const att of msg.attachments) {
-        // Skip safe media attachments (videos, images, audio, pdf)
-        const isSafeMedia =
-          att.type === 'video' ||
-          att.type === 'image' ||
-          att.type === 'audio' ||
-          (typeof att.name === 'string' &&
-            /\.(mp4|webm|mov|mkv|3gp|avi|jpg|jpeg|png|webp|gif|svg|pdf|mp3|wav|ogg|m4a)$/i.test(att.name)) ||
-          (att.mimeType &&
-            (att.mimeType.startsWith('image/') ||
-              att.mimeType.startsWith('video/') ||
-              att.mimeType.startsWith('audio/') ||
-              att.mimeType === 'application/pdf'));
-
-        if (isSafeMedia) continue;
-
-        if (att && att.data && typeof att.data === 'string') {
-          try {
-            const cleanB64 = att.data.replace(/^data:[^;]+;base64,/, '');
-            const buf = Buffer.from(cleanB64, 'base64');
-            uploads.push({
-              name: att.name || 'uploaded_payload.dat',
-              data: buf,
-            });
-          } catch (e) {
-            console.warn('DEFCON attachment extraction error:', e);
-          }
-        }
-      }
-    }
-  }
-  return uploads;
-}
-
-// Test trigger for DEFCON Shield verification (supports prompt, flood, and malware tests)
-apiRouter.post('/defcon/test', async (req: Request, res: Response) => {
-  const { payload, filename, fileBase64, isChat } = req.body || {};
-  const uploads: { name: string; data: Buffer }[] = [];
-
-  if (fileBase64 && typeof fileBase64 === 'string') {
-    try {
-      const cleanB64 = fileBase64.replace(/^data:[^;]+;base64,/, '');
-      uploads.push({
-        name: filename || 'test_payload.bin',
-        data: Buffer.from(cleanB64, 'base64'),
-      });
-    } catch {}
-  }
-
-  const isAllowed = await guard(req, res, {
-    message: payload,
-    uploads: uploads.length > 0 ? uploads : undefined,
-    isChat: Boolean(isChat),
-    isTest: true,
-  });
-
-  if (isAllowed) {
-    sendJson(res, 200, {
-      status: 'passed',
-      message: 'Payload terverifikasi bersih dan lolos pengawasan DEFCON 5.',
-    });
-  }
-});
-
-// Dedicated DEFCON File Inspection API
-apiRouter.post('/defcon/inspect-file', async (req: Request, res: Response) => {
-  const { name, dataBase64 } = req.body || {};
-  if (!dataBase64 || typeof dataBase64 !== 'string') {
-    sendJson(res, 400, { error: 'dataBase64 diperlukan untuk inspeksi biner.' });
-    return;
-  }
-
-  try {
-    const cleanB64 = dataBase64.replace(/^data:[^;]+;base64,/, '');
-    const buf = Buffer.from(cleanB64, 'base64');
-    const filename = name || 'uploaded_sample.bin';
-    const isAllowed = await guard(req, res, {
-      uploads: [{ name: filename, data: buf }],
-      isTest: true,
-    });
-
-    if (isAllowed) {
-      sendJson(res, 200, {
-        verdict: 'clean',
-        message: `${filename} lolos inspeksi heuristik & signature DEFCON 5.`,
-      });
-    }
-  } catch (err: any) {
-    sendJson(res, 500, { error: err?.message || 'Gagal memproses inspeksi berkas.' });
-  }
-});
-
-// VirusTotal Status Endpoint
-apiRouter.get('/virustotal/status', (_req: Request, res: Response) => {
-  const apiKey = process.env.VIRUSTOTAL_API_KEY || process.env.VT_API_KEY || '';
-  sendJson(res, 200, {
-    configured: Boolean(apiKey && apiKey.length >= 20),
-    variableName: 'VIRUSTOTAL_API_KEY',
-  });
-});
-
-// VirusTotal Live Hash Lookup Endpoint (v3 Files API)
-apiRouter.get(['/virustotal/check/:hash', '/virustotal/check-hash/:hash'], async (req: Request, res: Response) => {
-  const apiKey = process.env.VIRUSTOTAL_API_KEY || process.env.VT_API_KEY || '';
-  const hash = req.params.hash?.trim().toLowerCase();
-
-  if (!hash || hash.length !== 64) {
-    sendJson(res, 400, { error: 'Format hash SHA-256 tidak valid (harus 64 karakter heksadesimal).' });
-    return;
-  }
-
-  if (!apiKey) {
-    sendJson(res, 200, {
-      configured: false,
-      message: 'VIRUSTOTAL_API_KEY belum dikonfigurasi di secrets.',
-    });
-    return;
-  }
-
-  try {
-    const vtRes = await fetch(`https://www.virustotal.com/api/v3/files/${hash}`, {
-      headers: {
-        'x-apikey': apiKey,
-        'Accept': 'application/json',
-      },
-      signal: AbortSignal.timeout(6000),
-    });
-
-    if (vtRes.status === 404) {
-      sendJson(res, 200, {
-        configured: true,
-        found: false,
-        message: 'Berkas belum pernah dilaporkan di database global VirusTotal.',
-      });
-      return;
-    }
-
-    if (!vtRes.ok) {
-      const errText = await vtRes.text();
-      sendJson(res, vtRes.status, {
-        configured: true,
-        error: `VirusTotal API error (${vtRes.status}): ${errText.slice(0, 200)}`,
-      });
-      return;
-    }
-
-    const data = await vtRes.json();
-    const attrs = data?.data?.attributes || {};
-    const stats = attrs.last_analysis_stats || {};
-    const maliciousCount = stats.malicious || 0;
-    const suspiciousCount = stats.suspicious || 0;
-    const harmlessCount = stats.harmless || 0;
-    const undetectedCount = stats.undetected || 0;
-    const totalVendors = maliciousCount + suspiciousCount + harmlessCount + undetectedCount;
-
-    sendJson(res, 200, {
-      configured: true,
-      found: true,
-      sha256: hash,
-      verdict: maliciousCount > 0 ? 'threat' : suspiciousCount > 1 ? 'suspicious' : 'clean',
-      malicious: maliciousCount,
-      suspicious: suspiciousCount,
-      harmless: harmlessCount,
-      undetected: undetectedCount,
-      totalVendors,
-      threatName: attrs.meaningful_name || attrs.popular_threat_classification?.suggested_threat_label || null,
-      reputation: attrs.reputation || 0,
-      scanDate: attrs.last_analysis_date,
-    });
-  } catch (err: any) {
-    sendJson(res, 500, {
-      configured: true,
-      error: `Gagal menghubungi VirusTotal: ${err?.message || err}`,
-    });
-  }
-});
-
 // Health Check
 apiRouter.get('/health', (_req: Request, res: Response) => {
   sendJson(res, 200, {
@@ -303,6 +33,91 @@ apiRouter.get('/health', (_req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
     geminiAvailable: Boolean(process.env.GEMINI_API_KEY),
   });
+});
+
+// Chunked Raw Binary Media Upload -> Gemini Files API (Fixes 413 / Failed to fetch for large videos)
+apiRouter.post(
+  '/upload-media/chunk',
+  express.raw({ type: 'application/octet-stream', limit: '15mb' }),
+  async (req: Request, res: Response) => {
+    try {
+      const uploadId = String(req.query.uploadId || '').replace(/[^a-zA-Z0-9_-]/g, '');
+      const chunkIndex = Number(req.query.chunkIndex);
+      if (!uploadId || !Number.isInteger(chunkIndex) || chunkIndex < 0 || chunkIndex > 500) {
+        sendJson(res, 400, { error: 'Parameter uploadId atau chunkIndex tidak valid.' });
+        return;
+      }
+      if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+        sendJson(res, 400, { error: 'Data biner chunk kosong.' });
+        return;
+      }
+
+      const uploadDir = path.join(os.tmpdir(), 'maria_uploads', uploadId);
+      await fs.promises.mkdir(uploadDir, { recursive: true });
+      const chunkPath = path.join(uploadDir, `chunk_${chunkIndex}.bin`);
+      await fs.promises.writeFile(chunkPath, req.body);
+
+      sendJson(res, 200, { ok: true, chunkIndex, bytes: req.body.length });
+    } catch (err: any) {
+      console.error('Media chunk upload error:', err);
+      sendJson(res, 500, { error: err?.message || 'Gagal menyimpan chunk video.' });
+    }
+  }
+);
+
+apiRouter.post('/upload-media/finalize', async (req: Request, res: Response) => {
+  const uploadId = String(req.body?.uploadId || '').replace(/[^a-zA-Z0-9_-]/g, '');
+  const totalChunks = Number(req.body?.totalChunks);
+  const fileName = String(req.body?.fileName || 'video.mp4').replace(/[/\\]/g, '_');
+  const rawMime = String(req.body?.mimeType || 'video/mp4').split(';')[0].trim().toLowerCase();
+
+  if (!uploadId || !Number.isInteger(totalChunks) || totalChunks < 1 || totalChunks > 500) {
+    sendJson(res, 400, { error: 'Parameter finalize upload tidak valid.' });
+    return;
+  }
+
+  // Block unsafe executable extensions
+  const isBlockedExt = /\.(exe|bat|cmd|sh|php|jsp|asp|msi|dll|vbs|ps1)$/i.test(fileName);
+  if (isBlockedExt) {
+    sendJson(res, 403, { error: 'Jenis berkas ini tidak didukung untuk diunggah.' });
+    return;
+  }
+
+  const uploadDir = path.join(os.tmpdir(), 'maria_uploads', uploadId);
+  const assembledPath = path.join(uploadDir, `assembled_${Date.now()}_${fileName}`);
+
+  try {
+    const writeStream = fs.createWriteStream(assembledPath);
+    for (let i = 0; i < totalChunks; i++) {
+      const chunkPath = path.join(uploadDir, `chunk_${i}.bin`);
+      if (!fs.existsSync(chunkPath)) {
+        writeStream.close();
+        sendJson(res, 400, { error: `Chunk ${i} tidak ditemukan.` });
+        return;
+      }
+      const data = await fs.promises.readFile(chunkPath);
+      await new Promise<void>((resolve, reject) => {
+        if (!writeStream.write(data)) {
+          writeStream.once('drain', resolve);
+        } else {
+          resolve();
+        }
+        writeStream.once('error', reject);
+      });
+    }
+    await new Promise<void>((resolve, reject) => {
+      writeStream.end(() => resolve());
+      writeStream.once('error', reject);
+    });
+
+    const uploaded = await uploadMediaFileToGemini(assembledPath, rawMime || 'video/mp4', fileName);
+    sendJson(res, 200, uploaded);
+  } catch (err: any) {
+    console.error('Media finalize/Gemini upload error:', err);
+    sendJson(res, 500, { error: err?.message || 'Gagal mengunggah video ke Gemini Files API.' });
+  } finally {
+    fs.promises.rm(uploadDir, { recursive: true, force: true }).catch(() => {});
+  }
 });
 
 // Real-time Chat Streaming via Server-Sent Events (SSE)
@@ -324,16 +139,6 @@ apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
       sendJson(res, 400, { error: 'Daftar pesan tidak boleh kosong.' });
       return;
     }
-
-    // DEFCON 5 Guard inspection before calling Gemini (inspects text, uploads & floods)
-    const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user')?.content || '';
-    const uploads = extractUploadsFromMessages(messages);
-    const isAllowed = await guard(req, res, {
-      message: lastUserMsg,
-      uploads: uploads.length > 0 ? uploads : undefined,
-      isChat: true,
-    });
-    if (!isAllowed) return;
 
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -358,7 +163,6 @@ apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
 
       for await (const chunk of stream) {
         if (chunk && chunk.text) {
-          chunk.text = sanitizeOutput(chunk.text);
           tokensSent++;
         }
         res.write(`data: ${JSON.stringify(chunk)}\n\n`);
@@ -390,7 +194,7 @@ apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
           });
 
           if (fallbackRes.text) {
-            res.write(`data: ${JSON.stringify({ type: 'chunk', text: sanitizeOutput(fallbackRes.text), model: fallbackRes.model })}\n\n`);
+            res.write(`data: ${JSON.stringify({ type: 'chunk', text: fallbackRes.text, model: fallbackRes.model })}\n\n`);
           }
           res.write(`data: ${JSON.stringify({ type: 'done', model: fallbackRes.model, groundingLinks: fallbackRes.groundingLinks })}\n\n`);
           res.write('data: [DONE]\n\n');
@@ -446,16 +250,6 @@ apiRouter.post('/chat', async (req: Request, res: Response) => {
       return;
     }
 
-    // DEFCON 5 Guard inspection before calling Gemini (inspects text, uploads & floods)
-    const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user')?.content || '';
-    const uploads = extractUploadsFromMessages(messages);
-    const isAllowed = await guard(req, res, {
-      message: lastUserMsg,
-      uploads: uploads.length > 0 ? uploads : undefined,
-      isChat: true,
-    });
-    if (!isAllowed) return;
-
     const result = await generateChatResponse({
       messages,
       mode,
@@ -470,11 +264,6 @@ apiRouter.post('/chat', async (req: Request, res: Response) => {
       userMemories,
       userName,
     });
-
-    // DLP Sanitize Output to prevent secret leaks
-    if (result && result.text) {
-      result.text = sanitizeOutput(result.text);
-    }
 
     sendJson(res, 200, result);
   } catch (error: any) {

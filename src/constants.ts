@@ -129,9 +129,6 @@ export const DEFAULT_SETTINGS: UserSettings = {
   twoFactorEnabled: false,
   securityPin: "",
   sessionLockEnabled: false,
-  cyberModeEnabled: true,
-  defconLevel: "DEFCON 5",
-  autonomousSelfHealing: true,
   isPlus: false,
   plusPlan: "free",
 };

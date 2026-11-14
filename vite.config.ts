@@ -12,46 +12,28 @@ function expressApiPlugin(): Plugin {
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         const reqUrl = req.url || '';
-        const ua = String(req.headers['user-agent'] || '').toLowerCase().trim();
-        const isAutomatedRootProbe =
-          reqUrl === '/' &&
-          (ua === 'mozilla/5.0' ||
-            ua.includes('python-requests') ||
-            ua.includes('curl/') ||
-            ua.includes('wget/'));
-
-        // Intercept /api calls and automated bot probes on root /; never interfere with normal browser static loads
-        if (!reqUrl.startsWith('/api') && !isAutomatedRootProbe) {
+        if (!reqUrl.startsWith('/api')) {
           return next();
         }
 
         try {
-          const { defconAntiDdosMiddleware } = await import('./src/server/defcon/guard.ts');
-          defconAntiDdosMiddleware(req as any, res as any, () => {
-            if (!reqUrl.startsWith('/api')) {
-              return next();
+          const { apiApp } = await import('./src/server/api.ts');
+          apiApp(req as any, res as any, (err?: any) => {
+            if (err) {
+              console.error('API Error in Vite middleware:', err);
+              if (!res.headersSent) {
+                res.statusCode = 500;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ error: err.message || 'Internal Server Error' }));
+              }
+            } else if (!res.headersSent) {
+              res.statusCode = 404;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'Endpoint API tidak ditemukan.' }));
             }
-            import('./src/server/api.ts').then(({ apiApp }) => {
-              apiApp(req as any, res as any, (err?: any) => {
-                if (err) {
-                  console.error('API Error in Vite middleware:', err);
-                  if (!res.headersSent) {
-                    res.statusCode = 500;
-                    res.setHeader('Content-Type', 'application/json');
-                    res.end(JSON.stringify({ error: err.message || 'Internal Server Error' }));
-                  }
-                } else if (!res.headersSent) {
-                  res.statusCode = 404;
-                  res.setHeader('Content-Type', 'application/json');
-                  res.end(JSON.stringify({ error: 'Endpoint API tidak ditemukan.' }));
-                }
-              });
-            }).catch((importErr) => {
-              console.error('Failed to import apiApp:', importErr);
-              next();
-            });
           });
         } catch (err) {
+          console.error('Failed to handle API middleware:', err);
           next();
         }
       });
