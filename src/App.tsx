@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
-import { ThemeProvider, useTheme } from './context/ThemeContext.tsx';
+import { ThemeProvider, useThemeActions } from './context/ThemeContext.tsx';
 import { LanguageProvider } from './context/LanguageContext.tsx';
 import { Sidebar } from './components/Sidebar.tsx';
 import { ChatArea } from './components/ChatArea.tsx';
@@ -38,7 +38,7 @@ import { userMemoryService } from './lib/userMemoryService.ts';
 
 function AppContent() {
   const { user } = useAuth();
-  const { setTheme, isDark } = useTheme();
+  const { setTheme } = useThemeActions();
   const [activeConnectingAction, setActiveConnectingAction] = useState<LaunchAction | null>(null);
 
   // Enforce super-compact 1-byte micro cookies and clean storage on launch
@@ -1275,7 +1275,7 @@ function AppContent() {
 
   return (
     <LanguageProvider language={settings.language || 'Indonesia'}>
-    <div className={`flex h-[100dvh] w-screen overflow-hidden font-sans ${isDark ? 'bg-[#0e0f12] text-white' : 'bg-white text-slate-900'}`}>
+    <div className="flex h-[100dvh] w-screen overflow-hidden font-sans bg-white text-slate-900 dark:bg-[#0e0f12] dark:text-white">
       {/* Navigation Sidebar */}
       <Sidebar
         conversations={conversations}
@@ -1301,7 +1301,7 @@ function AppContent() {
       />
 
       {/* Main Workspace: Chat, Library, or Discover View */}
-      <main className={`flex-1 flex flex-col min-w-0 h-full overflow-hidden ${isDark ? 'bg-[#0e0f12]' : 'bg-white'}`}>
+      <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-white dark:bg-[#0e0f12]">
         {activeView === 'chat' && (
           <ChatArea
             activeConversation={activeConversation}

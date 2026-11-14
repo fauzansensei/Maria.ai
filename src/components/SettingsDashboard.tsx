@@ -214,7 +214,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
   conversations = [],
 }) => {
   const { user, signIn, signOut } = useAuth();
-  const { theme, isDark, setTheme } = useTheme();
+  const { theme, isDark, setTheme, toggleTheme } = useTheme();
   const { isEn } = useLanguage();
 
   const [activeTab, setActiveTab] = useState<TabType>('general');
@@ -399,6 +399,16 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
     }
   };
 
+  const handleToggleTheme = () => {
+    const resolvedTheme = toggleTheme();
+    if (user?.uid) {
+      if (themeSyncTimeoutRef.current) window.clearTimeout(themeSyncTimeoutRef.current);
+      themeSyncTimeoutRef.current = window.setTimeout(() => {
+        updateUserProfile(user.uid, { theme: resolvedTheme }).catch(() => {});
+      }, 450);
+    }
+  };
+
   const handleTogglePlugin = (pluginId: string) => {
     const current = settings.enabledPlugins || MARIA_PLUGINS.map((p) => p.id);
     const exists = current.includes(pluginId);
@@ -540,7 +550,13 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
                   {isEn ? 'Maria AI Settings' : 'Pengaturan Maria AI'}
                 </h3>
                 {savedSuccess && (
-                  <span className="text-[10px] font-semibold text-blue-600 dark:text-[#60a5fa] bg-blue-50 dark:bg-[#2563eb]/20 px-2 py-0.5 rounded-full border border-blue-200 dark:border-[#2563eb]/30 flex items-center gap-1">
+                  <span
+                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border flex items-center gap-1 ${
+                      isDark
+                        ? 'text-[#60a5fa] bg-[#2563eb]/20 border-[#2563eb]/30'
+                        : 'text-blue-600 bg-blue-50 border-blue-200'
+                    }`}
+                  >
                     <Check className="w-3 h-3" /> {isEn ? 'Saved' : 'Tersimpan'}
                   </span>
                 )}
@@ -554,9 +570,9 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
           <div className="flex items-center gap-1.5">
             <button
               type="button"
-              onClick={() => handleSelectTheme(isDark ? 'light' : 'dark')}
+              onClick={handleToggleTheme}
               title={isDark ? (isEn ? 'Switch to Light Mode' : 'Beralih ke Mode Terang') : (isEn ? 'Switch to Dark Mode' : 'Beralih ke Mode Gelap')}
-              className={`w-8 h-8 rounded-xl border flex items-center justify-center cursor-pointer active:scale-95 ${
+              className={`w-8 h-8 rounded-xl border flex items-center justify-center cursor-pointer ${
                 isDark
                   ? 'border-[#2d3042] bg-[#1b1d28] text-amber-300 hover:bg-[#252838]'
                   : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
@@ -672,7 +688,11 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
                       <div className={`text-xs font-semibold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>{res.title}</div>
                       <div className={`text-[11px] truncate ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>{res.description}</div>
                     </div>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-[#2563eb]/15 text-blue-600 dark:text-[#60a5fa] shrink-0">
+                    <span
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg shrink-0 ${
+                        isDark ? 'bg-[#2563eb]/15 text-[#60a5fa]' : 'bg-blue-50 text-blue-600'
+                      }`}
+                    >
                       {res.tabLabel}
                     </span>
                   </button>

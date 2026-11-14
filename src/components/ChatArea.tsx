@@ -20,7 +20,6 @@ import { speechService, SpeechState } from '../lib/speechService.ts';
 import { DefconLevel } from './DefconShieldModal.tsx';
 import { defconService, DefconState } from '../lib/defconProtectionService.ts';
 import { guardianEngine, type Snapshot } from '../lib/guardian/guardianEngine.ts';
-import { useTheme } from '../context/ThemeContext.tsx';
 import { useLanguage } from '../context/LanguageContext.tsx';
 
 interface ChatAreaProps {
@@ -99,7 +98,6 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
   homepageSuggestions = true,
   temporaryChat = false,
 }) => {
-  const { isDark } = useTheme();
   const { isEn } = useLanguage();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [speechState, setSpeechState] = useState<SpeechState>(() => speechService.getState());
@@ -226,9 +224,9 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
   };
 
   return (
-    <div className={`flex-1 flex flex-col h-full relative overflow-hidden select-none ${isDark ? 'bg-[#0e0f12] text-slate-100' : 'bg-white text-gray-900'}`}>
+    <div className="flex-1 flex flex-col h-full relative overflow-hidden select-none bg-white text-gray-900 dark:bg-[#0e0f12] dark:text-slate-100">
       {/* Top Bar Header (Sticky, always visible on mobile & desktop) */}
-      <header className={`sticky top-0 h-14 px-3 sm:px-4 border-b flex items-center justify-between shrink-0 z-30 select-none shadow-2xs ${isDark ? 'border-[#1e2028] bg-[#0e0f12]' : 'border-gray-100 bg-white'}`}>
+      <header className="sticky top-0 h-14 px-3 sm:px-4 border-b flex items-center justify-between shrink-0 z-30 select-none shadow-2xs border-gray-100 bg-white dark:border-[#1e2028] dark:bg-[#0e0f12]">
         {/* Left: Hamburger Button (only shown when sidebar is closed/collapsed) + Maria AI Logo & PLUS Badge */}
         <div className="flex items-center gap-2 sm:gap-2.5">
           {!isSidebarOpen && (
@@ -236,7 +234,7 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
               onClick={onToggleSidebar}
               title={isEn ? 'Open Menu' : 'Buka Menu'}
               aria-label={isEn ? 'Open Menu' : 'Buka Menu'}
-              className={`w-9 h-9 rounded-xl border flex items-center justify-center active:scale-95 shadow-xs shrink-0 ${isDark ? 'border-[#262834] bg-[#171820] text-slate-200 hover:bg-[#1f212b]' : 'border-gray-200 bg-white text-gray-800 hover:bg-gray-50'}`}
+              className="w-9 h-9 rounded-xl border flex items-center justify-center active:scale-95 shadow-xs shrink-0 border-gray-200 bg-white text-gray-800 hover:bg-gray-50 dark:border-[#262834] dark:bg-[#171820] dark:text-slate-200 dark:hover:bg-[#1f212b]"
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -245,7 +243,7 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
           <div className="flex items-center gap-2">
             <MariaLogo size="sm" withOnlineDot={true} />
             <div className="flex items-center gap-2">
-              <span className={`font-bold text-sm sm:text-base tracking-tight ${isDark ? 'text-white' : 'text-[#0f172a]'}`}>
+              <span className="font-bold text-sm sm:text-base tracking-tight text-[#0f172a] dark:text-white">
                 Maria AI
               </span>
               {isPlus ? (
@@ -276,7 +274,7 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
             </span>
           )}
           {activeConversation && !temporaryChat && (
-            <span className={`text-xs font-medium truncate max-w-xs ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+            <span className="text-xs font-medium truncate max-w-xs text-gray-500 dark:text-slate-400">
               {activeConversation.title}
             </span>
           )}
@@ -288,7 +286,7 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
           <button
             onClick={() => onOpenDefcon?.()}
             title={isEn ? 'Open Maria Spy Guard Security System (Anti-Malware, Spyware & WAF)' : 'Buka Sistem Keamanan Maria Spy Guard (Anti-Malware, Spyware & WAF)'}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold shadow-xs transition-colors duration-100 cursor-pointer active:scale-95 ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold shadow-xs cursor-pointer active:scale-95 ${
               defconLevel === 5
                 ? 'border-[#a7f3d0] bg-[#ecfdf5] text-[#059669] hover:bg-emerald-100/80 hover:border-emerald-300'
                 : defconLevel === 4
@@ -318,7 +316,7 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
             <button
               onClick={() => setShowNotifications((prev) => !prev)}
               title={isEn ? 'Notifications' : 'Notifikasi'}
-              className={`w-9 h-9 rounded-xl border flex items-center justify-center shadow-xs relative ${isDark ? 'border-[#262834] bg-[#171820] text-slate-200 hover:bg-[#1f212b]' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
+              className="w-9 h-9 rounded-xl border flex items-center justify-center shadow-xs relative border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-[#262834] dark:bg-[#171820] dark:text-slate-200 dark:hover:bg-[#1f212b]"
             >
               <Bell className="w-4 h-4" />
               {unreadCount > 0 && (
@@ -330,9 +328,9 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
 
             {/* Notifications Popover */}
             {showNotifications && (
-              <div className={`absolute right-0 mt-2 w-72 border rounded-2xl shadow-2xl p-3 z-50 text-xs ${isDark ? 'bg-[#181a22] border-[#2a2d3a]' : 'bg-white border-gray-200'}`}>
-                <div className={`flex items-center justify-between pb-2 border-b ${isDark ? 'border-[#262834]' : 'border-gray-100'}`}>
-                  <span className={`font-bold flex items-center gap-1.5 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <div className="absolute right-0 mt-2 w-72 border rounded-2xl shadow-2xl p-3 z-50 text-xs bg-white border-gray-200 dark:bg-[#181a22] dark:border-[#2a2d3a]">
+                <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-[#262834]">
+                  <span className="font-bold flex items-center gap-1.5 text-gray-900 dark:text-white">
                     <Bell className="w-3.5 h-3.5 text-emerald-600" /> {isEn ? 'Notifications' : 'Notifikasi'}
                   </span>
                   {unreadCount > 0 && (
@@ -353,8 +351,8 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
                       key={n.id}
                       className={`p-2 rounded-xl border ${
                         n.read
-                          ? isDark ? 'bg-[#12131a] border-transparent text-slate-500' : 'bg-gray-50 border-transparent text-gray-400'
-                          : isDark ? 'bg-emerald-950/30 border-emerald-500/20 text-slate-100' : 'bg-emerald-50/60 border-emerald-100 text-gray-800'
+                          ? 'bg-gray-50 border-transparent text-gray-400 dark:bg-[#12131a] dark:border-transparent dark:text-slate-500'
+                          : 'bg-emerald-50/60 border-emerald-100 text-gray-800 dark:bg-emerald-950/30 dark:border-emerald-500/20 dark:text-slate-100'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-1">
@@ -386,7 +384,7 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
             </div>
 
             {/* Title: Dari mana kita harus mulai? */}
-            <h1 className={`text-xl sm:text-2xl font-bold tracking-tight text-center ${isDark ? 'text-white' : 'text-[#0f172a]'}`}>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-center text-[#0f172a] dark:text-white">
               {isEn ? 'Where should we start?' : 'Dari mana kita harus mulai?'}
             </h1>
 
@@ -400,7 +398,7 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
                     key={starter.id}
                     type="button"
                     onClick={() => onSendMessage(sText, activeMode, undefined, undefined, webSearchDefault)}
-                    className={`px-3 py-1.5 rounded-full border text-xs font-medium cursor-pointer ${isDark ? 'bg-[#171920] hover:bg-[#1f222b] border-[#2a2d3a] text-slate-200' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
+                    className="px-3 py-1.5 rounded-full border text-xs font-medium cursor-pointer bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700 dark:bg-[#171920] dark:hover:bg-[#1f222b] dark:border-[#2a2d3a] dark:text-slate-200"
                   >
                     {sTitle}
                   </button>
@@ -452,7 +450,7 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
       </div>
 
       {/* Bottom Chat Input Dock */}
-      <div className={`shrink-0 pt-2 pb-2 border-t shadow-xs ${isDark ? 'bg-[#0e0f12] border-[#1e2028]' : 'bg-white border-slate-200'}`}>
+      <div className="shrink-0 pt-2 pb-2 border-t shadow-xs bg-white border-slate-200 dark:bg-[#0e0f12] dark:border-[#1e2028]">
         <ChatInput
           onSendMessage={onSendMessage}
           isLoading={isLoading}

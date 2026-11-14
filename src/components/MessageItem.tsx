@@ -37,7 +37,6 @@ import { speechService, SpeechState } from '../lib/speechService.ts';
 import { formatBytes, getOriginalMedia, getOriginalMediaBlob, getMediaBase64 } from '../lib/mediaUtils.ts';
 import { MediaLightboxModal, LightboxMedia } from './MediaLightboxModal.tsx';
 import { useLanguage } from '../context/LanguageContext.tsx';
-import { useTheme } from '../context/ThemeContext.tsx';
 
 interface MessageItemProps {
   message: Message;
@@ -332,7 +331,6 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
   onOpenImageStudio,
 }) => {
   const { isEn } = useLanguage();
-  const { isDark } = useTheme();
   const [copied, setCopied] = useState(false);
   const [shared, setShared] = useState(false);
   const [feedback, setFeedback] = useState<'like' | 'dislike' | null>(null);
@@ -963,12 +961,8 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
               onTouchMove={cancelLongPress}
               className={`rounded-3xl rounded-br-md px-4 py-2.5 shadow-2xs ${
                 isEditing
-                  ? isDark
-                    ? 'w-full min-w-[260px] sm:min-w-[360px] bg-[#1e2028] border border-blue-400 text-white'
-                    : 'w-full min-w-[260px] sm:min-w-[360px] bg-slate-100 border border-blue-400 text-slate-900'
-                  : isDark
-                  ? 'bg-[#1e3a8a] text-white'
-                  : 'bg-[#1d4ed8] text-white'
+                  ? 'w-full min-w-[260px] sm:min-w-[360px] bg-slate-100 border border-blue-400 text-slate-900 dark:bg-[#1e2028] dark:text-white'
+                  : 'bg-[#1d4ed8] dark:bg-[#1e3a8a] text-white'
               }`}
             >
               {isEditing ? (
@@ -1068,7 +1062,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
           {showContextMenu && (
             <div
               ref={contextMenuRef}
-              className={`absolute right-0 top-full mt-1 z-40 w-52 border rounded-2xl shadow-2xl py-1.5 text-xs ${isDark ? 'bg-[#232429] border-[#34363f] text-slate-100' : 'bg-white border-slate-200 text-slate-800'}`}
+              className="absolute right-0 top-full mt-1 z-40 w-52 border rounded-2xl shadow-2xl py-1.5 text-xs bg-white border-slate-200 text-slate-800 dark:bg-[#232429] dark:border-[#34363f] dark:text-slate-100"
             >
               <div className="px-3.5 py-2 text-[11px] text-slate-400 border-b border-slate-100 dark:border-[#32343d] capitalize">
                 {formattedTimestamp}
@@ -1223,7 +1217,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
         )}
 
         {/* Open Borderless Response Prose */}
-        <div className={`text-[15px] leading-[1.7] select-text break-words ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>
+        <div className="text-[15px] leading-[1.7] select-text break-words text-slate-800 dark:text-slate-100">
           {!displayedContent.trim() && message.isStreaming && (
             <div className="flex items-center gap-2 py-1 text-slate-500 dark:text-slate-400 animate-in fade-in duration-200">
               <div className="flex items-center gap-1.5">
@@ -1492,7 +1486,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
             {showContextMenu && (
               <div
                 ref={contextMenuRef}
-                className={`absolute left-0 bottom-full mb-1 z-40 w-52 border rounded-2xl shadow-2xl py-1.5 text-xs ${isDark ? 'bg-[#232429] border-[#34363f] text-slate-100' : 'bg-white border-slate-200 text-slate-800'}`}
+                className="absolute left-0 bottom-full mb-1 z-40 w-52 border rounded-2xl shadow-2xl py-1.5 text-xs bg-white border-slate-200 text-slate-800 dark:bg-[#232429] dark:border-[#34363f] dark:text-slate-100"
               >
                 <div className="px-3.5 py-2 text-[11px] text-slate-400 border-b border-slate-100 dark:border-[#32343d] capitalize">
                   {formattedTimestamp}

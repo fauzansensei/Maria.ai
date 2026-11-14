@@ -35,7 +35,6 @@ import {
 } from '../lib/mediaUtils.ts';
 import { MediaLightboxModal, LightboxMedia } from './MediaLightboxModal.tsx';
 import { ActionBottomSheet } from './ActionBottomSheet.tsx';
-import { useTheme } from '../context/ThemeContext.tsx';
 import { useLanguage } from '../context/LanguageContext.tsx';
 
 interface ChatInputProps {
@@ -80,7 +79,6 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
   voiceLanguage = 'auto',
   webSearchDefault = true,
 }) => {
-  const { isDark } = useTheme();
   const { isEn } = useLanguage();
   const [text, setText] = useState('');
   const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
@@ -825,27 +823,17 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
       )}
 
       {/* Main Floating Pill Input Bar (Crisp Capsule in Light & Dark Mode) */}
-      <div
-        className={`relative flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full border-2 shadow-sm ${
-          isDark
-            ? 'bg-[#171920] border-[#2a2d3a] hover:border-[#383c4c] focus-within:border-blue-500/70 focus-within:ring-2 focus-within:ring-blue-500/20'
-            : 'bg-white border-slate-300 hover:border-slate-400 focus-within:border-slate-800 focus-within:ring-2 focus-within:ring-slate-200'
-        }`}
-      >
+      <div className="relative flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full border-2 shadow-sm bg-white border-slate-300 hover:border-slate-400 focus-within:border-slate-800 focus-within:ring-2 focus-within:ring-slate-200 dark:bg-[#171920] dark:border-[#2a2d3a] dark:hover:border-[#383c4c] dark:focus-within:border-blue-500/70 dark:focus-within:ring-blue-500/20">
         {/* Plus Button (+) */}
         <button
           type="button"
           onClick={() => setIsAttachmentOpen((prev) => !prev)}
           title={isEn ? 'Attachments & Media' : 'Lampiran & Media'}
-          className={`w-8 h-8 rounded-full bg-transparent border flex items-center justify-center shrink-0 shadow-xs ${
-            isDark
-              ? 'border-[#343846] text-slate-200 hover:bg-white/10 hover:text-white'
-              : 'border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-950'
-          }`}
+          className="w-8 h-8 rounded-full bg-transparent border flex items-center justify-center shrink-0 shadow-xs border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-950 dark:border-[#343846] dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-white"
         >
           <Plus
             className={`w-4 h-4 transition-transform duration-150 ${
-              isAttachmentOpen ? (isDark ? 'rotate-45 text-white' : 'rotate-45 text-slate-950') : ''
+              isAttachmentOpen ? 'rotate-45 text-slate-950 dark:text-white' : ''
             }`}
           />
         </button>
@@ -907,18 +895,14 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
           onMouseUp={handleSelect}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-          className={`flex-1 bg-transparent border-0 py-1.5 px-1.5 text-sm focus:outline-none min-h-[28px] max-h-32 overflow-y-auto leading-relaxed select-text empty:before:content-[attr(data-placeholder)] empty:before:pointer-events-none empty:before:select-none break-words ${
-            isDark
-              ? 'text-slate-100 empty:before:text-slate-500'
-              : 'text-[#0f172a] empty:before:text-slate-400'
-          }`}
+          className="flex-1 bg-transparent border-0 py-1.5 px-1.5 text-sm focus:outline-none min-h-[28px] max-h-32 overflow-y-auto leading-relaxed select-text empty:before:content-[attr(data-placeholder)] empty:before:pointer-events-none empty:before:select-none break-words text-[#0f172a] empty:before:text-slate-400 dark:text-slate-100 dark:empty:before:text-slate-500"
           style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
         />
 
         {/* Right Section: Divider | Mic | Send Button */}
         <div className="flex items-center gap-1.5 shrink-0">
           {/* Subtle Vertical Divider */}
-          <div className={`h-5 w-px my-auto ${isDark ? 'bg-slate-700' : 'bg-slate-300'}`} />
+          <div className="h-5 w-px my-auto bg-slate-300 dark:bg-slate-700" />
 
           {/* Microphone Button */}
           <button
@@ -928,9 +912,7 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
             className={`w-8 h-8 rounded-full flex items-center justify-center ${
               isRecording
                 ? 'bg-rose-500 text-white animate-pulse border-2 border-rose-300'
-                : isDark
-                ? 'text-slate-400 hover:text-white hover:bg-white/10'
-                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/10'
             }`}
           >
             {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
@@ -953,11 +935,7 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
                 disabled={isLoading}
                 onClick={() => handleSubmit()}
                 title={isEn ? 'Send message (*bold* auto-formatted)' : 'Kirim pesan (*bold* otomatis diformat)'}
-                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full active:scale-95 flex items-center justify-center shadow-md shrink-0 font-bold border cursor-pointer ${
-                  isDark
-                    ? 'bg-white hover:bg-slate-200 text-slate-900 border-white'
-                    : 'bg-slate-900 hover:bg-slate-800 text-white border-slate-900'
-                }`}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full active:scale-95 flex items-center justify-center shadow-md shrink-0 font-bold border cursor-pointer bg-slate-900 hover:bg-slate-800 text-white border-slate-900 dark:bg-white dark:hover:bg-slate-200 dark:text-slate-900 dark:border-white"
               >
                 <Send className="w-4 h-4 ml-0.5" />
               </button>
