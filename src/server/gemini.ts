@@ -413,10 +413,108 @@ function extractNonThoughtText(payload: any): string {
 }
 
 function couldBeThoughtPrefix(sample: string): boolean {
-  const s = sample.trimStart().toLowerCase();
-  if (!s) return true;
-  const targets = ['think', 'thought:', 'thinking:', 'thinking process:', '<thought', '<thinking'];
-  return targets.some((t) => s.startsWith(t) || (s.length < t.length && t.startsWith(s)));
+  const trimmed = sample.trimStart();
+  if (!trimmed) return true;
+  const s = trimmed.toLowerCase();
+  const targets = [
+    'think',
+    'thought:',
+    'thinking:',
+    'thinking process:',
+    'self-correction',
+    '<thought',
+    '<thinking',
+    'asking them to',
+    '• keep it',
+    '* keep it',
+    '- keep it',
+    '1. acknowledge',
+    'the user is',
+  ];
+  if (targets.some((t) => s.startsWith(t) || (s.length < t.length && t.startsWith(s)))) {
+    return true;
+  }
+  // Hold briefly while still inside initial 160 chars or mid-clause lowercase fragment
+  if (trimmed.length < 160) return true;
+  if (/^[a-z]/.test(trimmed) && trimmed.length < 1200 && sanitizeModelText(trimmed).trim().length === 0) {
+    return true;
+  }
+  return false;
+}
+
+async function* streamSanitizedModelOutput(
+  responseStream: AsyncIterable<any>,
+  modelName: string,
+  allowEmojis: boolean,
+  groundingLinks: Array<{ title?: string; uri: string }>
+) {
+  const cleanOutChunk = (val: string) => (allowEmojis ? val : stripEmojis(val));
+  let leadingBuffer = '';
+  let streamPassedThoughtGate = false;
+
+  try {
+    for await (const chunk of responseStream) {
+      const piece = extractNonThoughtText(chunk);
+      if (piece) {
+        if (streamPassedThoughtGate) {
+          const cleanedPiece = piece.replace(
+            /^\s*\*{0,3}\((?:Melakukan pencarian web|Mencari di web|Menelusuri web|Searching the web|Performing web search)\.{0,3}\)\*{0,3}\s*$/gim,
+            ''
+          );
+          if (cleanedPiece) {
+            yield {
+              type: 'chunk' as const,
+              text: cleanOutChunk(cleanedPiece),
+              model: modelName,
+            };
+          }
+        } else {
+          leadingBuffer += piece;
+          const sanitized = sanitizeModelText(leadingBuffer);
+          const stillCollecting =
+            leadingBuffer.length < 4000 &&
+            (couldBeThoughtPrefix(leadingBuffer) ||
+              (sanitized.trim().length === 0 && leadingBuffer.trim().length > 0));
+
+          if (!stillCollecting && sanitized.trim().length > 0) {
+            streamPassedThoughtGate = true;
+            leadingBuffer = '';
+            yield {
+              type: 'chunk' as const,
+              text: cleanOutChunk(sanitized),
+              model: modelName,
+            };
+          } else if (leadingBuffer.length >= 4000) {
+            streamPassedThoughtGate = true;
+            leadingBuffer = '';
+            if (sanitized) {
+              yield {
+                type: 'chunk' as const,
+                text: cleanOutChunk(sanitized),
+                model: modelName,
+              };
+            }
+          }
+        }
+      }
+
+      appendGroundingFromPayload(chunk, groundingLinks);
+    }
+
+    if (!streamPassedThoughtGate && leadingBuffer) {
+      const cleanedTail = sanitizeModelText(leadingBuffer);
+      if (cleanedTail) {
+        yield {
+          type: 'chunk' as const,
+          text: cleanOutChunk(cleanedTail),
+          model: modelName,
+        };
+      }
+    }
+  } catch (iterErr: any) {
+    const errMsg = String(iterErr?.message || iterErr);
+    console.warn('Gracefully recovered from stream chunk iteration notice:', errMsg);
+  }
 }
 
 function prepareCandidateConfig(
@@ -431,13 +529,18 @@ function prepareCandidateConfig(
 
   if (candidate === 'gemini-2.5-flash') {
     candidateConfig.thinkingConfig =
-      mode === 'thinking' ? { thinkingBudget: 8192 } : { thinkingBudget: 0 };
+      mode === 'thinking'
+        ? { thinkingBudget: 8192, includeThoughts: false }
+        : { thinkingBudget: 0, includeThoughts: false };
   } else if (!candidate.startsWith('gemini-3') && !candidate.startsWith('gemini-4')) {
     delete candidateConfig.thinkingConfig;
   } else if (candidate === 'gemini-3.1-flash-lite') {
     delete candidateConfig.thinkingConfig;
-  } else if ((candidate === 'gemini-4-hydrogen' || candidate === 'gemini-3.8-flash') && mode !== 'thinking') {
-    candidateConfig.thinkingConfig = { thinkingLevel: ThinkingLevel.LOW };
+  } else if (candidate === 'gemini-4-hydrogen' || candidate === 'gemini-3.8-flash') {
+    candidateConfig.thinkingConfig =
+      mode === 'thinking'
+        ? { thinkingLevel: ThinkingLevel.HIGH, includeThoughts: false }
+        : { thinkingLevel: ThinkingLevel.LOW, includeThoughts: false };
   }
 
   const baseTools: any[] =
@@ -520,6 +623,7 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
   if (effectiveMode === 'thinking') {
     config.thinkingConfig = {
       thinkingLevel: ThinkingLevel.HIGH,
+      includeThoughts: false,
     };
   } else if (effectiveMode === 'maps') {
     config.tools = [{ googleMaps: {} }];
@@ -705,20 +809,14 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
           return;
         }
       } else {
-        // Stream final synthesized answer after max tool rounds
+        // Stream final synthesized answer after max tool rounds using unified thought-gate
         try {
           const finalStream = await ai.models.generateContentStream({
             model: chosenModel,
             contents: workingContents,
             config: { systemInstruction: activeSystemInstruction },
           });
-          for await (const chunk of finalStream) {
-            const piece = sanitizeModelText(extractNonThoughtText(chunk));
-            if (piece) {
-              yield { type: 'chunk', text: cleanOutChunk(piece), model: chosenModel };
-            }
-            appendGroundingFromPayload(chunk, groundingLinks);
-          }
+          yield* streamSanitizedModelOutput(finalStream, chosenModel, allowEmojis, groundingLinks);
           yield {
             type: 'done',
             model: chosenModel,
@@ -789,74 +887,7 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
     throw streamError || new Error('Gagal terhubung ke model Gemini.');
   }
 
-  let leadingBuffer = '';
-  let streamPassedThoughtGate = false;
-
-  try {
-    for await (const chunk of responseStream) {
-      const piece = extractNonThoughtText(chunk);
-      if (piece) {
-        if (streamPassedThoughtGate) {
-          const cleanedPiece = piece.replace(
-            /^\s*\*{0,3}\((?:Melakukan pencarian web|Mencari di web|Menelusuri web|Searching the web|Performing web search)\.{0,3}\)\*{0,3}\s*$/gim,
-            ''
-          );
-          if (cleanedPiece) {
-            yield {
-              type: 'chunk',
-              text: cleanOutChunk(cleanedPiece),
-              model: successfulModel,
-            };
-          }
-        } else {
-          leadingBuffer += piece;
-          if (!couldBeThoughtPrefix(leadingBuffer)) {
-            streamPassedThoughtGate = true;
-            const cleaned = sanitizeModelText(leadingBuffer);
-            leadingBuffer = '';
-            if (cleaned) {
-              yield {
-                type: 'chunk',
-                text: cleanOutChunk(cleaned),
-                model: successfulModel,
-              };
-            }
-          } else {
-            const sanitized = sanitizeModelText(leadingBuffer);
-            const isConfirmedLeak = /^(?:THINK\b|Thought\s*:|Thinking(?:\s+Process)?\s*:|<thought|<thinking)/i.test(
-              leadingBuffer.trimStart()
-            );
-
-            if (isConfirmedLeak && sanitized.trim().length > 0) {
-              streamPassedThoughtGate = true;
-              leadingBuffer = '';
-              yield {
-                type: 'chunk',
-                text: cleanOutChunk(sanitized),
-                model: successfulModel,
-              };
-            }
-          }
-        }
-      }
-
-      appendGroundingFromPayload(chunk, groundingLinks);
-    }
-
-    if (!streamPassedThoughtGate && leadingBuffer) {
-      const cleanedTail = sanitizeModelText(leadingBuffer);
-      if (cleanedTail) {
-        yield {
-          type: 'chunk',
-          text: cleanOutChunk(cleanedTail),
-          model: successfulModel,
-        };
-      }
-    }
-  } catch (iterErr: any) {
-    const errMsg = String(iterErr?.message || iterErr);
-    console.warn('Gracefully recovered from stream chunk iteration notice:', errMsg);
-  }
+  yield* streamSanitizedModelOutput(responseStream, successfulModel, allowEmojis, groundingLinks);
 
   yield {
     type: 'done',
@@ -896,6 +927,7 @@ export async function generateChatResponse(options: GenerateOptions) {
   if (effectiveMode === 'thinking') {
     config.thinkingConfig = {
       thinkingLevel: ThinkingLevel.HIGH,
+      includeThoughts: false,
     };
   } else if (effectiveMode === 'maps') {
     config.tools = [{ googleMaps: {} }];

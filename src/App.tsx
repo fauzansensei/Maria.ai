@@ -1012,19 +1012,18 @@ function AppContent() {
       const resolvedCurrentAttachments = attachments
         ? await Promise.all(
             attachments.map(async (a) => {
-              let uri = a.fileUri || getMediaFileUri(a.id) || getMediaFileUri(a.name);
-              let data = uri ? '' : a.base64Data || getMediaBase64(a.id) || getMediaBase64(a.name) || '';
+              let uri = a.fileUri || getMediaFileUri(a.id);
+              let data = uri ? '' : a.base64Data || getMediaBase64(a.id) || '';
 
               const needsFilesApi =
                 !uri && (a.type === 'video' || (a.size || 0) > 6 * 1024 * 1024 || data.length > 8 * 1024 * 1024);
 
               if (needsFilesApi) {
-                const blob = (await resolveOriginalBlob(a.id)) || (await resolveOriginalBlob(a.name));
+                const blob = await resolveOriginalBlob(a.id);
                 if (blob) {
                   const uploaded = await uploadMediaToGemini(blob, a.name, a.mimeType || 'video/mp4');
                   uri = uploaded.fileUri;
                   storeMediaFileUri(a.id, uri);
-                  storeMediaFileUri(a.name, uri);
                   data = '';
                 } else if (data.length > 10 * 1024 * 1024) {
                   throw new Error(
@@ -1058,7 +1057,7 @@ function AppContent() {
           role: m.role as 'user' | 'model',
           content: m.content,
           attachments: m.attachments?.map((a) => {
-            const cachedUri = a.fileUri || getMediaFileUri(a.id) || getMediaFileUri(a.name);
+            const cachedUri = a.fileUri || getMediaFileUri(a.id);
             if (cachedUri && isVeryRecent) {
               return {
                 type: a.type,
@@ -1070,7 +1069,7 @@ function AppContent() {
               };
             }
             const rawData = isVeryRecent
-              ? a.base64Data || getMediaBase64(a.id) || getMediaBase64(a.name) || ''
+              ? a.base64Data || getMediaBase64(a.id) || ''
               : '';
             let safeData = '';
             if (rawData && rawData.length <= remainingHistoryMediaBudget) {
