@@ -9,6 +9,7 @@ import {
   generateSpeechAudio,
   uploadMediaFileToGemini,
 } from './gemini.ts';
+import { testAndDiscoverConnector } from './connectorsEngine.ts';
 
 export const apiApp = express();
 export const apiRouter = express.Router();
@@ -33,6 +34,33 @@ apiRouter.get('/health', (_req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
     geminiAvailable: Boolean(process.env.GEMINI_API_KEY),
   });
+});
+
+// Test & Discover Remote MCP / REST Connector Endpoint
+apiRouter.post('/connectors/test', async (req: Request, res: Response) => {
+  try {
+    const { url, authType, authHeaderName, authToken } = req.body || {};
+    if (!url || typeof url !== 'string') {
+      sendJson(res, 400, { ok: false, message: 'URL endpoint konektor wajib diisi.' });
+      return;
+    }
+
+    const result = await testAndDiscoverConnector({
+      url,
+      authType,
+      authHeaderName,
+      authToken,
+    });
+    sendJson(res, result.ok ? 200 : 400, result);
+  } catch (err: any) {
+    sendJson(res, 400, {
+      ok: false,
+      mode: 'rest',
+      latencyMs: 0,
+      tools: [],
+      message: err?.message || 'Gagal menguji koneksi endpoint.',
+    });
+  }
 });
 
 // Chunked Raw Binary Media Upload -> Gemini Files API (Fixes 413 / Failed to fetch for large videos)
@@ -133,6 +161,7 @@ apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
       deviceTime,
       userMemories,
       userName,
+      activeConnectors,
     } = req.body || {};
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -159,6 +188,7 @@ apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
         deviceTime,
         userMemories,
         userName,
+        activeConnectors: Array.isArray(activeConnectors) ? activeConnectors : [],
       });
 
       for await (const chunk of stream) {
@@ -171,14 +201,27 @@ apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
       res.write('data: [DONE]\n\n');
       res.end();
     } catch (streamErr: any) {
-      console.warn('Chat stream recovered from streaming interruption:', streamErr?.message || streamErr);
+      const streamErrMsg = String(streamErr?.message || streamErr || '');
+      const isStreamQuota =
+        streamErrMsg.includes('429') ||
+        streamErrMsg.includes('RESOURCE_EXHAUSTED') ||
+        streamErrMsg.includes('quota') ||
+        streamErrMsg.includes('kuota');
+
       if (tokensSent > 0) {
         // Tokens were already streamed to user, conclude stream gracefully
         res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
         res.write('data: [DONE]\n\n');
         res.end();
+      } else if (isStreamQuota) {
+        const quotaReply =
+          'Mohon maaf, saat ini batas kuota Gemini API (429) pada kunci gratis Anda sedang mencapai batas sementara dari Google. Kuota otomatis pulih secara berkala, atau Anda dapat memilih API key berbayar di panel Settings > Secrets untuk kapasitas kuota lebih tinggi.';
+        res.write(`data: ${JSON.stringify({ type: 'chunk', text: quotaReply, model: 'system-notice' })}\n\n`);
+        res.write(`data: ${JSON.stringify({ type: 'done', model: 'system-notice' })}\n\n`);
+        res.write('data: [DONE]\n\n');
+        res.end();
       } else {
-        // Fall back seamlessly to non-streaming generateChatResponse
+        // Fall back seamlessly to non-streaming generateChatResponse for non-quota stream errors
         try {
           const fallbackRes = await generateChatResponse({
             messages,
@@ -191,6 +234,7 @@ apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
             deviceTime,
             userMemories,
             userName,
+            activeConnectors: Array.isArray(activeConnectors) ? activeConnectors : [],
           });
 
           if (fallbackRes.text) {
@@ -200,9 +244,10 @@ apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
           res.write('data: [DONE]\n\n');
           res.end();
         } catch (fbErr: any) {
-          const errMsg = String(fbErr?.message || streamErr?.message || '');
+          const errMsg = String(fbErr?.message || streamErrMsg || '');
           if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('quota') || errMsg.includes('kuota')) {
-            const quotaReply = 'Mohon maaf, saat ini batas kuota harian Gemini API (429) pada kunci gratis Anda sedang mencapai batas maksimum dari Google akibat lonjakan permintaan atau pengujian paket. Kuota akan otomatis dipulihkan oleh Google, atau Anda dapat menyetel kunci billing di Google AI Studio untuk akses tanpa batas.';
+            const quotaReply =
+              'Mohon maaf, saat ini batas kuota Gemini API (429) pada kunci gratis Anda sedang mencapai batas sementara dari Google. Kuota otomatis pulih secara berkala, atau Anda dapat memilih API key berbayar di panel Settings > Secrets untuk kapasitas kuota lebih tinggi.';
             res.write(`data: ${JSON.stringify({ type: 'chunk', text: quotaReply, model: 'system-notice' })}\n\n`);
             res.write(`data: ${JSON.stringify({ type: 'done', model: 'system-notice' })}\n\n`);
             res.write('data: [DONE]\n\n');
@@ -243,6 +288,7 @@ apiRouter.post('/chat', async (req: Request, res: Response) => {
       deviceTime,
       userMemories,
       userName,
+      activeConnectors,
     } = req.body || {};
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -263,21 +309,29 @@ apiRouter.post('/chat', async (req: Request, res: Response) => {
       deviceTime,
       userMemories,
       userName,
+      activeConnectors: Array.isArray(activeConnectors) ? activeConnectors : [],
     });
 
     sendJson(res, 200, result);
   } catch (error: any) {
-    console.error('Chat generation error:', error);
     const rawMsg = String(error?.message || '');
-    let cleanMsg = error?.message || 'Terjadi kesalahan saat memproses jawaban AI.';
-    if (rawMsg.includes('503') || rawMsg.includes('high demand') || rawMsg.includes('UNAVAILABLE')) {
-      cleanMsg = 'Server AI Google sedang mengalami lonjakan permintaan (503). Sistem sedang mengalihkan ke model cadangan, silakan coba kirim ulang.';
-    } else if (rawMsg.includes('429') || rawMsg.includes('quota') || rawMsg.includes('RESOURCE_EXHAUSTED')) {
+    if (
+      rawMsg.includes('429') ||
+      rawMsg.includes('quota') ||
+      rawMsg.includes('kuota') ||
+      rawMsg.includes('RESOURCE_EXHAUSTED')
+    ) {
       sendJson(res, 200, {
-        text: 'Mohon maaf, saat ini batas kuota harian Gemini API (429) pada kunci gratis Anda sedang mencapai batas maksimum dari Google akibat lonjakan permintaan atau pengujian paket. Kuota akan otomatis dipulihkan secara berkala oleh Google, atau Anda dapat menyetel kunci billing di Google AI Studio untuk akses tanpa batas.',
+        text: 'Mohon maaf, saat ini batas kuota Gemini API (429) pada kunci gratis Anda sedang mencapai batas sementara dari Google. Kuota otomatis pulih secara berkala, atau Anda dapat memilih API key berbayar di panel Settings > Secrets untuk kapasitas kuota lebih tinggi.',
         model: 'system-notice',
       });
       return;
+    }
+    let cleanMsg = error?.message || 'Terjadi kesalahan saat memproses jawaban AI.';
+    if (rawMsg.includes('503') || rawMsg.includes('high demand') || rawMsg.includes('UNAVAILABLE')) {
+      cleanMsg = 'Server AI Google sedang mengalami lonjakan permintaan (503). Sistem sedang mengalihkan ke model cadangan, silakan coba kirim ulang.';
+    } else {
+      console.error('Chat generation error:', error);
     }
     sendJson(res, 500, {
       error: cleanMsg,

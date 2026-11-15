@@ -121,6 +121,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
     const [copiedToast, setCopiedToast] = useState(false);
     const [notebooks, setNotebooks] = useState<NotebookItem[]>(() => loadNotebooks());
     const searchInputRef = useRef<HTMLInputElement>(null);
+    const moreMenuRef = useRef<HTMLDivElement>(null);
 
     // Floating Popover State
     const [popoverTarget, setPopoverTarget] = useState<{
@@ -245,6 +246,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
 
         {/* Sidebar Container */}
         <aside
+          onClick={(e) => e.stopPropagation()}
           className={`fixed inset-y-0 left-0 z-50 w-[82vw] max-w-[310px] sm:w-80 bg-white dark:bg-[#0b0d13] text-slate-900 dark:text-slate-100 border-r border-slate-200 dark:border-[#1c1f2b] flex flex-col transition-transform duration-150 ease-out will-change-transform select-none shadow-2xl ${
             isOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
           }`}
@@ -402,16 +404,28 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
               {/* More Expandable Section (Plugins/Konektor, Skills, Video, Discover, Settings) */}
               <button
                 type="button"
-                onClick={() => setShowMoreMenu((prev) => !prev)}
+                aria-expanded={showMoreMenu}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMoreMenu((prev) => {
+                    const next = !prev;
+                    if (next) {
+                      window.setTimeout(() => {
+                        moreMenuRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                      }, 50);
+                    }
+                    return next;
+                  });
+                }}
                 className="w-full min-h-[42px] flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl text-[13px] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#171923] cursor-pointer"
               >
                 <span className="flex items-center gap-3 min-w-0">
                   <MoreHorizontal className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" />
-                  <span>{isEn ? 'More' : 'Lainnya'}</span>
+                  <span className="truncate">{isEn ? 'More' : 'Lainnya'}</span>
                 </span>
-                <span className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                <span className="flex items-center gap-1.5 text-[11px] text-slate-400 shrink-0">
                   {!showMoreMenu && (
-                    <span className="truncate max-w-[120px]">Plugins · Skills · Video</span>
+                    <span className="truncate max-w-[110px] sm:max-w-[128px]">Plugins · Skills · Video</span>
                   )}
                   {showMoreMenu ? (
                     <ChevronUp className="w-3.5 h-3.5 shrink-0" />
@@ -422,7 +436,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
               </button>
 
               {showMoreMenu && (
-                <div className="space-y-0.5 pl-1">
+                <div ref={moreMenuRef} className="space-y-0.5 pl-1">
                   <button
                     type="button"
                     onClick={() => {

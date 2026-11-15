@@ -32,6 +32,7 @@ import {
   PluginCategoryId,
   PluginEntry,
   PluginSamplePrompt,
+  DiscoveredConnectorTool,
   getAllPlugins,
   getPluginById,
   loadCustomConnectors,
@@ -129,6 +130,17 @@ export const PluginsArea: React.FC<PluginsAreaProps> = React.memo(
     const [customUrl, setCustomUrl] = useState('');
     const [customDesc, setCustomDesc] = useState('');
     const [customToolsText, setCustomToolsText] = useState('');
+    const [customAuthType, setCustomAuthType] = useState<'none' | 'bearer' | 'header'>('none');
+    const [customAuthHeaderName, setCustomAuthHeaderName] = useState('X-API-Key');
+    const [customAuthToken, setCustomAuthToken] = useState('');
+    const [discoveredToolsState, setDiscoveredToolsState] = useState<DiscoveredConnectorTool[]>([]);
+    const [isTestingCustomUrl, setIsTestingCustomUrl] = useState(false);
+    const [customTestResult, setCustomTestResult] = useState<{
+      ok: boolean;
+      message: string;
+      toolsCount?: number;
+    } | null>(null);
+    const [isRetestingDetail, setIsRetestingDetail] = useState(false);
     const [customFormError, setCustomFormError] = useState<string | null>(null);
 
     const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -271,6 +283,129 @@ export const PluginsArea: React.FC<PluginsAreaProps> = React.memo(
       );
     };
 
+    const resetCustomModalState = () => {
+      setCustomName('');
+      setCustomUrl('');
+      setCustomDesc('');
+      setCustomToolsText('');
+      setCustomAuthType('none');
+      setCustomAuthHeaderName('X-API-Key');
+      setCustomAuthToken('');
+      setDiscoveredToolsState([]);
+      setCustomTestResult(null);
+      setCustomFormError(null);
+      setIsCustomModalOpen(false);
+    };
+
+    const handleTestCustomConnector = async () => {
+      const trimmedUrl = customUrl.trim();
+      if (!/^https?:\/\/.+/i.test(trimmedUrl)) {
+        setCustomFormError(
+          isEn
+            ? 'Enter a valid endpoint or MCP server URL starting with https://'
+            : 'Masukkan URL endpoint / server MCP valid diawali https://'
+        );
+        return;
+      }
+
+      setCustomFormError(null);
+      setCustomTestResult(null);
+      setIsTestingCustomUrl(true);
+
+      try {
+        const res = await fetch('/api/connectors/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: trimmedUrl,
+            authType: customAuthType,
+            authHeaderName: customAuthType === 'header' ? customAuthHeaderName.trim() : undefined,
+            authToken: customAuthType !== 'none' ? customAuthToken.trim() : undefined,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.ok) {
+          const foundTools: DiscoveredConnectorTool[] = Array.isArray(data.tools) ? data.tools : [];
+          setDiscoveredToolsState(foundTools);
+          if (foundTools.length > 0 && !customToolsText.trim()) {
+            setCustomToolsText(foundTools.map((t) => t.name).join(', '));
+          }
+          setCustomTestResult({
+            ok: true,
+            message:
+              data.message ||
+              (isEn
+                ? `Connected (${data.latencyMs || 0}ms)`
+                : `Terhubung (${data.latencyMs || 0}ms)`),
+            toolsCount: foundTools.length,
+          });
+        } else {
+          setDiscoveredToolsState([]);
+          setCustomTestResult({
+            ok: false,
+            message:
+              data.message ||
+              (isEn ? 'Unable to reach endpoint.' : 'Endpoint tidak dapat dijangkau.'),
+          });
+        }
+      } catch (err: any) {
+        setDiscoveredToolsState([]);
+        setCustomTestResult({
+          ok: false,
+          message: err?.message || (isEn ? 'Connection test failed.' : 'Uji koneksi gagal.'),
+        });
+      } finally {
+        setIsTestingCustomUrl(false);
+      }
+    };
+
+    const handleRetestExistingConnector = async (plugin: PluginEntry) => {
+      if (!plugin.mcpUrl || isRetestingDetail) return;
+      setIsRetestingDetail(true);
+      try {
+        const res = await fetch('/api/connectors/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: plugin.mcpUrl,
+            authType: plugin.authType || 'none',
+            authHeaderName: plugin.authHeaderName,
+            authToken: plugin.authToken,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.ok) {
+          const foundTools: DiscoveredConnectorTool[] = Array.isArray(data.tools) ? data.tools : [];
+          if (foundTools.length > 0) {
+            const nextCustom = customConnectors.map((c) =>
+              c.id === plugin.id
+                ? {
+                    ...c,
+                    discoveredTools: foundTools,
+                    tools: foundTools.map((t) => t.name),
+                  }
+                : c
+            );
+            setCustomConnectors(nextCustom);
+            saveCustomConnectors(nextCustom);
+          }
+          showToast(
+            data.message ||
+              (isEn ? 'Endpoint verified & active' : 'Endpoint terverifikasi & aktif')
+          );
+        } else {
+          showToast(
+            data.message ||
+              (isEn ? 'Endpoint check failed' : 'Pemeriksaan endpoint gagal')
+          );
+        }
+      } catch {
+        showToast(isEn ? 'Endpoint unreachable' : 'Endpoint tidak dapat dijangkau');
+      } finally {
+        setIsRetestingDetail(false);
+      }
+    };
+
     const handleCreateCustomConnector = (e: React.FormEvent) => {
       e.preventDefault();
       const trimmedName = customName.trim();
@@ -299,6 +434,8 @@ export const PluginsArea: React.FC<PluginsAreaProps> = React.memo(
       const toolsList =
         parsedTools.length > 0
           ? parsedTools
+          : discoveredToolsState.length > 0
+          ? discoveredToolsState.map((t) => t.name)
           : ['query_resource', 'list_items', 'execute_action'];
 
       const newEntry: PluginEntry = {
@@ -326,6 +463,14 @@ export const PluginsArea: React.FC<PluginsAreaProps> = React.memo(
         website: hostLabel,
         websiteUrl: trimmedUrl,
         mcpUrl: trimmedUrl,
+        authType: customAuthType,
+        authHeaderName:
+          customAuthType === 'header' ? customAuthHeaderName.trim() || 'X-API-Key' : undefined,
+        authToken:
+          customAuthType !== 'none' && customAuthToken.trim()
+            ? customAuthToken.trim()
+            : undefined,
+        discoveredTools: discoveredToolsState.length > 0 ? discoveredToolsState : undefined,
         version: '1.0.0',
         privacyUrl: '/privacy.html',
         termsUrl: '/terms.html',
@@ -359,12 +504,7 @@ export const PluginsArea: React.FC<PluginsAreaProps> = React.memo(
       setEnabledConnectors(nextEnabled);
       saveEnabledConnectors(nextEnabled);
 
-      setCustomName('');
-      setCustomUrl('');
-      setCustomDesc('');
-      setCustomToolsText('');
-      setCustomFormError(null);
-      setIsCustomModalOpen(false);
+      resetCustomModalState();
       showToast(isEn ? `Connected to ${trimmedName}` : `Terhubung ke ${trimmedName}`);
     };
 
@@ -795,12 +935,12 @@ export const PluginsArea: React.FC<PluginsAreaProps> = React.memo(
         {isCustomModalOpen && (
           <div
             className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
-            onClick={() => setIsCustomModalOpen(false)}
+            onClick={resetCustomModalState}
           >
             <form
               onSubmit={handleCreateCustomConnector}
               onClick={(e) => e.stopPropagation()}
-              className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl bg-white dark:bg-[#14161f] border border-slate-200 dark:border-[#262a3a] p-5 sm:p-6 space-y-4 shadow-2xl"
+              className="w-full sm:max-w-md max-h-[90dvh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-white dark:bg-[#14161f] border border-slate-200 dark:border-[#262a3a] p-5 sm:p-6 space-y-4 shadow-2xl"
             >
               <div className="w-10 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto sm:hidden" />
 
@@ -822,7 +962,7 @@ export const PluginsArea: React.FC<PluginsAreaProps> = React.memo(
                 </div>
                 <button
                   type="button"
-                  onClick={() => setIsCustomModalOpen(false)}
+                  onClick={resetCustomModalState}
                   className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-[#222534] cursor-pointer"
                 >
                   <X className="w-4 h-4" />
@@ -856,10 +996,101 @@ export const PluginsArea: React.FC<PluginsAreaProps> = React.memo(
                     onChange={(e) => {
                       setCustomUrl(e.target.value);
                       setCustomFormError(null);
+                      setCustomTestResult(null);
                     }}
                     placeholder="https://mcp.example.com/sse"
                     className="w-full h-10 px-3.5 rounded-xl border border-slate-200 dark:border-[#2a2e3e] bg-slate-50 dark:bg-[#101219] text-sm font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                </div>
+
+                {/* Optional Auth Header for Remote MCP Server */}
+                <div className="space-y-2 rounded-xl border border-slate-200/80 dark:border-[#242838] bg-slate-50/70 dark:bg-[#10121a] p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                      {isEn
+                        ? 'MCP Endpoint Authorization (Optional)'
+                        : 'Otorisasi Endpoint MCP / Konektor (Opsional)'}
+                    </span>
+                    <select
+                      value={customAuthType}
+                      onChange={(e) =>
+                        setCustomAuthType(e.target.value as 'none' | 'bearer' | 'header')
+                      }
+                      className="text-xs rounded-lg border border-slate-200 dark:border-[#2b3042] bg-white dark:bg-[#171a24] text-slate-800 dark:text-slate-200 px-2 py-1 focus:outline-none"
+                    >
+                      <option value="none">{isEn ? 'No Auth' : 'Tanpa Auth'}</option>
+                      <option value="bearer">Bearer Token</option>
+                      <option value="header">{isEn ? 'Custom Header' : 'Header Kustom'}</option>
+                    </select>
+                  </div>
+
+                  {customAuthType === 'header' && (
+                    <input
+                      type="text"
+                      value={customAuthHeaderName}
+                      onChange={(e) => setCustomAuthHeaderName(e.target.value)}
+                      placeholder="X-API-Key"
+                      className="w-full h-9 px-3 rounded-lg border border-slate-200 dark:border-[#2a2e3e] bg-white dark:bg-[#14161f] text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  )}
+
+                  {customAuthType !== 'none' && (
+                    <input
+                      type="password"
+                      value={customAuthToken}
+                      onChange={(e) => setCustomAuthToken(e.target.value)}
+                      placeholder={
+                        customAuthType === 'bearer'
+                          ? isEn
+                            ? 'Bearer token for your remote MCP server'
+                            : 'Bearer token server MCP Anda'
+                          : isEn
+                          ? 'Header value for your remote endpoint'
+                          : 'Nilai header otorisasi endpoint Anda'
+                      }
+                      className="w-full h-9 px-3 rounded-lg border border-slate-200 dark:border-[#2a2e3e] bg-white dark:bg-[#14161f] text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  )}
+                </div>
+
+                {/* Live Endpoint Test & Discovery Button */}
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    disabled={isTestingCustomUrl}
+                    onClick={handleTestCustomConnector}
+                    className="w-full h-9 px-3.5 rounded-xl border border-slate-200 dark:border-[#2b2f40] bg-slate-50 hover:bg-slate-100 dark:bg-[#181b26] dark:hover:bg-[#222636] text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-60"
+                  >
+                    {isTestingCustomUrl ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
+                        <span>
+                          {isEn ? 'Testing endpoint...' : 'Menguji endpoint...'}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Wrench className="w-3.5 h-3.5 text-cyan-500" />
+                        <span>
+                          {isEn
+                            ? 'Test Connection & Discover Tools'
+                            : 'Tes Koneksi & Deteksi Tools'}
+                        </span>
+                      </>
+                    )}
+                  </button>
+
+                  {customTestResult && (
+                    <div
+                      className={`rounded-xl px-3 py-2 text-xs font-medium ${
+                        customTestResult.ok
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60'
+                          : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800/60'
+                      }`}
+                    >
+                      {customTestResult.message}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-1">
@@ -902,7 +1133,7 @@ export const PluginsArea: React.FC<PluginsAreaProps> = React.memo(
               <div className="flex items-center gap-2.5 pt-1">
                 <button
                   type="button"
-                  onClick={() => setIsCustomModalOpen(false)}
+                  onClick={resetCustomModalState}
                   className="flex-1 h-11 rounded-full border border-slate-200 dark:border-[#2b2f40] text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#202331] text-xs font-semibold cursor-pointer"
                 >
                   {isEn ? 'Cancel' : 'Batal'}
@@ -1238,7 +1469,23 @@ export const PluginsArea: React.FC<PluginsAreaProps> = React.memo(
                 </div>
 
                 {plugin.source === 'custom' && (
-                  <div className="pt-4">
+                  <div className="pt-4 flex flex-wrap items-center gap-4">
+                    <button
+                      type="button"
+                      disabled={isRetestingDetail}
+                      onClick={() => handleRetestExistingConnector(plugin)}
+                      className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                    >
+                      {isRetestingDetail ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Wrench className="w-3.5 h-3.5" />
+                      )}
+                      <span>
+                        {isEn ? 'Test endpoint connection' : 'Tes Koneksi Endpoint'}
+                      </span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => handleRemoveCustomConnector(plugin)}

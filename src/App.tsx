@@ -52,6 +52,7 @@ import {
   loadNotebooks,
   saveNotebooks,
 } from './lib/workspaceStore.ts';
+import { buildActiveConnectorsPayload } from './lib/pluginsCatalog.ts';
 
 function AppContent() {
   const { user } = useAuth();
@@ -648,6 +649,7 @@ function AppContent() {
               deviceTime: editDeviceTime,
               userMemories: editUserMemories,
               userName: editUserName,
+              activeConnectors: buildActiveConnectorsPayload(settings.enabledPlugins || []),
             }),
           });
           if (response.ok) break;
@@ -1129,6 +1131,7 @@ function AppContent() {
       let streamGroundingLinks: any[] = [];
 
       const allowEmojis = shouldAllowEmojis(settings);
+      const activeConnectors = buildActiveConnectorsPayload(settings.enabledPlugins || []);
 
       let definitiveStreamError: string | null = null;
       try {
@@ -1145,6 +1148,7 @@ function AppContent() {
             deviceTime,
             userMemories,
             userName: activeUserName,
+            activeConnectors,
           }),
         });
 
@@ -1350,6 +1354,7 @@ function AppContent() {
                 deviceTime,
                 userMemories,
                 userName: activeUserName,
+                activeConnectors,
               }),
             });
             if (response.ok || (response.status >= 400 && response.status < 500)) break;

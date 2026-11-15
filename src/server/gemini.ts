@@ -1,5 +1,12 @@
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
+import { sanitizeModelText } from '../lib/formatUtils.ts';
+import {
+  ActiveConnectorConfig,
+  BuiltConnectorTools,
+  buildConnectorTools,
+  executeFunctionCallsBatch,
+} from './connectorsEngine.ts';
 
 // Initialize Gemini Client strictly on server-side
 export function getGeminiClient(): GoogleGenAI {
@@ -52,6 +59,7 @@ export interface GenerateOptions {
   deviceTime?: DeviceTimeInfo;
   userMemories?: string;
   userName?: string;
+  activeConnectors?: ActiveConnectorConfig[];
 }
 
 // Helper to strip any emoji characters completely from text
@@ -77,7 +85,11 @@ Aturan Dasar Komunikasi (Berlaku JIKA TIDAK ditimpa oleh Konfigurasi Kepribadian
 - Saat tidak tahu atau tidak bisa melakukan sesuatu, sampaikan dengan jujur.
 
 Pencarian Web & Rangkuman Informasi Media:
-- Anda memiliki integrasi Google Search. Ketika pengguna menanyakan berita, kabar terkini, perkembangan peristiwa di media, atau informasi aktual: telusuri web dan media terpercaya, kemudian rangkum fakta-fakta kunci secara akurat dan objektif.
+- Anda memiliki integrasi Google Search. Ketika pengguna menanyakan berita, kabar terkini, kebenaran informasi pada gambar/screenshot, perkembangan peristiwa di media, atau informasi aktual: telusuri web secara langsung menggunakan Google Search, lalu rangkum fakta-fakta kunci secara akurat dan objektif.
+
+Aturan Output Bersih (WAJIB):
+- DILARANG keras menuliskan proses berpikir internal, monolog bahasa Inggris, catatan langkah rencana, koreksi diri, atau awalan seperti "THINK", "Thought:", "Self-correction:", maupun teks simulasi seperti "(Melakukan pencarian web...)" di dalam jawaban.
+- Berikan langsung jawaban yang bersih, alami, dan siap dibaca pengguna.
 
 Fitur Windows Open & Pembuka Aplikasi / Musik / Situs Eksternal:
 - Anda memiliki fitur Windows Open interaktif. Ketika pengguna meminta memutar lagu/musik ("putar lagu ...", "dengerin lagu ..."), membuka aplikasi ("open discord", "open youtube", "buka spotify"), atau membuka situs ("buka situs ..."): berikan pengantar singkat (1 kalimat sesuai gaya kepribadian aktif Anda). Antarmuka otomatis meluncurkan aksi Windows Open.
@@ -340,8 +352,146 @@ export async function uploadMediaFileToGemini(
   };
 }
 
+const chatModelCooldowns = new Map<string, number>();
+let chatLastApiKey = '';
+
+function syncChatApiKey(apiKey: string) {
+  if (apiKey !== chatLastApiKey) {
+    chatLastApiKey = apiKey;
+    chatModelCooldowns.clear();
+  }
+}
+
+function isChatQuotaOrRateError(err: any): boolean {
+  const raw = String(err?.message || err || '');
+  return (
+    err?.status === 429 ||
+    err?.code === 429 ||
+    /429|RESOURCE_EXHAUSTED|quota|kuota|rate[- ]limit|exceeded/i.test(raw)
+  );
+}
+
+function recordChatModelCooldown(model: string, err: any) {
+  const raw = String(err?.message || err || '');
+  const secMatch =
+    raw.match(/"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/i) ||
+    raw.match(/retry in\s+(\d+(?:\.\d+)?)s/i);
+  let ms = 60_000;
+  if (secMatch) {
+    const secs = Number(secMatch[1]);
+    if (Number.isFinite(secs) && secs > 0) {
+      ms = Math.max(15_000, Math.min(secs * 1000, 15 * 60_000));
+    }
+  } else if (/PerDay|Daily|GenerateRequestsPerDay/i.test(raw)) {
+    ms = 10 * 60_000;
+  }
+  chatModelCooldowns.set(model, Date.now() + ms);
+}
+
+function orderAvailableCandidates(candidates: string[]): string[] {
+  const now = Date.now();
+  const ready = candidates.filter((m) => (chatModelCooldowns.get(m) || 0) <= now);
+  if (ready.length > 0) return ready;
+  // If all are cooling down, still probe the earliest-expiring primary models so recovery is automatic
+  return [...candidates].sort(
+    (a, b) => (chatModelCooldowns.get(a) || 0) - (chatModelCooldowns.get(b) || 0)
+  ).slice(0, 2);
+}
+
+function extractNonThoughtText(payload: any): string {
+  const parts = payload?.candidates?.[0]?.content?.parts;
+  if (Array.isArray(parts) && parts.length > 0) {
+    let out = '';
+    for (const part of parts) {
+      if (!part?.thought && typeof part?.text === 'string') {
+        out += part.text;
+      }
+    }
+    return out;
+  }
+  return typeof payload?.text === 'string' ? payload.text : '';
+}
+
+function couldBeThoughtPrefix(sample: string): boolean {
+  const s = sample.trimStart().toLowerCase();
+  if (!s) return true;
+  const targets = ['think', 'thought:', 'thinking:', 'thinking process:', '<thought', '<thinking'];
+  return targets.some((t) => s.startsWith(t) || (s.length < t.length && t.startsWith(s)));
+}
+
+function prepareCandidateConfig(
+  candidate: string,
+  baseConfig: any,
+  mode: string,
+  hasVideo: boolean,
+  builtConnectors: BuiltConnectorTools
+) {
+  const candidateConfig: any = { ...baseConfig };
+  const isLite = candidate === 'gemini-2.5-flash-lite' || candidate === 'gemini-3.1-flash-lite';
+
+  if (candidate === 'gemini-2.5-flash') {
+    candidateConfig.thinkingConfig =
+      mode === 'thinking' ? { thinkingBudget: 8192 } : { thinkingBudget: 0 };
+  } else if (!candidate.startsWith('gemini-3') && !candidate.startsWith('gemini-4')) {
+    delete candidateConfig.thinkingConfig;
+  } else if (candidate === 'gemini-3.1-flash-lite') {
+    delete candidateConfig.thinkingConfig;
+  } else if ((candidate === 'gemini-4-hydrogen' || candidate === 'gemini-3.8-flash') && mode !== 'thinking') {
+    candidateConfig.thinkingConfig = { thinkingLevel: ThinkingLevel.LOW };
+  }
+
+  const baseTools: any[] =
+    hasVideo || isLite ? [] : Array.isArray(baseConfig.tools) ? [...baseConfig.tools] : [];
+
+  if (isLite || hasVideo) {
+    delete candidateConfig.tools;
+    delete candidateConfig.toolConfig;
+  }
+
+  if (builtConnectors.declarations.length > 0 && !hasVideo) {
+    const canCombineWithBuiltin =
+      (candidate.startsWith('gemini-4') || candidate.startsWith('gemini-3.8')) &&
+      baseTools.some((t) => Boolean(t?.googleSearch));
+
+    if (canCombineWithBuiltin) {
+      candidateConfig.tools = [
+        ...baseTools,
+        { functionDeclarations: builtConnectors.declarations },
+      ];
+      candidateConfig.toolConfig = {
+        ...(candidateConfig.toolConfig || {}),
+        includeServerSideToolInvocations: true,
+      };
+    } else {
+      candidateConfig.tools = [{ functionDeclarations: builtConnectors.declarations }];
+      delete candidateConfig.toolConfig;
+    }
+  }
+
+  return candidateConfig;
+}
+
+function appendGroundingFromPayload(
+  payload: any,
+  target: Array<{ title?: string; uri: string }>
+) {
+  const groundingChunks = payload?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+  for (const gChunk of groundingChunks) {
+    if (gChunk.web?.uri) {
+      const link = { title: gChunk.web.title || gChunk.web.uri, uri: gChunk.web.uri };
+      if (!target.some((l) => l.uri === link.uri)) target.push(link);
+    }
+    if (gChunk.maps?.uri) {
+      const link = { title: gChunk.maps.title || 'Buka di Google Maps', uri: gChunk.maps.uri };
+      if (!target.some((l) => l.uri === link.uri)) target.push(link);
+    }
+  }
+}
+
 // Real-time token streaming generator for blazing-fast responses
 export async function* generateChatResponseStream(options: GenerateOptions) {
+  const currentKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '';
+  syncChatApiKey(currentKey);
   const ai = getGeminiClient();
   const {
     messages,
@@ -353,26 +503,25 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
     deviceTime,
     userMemories,
     userName,
+    activeConnectors = [],
   } = options;
 
-  let modelName = 'gemini-3.8-flash';
-  const config: any = {};
-  const activeSystemInstruction = buildSystemInstruction(
-    deviceTime,
-    systemInstruction,
-    userMemories,
-    userName,
-    allowEmojis
-  );
-  const isSearchActive = webSearch !== false;
+  const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')?.content || '';
+  const builtConnectors = buildConnectorTools(activeConnectors, lastUserMsg);
 
-  if (mode === 'thinking') {
-    modelName = 'gemini-3.8-flash';
+  const effectiveMode = builtConnectors.forceMapsMode ? 'maps' : mode;
+  const isSearchActive = webSearch !== false || Boolean(builtConnectors.forceWebSearch);
+
+  const config: any = {};
+  const activeSystemInstruction =
+    buildSystemInstruction(deviceTime, systemInstruction, userMemories, userName, allowEmojis) +
+    builtConnectors.systemAddendum;
+
+  if (effectiveMode === 'thinking') {
     config.thinkingConfig = {
       thinkingLevel: ThinkingLevel.HIGH,
     };
-  } else if (mode === 'maps') {
-    modelName = 'gemini-3.8-flash';
+  } else if (effectiveMode === 'maps') {
     config.tools = [{ googleMaps: {} }];
     if (location) {
       config.toolConfig = {
@@ -382,10 +531,7 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
       };
     }
   } else if (isSearchActive) {
-    modelName = 'gemini-3.8-flash';
     config.tools = [{ googleSearch: {} }];
-  } else {
-    modelName = 'gemini-3.8-flash';
   }
 
   config.systemInstruction = activeSystemInstruction;
@@ -408,22 +554,182 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
   );
   const hasMedia = messages.some((m) => m.attachments && m.attachments.length > 0);
 
-  // Model selection priority designed for maximum speed & quota efficiency:
-  // 1. Prioritize fresh Gemini 2.5 models (gemini-2.5-flash, gemini-2.5-flash-lite) which have 0/5 & 0/10 RPM used
-  //    and separate daily quotas from Gemini 3.8 Flash (which reached 20/20 RPD daily limit on user project).
-  // 2. Video files: gemini-2.5-flash -> gemini-3.8-flash -> gemini-flash-latest.
-  // 3. Media (images/docs): gemini-2.5-flash -> gemini-2.5-flash-lite -> gemini-3.8-flash -> gemini-flash-latest.
-  // 4. Regular chat: gemini-2.5-flash-lite -> gemini-2.5-flash -> gemini-3.8-flash -> gemini-flash-latest.
-  let candidateModels: string[];
+  let baseCandidates: string[];
   if (hasVideo) {
-    candidateModels = ['gemini-2.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest'];
-  } else if (mode === 'thinking') {
-    candidateModels = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-flash-latest'];
+    baseCandidates = ['gemini-4-hydrogen', 'gemini-2.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest'];
+  } else if (effectiveMode === 'thinking') {
+    baseCandidates = ['gemini-4-hydrogen', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-flash-latest'];
+  } else if (builtConnectors.declarations.length > 0) {
+    baseCandidates = ['gemini-4-hydrogen', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-3.1-flash-lite'];
+  } else if (hasMedia && isSearchActive) {
+    baseCandidates = ['gemini-4-hydrogen', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite'];
   } else if (hasMedia) {
-    candidateModels = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.8-flash', 'gemini-flash-latest'];
+    baseCandidates = ['gemini-4-hydrogen', 'gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.8-flash'];
   } else {
-    // Ultra-fast sub-second chat response (<600ms) with multiple quota fallback tiers
-    candidateModels = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest'];
+    baseCandidates = ['gemini-4-hydrogen', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest'];
+  }
+
+  const candidateModels = orderAvailableCandidates(baseCandidates);
+  const groundingLinks: Array<{ title?: string; uri: string }> = [];
+  const cleanOutChunk = (val: string) => (allowEmojis ? val : stripEmojis(val));
+
+  // Connector Function Calling Path: execute tool rounds first, then stream synthesized response
+  if (builtConnectors.declarations.length > 0 && !hasVideo) {
+    let workingContents = [...contents];
+    let executedTools = false;
+    let chosenModel = candidateModels[0];
+    let firstTurnResponse: any = null;
+    let activeToolConfig: any = null;
+    let toolErr: any = null;
+
+    for (const candidate of candidateModels) {
+      const candidateConfig = prepareCandidateConfig(
+        candidate,
+        config,
+        effectiveMode,
+        hasVideo,
+        builtConnectors
+      );
+      try {
+        firstTurnResponse = await ai.models.generateContent({
+          model: candidate,
+          contents: workingContents,
+          config: candidateConfig,
+        });
+        chatModelCooldowns.delete(candidate);
+        chosenModel = candidate;
+        activeToolConfig = candidateConfig;
+        toolErr = null;
+        break;
+      } catch (err: any) {
+        toolErr = err;
+        if (isChatQuotaOrRateError(err)) {
+          recordChatModelCooldown(candidate, err);
+        } else {
+          // Retry with pure functionDeclarations (without hybrid search/toolConfig) if 400
+          try {
+            const pureToolConfig: any = {
+              systemInstruction: activeSystemInstruction,
+              tools: [{ functionDeclarations: builtConnectors.declarations }],
+              ...(candidateConfig.thinkingConfig ? { thinkingConfig: candidateConfig.thinkingConfig } : {}),
+            };
+            firstTurnResponse = await ai.models.generateContent({
+              model: candidate,
+              contents: workingContents,
+              config: pureToolConfig,
+            });
+            chatModelCooldowns.delete(candidate);
+            chosenModel = candidate;
+            activeToolConfig = pureToolConfig;
+            toolErr = null;
+            break;
+          } catch (fbErr: any) {
+            toolErr = fbErr;
+            if (isChatQuotaOrRateError(fbErr)) {
+              recordChatModelCooldown(candidate, fbErr);
+            }
+          }
+        }
+      }
+    }
+
+    if (firstTurnResponse && activeToolConfig) {
+      appendGroundingFromPayload(firstTurnResponse, groundingLinks);
+      let currentResponse = firstTurnResponse;
+
+      for (let round = 0; round < 3; round++) {
+        const calls = currentResponse?.functionCalls;
+        const modelContent = currentResponse?.candidates?.[0]?.content;
+        if (!calls || calls.length === 0 || !modelContent) {
+          break;
+        }
+        executedTools = true;
+        const { responseParts, links } = await executeFunctionCallsBatch(
+          calls,
+          builtConnectors.executors
+        );
+        for (const l of links) {
+          if (!groundingLinks.some((g) => g.uri === l.uri)) groundingLinks.push(l);
+        }
+        workingContents = [
+          ...workingContents,
+          modelContent,
+          { role: 'user', parts: responseParts },
+        ];
+
+        if (round < 2) {
+          try {
+            const nextRes = await ai.models.generateContent({
+              model: chosenModel,
+              contents: workingContents,
+              config: activeToolConfig,
+            });
+            appendGroundingFromPayload(nextRes, groundingLinks);
+            if (nextRes.functionCalls && nextRes.functionCalls.length > 0) {
+              currentResponse = nextRes;
+              continue;
+            }
+            const finalText = sanitizeModelText(extractNonThoughtText(nextRes));
+            if (finalText.trim()) {
+              yield {
+                type: 'chunk',
+                text: cleanOutChunk(finalText),
+                model: chosenModel,
+              };
+            }
+            yield {
+              type: 'done',
+              model: chosenModel,
+              groundingLinks: groundingLinks.length > 0 ? groundingLinks : undefined,
+            };
+            return;
+          } catch {
+            break;
+          }
+        }
+      }
+
+      if (!executedTools) {
+        const directText = sanitizeModelText(extractNonThoughtText(currentResponse));
+        if (directText.trim()) {
+          yield {
+            type: 'chunk',
+            text: cleanOutChunk(directText),
+            model: chosenModel,
+          };
+          yield {
+            type: 'done',
+            model: chosenModel,
+            groundingLinks: groundingLinks.length > 0 ? groundingLinks : undefined,
+          };
+          return;
+        }
+      } else {
+        // Stream final synthesized answer after max tool rounds
+        try {
+          const finalStream = await ai.models.generateContentStream({
+            model: chosenModel,
+            contents: workingContents,
+            config: { systemInstruction: activeSystemInstruction },
+          });
+          for await (const chunk of finalStream) {
+            const piece = sanitizeModelText(extractNonThoughtText(chunk));
+            if (piece) {
+              yield { type: 'chunk', text: cleanOutChunk(piece), model: chosenModel };
+            }
+            appendGroundingFromPayload(chunk, groundingLinks);
+          }
+          yield {
+            type: 'done',
+            model: chosenModel,
+            groundingLinks: groundingLinks.length > 0 ? groundingLinks : undefined,
+          };
+          return;
+        } catch {}
+      }
+    } else if (isChatQuotaOrRateError(toolErr)) {
+      throw new Error('Batas kuota model Gemini tercapai (429). Mohon tunggu beberapa saat lalu coba kembali.');
+    }
   }
 
   let responseStream;
@@ -431,20 +737,13 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
   let successfulModel = candidateModels[0];
 
   for (const candidate of candidateModels) {
-    const candidateConfig = { ...config };
-
-    // Gemini 2.5 series does NOT support thinkingConfig (only Gemini 3 & 4)
-    if (!candidate.startsWith('gemini-3') && !candidate.startsWith('gemini-4')) {
-      delete candidateConfig.thinkingConfig;
-    } else if (candidate === 'gemini-3.8-flash' && mode !== 'thinking') {
-      candidateConfig.thinkingConfig = { thinkingLevel: ThinkingLevel.LOW };
-    }
-
-    // Grounding tools (googleSearch/googleMaps) are unsupported with multimodal images/video on Gemini 2.5
-    if (hasMedia || hasVideo || candidate === 'gemini-2.5-flash-lite' || candidate === 'gemini-3.1-flash-lite') {
-      delete candidateConfig.tools;
-      delete candidateConfig.toolConfig;
-    }
+    const candidateConfig = prepareCandidateConfig(
+      candidate,
+      config,
+      effectiveMode,
+      hasVideo,
+      { declarations: [], executors: new Map(), systemAddendum: '' }
+    );
 
     try {
       responseStream = await ai.models.generateContentStream({
@@ -452,84 +751,110 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
         contents,
         config: candidateConfig,
       });
+      chatModelCooldowns.delete(candidate);
       successfulModel = candidate;
       streamError = null;
       break;
     } catch (err: any) {
       streamError = err;
-      const errMsg = String(err?.message || err);
-      const isQuotaExhausted =
-        errMsg.includes('429') ||
-        errMsg.includes('RESOURCE_EXHAUSTED') ||
-        errMsg.includes('quota') ||
-        errMsg.includes('rate limit');
+      const isQuotaExhausted = isChatQuotaOrRateError(err);
 
-      // If tools or thinking config caused a 400 error, retry once with clean basic configuration
-      if (!isQuotaExhausted && (candidateConfig.tools || candidateConfig.thinkingConfig)) {
+      if (isQuotaExhausted) {
+        recordChatModelCooldown(candidate, err);
+      } else if (candidateConfig.tools || candidateConfig.thinkingConfig) {
         try {
           responseStream = await ai.models.generateContentStream({
             model: candidate,
             contents,
             config: { systemInstruction: activeSystemInstruction },
           });
+          chatModelCooldowns.delete(candidate);
           successfulModel = candidate;
           streamError = null;
           break;
         } catch (fallbackErr: any) {
           streamError = fallbackErr;
+          if (isChatQuotaOrRateError(fallbackErr)) {
+            recordChatModelCooldown(candidate, fallbackErr);
+          }
         }
       }
-      // If quota exhausted or failed, loop immediately moves to next candidate model!
     }
   }
 
   if (!responseStream) {
-    const rawMsg = String(streamError?.message || streamError || '');
-    if (rawMsg.includes('429') || rawMsg.includes('RESOURCE_EXHAUSTED')) {
+    if (isChatQuotaOrRateError(streamError)) {
       throw new Error('Batas kuota model Gemini tercapai (429). Mohon tunggu beberapa saat lalu coba kembali.');
     }
     throw streamError || new Error('Gagal terhubung ke model Gemini.');
   }
 
-  const groundingLinks: Array<{ title?: string; uri: string }> = [];
+  let leadingBuffer = '';
+  let streamPassedThoughtGate = false;
 
   try {
     for await (const chunk of responseStream) {
-      if (chunk.text) {
-        yield {
-          type: 'chunk',
-          text: allowEmojis ? chunk.text : stripEmojis(chunk.text),
-          model: successfulModel,
-        };
+      const piece = extractNonThoughtText(chunk);
+      if (piece) {
+        if (streamPassedThoughtGate) {
+          const cleanedPiece = piece.replace(
+            /^\s*\*{0,3}\((?:Melakukan pencarian web|Mencari di web|Menelusuri web|Searching the web|Performing web search)\.{0,3}\)\*{0,3}\s*$/gim,
+            ''
+          );
+          if (cleanedPiece) {
+            yield {
+              type: 'chunk',
+              text: cleanOutChunk(cleanedPiece),
+              model: successfulModel,
+            };
+          }
+        } else {
+          leadingBuffer += piece;
+          if (!couldBeThoughtPrefix(leadingBuffer)) {
+            streamPassedThoughtGate = true;
+            const cleaned = sanitizeModelText(leadingBuffer);
+            leadingBuffer = '';
+            if (cleaned) {
+              yield {
+                type: 'chunk',
+                text: cleanOutChunk(cleaned),
+                model: successfulModel,
+              };
+            }
+          } else {
+            const sanitized = sanitizeModelText(leadingBuffer);
+            const isConfirmedLeak = /^(?:THINK\b|Thought\s*:|Thinking(?:\s+Process)?\s*:|<thought|<thinking)/i.test(
+              leadingBuffer.trimStart()
+            );
+
+            if (isConfirmedLeak && sanitized.trim().length > 0) {
+              streamPassedThoughtGate = true;
+              leadingBuffer = '';
+              yield {
+                type: 'chunk',
+                text: cleanOutChunk(sanitized),
+                model: successfulModel,
+              };
+            }
+          }
+        }
       }
 
-      const groundingChunks =
-        chunk.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-      for (const gChunk of groundingChunks) {
-        if (gChunk.web?.uri) {
-          const link = {
-            title: gChunk.web.title || gChunk.web.uri,
-            uri: gChunk.web.uri,
-          };
-          if (!groundingLinks.some((l) => l.uri === link.uri)) {
-            groundingLinks.push(link);
-          }
-        }
-        if (gChunk.maps?.uri) {
-          const link = {
-            title: gChunk.maps.title || 'Buka di Google Maps',
-            uri: gChunk.maps.uri,
-          };
-          if (!groundingLinks.some((l) => l.uri === link.uri)) {
-            groundingLinks.push(link);
-          }
-        }
+      appendGroundingFromPayload(chunk, groundingLinks);
+    }
+
+    if (!streamPassedThoughtGate && leadingBuffer) {
+      const cleanedTail = sanitizeModelText(leadingBuffer);
+      if (cleanedTail) {
+        yield {
+          type: 'chunk',
+          text: cleanOutChunk(cleanedTail),
+          model: successfulModel,
+        };
       }
     }
   } catch (iterErr: any) {
     const errMsg = String(iterErr?.message || iterErr);
-    // If the stream ends abruptly or encounters an incomplete trailing JSON segment,
-    // gracefully conclude without failing the tokens already delivered
     console.warn('Gracefully recovered from stream chunk iteration notice:', errMsg);
   }
 
@@ -541,6 +866,8 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
 }
 
 export async function generateChatResponse(options: GenerateOptions) {
+  const currentKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '';
+  syncChatApiKey(currentKey);
   const ai = getGeminiClient();
   const {
     messages,
@@ -552,26 +879,25 @@ export async function generateChatResponse(options: GenerateOptions) {
     deviceTime,
     userMemories,
     userName,
+    activeConnectors = [],
   } = options;
 
-  let modelName = 'gemini-3.8-flash';
-  const config: any = {};
-  const activeSystemInstruction = buildSystemInstruction(
-    deviceTime,
-    systemInstruction,
-    userMemories,
-    userName,
-    allowEmojis
-  );
-  const isSearchActive = webSearch !== false;
+  const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')?.content || '';
+  const builtConnectors = buildConnectorTools(activeConnectors, lastUserMsg);
 
-  if (mode === 'thinking') {
-    modelName = 'gemini-3.8-flash';
+  const effectiveMode = builtConnectors.forceMapsMode ? 'maps' : mode;
+  const isSearchActive = webSearch !== false || Boolean(builtConnectors.forceWebSearch);
+
+  const config: any = {};
+  const activeSystemInstruction =
+    buildSystemInstruction(deviceTime, systemInstruction, userMemories, userName, allowEmojis) +
+    builtConnectors.systemAddendum;
+
+  if (effectiveMode === 'thinking') {
     config.thinkingConfig = {
       thinkingLevel: ThinkingLevel.HIGH,
     };
-  } else if (mode === 'maps') {
-    modelName = 'gemini-3.8-flash';
+  } else if (effectiveMode === 'maps') {
     config.tools = [{ googleMaps: {} }];
     if (location) {
       config.toolConfig = {
@@ -581,10 +907,7 @@ export async function generateChatResponse(options: GenerateOptions) {
       };
     }
   } else if (isSearchActive) {
-    modelName = 'gemini-3.8-flash';
     config.tools = [{ googleSearch: {} }];
-  } else {
-    modelName = 'gemini-3.8-flash';
   }
 
   config.systemInstruction = activeSystemInstruction;
@@ -607,100 +930,131 @@ export async function generateChatResponse(options: GenerateOptions) {
   );
   const hasMedia = messages.some((m) => m.attachments && m.attachments.length > 0);
 
-  let candidateModels: string[];
+  let baseCandidates: string[];
   if (hasVideo) {
-    candidateModels = ['gemini-2.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest'];
-  } else if (mode === 'thinking') {
-    candidateModels = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-flash-latest'];
+    baseCandidates = ['gemini-4-hydrogen', 'gemini-2.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest'];
+  } else if (effectiveMode === 'thinking') {
+    baseCandidates = ['gemini-4-hydrogen', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-flash-latest'];
+  } else if (builtConnectors.declarations.length > 0) {
+    baseCandidates = ['gemini-4-hydrogen', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-3.1-flash-lite'];
+  } else if (hasMedia && isSearchActive) {
+    baseCandidates = ['gemini-4-hydrogen', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite'];
   } else if (hasMedia) {
-    candidateModels = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.8-flash', 'gemini-flash-latest'];
+    baseCandidates = ['gemini-4-hydrogen', 'gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.8-flash'];
   } else {
-    candidateModels = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest'];
+    baseCandidates = ['gemini-4-hydrogen', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest'];
   }
 
-  let response;
+  const candidateModels = orderAvailableCandidates(baseCandidates);
+  const groundingLinks: Array<{ title?: string; uri: string }> = [];
+
+  let workingContents = [...contents];
+  let response: any = null;
   let lastError: any = null;
   let successfulModel = candidateModels[0];
+  let activeToolConfig: any = null;
 
   for (const candidate of candidateModels) {
-    const candidateConfig = { ...config };
-
-    if (!candidate.startsWith('gemini-3') && !candidate.startsWith('gemini-4')) {
-      delete candidateConfig.thinkingConfig;
-    } else if (candidate === 'gemini-3.8-flash' && mode !== 'thinking') {
-      candidateConfig.thinkingConfig = { thinkingLevel: ThinkingLevel.LOW };
-    }
-
-    if (hasMedia || hasVideo || candidate === 'gemini-2.5-flash-lite' || candidate === 'gemini-3.1-flash-lite') {
-      delete candidateConfig.tools;
-      delete candidateConfig.toolConfig;
-    }
+    const candidateConfig = prepareCandidateConfig(
+      candidate,
+      config,
+      effectiveMode,
+      hasVideo,
+      builtConnectors
+    );
 
     try {
       response = await ai.models.generateContent({
         model: candidate,
-        contents,
+        contents: workingContents,
         config: candidateConfig,
       });
+      chatModelCooldowns.delete(candidate);
       successfulModel = candidate;
+      activeToolConfig = candidateConfig;
       lastError = null;
       break;
     } catch (err: any) {
       lastError = err;
-      const errMsg = String(err?.message || err);
-      const isQuotaExhausted =
-        errMsg.includes('429') ||
-        errMsg.includes('RESOURCE_EXHAUSTED') ||
-        errMsg.includes('quota') ||
-        errMsg.includes('rate limit');
+      const isQuotaExhausted = isChatQuotaOrRateError(err);
 
-      if (!isQuotaExhausted && (candidateConfig.tools || candidateConfig.thinkingConfig)) {
+      if (isQuotaExhausted) {
+        recordChatModelCooldown(candidate, err);
+      } else if (candidateConfig.tools || candidateConfig.thinkingConfig) {
         try {
+          const fallbackCfg: any =
+            builtConnectors.declarations.length > 0 && !hasVideo
+              ? {
+                  systemInstruction: activeSystemInstruction,
+                  tools: [{ functionDeclarations: builtConnectors.declarations }],
+                }
+              : { systemInstruction: activeSystemInstruction };
           response = await ai.models.generateContent({
             model: candidate,
-            contents,
-            config: { systemInstruction: activeSystemInstruction },
+            contents: workingContents,
+            config: fallbackCfg,
           });
+          chatModelCooldowns.delete(candidate);
           successfulModel = candidate;
+          activeToolConfig = fallbackCfg;
           lastError = null;
           break;
         } catch (fallbackErr: any) {
           lastError = fallbackErr;
+          if (isChatQuotaOrRateError(fallbackErr)) {
+            recordChatModelCooldown(candidate, fallbackErr);
+          }
         }
       }
     }
   }
 
   if (!response) {
-    const rawMsg = String(lastError?.message || lastError || '');
-    if (rawMsg.includes('429') || rawMsg.includes('RESOURCE_EXHAUSTED')) {
+    if (isChatQuotaOrRateError(lastError)) {
       throw new Error('Batas kuota model Gemini tercapai (429). Mohon tunggu beberapa saat lalu coba kembali.');
     }
     throw lastError || new Error('Gagal terhubung ke model Gemini.');
   }
 
-  const rawText = response.text || '';
-  const responseText = (allowEmojis ? rawText : stripEmojis(rawText)).replace(/  +/g, ' ').trim();
+  appendGroundingFromPayload(response, groundingLinks);
 
-  // Extract grounding information (Search or Maps)
-  const groundingChunks =
-    response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-  const groundingLinks: Array<{ title?: string; uri: string }> = [];
+  // Execute function calling loop if model invoked connector tools
+  if (builtConnectors.declarations.length > 0 && activeToolConfig) {
+    for (let round = 0; round < 3; round++) {
+      const calls = response?.functionCalls;
+      const modelContent = response?.candidates?.[0]?.content;
+      if (!calls || calls.length === 0 || !modelContent) {
+        break;
+      }
 
-  for (const chunk of groundingChunks) {
-    if (chunk.web?.uri) {
-      groundingLinks.push({
-        title: chunk.web.title || chunk.web.uri,
-        uri: chunk.web.uri,
+      const { responseParts, links } = await executeFunctionCallsBatch(
+        calls,
+        builtConnectors.executors
+      );
+      for (const l of links) {
+        if (!groundingLinks.some((g) => g.uri === l.uri)) groundingLinks.push(l);
+      }
+
+      workingContents = [
+        ...workingContents,
+        modelContent,
+        { role: 'user', parts: responseParts },
+      ];
+
+      response = await ai.models.generateContent({
+        model: successfulModel,
+        contents: workingContents,
+        config:
+          round < 2
+            ? activeToolConfig
+            : { systemInstruction: activeSystemInstruction },
       });
-    }
-    if (chunk.maps?.uri) {
-      groundingLinks.push({
-        title: chunk.maps.title || 'Buka di Google Maps',
-        uri: chunk.maps.uri,
-      });
+      appendGroundingFromPayload(response, groundingLinks);
     }
   }
+
+  const rawText = sanitizeModelText(extractNonThoughtText(response));
+  const responseText = (allowEmojis ? rawText : stripEmojis(rawText)).replace(/  +/g, ' ').trim();
 
   return {
     text: responseText,

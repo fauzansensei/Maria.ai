@@ -21,6 +21,12 @@ export interface PluginSamplePrompt {
   cardTone: 'emerald' | 'blue' | 'violet' | 'amber' | 'rose' | 'cyan' | 'slate';
 }
 
+export interface DiscoveredConnectorTool {
+  name: string;
+  description?: string;
+  inputSchema?: any;
+}
+
 export interface PluginEntry {
   id: string;
   source: 'core' | 'connector' | 'custom';
@@ -39,6 +45,10 @@ export interface PluginEntry {
   website: string;
   websiteUrl: string;
   mcpUrl?: string;
+  authType?: 'none' | 'bearer' | 'header';
+  authHeaderName?: string;
+  authToken?: string;
+  discoveredTools?: DiscoveredConnectorTool[];
   version: string;
   privacyUrl: string;
   termsUrl: string;
@@ -1748,4 +1758,52 @@ export function getPluginById(
   customConnectors: PluginEntry[] = []
 ): PluginEntry | undefined {
   return getAllPlugins(customConnectors).find((p) => p.id === id);
+}
+
+export interface ActiveConnectorPayload {
+  id: string;
+  source: 'core' | 'connector' | 'custom';
+  name: string;
+  mentionTag: string;
+  mcpUrl?: string;
+  authType?: 'none' | 'bearer' | 'header';
+  authHeaderName?: string;
+  authToken?: string;
+  tools?: string[];
+  discoveredTools?: DiscoveredConnectorTool[];
+}
+
+export function buildActiveConnectorsPayload(
+  enabledCoreIds: string[] = []
+): ActiveConnectorPayload[] {
+  let enabledExternalIds: string[] = ['conn-youtube', 'conn-spotify', 'conn-github'];
+  try {
+    const raw = localStorage.getItem('maria_connectors');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) enabledExternalIds = parsed;
+    }
+  } catch {}
+
+  const customConnectors = loadCustomConnectors();
+  const catalog = getAllPlugins(customConnectors);
+
+  return catalog
+    .filter((entry) =>
+      entry.source === 'core'
+        ? enabledCoreIds.includes(entry.id)
+        : enabledExternalIds.includes(entry.id)
+    )
+    .map((entry) => ({
+      id: entry.id,
+      source: entry.source,
+      name: entry.name,
+      mentionTag: entry.mentionTag,
+      ...(entry.mcpUrl ? { mcpUrl: entry.mcpUrl } : {}),
+      ...(entry.authType ? { authType: entry.authType } : {}),
+      ...(entry.authHeaderName ? { authHeaderName: entry.authHeaderName } : {}),
+      ...(entry.authToken ? { authToken: entry.authToken } : {}),
+      ...(entry.tools ? { tools: entry.tools } : {}),
+      ...(entry.discoveredTools ? { discoveredTools: entry.discoveredTools } : {}),
+    }));
 }

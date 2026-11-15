@@ -49,7 +49,7 @@ interface MessageItemProps {
   onOpenImageStudio?: (baseImage?: string, prompt?: string) => void;
 }
 
-import { autoFormatMarkdown } from '../lib/formatUtils.ts';
+import { autoFormatMarkdown, sanitizeModelText } from '../lib/formatUtils.ts';
 export { autoFormatMarkdown };
 
 // Subcomponent to resolve and display the 100% full original resolution image
@@ -469,21 +469,27 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
   const isThisLoading =
     speechState.isLoading && speechState.activeMessageId === message.id;
 
+  const cleanModelRawContent = useMemo(
+    () => (isModel ? sanitizeModelText(message.content) : message.content),
+    [isModel, message.content]
+  );
+
   const handleCopyText = () => {
-    navigator.clipboard.writeText(message.content);
+    navigator.clipboard.writeText(isModel ? cleanModelRawContent : message.content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleShareText = async () => {
     try {
+      const shareText = isModel ? cleanModelRawContent : message.content;
       if (navigator.share) {
         await navigator.share({
           title: 'Maria AI',
-          text: message.content,
+          text: shareText,
         });
       } else {
-        await navigator.clipboard.writeText(message.content);
+        await navigator.clipboard.writeText(shareText);
         setShared(true);
         setTimeout(() => setShared(false), 2000);
       }
@@ -510,9 +516,14 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
     [message.role, message.content]
   );
 
-  const formattedModelContent = useMemo(
-    () => (message.role === 'model' ? autoFormatMarkdown(displayedContent) : ''),
+  const sanitizedDisplayedModelText = useMemo(
+    () => (message.role === 'model' ? sanitizeModelText(displayedContent) : ''),
     [message.role, displayedContent]
+  );
+
+  const formattedModelContent = useMemo(
+    () => (message.role === 'model' ? autoFormatMarkdown(sanitizedDisplayedModelText) : ''),
+    [message.role, sanitizedDisplayedModelText]
   );
 
   const userMarkdownComponents = useMemo(
@@ -706,7 +717,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
         }
       } catch {}
 
-      speechService.speak(message.content, {
+      speechService.speak(isModel ? cleanModelRawContent : message.content, {
         messageId: message.id,
         speed: speechSpeed,
         voiceName,
@@ -755,7 +766,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
           </button>
         </div>
         <div className="p-4 max-h-[60vh] overflow-y-auto select-text text-sm leading-relaxed text-slate-800 dark:text-slate-100 whitespace-pre-wrap break-words">
-          {message.content}
+          {isModel ? cleanModelRawContent : message.content}
         </div>
         <div className="px-4 py-2.5 border-t border-slate-100 dark:border-[#2a2d3a] flex justify-end gap-2">
           <button
@@ -1218,7 +1229,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
 
         {/* Open Borderless Response Prose */}
         <div className="text-[15px] leading-[1.7] select-text break-words text-slate-800 dark:text-slate-100">
-          {!displayedContent.trim() && message.isStreaming && (
+          {!sanitizedDisplayedModelText.trim() && message.isStreaming && (
             <div className="flex items-center gap-2 py-1 text-slate-500 dark:text-slate-400 animate-in fade-in duration-200">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -1229,7 +1240,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
             </div>
           )}
 
-          {Boolean(displayedContent.trim()) && (
+          {Boolean(sanitizedDisplayedModelText.trim()) && (
             <div className="relative">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
