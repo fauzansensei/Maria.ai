@@ -73,6 +73,31 @@ service cloud.firestore {
              (!('groundingLinks' in data) || data.groundingLinks == null || (data.groundingLinks is list && data.groundingLinks.size() <= 20));
     }
 
+    // Library Item & Archived Chat Validation
+    function isValidLibraryItem(data) {
+      return data.keys().hasAll(['id', 'userId', 'title', 'category', 'kind', 'type', 'date']) &&
+             data.keys().hasOnly(['id', 'userId', 'title', 'category', 'kind', 'type', 'date', 'size', 'previewUrl', 'imageMediaKey', 'snippet', 'badge', 'sourceConvId', 'sourceMessageId', 'model', 'mode', 'archivedMessages', 'createdAtIso', 'updatedAtIso', 'createdAt', 'updatedAt']) &&
+             data.userId == request.auth.uid &&
+             isValidId(data.id) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.category in ['images', 'documents', 'audio', 'bookmarked', 'chat-history', 'archive', 'formulas'] &&
+             data.kind in ['image', 'chat', 'note'] &&
+             data.type is string && data.type.size() <= 100 &&
+             data.date is string && data.date.size() <= 60 &&
+             (!('size' in data) || data.size == null || (data.size is string && data.size.size() <= 40)) &&
+             (!('previewUrl' in data) || data.previewUrl == null || (data.previewUrl is string && data.previewUrl.size() <= 220000)) &&
+             (!('imageMediaKey' in data) || data.imageMediaKey == null || (data.imageMediaKey is string && data.imageMediaKey.size() <= 128)) &&
+             (!('snippet' in data) || data.snippet == null || (data.snippet is string && data.snippet.size() <= 1000)) &&
+             (!('badge' in data) || data.badge == null || (data.badge is string && data.badge.size() <= 50)) &&
+             (!('sourceConvId' in data) || data.sourceConvId == null || (data.sourceConvId is string && data.sourceConvId.size() <= 128)) &&
+             (!('sourceMessageId' in data) || data.sourceMessageId == null || (data.sourceMessageId is string && data.sourceMessageId.size() <= 128)) &&
+             (!('model' in data) || data.model == null || (data.model is string && data.model.size() <= 100)) &&
+             (!('mode' in data) || data.mode == null || (data.mode is string && data.mode.size() <= 50)) &&
+             (!('createdAtIso' in data) || data.createdAtIso == null || (data.createdAtIso is string && data.createdAtIso.size() <= 60)) &&
+             (!('updatedAtIso' in data) || data.updatedAtIso == null || (data.updatedAtIso is string && data.updatedAtIso.size() <= 60)) &&
+             (!('archivedMessages' in data) || data.archivedMessages == null || (data.archivedMessages is list && data.archivedMessages.size() <= 200 && (data.archivedMessages.size() == 0 || data.archivedMessages[0] is map)));
+    }
+
     // 1. User Profiles Collection
     match /users/{userId} {
       allow get: if isOwner(userId) && isValidId(userId);
@@ -86,6 +111,27 @@ service cloud.firestore {
                     incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'theme', 'updatedAt']);
                     
       allow delete: if isOwner(userId) && isValidId(userId);
+
+      // 1b. Persistent User Library & Archived Chat Snapshots
+      match /library/{itemId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(itemId);
+        allow list: if isOwner(userId) && isValidId(userId) && resource.data.userId == request.auth.uid;
+
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(itemId) &&
+                      isValidLibraryItem(incoming()) &&
+                      incoming().id == itemId &&
+                      incoming().userId == userId;
+
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(itemId) &&
+                      resource != null && resource.data.userId == request.auth.uid &&
+                      isValidLibraryItem(incoming()) &&
+                      incoming().userId == existing().userId &&
+                      incoming().id == existing().id &&
+                      incoming().diff(existing()).affectedKeys().hasOnly(['title', 'type', 'date', 'previewUrl', 'imageMediaKey', 'snippet', 'archivedMessages', 'updatedAtIso', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(itemId) &&
+                      (resource == null || resource.data.userId == request.auth.uid);
+      }
     }
 
     // 2. Conversations Collection

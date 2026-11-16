@@ -6,32 +6,25 @@ import {
   Volume2,
   VolumeX,
   Loader2,
-  MessageSquare,
   Shield,
   Layers,
   User,
   Moon,
   Sun,
-  Laptop,
   Check,
   Sparkles,
-  Database,
-  Lock,
   Download,
   Trash2,
   ExternalLink,
-  Cookie,
   Plus,
   Search,
   Bell,
-  HardDrive,
-  BookOpen,
-  Zap,
-  Globe,
+  Lock,
   Info,
-  KeyRound,
-  EyeOff,
   Sliders,
+  Database,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useTheme } from '../context/ThemeContext.tsx';
@@ -59,7 +52,17 @@ interface SettingsDashboardProps {
   conversations?: Conversation[];
 }
 
-type TabType = 'general' | 'ai-memory' | 'voice' | 'chat' | 'privacy' | 'integrations' | 'account';
+type TabType =
+  | 'general'
+  | 'ai'
+  | 'memory'
+  | 'connectors'
+  | 'security'
+  | 'notifications'
+  | 'voice'
+  | 'privacy'
+  | 'account'
+  | 'about';
 
 interface SettingSearchItem {
   id: string;
@@ -71,128 +74,56 @@ interface SettingSearchItem {
 }
 
 const getSearchIndex = (isEn: boolean): SettingSearchItem[] => [
-  { id: 'nickname', title: isEn ? 'User Display Name' : 'Nama Panggilan Pengguna', description: isEn ? 'Your personal greeting name' : 'Nama sapaan pribadi Anda', tab: 'general', tabLabel: 'General', keywords: 'nama name nickname user profil profile' },
-  { id: 'appearance', title: isEn ? 'Theme & Appearance Mode (System / Dark / Light)' : 'Tema & Mode Tampilan (System / Gelap / Terang)', description: isEn ? 'Set interface to System, OLED Dark, or Light mode' : 'Atur tampilan mengikuti sistem, gelap OLED, atau terang', tab: 'general', tabLabel: 'General', keywords: 'theme dark light system oled mode gelap terang putih hitam penampilan appearance' },
-  { id: 'accent', title: isEn ? 'Accent Color' : 'Warna Aksen (Accent Color)', description: isEn ? 'Choose Maria AI accent highlight color' : 'Pilih warna aksen antarmuka Maria AI', tab: 'general', tabLabel: 'General', keywords: 'warna accent color biru blue cyan emerald sky violet amber rose' },
+  { id: 'nickname', title: isEn ? 'User Display Name' : 'Nama Panggilan Pengguna', description: isEn ? 'Your personal greeting name' : 'Nama sapaan pribadi Anda', tab: 'general', tabLabel: 'General', keywords: 'nama name nickname user profil' },
+  { id: 'appearance', title: isEn ? 'Theme Mode (System / Dark / Light)' : 'Mode Tampilan (Sistem / Gelap / Terang)', description: isEn ? 'Set interface theme preference' : 'Pilih tema antarmuka Maria AI', tab: 'general', tabLabel: 'General', keywords: 'theme dark light system oled mode gelap terang' },
+  { id: 'accent', title: isEn ? 'Accent Color' : 'Warna Aksen', description: isEn ? 'Choose highlight accent color' : 'Pilih warna aksen antarmuka Maria', tab: 'general', tabLabel: 'General', keywords: 'warna accent color biru cyan emerald violet amber rose' },
   { id: 'language', title: isEn ? 'Interface Language' : 'Bahasa Antarmuka', description: isEn ? 'Indonesian or English (US)' : 'Bahasa Indonesia atau English', tab: 'general', tabLabel: 'General', keywords: 'language bahasa interface indonesia english' },
-  { id: 'fast-answers', title: isEn ? 'Fast Answers' : 'Jawaban Cepat (Fast Answers)', description: isEn ? 'Prioritize concise low-latency responses' : 'Prioritaskan respons ringkas berlatensi rendah', tab: 'general', tabLabel: 'General', keywords: 'fast answers cepat kecerdasan intelligence' },
-  { id: 'web-search', title: isEn ? 'Automatic Web Search' : 'Pencarian Web Otomatis', description: isEn ? 'Enable live Google Search by default' : 'Aktifkan penelusuran Google Search secara default', tab: 'general', tabLabel: 'General', keywords: 'web search pencarian google default' },
-  { id: 'homepage-suggestions', title: isEn ? 'Home Topic Suggestions' : 'Saran Topik Beranda', description: isEn ? 'Show quick starter prompts on empty chat screen' : 'Tampilkan contoh topik mulai cepat di layar kosong', tab: 'general', tabLabel: 'General', keywords: 'saran homepage suggestions beranda topik' },
-  { id: 'tone', title: isEn ? 'Response Style & Maria Persona' : 'Gaya Respon & Persona Maria', description: isEn ? 'Professional, Warm, Creative, Technical, Minimalist' : 'Profesional, Ramah, Kreatif, Teknis, Minimalis', tab: 'ai-memory', tabLabel: 'AI & Memory', keywords: 'tone gaya respon persona kepribadian' },
-  { id: 'language-style', title: isEn ? 'Speech & Vocabulary Style' : 'Gaya Bahasa (Baku / Santai / Gaul / Puitis / Teknis)', description: isEn ? 'Choose Maria phrasing and greeting style' : 'Pilih gaya kosakata dan sapaan Maria', tab: 'ai-memory', tabLabel: 'AI & Memory', keywords: 'gaya bahasa baku santai gaul puitis teknis personality sapaan style' },
-  { id: 'traits', title: isEn ? 'Personality Traits (Warmth, Enthusiasm, Structured)' : 'Sifat Kepribadian (Kehangatan, Antusias, Terstruktur)', description: isEn ? 'Fine-tune how Maria presents answers' : 'Atur detail gaya penyampaian Maria', tab: 'ai-memory', tabLabel: 'AI & Memory', keywords: 'personality traits kehangatan warmth antusias terstruktur structured customize' },
-  { id: 'custom-prompt', title: isEn ? 'Custom Instructions & Personality Prompt' : 'Instruksi Kustom (Custom Prompt)', description: isEn ? 'Define custom personality & rules for Maria' : 'Atur kepribadian & aturan khusus cara Maria menjawab', tab: 'ai-memory', tabLabel: 'AI & Memory', keywords: 'custom prompt instruksi khusus personality kepribadian' },
-  { id: 'memory-summary', title: isEn ? 'Memory Summary & Personal Notes' : 'Ringkasan Memori & Catatan Personal', description: isEn ? 'Manage saved memories and auto summary' : 'Kelola memori tersimpan dan ringkasan otomatis', tab: 'ai-memory', tabLabel: 'AI & Memory', keywords: 'memory summary memori fakta personal' },
-  { id: 'voice-auto', title: isEn ? 'Automatic AI Voice Responses (TTS)' : 'Respon Suara AI Otomatis (TTS)', description: isEn ? 'Read Maria replies aloud automatically' : 'Bacakan balasan Maria dengan suara otomatis', tab: 'voice', tabLabel: 'Voice & Audio', keywords: 'tts suara voice otomatis audio' },
-  { id: 'voice-lang', title: isEn ? 'Voice Recognition & Background Audio' : 'Bahasa Pengenalan Suara & Latar Belakang', description: isEn ? 'Dictation language and background playback' : 'Bahasa dikte suara dan percakapan latar belakang', tab: 'voice', tabLabel: 'Voice & Audio', keywords: 'voice language dikte background audio' },
-  { id: 'voice-dict', title: isEn ? 'Pronunciation Dictionary' : 'Kamus Pengucapan (Dictionary)', description: isEn ? 'Customize pronunciation of special terms' : 'Atur pelafalan istilah atau singkatan khusus', tab: 'voice', tabLabel: 'Voice & Audio', keywords: 'dictionary kamus pengucapan' },
-  { id: 'temp-chat', title: isEn ? 'Temporary Chat' : 'Obrolan Sementara (Temporary Chat)', description: isEn ? 'Conversations are not saved to history or cloud' : 'Percakapan tidak disimpan ke riwayat atau database', tab: 'chat', tabLabel: 'Chat & Prompt', keywords: 'temporary chat sementara incognito privasi' },
-  { id: 'notifications', title: isEn ? 'Notification Preferences' : 'Preferensi Notifikasi', description: isEn ? 'Chat status, reminders, and notification sounds' : 'Notifikasi status chat, pengingat, dan suara', tab: 'chat', tabLabel: 'Chat & Prompt', keywords: 'notifications notifikasi pengingat reminder' },
-  { id: 'about', title: isEn ? 'About, Help & Terms' : 'Tentang, Bantuan & Ketentuan (About)', description: isEn ? 'Help center, terms of service, privacy policy' : 'Pusat bantuan, ketentuan layanan, kebijakan privasi', tab: 'chat', tabLabel: 'Chat & Prompt', keywords: 'about help terms privacy cookies bantuan' },
-  { id: 'safety', title: isEn ? 'Content Safety Filter' : 'Keamanan Konten (Safety Filter)', description: isEn ? 'Reduce sensitive content in responses & search' : 'Kurangi konten sensitif dalam respon & pencarian', tab: 'privacy', tabLabel: 'Privacy & Data', keywords: 'safety sensitif filter aman' },
-  { id: 'security-pin', title: isEn ? '2FA Security PIN & Session Lock' : 'PIN Keamanan 2FA & Kunci Sesi', description: isEn ? 'Set a 6-digit PIN for sensitive actions' : 'Atur PIN 6-digit untuk tindakan sensitif', tab: 'privacy', tabLabel: 'Privacy & Data', keywords: 'security pin 2fa password login kunci' },
-  { id: 'storage', title: isEn ? 'Local Storage & Cache' : 'Penyimpanan Lokal & Cache', description: isEn ? 'Inspect storage footprint and clear temporary cache' : 'Lihat penggunaan penyimpanan dan bersihkan cache', tab: 'privacy', tabLabel: 'Privacy & Data', keywords: 'storage cache penyimpanan memori lokal' },
-  { id: 'export', title: isEn ? 'Export Data (JSON)' : 'Ekspor Data (JSON)', description: isEn ? 'Download backup of settings, memories, and chats' : 'Unduh cadangan pengaturan, memori, dan riwayat chat', tab: 'privacy', tabLabel: 'Privacy & Data', keywords: 'export data json download unduh cadangan' },
-  { id: 'plugins', title: isEn ? 'Plugins & Connectors' : 'Plugins & Konektor Maria', description: isEn ? 'Manage Search, Maps, Image Studio, Science Scout' : 'Kelola kapabilitas Search, Maps, Image Studio, Science Scout', tab: 'integrations', tabLabel: 'Integrations', keywords: 'plugins konektor integrations search maps' },
-  { id: 'usage', title: isEn ? 'Usage & Model Limits' : 'Penggunaan & Batas Model (Usage)', description: isEn ? 'Gemini model quota status and subscription plan' : 'Status kuota model Gemini dan paket langganan', tab: 'account', tabLabel: 'Account', keywords: 'usage limits kuota akun workspace upgrade plus' },
+  { id: 'fast-answers', title: isEn ? 'Fast Answers' : 'Jawaban Cepat', description: isEn ? 'Concise low-latency responses' : 'Prioritaskan jawaban lebih ringkas', tab: 'general', tabLabel: 'General', keywords: 'fast answers cepat' },
+  { id: 'web-search', title: isEn ? 'Automatic Web Search' : 'Pencarian Web Otomatis', description: isEn ? 'Enable live Google Search by default' : 'Aktifkan penelusuran Google otomatis', tab: 'general', tabLabel: 'General', keywords: 'web search pencarian google' },
+  { id: 'homepage-suggestions', title: isEn ? 'Home Topic Suggestions' : 'Saran Topik Beranda', description: isEn ? 'Starter prompts on empty chat screen' : 'Kartu ide cepat di halaman awal', tab: 'general', tabLabel: 'General', keywords: 'saran homepage suggestions beranda' },
+  { id: 'tone', title: isEn ? 'Response Style' : 'Gaya Respon', description: isEn ? 'Professional, Warm, Creative, Technical, Minimalist' : 'Profesional, Ramah, Kreatif, Teknis, Minimalis', tab: 'ai', tabLabel: 'AI Behavior', keywords: 'tone gaya respon persona' },
+  { id: 'language-style', title: isEn ? 'Language Style' : 'Gaya Bahasa & Sapaan', description: isEn ? 'Formal, Casual, Slang, Poetic, Technical' : 'Baku, Santai, Gaul, Puitis, Teknis', tab: 'ai', tabLabel: 'AI Behavior', keywords: 'gaya bahasa baku santai gaul puitis teknis' },
+  { id: 'traits', title: isEn ? 'Personality Traits' : 'Sifat Kepribadian Respon', description: isEn ? 'Warmth, Enthusiasm, Structured formatting' : 'Kehangatan, Antusiasme, Terstruktur', tab: 'ai', tabLabel: 'AI Behavior', keywords: 'traits kepribadian warmth enthusiasm structured' },
+  { id: 'custom-prompt', title: isEn ? 'Custom Instructions' : 'Instruksi Kustom (Custom Prompt)', description: isEn ? 'Custom rules & personality prompt' : 'Aturan dan kepribadian khusus Maria', tab: 'ai', tabLabel: 'AI Behavior', keywords: 'custom prompt instruksi khusus' },
+  { id: 'enter-send', title: isEn ? 'Enter to Send' : 'Tekan Enter untuk Mengirim', description: isEn ? 'Shift + Enter for new line' : 'Shift + Enter untuk baris baru', tab: 'ai', tabLabel: 'AI Behavior', keywords: 'enter send kirim chat' },
+  { id: 'memory-auto', title: isEn ? 'Automatic Context Memory' : 'Memori Konteks Otomatis', description: isEn ? 'Remember preferences across chats' : 'Ingat preferensi lintas percakapan', tab: 'memory', tabLabel: 'Memory', keywords: 'memory memori otomatis konteks' },
+  { id: 'memory-notes', title: isEn ? 'Saved Personal Memories' : 'Catatan Memori Personal', description: isEn ? 'Add, inspect, or remove saved facts' : 'Kelola fakta dan catatan pribadi tersimpan', tab: 'memory', tabLabel: 'Memory', keywords: 'memory notes fakta catatan ringkasan' },
+  { id: 'plugins', title: isEn ? 'Plugins & Connectors' : 'Plugins & Konektor Maria', description: isEn ? 'Search, Maps, Image Studio, Science Scout' : 'Search, Maps, Studio Gambar, Science Scout', tab: 'connectors', tabLabel: 'Connectors', keywords: 'plugins konektor integrations search maps' },
+  { id: 'safety', title: isEn ? 'DLP & Content Safety' : 'Keamanan Konten & DLP Shield', description: isEn ? 'Mask credentials & reduce sensitive content' : 'Samarkan token sensitif & saring konten', tab: 'security', tabLabel: 'Security', keywords: 'dlp safety filter sensitif security' },
+  { id: 'security-pin', title: isEn ? '2FA Security PIN & Session Lock' : 'PIN Keamanan 2FA & Kunci Sesi', description: isEn ? '6-digit PIN for destructive actions' : 'PIN 6-digit untuk tindakan sensitif', tab: 'security', tabLabel: 'Security', keywords: 'pin 2fa password lock keamanan' },
+  { id: 'notifications', title: isEn ? 'Notification Preferences' : 'Preferensi Notifikasi', description: isEn ? 'Status, reminders, sound & in-app alerts' : 'Status chat, pengingat, suara & notifikasi', tab: 'notifications', tabLabel: 'Notifications', keywords: 'notifications notifikasi pengingat sound' },
+  { id: 'voice-auto', title: isEn ? 'Voice Responses (TTS)' : 'Respon Suara Otomatis (TTS)', description: isEn ? 'Persona, vocal timbre, speed & voice language' : 'Persona suara, timbre, kecepatan & bahasa dikte', tab: 'voice', tabLabel: 'Voice', keywords: 'tts suara voice persona speed timbre' },
+  { id: 'voice-dict', title: isEn ? 'Pronunciation Dictionary' : 'Kamus Pengucapan', description: isEn ? 'Custom pronunciation for acronyms/terms' : 'Atur pelafalan istilah khusus', tab: 'voice', tabLabel: 'Voice', keywords: 'dictionary kamus pengucapan' },
+  { id: 'temp-chat', title: isEn ? 'Temporary Chat & History' : 'Riwayat & Obrolan Sementara', description: isEn ? 'Control saving or ephemeral chat mode' : 'Kontrol penyimpanan riwayat & mode sementara', tab: 'privacy', tabLabel: 'Data & Privacy', keywords: 'temporary chat sementara history riwayat' },
+  { id: 'storage-export', title: isEn ? 'Storage Cache & Export JSON' : 'Cache Penyimpanan & Ekspor JSON', description: isEn ? 'Clear local cache or download data backup' : 'Bersihkan cache lokal atau ekspor backup JSON', tab: 'privacy', tabLabel: 'Data & Privacy', keywords: 'storage cache export json delete hapus' },
+  { id: 'account', title: isEn ? 'Account, Usage & Maria PLUS' : 'Akun, Kuota & Maria PLUS', description: isEn ? 'Profile, model routing, and subscription' : 'Profil Google, status model, dan langganan', tab: 'account', tabLabel: 'Account', keywords: 'account akun usage kuota plus upgrade google' },
+  { id: 'about', title: isEn ? 'About & Legal Policies' : 'Tentang & Kebijakan', description: isEn ? 'App info, help center, terms & privacy' : 'Info aplikasi, bantuan, ketentuan & privasi', tab: 'about', tabLabel: 'About', keywords: 'about help terms privacy cookies' },
 ];
 
 const EN_TONE_MAP: Record<string, { label: string; description: string }> = {
-  Professional: {
-    label: 'Professional & Formal',
-    description: 'Neat, polite, courteous, and well-structured language suited for work.',
-  },
-  Warm: {
-    label: 'Warm & Friendly',
-    description: 'Empathetic, approachable, attentive, and reassuring.',
-  },
-  Creative: {
-    label: 'Creative & Energetic',
-    description: 'Full of fresh ideas, unique analogies, expressive and spirited.',
-  },
-  Technical: {
-    label: 'Technical & Precise',
-    description: 'Highly logical, scientific, focused on data, code, or technical facts.',
-  },
-  Minimalist: {
-    label: 'Minimalist & Concise',
-    description: 'Super concise answers, straight to the point, word-efficient.',
-  },
+  Professional: { label: 'Professional & Formal', description: 'Neat, polite, and structured language for work.' },
+  Warm: { label: 'Warm & Friendly', description: 'Empathetic, approachable, and reassuring.' },
+  Creative: { label: 'Creative & Energetic', description: 'Fresh ideas, unique analogies, and expressive.' },
+  Technical: { label: 'Technical & Precise', description: 'Logical, scientific, focused on code and data.' },
+  Minimalist: { label: 'Minimalist & Concise', description: 'Short answers, straight to the point.' },
 };
 
-const EN_PERSONA_MAP: Record<
-  string,
-  { label: string; category: string; description: string; sampleText: string }
-> = {
-  wanita: {
-    label: 'Adult Female',
-    category: 'Adult',
-    description: 'Warm, friendly, graceful, and expressive',
-    sampleText: "Hello, I'm Maria. It's wonderful to assist you today.",
-  },
-  pria: {
-    label: 'Adult Male',
-    category: 'Adult',
-    description: 'Authoritative, calm, steady, and trustworthy',
-    sampleText: "Hello, I'm Mario. Ready to help with your analysis and tasks.",
-  },
-  'remaja-perempuan': {
-    label: 'Teen Female',
-    category: 'Teen',
-    description: 'Cheerful, relaxed, lively, and approachable',
-    sampleText: "Hey! I'm Maya. Let's explore something fun together today!",
-  },
-  'remaja-laki': {
-    label: 'Teen Male',
-    category: 'Teen',
-    description: 'Energetic, dynamic, casual, and engaging',
-    sampleText: "Hi! I'm Max. What interesting topic should we dive into?",
-  },
-  'anak-perempuan': {
-    label: 'Young Girl',
-    category: 'Kids',
-    description: 'Sweet, joyful, bright, and cheerful',
-    sampleText: "Hi there! I'm Mia, let's learn and share stories together!",
-  },
-  'anak-laki': {
-    label: 'Young Boy',
-    category: 'Kids',
-    description: 'Playful, energetic, curious, and full of wonder',
-    sampleText: "Hello! I'm Milo! I have lots of fun questions to explore!",
-  },
+const EN_PERSONA_MAP: Record<string, { label: string; sampleText: string }> = {
+  wanita: { label: 'Maria (Adult Female)', sampleText: "Hello, I'm Maria. It's wonderful to assist you today." },
+  pria: { label: 'Mario (Adult Male)', sampleText: "Hello, I'm Mario. Ready to help with your analysis and tasks." },
+  'remaja-perempuan': { label: 'Maya (Teen Female)', sampleText: "Hey! I'm Maya. Let's explore something fun together today!" },
+  'remaja-laki': { label: 'Max (Teen Male)', sampleText: "Hi! I'm Max. What interesting topic should we dive into?" },
+  'anak-perempuan': { label: 'Mia (Young Girl)', sampleText: "Hi there! I'm Mia, let's learn and share stories together!" },
+  'anak-laki': { label: 'Milo (Young Boy)', sampleText: "Hello! I'm Milo! I have lots of fun questions to explore!" },
 };
 
 const EN_PLUGIN_MAP: Record<string, { name: string; category: string; description: string }> = {
-  'google-search': {
-    name: 'Google Search Grounding',
-    category: 'Real-time Search',
-    description: 'Live web browsing & latest news facts directly from Google.',
-  },
-  'google-maps': {
-    name: 'Google Maps Explorer',
-    category: 'Location & Navigation',
-    description: 'Place search, travel routes, and nearby location recommendations.',
-  },
-  'image-studio': {
-    name: 'AI Image Studio',
-    category: 'Visuals & Creation',
-    description: 'Image generation and editing powered by Nano Banana & Flux.',
-  },
-  'science-scout': {
-    name: 'Science Scout (PubMed / UniProt / PDB)',
-    category: 'Scientific Research',
-    description: 'Direct access to biomedical journals, protein databases & 3D structures.',
-  },
-  'voice-engine': {
-    name: 'Gemini AI Voice Engine',
-    category: 'Audio & TTS',
-    description: 'Natural voice synthesis with 6 personas & voice dictation support.',
-  },
-  'canvas-code': {
-    name: 'Canvas Code & App Launcher',
-    category: 'Productivity',
-    description: 'Interactive code editor and Windows Open app launcher.',
-  },
+  'google-search': { name: 'Google Search Grounding', category: 'Search', description: 'Live web browsing & latest news facts directly from Google.' },
+  'google-maps': { name: 'Google Maps Explorer', category: 'Maps', description: 'Place search, travel routes, and nearby recommendations.' },
+  'image-studio': { name: 'AI Image Studio', category: 'Visuals', description: 'Image generation and editing powered by Nano Banana & Flux.' },
+  'science-scout': { name: 'Science Scout (PubMed / UniProt / PDB)', category: 'Research', description: 'Access biomedical journals, proteins & 3D structures.' },
+  'voice-engine': { name: 'Gemini AI Voice Engine', category: 'Audio & TTS', description: 'Natural voice synthesis with 6 personas & dictation.' },
+  'canvas-code': { name: 'Canvas Code & App Launcher', category: 'Productivity', description: 'Interactive code editor and app launcher.' },
 };
 
 const LANGUAGE_STYLE_OPTIONS = [
@@ -201,6 +132,15 @@ const LANGUAGE_STYLE_OPTIONS = [
   { value: 'Gaul', labelEn: 'Slang' },
   { value: 'Puitis', labelEn: 'Poetic' },
   { value: 'Teknis', labelEn: 'Technical' },
+] as const;
+
+const VOICE_TIMBRES = [
+  { id: 'Aoede', labelId: 'Aoede (Wanita • Elegan)', labelEn: 'Aoede (Female • Elegant)' },
+  { id: 'Kore', labelId: 'Kore (Wanita • Lembut)', labelEn: 'Kore (Female • Soft)' },
+  { id: 'Zephyr', labelId: 'Zephyr (Wanita • Ceria)', labelEn: 'Zephyr (Female • Cheerful)' },
+  { id: 'Fenrir', labelId: 'Fenrir (Pria • Mantap)', labelEn: 'Fenrir (Male • Firm)' },
+  { id: 'Puck', labelId: 'Puck (Pria • Dinamis)', labelEn: 'Puck (Male • Dynamic)' },
+  { id: 'Charon', labelId: 'Charon (Pria • Tenang)', labelEn: 'Charon (Male • Calm)' },
 ] as const;
 
 export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
@@ -219,20 +159,20 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
 
   const [activeTab, setActiveTab] = useState<TabType>('general');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [speechState, setSpeechState] = useState<SpeechState>(() => speechService.getState());
   const [memories, setMemories] = useState<UserMemory[]>(() => userMemoryService.getMemories());
   const [newMemoryText, setNewMemoryText] = useState('');
   const [newMemoryCategory, setNewMemoryCategory] = useState<UserMemory['category']>('personal');
 
-  // Voice Dictionary inputs
   const [dictTerm, setDictTerm] = useState('');
   const [dictPronunciation, setDictPronunciation] = useState('');
+  const [showDictEditor, setShowDictEditor] = useState(false);
 
-  // Security PIN input
   const [pinDraft, setPinDraft] = useState('');
   const [pinFeedback, setPinFeedback] = useState<string | null>(null);
+  const [showPinEditor, setShowPinEditor] = useState(false);
 
-  // Storage meter state
   const [storageRefreshTick, setStorageRefreshTick] = useState(0);
   const [cacheNotice, setCacheNotice] = useState<string | null>(null);
 
@@ -276,7 +216,6 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
     return found?.hex || '#2563eb';
   }, [settings.accentColor]);
 
-  // Search results filter (normalizes punctuation and matches multi-word terms)
   const searchResults = useMemo(() => {
     const clean = searchQuery
       .toLowerCase()
@@ -290,40 +229,32 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
     });
   }, [searchQuery, isEn]);
 
-  // Auto-synthesized Memory Summary
   const computedMemorySummary = useMemo(() => {
     if (memories.length === 0) {
       return isEn
-        ? 'No personal memories saved yet. Add facts manually or start chatting with Maria.'
-        : 'Belum ada memori personal yang tersimpan. Tambahkan fakta atau mulai percakapan dengan Maria.';
+        ? 'No personal memories saved yet.'
+        : 'Belum ada memori personal tersimpan.';
     }
-    const personalCount = memories.filter((m) => m.category === 'personal').length;
-    const prefCount = memories.filter((m) => m.category === 'preferences').length;
-    const workCount = memories.filter((m) => m.category === 'work').length;
     const highlights = memories.slice(0, 3).map((m) => m.text).join(' • ');
     return isEn
-      ? `${memories.length} active notes (${personalCount} personal, ${prefCount} preferences, ${workCount} work). Highlights: ${highlights}`
-      : `${memories.length} catatan aktif (${personalCount} personal, ${prefCount} preferensi, ${workCount} pekerjaan). Sorotan terbaru: ${highlights}`;
+      ? `${memories.length} notes active: ${highlights}`
+      : `${memories.length} catatan aktif: ${highlights}`;
   }, [memories, isEn]);
 
-  // LocalStorage real footprint calculation (only runs when Privacy & Data tab is visible)
   const storageStats = useMemo(() => {
     void storageRefreshTick;
     if (!isOpen || activeTab !== 'privacy') {
       return {
-        totalBytes: 0,
         totalLabel: '0 B',
         settingsLabel: '0 B',
         memoryLabel: '0 B',
         otherLabel: '0 B',
       };
     }
-
     let totalBytes = 0;
     let settingsBytes = 0;
     let memoryBytes = 0;
     let otherBytes = 0;
-
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -331,19 +262,13 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
         const val = localStorage.getItem(key) || '';
         const bytes = (key.length + val.length) * 2;
         totalBytes += bytes;
-        if (key === 'maria_settings' || key === 'maria_theme') {
-          settingsBytes += bytes;
-        } else if (key === 'maria_user_memories') {
-          memoryBytes += bytes;
-        } else {
-          otherBytes += bytes;
-        }
+        if (key === 'maria_settings' || key === 'maria_theme') settingsBytes += bytes;
+        else if (key === 'maria_user_memories') memoryBytes += bytes;
+        else otherBytes += bytes;
       }
     } catch {}
-
     const formatKB = (b: number) => (b < 1024 ? `${b} B` : `${(b / 1024).toFixed(1)} KB`);
     return {
-      totalBytes,
       totalLabel: formatKB(totalBytes),
       settingsLabel: formatKB(settingsBytes),
       memoryLabel: formatKB(memoryBytes),
@@ -352,6 +277,12 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
   }, [storageRefreshTick, isOpen, activeTab, memories.length]);
 
   if (!isOpen) return null;
+
+  const triggerSavedIndicator = () => {
+    setSavedSuccess(true);
+    if (savedTimeoutRef.current) window.clearTimeout(savedTimeoutRef.current);
+    savedTimeoutRef.current = window.setTimeout(() => setSavedSuccess(false), 1800);
+  };
 
   const handleUpdate = <K extends keyof UserSettings>(
     keyOrPatch: K | Partial<UserSettings>,
@@ -381,16 +312,15 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
       });
     }
 
-    setSavedSuccess(true);
+    triggerSavedIndicator();
     if (activeTab === 'privacy') {
       setStorageRefreshTick((t) => t + 1);
     }
-    if (savedTimeoutRef.current) window.clearTimeout(savedTimeoutRef.current);
-    savedTimeoutRef.current = window.setTimeout(() => setSavedSuccess(false), 1600);
   };
 
   const handleSelectTheme = (nextTheme: 'system' | 'dark' | 'light') => {
     setTheme(nextTheme);
+    triggerSavedIndicator();
     if (user?.uid) {
       if (themeSyncTimeoutRef.current) window.clearTimeout(themeSyncTimeoutRef.current);
       themeSyncTimeoutRef.current = window.setTimeout(() => {
@@ -401,6 +331,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
 
   const handleToggleTheme = () => {
     const resolvedTheme = toggleTheme();
+    triggerSavedIndicator();
     if (user?.uid) {
       if (themeSyncTimeoutRef.current) window.clearTimeout(themeSyncTimeoutRef.current);
       themeSyncTimeoutRef.current = window.setTimeout(() => {
@@ -438,7 +369,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
   const handleSavePin = () => {
     const clean = pinDraft.replace(/\D/g, '').slice(0, 6);
     if (clean.length !== 6) {
-      setPinFeedback(isEn ? 'PIN must be exactly 6 numeric digits.' : 'PIN harus tepat 6 digit angka.');
+      setPinFeedback(isEn ? 'PIN must be 6 digits.' : 'PIN harus tepat 6 digit.');
       return;
     }
     handleUpdate({
@@ -446,31 +377,35 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
       twoFactorEnabled: true,
       lastSecurityCheck: new Date().toISOString(),
     });
-    setPinFeedback(isEn ? '6-digit security PIN saved & active.' : 'PIN keamanan 6-digit tersimpan & aktif.');
-    setTimeout(() => setPinFeedback(null), 3000);
+    setPinFeedback(isEn ? '6-digit PIN saved.' : 'PIN 6-digit tersimpan.');
+    setTimeout(() => setPinFeedback(null), 2600);
   };
 
   const handleClearCache = () => {
     try {
-      const keepKeys = new Set(['maria_settings', 'maria_theme', 'maria_user_memories']);
+      const keepKeys = new Set([
+        'maria_settings',
+        'maria_theme',
+        'maria_user_memories',
+        'maria_library_items',
+        'maria_moved_chat_image_ids',
+      ]);
       const keysToDelete: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k && !keepKeys.has(k)) {
-          keysToDelete.push(k);
-        }
+        if (k && !keepKeys.has(k)) keysToDelete.push(k);
       }
       keysToDelete.forEach((k) => localStorage.removeItem(k));
       speechService.setDictionary(settings.speechDictionary || []);
       setStorageRefreshTick((t) => t + 1);
       setCacheNotice(
         isEn
-          ? `Cleared ${keysToDelete.length} temporary cache entries.`
-          : `${keysToDelete.length} entri cache sementara berhasil dibersihkan.`
+          ? `Cleared ${keysToDelete.length} temp cache keys.`
+          : `${keysToDelete.length} cache sementara dibersihkan.`
       );
       setTimeout(() => setCacheNotice(null), 3000);
     } catch {
-      setCacheNotice(isEn ? 'Failed to clear local cache.' : 'Gagal membersihkan cache lokal.');
+      setCacheNotice(isEn ? 'Failed to clear cache.' : 'Gagal membersihkan cache.');
     }
   };
 
@@ -487,11 +422,7 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
       },
       memories,
       conversationsCount: conversations.length,
-      conversations: conversations.map((c) => ({
-        id: c.id,
-        title: c.title,
-        mode: c.mode,
-      })),
+      conversations: conversations.map((c) => ({ id: c.id, title: c.title, mode: c.mode })),
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -504,74 +435,265 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
     URL.revokeObjectURL(url);
   };
 
-  const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
-    { id: 'general', label: 'General', icon: <Settings className="w-4 h-4" /> },
-    { id: 'ai-memory', label: 'AI & Memory', icon: <Brain className="w-4 h-4" /> },
-    { id: 'voice', label: 'Voice & Audio', icon: <Volume2 className="w-4 h-4" /> },
-    { id: 'chat', label: 'Chat & Prompt', icon: <MessageSquare className="w-4 h-4" /> },
-    { id: 'privacy', label: 'Privacy & Data', icon: <Shield className="w-4 h-4" /> },
-    { id: 'integrations', label: 'Integrations', icon: <Layers className="w-4 h-4" /> },
-    { id: 'account', label: 'Account', icon: <User className="w-4 h-4" /> },
+  const tabs: {
+    id: TabType;
+    label: string;
+    title: string;
+    subtitle: string;
+    icon: React.ReactNode;
+  }[] = [
+    {
+      id: 'general',
+      label: isEn ? 'General' : 'Umum',
+      title: isEn ? 'General' : 'Pengaturan Umum',
+      subtitle: isEn ? 'Manage your Maria AI appearance and preferences.' : 'Atur tampilan, bahasa, dan preferensi utama Maria AI.',
+      icon: <Settings className="w-3.5 h-3.5 shrink-0" />,
+    },
+    {
+      id: 'ai',
+      label: isEn ? 'AI Behavior' : 'Perilaku AI',
+      title: isEn ? 'AI Behavior' : 'Perilaku & Gaya AI',
+      subtitle: isEn ? 'Shape how Maria AI thinks, speaks, and formats answers.' : 'Atur gaya respon, sifat kepribadian, dan instruksi khusus.',
+      icon: <Sparkles className="w-3.5 h-3.5 shrink-0" />,
+    },
+    {
+      id: 'memory',
+      label: isEn ? 'Memory' : 'Memori',
+      title: isEn ? 'Memory' : 'Memori Personal',
+      subtitle: isEn ? 'Manage what Maria AI remembers across chats.' : 'Kelola catatan pribadi & ekstraksi memori otomatis.',
+      icon: <Brain className="w-3.5 h-3.5 shrink-0" />,
+    },
+    {
+      id: 'connectors',
+      label: isEn ? 'Connectors' : 'Konektor',
+      title: isEn ? 'Connectors' : 'Konektor & Plugin',
+      subtitle: isEn ? 'Manage connected engines, services, and plugins.' : 'Kelola koneksi mesin AI dan kapabilitas plugin Maria.',
+      icon: <Layers className="w-3.5 h-3.5 shrink-0" />,
+    },
+    {
+      id: 'security',
+      label: isEn ? 'Security' : 'Keamanan',
+      title: isEn ? 'Security' : 'Keamanan & Perlindungan',
+      subtitle: isEn ? 'Configure DLP shield, safety filter, and 2FA PIN.' : 'Atur DLP Shield, filter konten, dan kunci PIN 2FA.',
+      icon: <Shield className="w-3.5 h-3.5 shrink-0" />,
+    },
+    {
+      id: 'notifications',
+      label: isEn ? 'Notifications' : 'Notifikasi',
+      title: isEn ? 'Notifications' : 'Preferensi Notifikasi',
+      subtitle: isEn ? 'Choose which updates and alerts Maria sends.' : 'Pilih notifikasi status, agenda, dan efek suara.',
+      icon: <Bell className="w-3.5 h-3.5 shrink-0" />,
+    },
+    {
+      id: 'voice',
+      label: isEn ? 'Voice' : 'Suara AI',
+      title: isEn ? 'Voice & Audio' : 'Suara & Audio',
+      subtitle: isEn ? 'Configure AI voice persona, speed, and dictionary.' : 'Atur suara otomatis (TTS), persona vokal, dan kamus baca.',
+      icon: <Volume2 className="w-3.5 h-3.5 shrink-0" />,
+    },
+    {
+      id: 'privacy',
+      label: isEn ? 'Data & Privacy' : 'Data & Privasi',
+      title: isEn ? 'Data & Privacy' : 'Data & Privasi',
+      subtitle: isEn ? 'Control history retention, local cache, and data export.' : 'Kelola riwayat obrolan, cache lokal, dan cadangan data.',
+      icon: <Database className="w-3.5 h-3.5 shrink-0" />,
+    },
+    {
+      id: 'account',
+      label: isEn ? 'Account' : 'Akun',
+      title: isEn ? 'Account & Plan' : 'Akun & Langganan',
+      subtitle: isEn ? 'Manage your Google sync profile and Maria PLUS plan.' : 'Kelola profil sinkronisasi, kuota model, dan Maria PLUS.',
+      icon: <User className="w-3.5 h-3.5 shrink-0" />,
+    },
+    {
+      id: 'about',
+      label: isEn ? 'About' : 'Tentang',
+      title: isEn ? 'About Maria AI' : 'Tentang Maria AI',
+      subtitle: isEn ? 'Application version, help center, and legal policies.' : 'Informasi aplikasi, pusat bantuan, dan kebijakan layanan.',
+      icon: <Info className="w-3.5 h-3.5 shrink-0" />,
+    },
   ];
 
+  const currentTabMeta = tabs.find((t) => t.id === activeTab) || tabs[0];
   const activePluginIds = settings.enabledPlugins || MARIA_PLUGINS.map((p) => p.id);
 
+  // Shared Maria-styled compact UI primitives
+  const rowBorder = isDark ? 'border-[#212333]' : 'border-slate-100';
+  const titleCls = `text-[13px] font-semibold leading-snug ${isDark ? 'text-neutral-100' : 'text-slate-800'}`;
+  const descCls = `text-[11.5px] leading-relaxed mt-0.5 ${isDark ? 'text-neutral-400' : 'text-slate-500'}`;
+  const selectCls = `px-3 py-1.5 rounded-xl border text-xs font-medium focus:outline-none cursor-pointer shrink-0 ${
+    isDark
+      ? 'bg-[#181a25] border-[#2b2e40] text-neutral-100'
+      : 'bg-slate-50 border-slate-200 text-slate-700'
+  }`;
+  const actionBtnCls = `px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer shrink-0 transition-colors ${
+    isDark
+      ? 'bg-[#1d2132] hover:bg-[#272c42] text-neutral-100 border border-[#2f344d]'
+      : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200'
+  }`;
+
+  const renderToggle = (checked: boolean, onChange: (val: boolean) => void, ariaLabel: string) => (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      onClick={() => onChange(!checked)}
+      style={checked ? { backgroundColor: activeAccentHex } : undefined}
+      className={`relative inline-flex h-[22px] w-10 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
+        checked ? '' : isDark ? 'bg-[#2c2f42]' : 'bg-slate-300'
+      }`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+          checked ? 'translate-x-[21px]' : 'translate-x-[3px]'
+        }`}
+      />
+    </button>
+  );
+
+  const activePersonaObj =
+    VOICE_PERSONAS.find((p) => p.id === (settings.voicePersona || 'wanita')) || VOICE_PERSONAS[0];
+
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 ${isDark ? 'bg-black/80' : 'bg-slate-900/50'}`}>
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-5 ${
+        isDark ? 'bg-black/80 backdrop-blur-xs' : 'bg-slate-900/45 backdrop-blur-xs'
+      }`}
+    >
       <div
-        className={`relative w-full max-w-3xl border rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] ${
+        className={`relative w-full max-w-4xl border rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] sm:max-h-[85vh] ${
           isDark
             ? 'bg-[#111218] border-[#252737] text-white'
-            : 'bg-white border-slate-200 text-slate-900'
+            : 'bg-[#f8fafc] border-slate-200 text-slate-900'
         }`}
       >
-        {/* Top Header */}
+        {/* Top Modal Bar (Clean single-line header like original Maria UI) */}
         <div
-          className={`flex items-center justify-between px-6 py-4 border-b ${
-            isDark
-              ? 'border-[#212332] bg-[#151620]'
-              : 'border-slate-200 bg-slate-50/80'
+          className={`flex items-center justify-between gap-2.5 px-4 sm:px-6 py-3.5 border-b shrink-0 ${
+            isDark ? 'border-[#212332] bg-[#151620]' : 'border-slate-200 bg-white'
           }`}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center border"
+              className="w-9 h-9 rounded-xl flex items-center justify-center border shrink-0"
               style={{
-                backgroundColor: `${activeAccentHex}22`,
-                borderColor: `${activeAccentHex}45`,
+                backgroundColor: `${activeAccentHex}1c`,
+                borderColor: `${activeAccentHex}40`,
                 color: activeAccentHex,
               }}
             >
-              <Settings className="w-5 h-5" />
+              <Settings className="w-4 h-4" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className={`text-base font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  {isEn ? 'Maria AI Settings' : 'Pengaturan Maria AI'}
-                </h3>
-                {savedSuccess && (
-                  <span
-                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border flex items-center gap-1 ${
-                      isDark
-                        ? 'text-[#60a5fa] bg-[#2563eb]/20 border-[#2563eb]/30'
-                        : 'text-blue-600 bg-blue-50 border-blue-200'
-                    }`}
-                  >
-                    <Check className="w-3 h-3" /> {isEn ? 'Saved' : 'Tersimpan'}
-                  </span>
-                )}
-              </div>
-              <p className={`text-xs ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                {isEn ? 'Customize appearance, intelligence, memory, voice, and security' : 'Sesuaikan tampilan, kecerdasan, memori, suara, dan keamanan'}
+            <div className="min-w-0">
+              <h2 className={`text-sm sm:text-base font-bold tracking-tight truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                {isEn ? 'Maria AI Settings' : 'Pengaturan Maria AI'}
+              </h2>
+              <p className={`text-[11px] truncate ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
+                {isEn ? 'Customize appearance, intelligence, memory, voice & security' : 'Sesuaikan tampilan, kecerdasan, memori, suara, dan keamanan'}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Desktop Inline Search */}
+            <div className="relative hidden md:block w-52">
+              <Search
+                className={`w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none ${
+                  isDark ? 'text-neutral-500' : 'text-slate-400'
+                }`}
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={isEn ? 'Find setting...' : 'Cari setelan...'}
+                className={`w-full pl-8 pr-6 py-1.5 border rounded-xl text-xs focus:outline-none ${
+                  isDark
+                    ? 'bg-[#191b27] border-[#2a2d3f] text-white placeholder-neutral-500'
+                    : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
+                }`}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer ${
+                    isDark ? 'text-neutral-400 hover:text-white' : 'text-slate-400 hover:text-slate-700'
+                  }`}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+
+              {searchQuery.trim() && (
+                <div
+                  className={`absolute right-0 top-full mt-1.5 w-80 max-h-60 overflow-y-auto rounded-2xl border divide-y shadow-2xl z-30 ${
+                    isDark
+                      ? 'border-[#2a2d3f] bg-[#161824] divide-[#222536]'
+                      : 'border-slate-200 bg-white divide-slate-100'
+                  }`}
+                >
+                  {searchResults.length === 0 ? (
+                    <div className={`p-3 text-xs text-center ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
+                      {isEn ? `No match for "${searchQuery}"` : `Tidak ada hasil untuk "${searchQuery}"`}
+                    </div>
+                  ) : (
+                    searchResults.map((res) => (
+                      <button
+                        key={res.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveTab(res.tab);
+                          setSearchQuery('');
+                        }}
+                        className={`w-full text-left px-3 py-2 flex items-center justify-between gap-2 cursor-pointer ${
+                          isDark ? 'hover:bg-[#1f2233]' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <div className={`text-xs font-semibold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            {res.title}
+                          </div>
+                          <div className={`text-[10.5px] truncate ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
+                            {res.description}
+                          </div>
+                        </div>
+                        <span
+                          style={{ color: activeAccentHex, backgroundColor: `${activeAccentHex}18` }}
+                          className="text-[10px] font-semibold px-2 py-0.5 rounded-lg shrink-0"
+                        >
+                          {res.tabLabel}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Mobile Compact Search Trigger */}
+            <button
+              type="button"
+              onClick={() => setShowMobileSearch((v) => !v)}
+              title={isEn ? 'Search settings' : 'Cari pengaturan'}
+              className={`md:hidden w-8 h-8 rounded-xl border flex items-center justify-center cursor-pointer ${
+                showMobileSearch
+                  ? isDark
+                    ? 'border-blue-500/40 bg-blue-500/15 text-blue-400'
+                    : 'border-blue-300 bg-blue-50 text-blue-600'
+                  : isDark
+                  ? 'border-[#2d3042] bg-[#1b1d28] text-neutral-300 hover:bg-[#252838]'
+                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <Search className="w-4 h-4" />
+            </button>
+
             <button
               type="button"
               onClick={handleToggleTheme}
-              title={isDark ? (isEn ? 'Switch to Light Mode' : 'Beralih ke Mode Terang') : (isEn ? 'Switch to Dark Mode' : 'Beralih ke Mode Gelap')}
+              title={isDark ? (isEn ? 'Switch to Light Mode' : 'Mode Terang') : (isEn ? 'Switch to Dark Mode' : 'Mode Gelap')}
               className={`w-8 h-8 rounded-xl border flex items-center justify-center cursor-pointer ${
                 isDark
                   ? 'border-[#2d3042] bg-[#1b1d28] text-amber-300 hover:bg-[#252838]'
@@ -580,26 +702,26 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
             >
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
+
             <button
+              type="button"
               onClick={onClose}
               aria-label={isEn ? 'Close Settings' : 'Tutup Pengaturan'}
-              className={`p-1.5 rounded-xl cursor-pointer ${
+              className={`w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer ${
                 isDark
                   ? 'text-neutral-400 hover:text-white hover:bg-[#232535]'
-                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/70'
+                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* 7 Tab Navigation Bar */}
+        {/* Mobile/Tablet Horizontal Pill Navigation Bar (Image 3 style) */}
         <div
-          className={`flex items-center px-4 py-2 border-b overflow-x-auto scrollbar-none gap-1.5 ${
-            isDark
-              ? 'border-[#1d1f2c] bg-[#13141c]'
-              : 'border-slate-200 bg-slate-50/50'
+          className={`flex md:hidden items-center px-3.5 py-2 border-b overflow-x-auto scrollbar-none gap-1.5 shrink-0 ${
+            isDark ? 'border-[#1d1f2c] bg-[#13141c]' : 'border-slate-200 bg-slate-50/70'
           }`}
         >
           {tabs.map((tab) => {
@@ -607,17 +729,18 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
             return (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => {
                   setActiveTab(tab.id);
                   setSearchQuery('');
                 }}
                 style={isActive ? { backgroundColor: activeAccentHex } : undefined}
-                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs whitespace-nowrap cursor-pointer shrink-0 transition-colors ${
                   isActive
                     ? 'text-white shadow-sm font-semibold'
                     : isDark
-                    ? 'text-neutral-400 hover:text-white hover:bg-[#1c1e2a]'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
+                    ? 'text-neutral-400 hover:text-white hover:bg-[#1c1e2a] font-medium'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 font-medium'
                 }`}
               >
                 {tab.icon}
@@ -627,1947 +750,1274 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
           })}
         </div>
 
-        {/* Search Settings Bar */}
-        <div
-          className={`px-6 pt-3 pb-2 border-b ${
-            isDark
-              ? 'bg-[#111218] border-[#1c1e2a]'
-              : 'bg-white border-slate-100'
-          }`}
-        >
-          <div className="relative">
-            <Search className={`w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none ${isDark ? 'text-neutral-500' : 'text-slate-400'}`} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={isEn ? 'Search settings (e.g., theme, accent, memory, dictionary, export, pin)...' : 'Cari pengaturan (misal: tema, aksen, memori, kamus, sementara, ekspor, pin)...'}
-              className={`w-full pl-9 pr-8 py-2 border rounded-xl text-xs focus:outline-none focus:border-[#2563eb] ${
-                isDark
-                  ? 'bg-[#171923] border-[#262838] text-white placeholder-neutral-500'
-                  : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
-              }`}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className={`absolute right-2.5 top-1/2 -translate-y-1/2 ${isDark ? 'text-neutral-400 hover:text-white' : 'text-slate-400 hover:text-slate-700'}`}
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-
-          {searchQuery.trim() && (
-            <div
-              className={`mt-2 max-h-44 overflow-y-auto rounded-xl border divide-y shadow-lg ${
-                isDark
-                  ? 'border-[#262838] bg-[#151722] divide-[#212332]'
-                  : 'border-slate-200 bg-white divide-slate-100'
-              }`}
-            >
-              {searchResults.length === 0 ? (
-                <div className={`p-3 text-xs text-center ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                  {isEn ? `No settings matched "${searchQuery}".` : `Tidak ada pengaturan yang cocok dengan "${searchQuery}".`}
-                </div>
-              ) : (
-                searchResults.map((res) => (
-                  <button
-                    key={res.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveTab(res.tab);
-                      setSearchQuery('');
-                    }}
-                    className={`w-full text-left px-3.5 py-2.5 flex items-center justify-between gap-3 cursor-pointer ${
-                      isDark ? 'hover:bg-[#1e2130]' : 'hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="min-w-0">
-                      <div className={`text-xs font-semibold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>{res.title}</div>
-                      <div className={`text-[11px] truncate ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>{res.description}</div>
-                    </div>
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg shrink-0 ${
-                        isDark ? 'bg-[#2563eb]/15 text-[#60a5fa]' : 'bg-blue-50 text-blue-600'
-                      }`}
-                    >
-                      {res.tabLabel}
-                    </span>
-                  </button>
-                ))
+        {/* Expandable Mobile Search Bar */}
+        {showMobileSearch && (
+          <div
+            className={`md:hidden px-3.5 py-2 border-b shrink-0 ${
+              isDark ? 'border-[#1d1f2c] bg-[#111218]' : 'border-slate-100 bg-white'
+            }`}
+          >
+            <div className="relative">
+              <Search
+                className={`w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none ${
+                  isDark ? 'text-neutral-500' : 'text-slate-400'
+                }`}
+              />
+              <input
+                type="text"
+                autoFocus
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={isEn ? 'Search settings...' : 'Cari pengaturan...'}
+                className={`w-full pl-8 pr-7 py-1.5 border rounded-xl text-xs focus:outline-none ${
+                  isDark
+                    ? 'bg-[#191b27] border-[#2a2d3f] text-white placeholder-neutral-500'
+                    : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
+                }`}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer ${
+                    isDark ? 'text-neutral-400 hover:text-white' : 'text-slate-400 hover:text-slate-700'
+                  }`}
+                >
+                  <X className="w-3 h-3" />
+                </button>
               )}
             </div>
-          )}
-        </div>
 
-        {/* Body View for Active Tab */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* TAB 1: GENERAL */}
-          {activeTab === 'general' && (
-            <div className="space-y-5">
-              <div>
-                <label className={`text-xs font-semibold block mb-1.5 ${isDark ? 'text-neutral-300' : 'text-slate-700'}`}>
-                  {isEn ? 'User Display Name' : 'Nama Panggilan Pengguna'}
-                </label>
-                <input
-                  type="text"
-                  value={settings.username}
-                  onChange={(e) => handleUpdate('username', e.target.value)}
-                  placeholder={isEn ? 'Example: Basit' : 'Contoh: Basit'}
-                  className={`w-full px-3.5 py-2.5 border rounded-xl text-xs focus:outline-none focus:border-[#2563eb] ${
-                    isDark
-                      ? 'bg-[#181a24] border-[#292c3d] text-white'
-                      : 'bg-slate-50 border-slate-200 text-slate-900'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label className={`text-xs font-semibold block mb-2 ${isDark ? 'text-neutral-300' : 'text-slate-700'}`}>
-                  {isEn ? 'Theme & Appearance Mode' : 'Tema & Mode Tampilan'}
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => handleSelectTheme('system')}
-                    className={`p-3.5 rounded-2xl border text-xs font-medium flex flex-col items-center gap-2 cursor-pointer ${
-                      theme === 'system'
-                        ? isDark
-                          ? 'bg-[#2563eb]/15 border-[#2563eb] text-[#60a5fa]'
-                          : 'bg-blue-50 border-[#2563eb] text-blue-700'
-                        : isDark
-                        ? 'bg-[#181a24] border-[#292c3d] text-neutral-400 hover:border-neutral-700'
-                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
-                    }`}
-                  >
-                    <Laptop className="w-5 h-5" />
-                    <span>{isEn ? 'Follow System' : 'Ikuti Sistem'}</span>
-                    <span className="text-[10px] opacity-70">{isEn ? 'Automatic' : 'Otomatis'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSelectTheme('dark')}
-                    className={`p-3.5 rounded-2xl border text-xs font-medium flex flex-col items-center gap-2 cursor-pointer ${
-                      theme === 'dark'
-                        ? isDark
-                          ? 'bg-[#2563eb]/15 border-[#2563eb] text-[#60a5fa]'
-                          : 'bg-blue-50 border-[#2563eb] text-blue-700'
-                        : isDark
-                        ? 'bg-[#181a24] border-[#292c3d] text-neutral-400 hover:border-neutral-700'
-                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
-                    }`}
-                  >
-                    <Moon className="w-5 h-5" />
-                    <span>{isEn ? 'OLED Dark Mode' : 'Mode Gelap OLED'}</span>
-                    <span className="text-[10px] opacity-70">{isEn ? 'Power Saving' : 'Hemat Energi'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSelectTheme('light')}
-                    className={`p-3.5 rounded-2xl border text-xs font-medium flex flex-col items-center gap-2 cursor-pointer ${
-                      theme === 'light'
-                        ? isDark
-                          ? 'bg-[#2563eb]/15 border-[#2563eb] text-[#60a5fa]'
-                          : 'bg-blue-50 border-[#2563eb] text-blue-700'
-                        : isDark
-                        ? 'bg-[#181a24] border-[#292c3d] text-neutral-400 hover:border-neutral-700'
-                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
-                    }`}
-                  >
-                    <Sun className="w-5 h-5" />
-                    <span>{isEn ? 'Light Mode' : 'Mode Terang'}</span>
-                    <span className="text-[10px] opacity-70">{isEn ? 'Crisp White' : 'Standar Putih'}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Accent Color */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className={`text-xs font-semibold ${isDark ? 'text-neutral-300' : 'text-slate-700'}`}>
-                    {isEn ? 'Accent Color' : 'Warna Aksen (Accent Color)'}
-                  </label>
-                  <span className={`text-[11px] ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                    {ACCENT_COLORS.find((a) => a.id === (settings.accentColor || 'blue'))?.label}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                  {ACCENT_COLORS.map((acc) => {
-                    const isSelected = (settings.accentColor || 'blue') === acc.id;
-                    return (
-                      <button
-                        key={acc.id}
-                        type="button"
-                        onClick={() => handleUpdate('accentColor', acc.id)}
-                        className={`p-2.5 rounded-xl border flex flex-col items-center gap-1.5 cursor-pointer ${
-                          isSelected
-                            ? isDark
-                              ? 'bg-[#1d2030] border-white/50 text-white'
-                              : 'bg-slate-100 border-slate-400 text-slate-900 shadow-xs'
-                            : isDark
-                            ? 'bg-[#181a24] border-[#27293a] text-neutral-400 hover:text-white'
-                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900'
-                        }`}
-                      >
-                        <span
-                          className="w-5 h-5 rounded-full flex items-center justify-center"
-                          style={{ backgroundColor: acc.hex }}
-                        >
-                          {isSelected && <Check className="w-3 h-3 text-white stroke-[3]" />}
-                        </span>
-                        <span className="text-[10px] font-medium truncate max-w-full">{acc.label.split(' ')[0]}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <label className={`text-xs font-semibold block mb-1.5 ${isDark ? 'text-neutral-300' : 'text-slate-700'}`}>
-                  {isEn ? 'Interface Language' : 'Bahasa Antarmuka'}
-                </label>
-                <select
-                  value={settings.language || 'Indonesia'}
-                  onChange={(e) => handleUpdate('language', e.target.value as any)}
-                  className={`w-full px-3.5 py-2.5 border rounded-xl text-xs focus:outline-none focus:border-[#2563eb] ${
-                    isDark
-                      ? 'bg-[#181a24] border-[#292c3d] text-white'
-                      : 'bg-slate-50 border-slate-200 text-slate-900'
-                  }`}
-                >
-                  <option value="Indonesia">Bahasa Indonesia</option>
-                  <option value="English">English (US)</option>
-                </select>
-              </div>
-
-              {/* Intelligence & Experience Toggles */}
-              <div className="space-y-2.5 pt-1">
-                <label className={`text-xs font-semibold block ${isDark ? 'text-neutral-300' : 'text-slate-700'}`}>
-                  {isEn ? 'Intelligence & Home Preferences' : 'Kecerdasan & Preferensi Beranda'}
-                </label>
-
-                <div
-                  className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${
-                    isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Zap className="w-4 h-4 text-amber-400 shrink-0" />
-                    <div>
-                      <div className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                        {isEn ? 'Fast Answers' : 'Jawaban Cepat (Fast Answers)'}
-                      </div>
-                      <div className={`text-[11px] ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                        {isEn ? 'Prioritize shorter, straight-to-the-point responses' : 'Prioritaskan jawaban lebih singkat dan langsung ke inti'}
-                      </div>
-                    </div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(settings.fastAnswers)}
-                    onChange={(e) => handleUpdate('fastAnswers', e.target.checked)}
-                    className="w-4 h-4 accent-[#2563eb] rounded cursor-pointer"
-                  />
-                </div>
-
-                <div
-                  className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${
-                    isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Globe className="w-4 h-4 text-sky-400 shrink-0" />
-                    <div>
-                      <div className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                        {isEn ? 'Auto Web Search (Google Search)' : 'Pencarian Web Otomatis (Google Search)'}
-                      </div>
-                      <div className={`text-[11px] ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                        {isEn ? 'Enable real-time web browsing as default behavior' : 'Aktifkan penelusuran web real-time sebagai setelan bawaan'}
-                      </div>
-                    </div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={settings.webSearchDefault !== false}
-                    onChange={(e) => {
-                      const val = e.target.checked;
-                      try {
-                        localStorage.setItem('maria_web_search_active', String(val));
-                      } catch {}
-                      handleUpdate('webSearchDefault', val);
-                    }}
-                    className="w-4 h-4 accent-[#2563eb] rounded cursor-pointer"
-                  />
-                </div>
-
-                <div
-                  className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${
-                    isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Sparkles className="w-4 h-4 text-indigo-400 shrink-0" />
-                    <div>
-                      <div className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                        {isEn ? 'Home Topic Suggestions' : 'Saran Topik Beranda'}
-                      </div>
-                      <div className={`text-[11px] ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                        {isEn ? 'Show quick starter prompt chips on empty chat screen' : 'Tampilkan kartu ide cepat di halaman obrolan kosong'}
-                      </div>
-                    </div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={settings.homepageSuggestions !== false}
-                    onChange={(e) => handleUpdate('homepageSuggestions', e.target.checked)}
-                    className="w-4 h-4 accent-[#2563eb] rounded cursor-pointer"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 2: AI & MEMORY */}
-          {activeTab === 'ai-memory' && (
-            <div className="space-y-5">
-              <div>
-                <label className={`text-xs font-semibold block mb-2 ${isDark ? 'text-neutral-300' : 'text-slate-700'}`}>
-                  {isEn ? 'Maria Response Style & Persona' : 'Gaya Respon & Persona Maria'}
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                  {TONE_OPTIONS.map((tone) => {
-                    const toneDisplay = isEn ? EN_TONE_MAP[tone.value] || tone : tone;
-                    const active = settings.tone === tone.value;
-                    return (
-                      <button
-                        key={tone.value}
-                        type="button"
-                        onClick={() => handleUpdate('tone', tone.value)}
-                        className={`p-3 rounded-xl border text-left cursor-pointer ${
-                          active
-                            ? isDark
-                              ? 'bg-[#2563eb]/15 border-[#2563eb] text-white'
-                              : 'bg-blue-50 border-[#2563eb] text-blue-900'
-                            : isDark
-                              ? 'bg-[#181a24] border-[#262838] text-neutral-300 hover:border-neutral-700'
-                              : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-semibold">{toneDisplay.label}</span>
-                          {active && (
-                            <Check className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`} />
-                          )}
-                        </div>
-                        <div className={`text-[10px] line-clamp-2 mt-0.5 ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                          {toneDisplay.description}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Personality Traits (Warmth, Enthusiasm, Headings/Lists) */}
-              <div>
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Sliders className={`w-3.5 h-3.5 ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`} />
-                  <label className={`text-xs font-semibold ${isDark ? 'text-neutral-300' : 'text-slate-700'}`}>
-                    {isEn ? 'Response Personality Traits' : 'Sifat Kepribadian Respon (Traits)'}
-                  </label>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  <label
-                    className={`p-3 rounded-xl border flex items-center justify-between gap-2 cursor-pointer ${
-                      isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                    }`}
-                  >
-                    <div>
-                      <div className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                        {isEn ? 'Warmth' : 'Kehangatan'}
-                      </div>
-                      <div className={`text-[10px] ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                        {isEn ? 'Empathetic & approachable' : 'Empatik & bersahabat'}
-                      </div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={settings.personalityWarmth !== false}
-                      onChange={(e) => handleUpdate('personalityWarmth', e.target.checked)}
-                      className="w-4 h-4 accent-[#2563eb] rounded"
-                    />
-                  </label>
-
-                  <label
-                    className={`p-3 rounded-xl border flex items-center justify-between gap-2 cursor-pointer ${
-                      isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                    }`}
-                  >
-                    <div>
-                      <div className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                        {isEn ? 'Enthusiasm' : 'Antusiasme'}
-                      </div>
-                      <div className={`text-[10px] ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                        {isEn ? 'Expressive & energetic' : 'Ekspresif & energik'}
-                      </div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={Boolean(settings.personalityEnthusiasm)}
-                      onChange={(e) => handleUpdate('personalityEnthusiasm', e.target.checked)}
-                      className="w-4 h-4 accent-[#2563eb] rounded"
-                    />
-                  </label>
-
-                  <label
-                    className={`p-3 rounded-xl border flex items-center justify-between gap-2 cursor-pointer ${
-                      isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                    }`}
-                  >
-                    <div>
-                      <div className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                        {isEn ? 'Structured' : 'Terstruktur'}
-                      </div>
-                      <div className={`text-[10px] ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                        {isEn ? 'Use headings & lists' : 'Gunakan judul & daftar'}
-                      </div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={settings.personalityStructured !== false}
-                      onChange={(e) => handleUpdate('personalityStructured', e.target.checked)}
-                      className="w-4 h-4 accent-[#2563eb] rounded"
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {/* Gaya Bahasa (Language Style) */}
-              <div>
-                <label className={`text-xs font-semibold block mb-2 ${isDark ? 'text-neutral-300' : 'text-slate-700'}`}>
-                  {isEn ? 'Language & Greeting Style' : 'Gaya Bahasa & Sapaan'}
-                </label>
-                <div className="grid grid-cols-5 gap-2">
-                  {LANGUAGE_STYLE_OPTIONS.map((style) => {
-                    const active = (settings.languageStyle || 'Baku') === style.value;
-                    return (
-                      <button
-                        key={style.value}
-                        type="button"
-                        onClick={() => handleUpdate('languageStyle', style.value)}
-                        className={`py-2 px-2.5 rounded-xl border text-xs font-medium cursor-pointer text-center ${
-                          active
-                            ? isDark
-                              ? 'bg-[#2563eb]/20 border-[#2563eb] text-white font-semibold'
-                              : 'bg-blue-50 border-[#2563eb] text-blue-700 font-semibold'
-                            : isDark
-                              ? 'bg-[#181a24] border-[#262838] text-neutral-400 hover:text-white hover:border-neutral-700'
-                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300'
-                        }`}
-                      >
-                        {isEn ? style.labelEn : style.value}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <label className={`text-xs font-semibold block mb-1.5 ${isDark ? 'text-neutral-300' : 'text-slate-700'}`}>
-                  {isEn ? 'Custom Instructions & Personality Prompt' : 'Instruksi Kustom & Prompt Kepribadian (Custom Prompt)'}
-                </label>
-                <textarea
-                  rows={3}
-                  value={settings.customPrompt}
-                  onChange={(e) => handleUpdate('customPrompt', e.target.value)}
-                  placeholder={
-                    isEn
-                      ? 'Define Maria\'s personality & speaking style (e.g., Answer casually, straight to the point, with a touch of humor)...'
-                      : 'Tentukan kepribadian & gaya bicara Maria (contoh: Jawab santai pakai aku-kamu, to the point, boleh sedikit humoris)...'
-                  }
-                  className={`w-full px-3.5 py-2 border rounded-xl text-xs focus:outline-none focus:border-[#2563eb] ${
-                    isDark ? 'bg-[#181a24] border-[#292c3d] text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                  }`}
-                />
-              </div>
-
+            {searchQuery.trim() && (
               <div
-                className={`p-4 rounded-2xl border flex items-center justify-between ${
-                  isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
+                className={`mt-2 max-h-44 overflow-y-auto rounded-xl border divide-y ${
+                  isDark
+                    ? 'border-[#2a2d3f] bg-[#161824] divide-[#222536]'
+                    : 'border-slate-200 bg-white divide-slate-100'
                 }`}
               >
-                <div>
-                  <div className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    {isEn ? 'Automatic Context Memory Extraction' : 'Ekstraksi Memori Konteks Otomatis'}
+                {searchResults.length === 0 ? (
+                  <div className={`p-2.5 text-xs text-center ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
+                    {isEn ? `No match for "${searchQuery}"` : `Tidak ada hasil untuk "${searchQuery}"`}
                   </div>
-                  <div className={`text-[11px] ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                    {isEn ? 'Remember your preferences across future conversations' : 'Mengingat preferensi Anda dalam percakapan berikutnya'}
-                  </div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settings.memoryEnabled !== false}
-                  onChange={(e) => handleUpdate('memoryEnabled', e.target.checked)}
-                  className="w-4 h-4 accent-[#2563eb] rounded cursor-pointer"
-                />
-              </div>
-
-              {/* Memory Summary Box */}
-              <div
-                className={`p-4 rounded-2xl border space-y-2 ${
-                  isDark ? 'bg-[#141724] border-[#262b40]' : 'bg-blue-50/70 border-blue-200'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className={`text-xs font-semibold flex items-center gap-1.5 ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`}>
-                    <Sparkles className="w-3.5 h-3.5" />
-                    {isEn ? 'Active Memory Summary' : 'Ringkasan Memori Aktif'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleUpdate('memorySummary', computedMemorySummary)}
-                    className={`text-[11px] px-2.5 py-1 rounded-lg bg-[#2563eb]/20 hover:bg-[#2563eb]/30 font-medium cursor-pointer ${
-                      isDark ? 'text-[#60a5fa]' : 'text-blue-600'
-                    }`}
-                  >
-                    {isEn ? 'Refresh Summary' : 'Perbarui Ringkasan'}
-                  </button>
-                </div>
-                <p className={`text-[11px] leading-relaxed ${isDark ? 'text-neutral-300' : 'text-slate-600'}`}>
-                  {settings.memorySummary || computedMemorySummary}
-                </p>
-              </div>
-
-              {/* Memori Maria Tentang Anda */}
-              <div
-                className={`p-4 rounded-2xl border space-y-3.5 ${
-                  isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Brain className={`w-4 h-4 ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`} />
-                    <span className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      {isEn ? "Maria's Memories About You" : 'Memori Maria Tentang Anda'}
-                    </span>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#2563eb]/20 ${
-                        isDark ? 'text-[#60a5fa]' : 'text-blue-600'
-                      }`}
-                    >
-                      {memories.length} {isEn ? 'Saved' : 'Disimpan'}
-                    </span>
-                  </div>
-                  {memories.length > 0 && (
+                ) : (
+                  searchResults.map((res) => (
                     <button
-                      type="button"
-                      onClick={() => userMemoryService.clearMemories()}
-                      className="text-[11px] text-rose-400 hover:text-rose-300 hover:underline cursor-pointer"
-                    >
-                      {isEn ? 'Clear All' : 'Hapus Semua'}
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                  <input
-                    type="text"
-                    value={newMemoryText}
-                    onChange={(e) => setNewMemoryText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && newMemoryText.trim()) {
-                        userMemoryService.addMemory(newMemoryText, newMemoryCategory, 'manual');
-                        setNewMemoryText('');
-                      }
-                    }}
-                    placeholder={
-                      isEn
-                        ? 'Add a new memory (e.g., I love TypeScript)...'
-                        : 'Tambah memori baru (contoh: Saya suka bahasa TypeScript)...'
-                    }
-                    className={`flex-1 px-3 py-2 border rounded-xl text-xs focus:outline-none focus:border-[#2563eb] ${
-                      isDark
-                        ? 'bg-[#12141c] border-[#292c3d] text-white placeholder-neutral-500'
-                        : 'bg-white border-slate-200 text-slate-900 placeholder-slate-400'
-                    }`}
-                  />
-                  <div className="flex gap-1.5 flex-none">
-                    <select
-                      value={newMemoryCategory}
-                      onChange={(e) => setNewMemoryCategory(e.target.value as any)}
-                      aria-label={isEn ? 'Memory category' : 'Kategori memori'}
-                      className={`px-2.5 py-2 border rounded-xl text-xs focus:outline-none focus:border-[#2563eb] ${
-                        isDark ? 'bg-[#12141c] border-[#292c3d] text-neutral-300' : 'bg-white border-slate-200 text-slate-700'
-                      }`}
-                    >
-                      <option value="personal">{isEn ? 'Personal' : 'Personal'}</option>
-                      <option value="preferences">{isEn ? 'Preferences' : 'Preferensi'}</option>
-                      <option value="work">{isEn ? 'Work' : 'Pekerjaan'}</option>
-                      <option value="goals">{isEn ? 'Goals' : 'Target'}</option>
-                    </select>
-                    <button
+                      key={res.id}
                       type="button"
                       onClick={() => {
-                        if (newMemoryText.trim()) {
-                          userMemoryService.addMemory(newMemoryText, newMemoryCategory, 'manual');
-                          setNewMemoryText('');
-                        }
+                        setActiveTab(res.tab);
+                        setSearchQuery('');
+                        setShowMobileSearch(false);
                       }}
-                      className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#2563eb] text-white hover:bg-[#1d4ed8] flex items-center gap-1 cursor-pointer flex-none"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>{isEn ? 'Save' : 'Simpan'}</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1 pt-1">
-                  {memories.length === 0 ? (
-                    <div
-                      className={`p-4 rounded-xl border border-dashed text-center text-[11px] ${
-                        isDark ? 'bg-[#12141c] border-[#292c3d] text-neutral-400' : 'bg-white border-slate-200 text-slate-500'
+                      className={`w-full text-left px-3 py-2 flex items-center justify-between gap-2 cursor-pointer ${
+                        isDark ? 'hover:bg-[#1f2233]' : 'hover:bg-slate-50'
                       }`}
                     >
-                      {isEn
-                        ? 'Maria has no saved memories about you yet.'
-                        : 'Maria belum memiliki catatan memori khusus tentang Anda.'}
-                    </div>
-                  ) : (
-                    memories.map((m) => (
-                      <div
-                        key={m.id}
-                        className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 text-xs group ${
-                          isDark
-                            ? 'bg-[#12141c] border-[#262838] hover:border-[#3b3e52]'
-                            : 'bg-white border-slate-200 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span
-                              className={`text-[9.5px] uppercase font-bold px-1.5 py-0.5 rounded ${
-                                m.category === 'personal'
-                                  ? isDark
-                                    ? 'bg-blue-500/15 text-blue-400'
-                                    : 'bg-blue-500/15 text-blue-600'
-                                  : m.category === 'preferences'
-                                  ? isDark
-                                    ? 'bg-purple-500/15 text-purple-400'
-                                    : 'bg-purple-500/15 text-purple-600'
-                                  : m.category === 'work'
-                                  ? isDark
-                                    ? 'bg-amber-500/15 text-amber-400'
-                                    : 'bg-amber-500/15 text-amber-600'
-                                  : isDark
-                                    ? 'bg-emerald-500/15 text-emerald-400'
-                                    : 'bg-emerald-500/15 text-emerald-600'
-                              }`}
-                            >
-                              {m.category}
-                            </span>
-                            <span className={`text-[10px] ${isDark ? 'text-neutral-500' : 'text-slate-500'}`}>
-                              {m.source === 'auto' ? (isEn ? 'Auto Detected' : 'Deteksi Otomatis') : 'Manual'}
-                            </span>
-                          </div>
-                          <p className={`text-[11.5px] leading-snug ${isDark ? 'text-white' : 'text-slate-900'}`}>{m.text}</p>
+                      <div className="min-w-0">
+                        <div className={`text-xs font-semibold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                          {res.title}
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => userMemoryService.removeMemory(m.id)}
-                          className="p-1.5 text-neutral-500 hover:text-rose-400 rounded-lg hover:bg-rose-500/10 flex-none cursor-pointer"
-                          title={isEn ? 'Delete this memory' : 'Hapus memori ini'}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className={`text-[10.5px] truncate ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
+                          {res.description}
+                        </div>
                       </div>
-                    ))
-                  )}
-                </div>
+                      <span
+                        style={{ color: activeAccentHex, backgroundColor: `${activeAccentHex}18` }}
+                        className="text-[10px] font-semibold px-2 py-0.5 rounded-lg shrink-0"
+                      >
+                        {res.tabLabel}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Body Layout: Single Panel on Mobile (<md), 2-Pane Control Center Sidebar + Panel on Desktop (md+) */}
+        <div className="flex-1 min-h-0 overflow-hidden p-3 sm:p-4 md:p-5 flex flex-col md:grid md:grid-cols-[215px_1fr] md:gap-5">
+          {/* Desktop-Only Left Control Center Sidebar Card (Image 1 style) */}
+          <aside
+            className={`hidden md:block rounded-2xl border p-3.5 h-max shrink-0 ${
+              isDark
+                ? 'bg-[#151620] border-[#242636]'
+                : 'bg-white border-slate-200/90 shadow-xs'
+            }`}
+          >
+            <div className="px-2 pb-2.5">
+              <div
+                style={{ color: activeAccentHex }}
+                className="text-sm font-bold tracking-tight"
+              >
+                Maria AI
+              </div>
+              <div className={`text-[9.5px] font-semibold tracking-[0.16em] uppercase mt-0.5 ${isDark ? 'text-neutral-500' : 'text-slate-400'}`}>
+                CONTROL CENTER
               </div>
             </div>
-          )}
 
-          {/* TAB 3: VOICE & AUDIO */}
-          {activeTab === 'voice' && (
-            <div className="space-y-5">
-              <div
-                className={`p-4 rounded-2xl border flex items-center justify-between ${
-                  isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                }`}
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      {isEn ? 'Automatic AI Voice Responses (TTS)' : 'Respon Suara AI Otomatis (TTS)'}
-                    </span>
-                    <span
-                      className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                        settings.voiceEnabled
-                          ? isDark
-                            ? 'bg-[#2563eb]/20 text-[#60a5fa] border border-[#2563eb]/40'
-                            : 'bg-blue-50 text-blue-600 border border-blue-200'
-                          : isDark
-                            ? 'bg-neutral-800 text-neutral-400'
-                            : 'bg-slate-200 text-slate-600'
-                      }`}
-                    >
-                      {settings.voiceEnabled ? (isEn ? 'Active' : 'Aktif') : isEn ? 'Inactive' : 'Nonaktif'}
-                    </span>
-                  </div>
-                  <div className={`text-[11px] mt-0.5 ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                    {isEn
-                      ? 'Maria automatically reads responses aloud in the chat room'
-                      : 'Maria langsung berbicara otomatis setiap merespons pesan di ruang obrolan'}
-                  </div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={Boolean(settings.voiceEnabled)}
-                  onChange={(e) => {
-                    speechService.unlockAudio();
-                    handleUpdate('voiceEnabled', e.target.checked);
-                  }}
-                  className="w-5 h-5 accent-[#2563eb] rounded cursor-pointer"
-                />
-              </div>
-
-              {/* Voice Recognition Language & Background Mode */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div
-                  className={`p-3.5 rounded-2xl border ${
-                    isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                  }`}
-                >
-                  <label className={`text-xs font-semibold block mb-1.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    {isEn ? 'Speech Recognition Language' : 'Bahasa Pengenalan Suara'}
-                  </label>
-                  <select
-                    value={settings.voiceLanguage || 'auto'}
-                    onChange={(e) => handleUpdate('voiceLanguage', e.target.value as any)}
-                    className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none focus:border-[#2563eb] ${
-                      isDark ? 'bg-[#12141c] border-[#292c3d] text-white' : 'bg-white border-slate-200 text-slate-900'
+            <nav className="grid grid-cols-1 gap-1">
+              {tabs.map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    style={
+                      isActive
+                        ? {
+                            backgroundColor: `${activeAccentHex}18`,
+                            color: activeAccentHex,
+                          }
+                        : undefined
+                    }
+                    className={`flex items-center gap-2 px-2.5 py-2 rounded-xl text-[12px] text-left cursor-pointer transition-colors ${
+                      isActive
+                        ? 'font-bold'
+                        : isDark
+                        ? 'text-neutral-400 hover:text-neutral-200 hover:bg-[#1d1f2c] font-medium'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 font-medium'
                     }`}
                   >
-                    <option value="auto">{isEn ? 'Auto Detect' : 'Deteksi Otomatis (Auto)'}</option>
-                    <option value="id-ID">{isEn ? 'Indonesian' : 'Bahasa Indonesia'}</option>
-                    <option value="en-US">English (US)</option>
-                  </select>
-                </div>
+                    {tab.icon}
+                    <span className="truncate">{tab.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </aside>
 
-                <label
-                  className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 cursor-pointer ${
-                    isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                  }`}
-                >
-                  <div>
-                    <div className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      {isEn ? 'Background Conversations' : 'Percakapan Latar Belakang'}
+          {/* Right Clean Panel Card */}
+          <main
+            className={`flex-1 min-h-0 overflow-hidden rounded-2xl border flex flex-col ${
+              isDark
+                ? 'bg-[#151620] border-[#242636]'
+                : 'bg-white border-slate-200/90 shadow-xs'
+            }`}
+          >
+            {/* Panel Header */}
+            <div className={`px-5 py-4 border-b shrink-0 ${rowBorder}`}>
+              <h3 className={`text-base sm:text-lg font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                {currentTabMeta.title}
+              </h3>
+              <p className={`text-xs mt-0.5 ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
+                {currentTabMeta.subtitle}
+              </p>
+            </div>
+
+            {/* Clean Divider-Separated Settings Rows */}
+            <div className="flex-1 overflow-y-auto px-5 py-1 divide-y divide-transparent">
+              {/* TAB 1: GENERAL */}
+              {activeTab === 'general' && (
+                <div className={`divide-y ${isDark ? 'divide-[#212333]' : 'divide-slate-100'}`}>
+                  {/* Display Name */}
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Display Name' : 'Nama Panggilan'}</div>
+                      <div className={descCls}>{isEn ? 'How Maria addresses you in chats.' : 'Sapaan pribadi Anda di dalam percakapan.'}</div>
                     </div>
-                    <div className={`text-[11px] ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                      {isEn ? 'Keep audio playing when switching tabs' : 'Pertahankan pemutaran audio saat berpindah tab'}
-                    </div>
+                    <input
+                      type="text"
+                      value={settings.username}
+                      onChange={(e) => handleUpdate('username', e.target.value)}
+                      placeholder={isEn ? 'Your name' : 'Nama Anda'}
+                      className={`w-36 sm:w-48 px-3 py-1.5 border rounded-xl text-xs focus:outline-none shrink-0 ${
+                        isDark ? 'bg-[#181a25] border-[#2b2e40] text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                      }`}
+                    />
                   </div>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(settings.backgroundVoice)}
-                    onChange={(e) => handleUpdate('backgroundVoice', e.target.checked)}
-                    className="w-4 h-4 accent-[#2563eb] rounded"
-                  />
-                </label>
-              </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className={`text-xs font-semibold ${isDark ? 'text-neutral-300' : 'text-slate-700'}`}>
-                    {isEn ? 'AI Voice Engine Model (Gemini TTS)' : 'Model AI Voice Engine (Gemini TTS)'}
-                  </label>
-                  <span className={`text-[10px] font-medium flex items-center gap-1 ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`}>
-                    <Sparkles className={`w-3 h-3 ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`} />
-                    {isEn ? 'Primary Active Model' : 'Model Utama Aktif'}
-                  </span>
-                </div>
-                <div
-                  className={`p-3.5 rounded-2xl border shadow-sm ${
-                    isDark ? 'bg-[#2563eb]/15 border-[#2563eb] text-white' : 'bg-blue-50/80 border-[#2563eb] text-slate-900'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className={`text-xs font-bold flex items-center gap-1.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      <Sparkles className={`w-3.5 h-3.5 ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`} /> Gemini 3.8 Flash Lite TTS
-                    </span>
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                        isDark ? 'text-[#60a5fa] bg-[#2563eb]/30' : 'text-blue-700 bg-blue-100'
+                  {/* Theme Mode (Compact 3-way segmented control) */}
+                  <div className="py-3.5 flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Appearance Mode' : 'Mode Tampilan'}</div>
+                      <div className={descCls}>{isEn ? 'Follow device system, dark OLED, or light.' : 'Pilih tampilan sistem, gelap OLED, atau terang.'}</div>
+                    </div>
+                    <div
+                      className={`inline-flex p-0.5 rounded-xl border shrink-0 ${
+                        isDark ? 'bg-[#101219] border-[#262839]' : 'bg-slate-100 border-slate-200'
                       }`}
                     >
-                      <Check className="w-3 h-3" /> {isEn ? 'Active' : 'Aktif'}
-                    </span>
+                      {([
+                        { id: 'system', label: isEn ? 'System' : 'Sistem' },
+                        { id: 'dark', label: isEn ? 'Dark' : 'Gelap' },
+                        { id: 'light', label: isEn ? 'Light' : 'Terang' },
+                      ] as const).map((m) => {
+                        const active = theme === m.id;
+                        return (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => handleSelectTheme(m.id)}
+                            style={active ? { backgroundColor: activeAccentHex, color: '#ffffff' } : undefined}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer transition-colors ${
+                              active ? 'shadow-xs' : isDark ? 'text-neutral-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            {m.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <p className={`text-[11px] mt-1 ${isDark ? 'text-neutral-300' : 'text-slate-600'}`}>
-                    {isEn
-                      ? 'Low-latency Neural Voice with Indonesian & English support and automatic fallback.'
-                      : 'Latensi rendah dengan dukungan Neural Voice Bahasa Indonesia & fallback otomatis.'}
-                  </p>
+
+                  {/* Accent Color Circles */}
+                  <div className="py-3.5 flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Accent Color' : 'Warna Aksen'}</div>
+                      <div className={descCls}>{isEn ? 'Primary highlight across buttons & active tabs.' : 'Warna sorotan utama tombol dan menu aktif.'}</div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {ACCENT_COLORS.map((acc) => {
+                        const isSelected = (settings.accentColor || 'blue') === acc.id;
+                        return (
+                          <button
+                            key={acc.id}
+                            type="button"
+                            title={acc.label}
+                            aria-label={acc.label}
+                            onClick={() => handleUpdate('accentColor', acc.id)}
+                            style={{ backgroundColor: acc.hex }}
+                            className={`w-6 h-6 rounded-full flex items-center justify-center cursor-pointer transition-transform ${
+                              isSelected ? 'scale-110 ring-2 ring-offset-2 ring-slate-400/70' : 'opacity-80 hover:opacity-100'
+                            }`}
+                          >
+                            {isSelected && <Check className="w-3 h-3 text-white stroke-[3]" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Language */}
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Language' : 'Bahasa Antarmuka'}</div>
+                      <div className={descCls}>{isEn ? 'Choose your preferred application language.' : 'Pilih bahasa antarmuka aplikasi Maria AI.'}</div>
+                    </div>
+                    <select
+                      value={settings.language || 'Indonesia'}
+                      onChange={(e) => handleUpdate('language', e.target.value as any)}
+                      className={selectCls}
+                    >
+                      <option value="Indonesia">Indonesia</option>
+                      <option value="English">English</option>
+                    </select>
+                  </div>
+
+                  {/* Fast Answers */}
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Fast Answers' : 'Jawaban Cepat'}</div>
+                      <div className={descCls}>{isEn ? 'Prioritize concise, low-latency replies.' : 'Prioritaskan jawaban lebih singkat & cepat.'}</div>
+                    </div>
+                    {renderToggle(Boolean(settings.fastAnswers), (v) => handleUpdate('fastAnswers', v), 'Fast Answers')}
+                  </div>
+
+                  {/* Auto Web Search */}
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Auto Web Search' : 'Pencarian Web Otomatis'}</div>
+                      <div className={descCls}>{isEn ? 'Enable live Google Search by default.' : 'Aktifkan penelusuran Google secara bawaan.'}</div>
+                    </div>
+                    {renderToggle(
+                      settings.webSearchDefault !== false,
+                      (val) => {
+                        try {
+                          localStorage.setItem('maria_web_search_active', String(val));
+                        } catch {}
+                        handleUpdate('webSearchDefault', val);
+                      },
+                      'Auto Web Search'
+                    )}
+                  </div>
+
+                  {/* Home Suggestions */}
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Home Suggestions' : 'Saran Topik Beranda'}</div>
+                      <div className={descCls}>{isEn ? 'Show starter prompts on new chat screen.' : 'Tampilkan kartu ide cepat di halaman awal chat.'}</div>
+                    </div>
+                    {renderToggle(
+                      settings.homepageSuggestions !== false,
+                      (v) => handleUpdate('homepageSuggestions', v),
+                      'Home Topic Suggestions'
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* 6 Persona Models */}
-              <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className={`text-xs font-semibold ${isDark ? 'text-neutral-300' : 'text-slate-700'}`}>
-                      {isEn ? 'AI Voice Gender & Age Personas' : 'Pilihan Model Gender & Usia Suara AI'}
-                    </label>
-                    <span className={`text-[10px] font-medium ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
-                      {isEn ? '6 Models Available' : '6 Model Tersedia'}
-                    </span>
+              {/* TAB 2: AI BEHAVIOR */}
+              {activeTab === 'ai' && (
+                <div className={`divide-y ${isDark ? 'divide-[#212333]' : 'divide-slate-100'}`}>
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Response Style' : 'Gaya Respon AI'}</div>
+                      <div className={descCls}>
+                        {(isEn ? EN_TONE_MAP[settings.tone]?.description : TONE_OPTIONS.find((t) => t.value === settings.tone)?.description) ||
+                          (isEn ? 'Choose Maria default communication tone.' : 'Pilih gaya penyampaian utama Maria.')}
+                      </div>
+                    </div>
+                    <select
+                      value={settings.tone}
+                      onChange={(e) => handleUpdate('tone', e.target.value as any)}
+                      className={selectCls}
+                    >
+                      {TONE_OPTIONS.map((t) => {
+                        const d = isEn ? EN_TONE_MAP[t.value] || t : t;
+                        return (
+                          <option key={t.value} value={t.value}>
+                            {d.label}
+                          </option>
+                        );
+                      })}
+                    </select>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {VOICE_PERSONAS.map((persona) => {
-                      const pDisplay = isEn ? EN_PERSONA_MAP[persona.id] || persona : persona;
-                      const isSelected = (settings.voicePersona || 'wanita') === persona.id;
-                      return (
-                        <div
-                          key={persona.id}
-                          onClick={() =>
-                            handleUpdate({
-                              voicePersona: persona.id,
-                              geminiVoice: persona.geminiVoice,
-                            })
-                          }
-                          className={`cursor-pointer p-3 rounded-2xl border ${
-                            isSelected
-                              ? isDark
-                                ? 'bg-emerald-500/15 border-emerald-500 text-white shadow-sm'
-                                : 'bg-emerald-50 border-emerald-500 text-emerald-950 shadow-sm'
-                              : isDark
-                                ? 'bg-[#181a24] border-[#27293a] text-neutral-300 hover:border-neutral-600'
-                                : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300'
-                          }`}
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Vocabulary & Greeting Style' : 'Gaya Bahasa & Sapaan'}</div>
+                      <div className={descCls}>{isEn ? 'Pick formality level and phrasing.' : 'Pilih tingkat kefasihan & nuansa sapaan Maria.'}</div>
+                    </div>
+                    <select
+                      value={settings.languageStyle || 'Baku'}
+                      onChange={(e) => handleUpdate('languageStyle', e.target.value as any)}
+                      className={selectCls}
+                    >
+                      {LANGUAGE_STYLE_OPTIONS.map((st) => (
+                        <option key={st.value} value={st.value}>
+                          {isEn ? st.labelEn : st.value}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Warmth' : 'Kehangatan'}</div>
+                      <div className={descCls}>{isEn ? 'Empathetic, friendly, and approachable replies.' : 'Jawaban empatik dan bersahabat.'}</div>
+                    </div>
+                    {renderToggle(
+                      settings.personalityWarmth !== false,
+                      (v) => handleUpdate('personalityWarmth', v),
+                      'Warmth'
+                    )}
+                  </div>
+
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Enthusiasm' : 'Antusiasme'}</div>
+                      <div className={descCls}>{isEn ? 'Expressive, upbeat, and spirited tone.' : 'Nada bicara lebih ekspresif dan bersemangat.'}</div>
+                    </div>
+                    {renderToggle(
+                      Boolean(settings.personalityEnthusiasm),
+                      (v) => handleUpdate('personalityEnthusiasm', v),
+                      'Enthusiasm'
+                    )}
+                  </div>
+
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Structured Formatting' : 'Format Terstruktur'}</div>
+                      <div className={descCls}>{isEn ? 'Organize long answers with headings & lists.' : 'Susun jawaban rapi dengan poin dan subjudul.'}</div>
+                    </div>
+                    {renderToggle(
+                      settings.personalityStructured !== false,
+                      (v) => handleUpdate('personalityStructured', v),
+                      'Structured'
+                    )}
+                  </div>
+
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Enter to Send' : 'Tekan Enter untuk Mengirim'}</div>
+                      <div className={descCls}>{isEn ? 'Use Shift + Enter to add a new line.' : 'Gunakan Shift + Enter untuk baris baru.'}</div>
+                    </div>
+                    {renderToggle(
+                      settings.enterToSend !== false,
+                      (v) => handleUpdate('enterToSend', v),
+                      'Enter to Send'
+                    )}
+                  </div>
+
+                  <div className="py-3.5 space-y-2">
+                    <div>
+                      <div className={titleCls}>{isEn ? 'Custom Instructions' : 'Instruksi Kustom (Custom Prompt)'}</div>
+                      <div className={descCls}>{isEn ? 'Extra rules or persona instructions always sent to Maria.' : 'Aturan atau karakter tambahan yang selalu diikuti Maria.'}</div>
+                    </div>
+                    <textarea
+                      rows={2}
+                      value={settings.customPrompt}
+                      onChange={(e) => handleUpdate('customPrompt', e.target.value)}
+                      placeholder={
+                        isEn
+                          ? 'Example: Answer concisely, use bullet points, avoid fluff...'
+                          : 'Contoh: Jawab ringkas pakai poin, santai namun jelas...'
+                      }
+                      className={`w-full px-3 py-2 border rounded-xl text-xs focus:outline-none ${
+                        isDark ? 'bg-[#181a25] border-[#2b2e40] text-white placeholder-neutral-500' : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
+                      }`}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: MEMORY */}
+              {activeTab === 'memory' && (
+                <div className={`divide-y ${isDark ? 'divide-[#212333]' : 'divide-slate-100'}`}>
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'AI Memory' : 'Memori Konteks Otomatis'}</div>
+                      <div className={descCls}>{isEn ? 'Allow Maria to remember useful context across chats.' : 'Izinkan Maria mengingat preferensi penting antar chat.'}</div>
+                    </div>
+                    {renderToggle(
+                      settings.memoryEnabled !== false,
+                      (v) => handleUpdate('memoryEnabled', v),
+                      'AI Memory'
+                    )}
+                  </div>
+
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className={titleCls}>{isEn ? 'Memory Summary' : 'Ringkasan Memori Aktif'}</div>
+                      <div className={`${descCls} line-clamp-2`}>
+                        {settings.memorySummary || computedMemorySummary}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdate('memorySummary', computedMemorySummary)}
+                      className={actionBtnCls}
+                    >
+                      {isEn ? 'Refresh' : 'Perbarui'}
+                    </button>
+                  </div>
+
+                  <div className="py-3.5 space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <div className={titleCls}>
+                          {isEn ? `Saved Notes (${memories.length})` : `Catatan Memori (${memories.length})`}
+                        </div>
+                        <div className={descCls}>{isEn ? 'Facts Maria uses to personalize answers.' : 'Fakta pribadi yang digunakan Maria saat menjawab.'}</div>
+                      </div>
+                      {memories.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => userMemoryService.clearMemories()}
+                          className="text-[11px] font-semibold text-rose-500 hover:underline cursor-pointer shrink-0"
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                              <div
-                                className={`w-8 h-8 rounded-xl border flex items-center justify-center font-bold text-xs shrink-0 ${
-                                  isSelected
-                                    ? isDark
-                                      ? 'bg-emerald-500/20 border-emerald-500/60 text-emerald-400'
-                                      : 'bg-emerald-500/20 border-emerald-500/60 text-emerald-600'
-                                    : isDark
-                                      ? 'bg-neutral-800/80 border-neutral-700/60 text-neutral-400'
-                                      : 'bg-slate-200/80 border-slate-300 text-slate-600'
+                          {isEn ? 'Clear All' : 'Hapus Semua'}
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        type="text"
+                        value={newMemoryText}
+                        onChange={(e) => setNewMemoryText(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && newMemoryText.trim()) {
+                            userMemoryService.addMemory(newMemoryText, newMemoryCategory, 'manual');
+                            setNewMemoryText('');
+                          }
+                        }}
+                        placeholder={isEn ? 'Add a memory note...' : 'Tambah fakta baru (misal: Saya suka TypeScript)...'}
+                        className={`flex-1 px-3 py-1.5 border rounded-xl text-xs focus:outline-none ${
+                          isDark ? 'bg-[#181a25] border-[#2b2e40] text-white placeholder-neutral-500' : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
+                        }`}
+                      />
+                      <div className="flex gap-1.5 shrink-0">
+                        <select
+                          value={newMemoryCategory}
+                          onChange={(e) => setNewMemoryCategory(e.target.value as any)}
+                          className={selectCls}
+                        >
+                          <option value="personal">{isEn ? 'Personal' : 'Personal'}</option>
+                          <option value="preferences">{isEn ? 'Preferences' : 'Preferensi'}</option>
+                          <option value="work">{isEn ? 'Work' : 'Pekerjaan'}</option>
+                          <option value="goals">{isEn ? 'Goals' : 'Target'}</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (newMemoryText.trim()) {
+                              userMemoryService.addMemory(newMemoryText, newMemoryCategory, 'manual');
+                              setNewMemoryText('');
+                            }
+                          }}
+                          style={{ backgroundColor: activeAccentHex }}
+                          className="px-3 py-1.5 rounded-xl text-xs font-semibold text-white flex items-center gap-1 cursor-pointer shrink-0"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>{isEn ? 'Add' : 'Tambah'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {memories.length > 0 && (
+                      <div className={`divide-y max-h-44 overflow-y-auto rounded-xl border ${isDark ? 'border-[#252738] divide-[#212333] bg-[#12141c]' : 'border-slate-200 divide-slate-100 bg-slate-50/70'}`}>
+                        {memories.map((m) => (
+                          <div key={m.id} className="px-3 py-2 flex items-center justify-between gap-2 text-xs">
+                            <div className="min-w-0 flex items-center gap-2">
+                              <span
+                                className={`text-[9px] uppercase font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                                  m.category === 'personal'
+                                    ? 'bg-blue-500/15 text-blue-500'
+                                    : m.category === 'preferences'
+                                    ? 'bg-purple-500/15 text-purple-500'
+                                    : m.category === 'work'
+                                    ? 'bg-amber-500/15 text-amber-500'
+                                    : 'bg-emerald-500/15 text-emerald-500'
                                 }`}
                               >
-                                {persona.name.slice(0, 2).toUpperCase()}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                                    {pDisplay.label}
-                                  </span>
-                                  <span
-                                    className={`text-[9px] px-1.5 py-0.5 rounded-full border ${
-                                      isDark
-                                        ? 'bg-neutral-800 text-neutral-300 border-neutral-700'
-                                        : 'bg-slate-200 text-slate-600 border-slate-300'
-                                    }`}
-                                  >
-                                    {pDisplay.category}
-                                  </span>
-                                  {isSelected && (
-                                    <Check className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-emerald-400' : 'text-emerald-500'}`} />
-                                  )}
-                                </div>
-                                <div className={`text-[10px] mt-0.5 line-clamp-1 ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                                  {pDisplay.description}
-                                </div>
-                              </div>
+                                {m.category}
+                              </span>
+                              <span className={`truncate ${isDark ? 'text-neutral-200' : 'text-slate-700'}`}>{m.text}</span>
                             </div>
-
                             <button
                               type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                speechService.unlockAudio();
-                                speechService.speak(pDisplay.sampleText, {
-                                  voiceName: persona.geminiVoice,
-                                  personaId: persona.id,
-                                  speed: settings.speechSpeed || '1x',
-                                  ttsModel: settings.ttsModel || 'gemini-3.8-flash-lite-tts',
-                                });
-                              }}
-                              className={`p-1.5 px-2.5 rounded-xl hover:bg-emerald-600 hover:text-white shrink-0 flex items-center gap-1 text-[10px] font-semibold cursor-pointer ${
-                                isDark ? 'bg-neutral-800/90 text-neutral-300' : 'bg-slate-200 text-slate-700'
-                              }`}
+                              onClick={() => userMemoryService.removeMemory(m.id)}
+                              className="p-1 text-neutral-400 hover:text-rose-500 cursor-pointer shrink-0"
+                              title={isEn ? 'Delete' : 'Hapus'}
                             >
-                              <Volume2 className={`w-3.5 h-3.5 ${isDark ? 'text-emerald-400' : 'text-emerald-500'}`} />
-                              <span>{isEn ? 'Test' : 'Tes'}</span>
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: CONNECTORS */}
+              {activeTab === 'connectors' && (
+                <div className={`divide-y ${isDark ? 'divide-[#212333]' : 'divide-slate-100'}`}>
+                  <div className="py-3 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>Google Cloud Firestore</div>
+                      <div className={descCls}>{isEn ? 'Real-time cloud history & library synchronization.' : 'Sinkronisasi riwayat chat, profil & pustaka real-time.'}</div>
+                    </div>
+                    <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-500 shrink-0">
+                      {isEn ? 'Connected' : 'Terhubung'}
+                    </span>
+                  </div>
+
+                  <div className="py-3 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>Gemini 2.5 &amp; 3.8 Flash</div>
+                      <div className={descCls}>{isEn ? 'Core text, multimodal vision & neural TTS engine.' : 'Mesin pemrosesan teks, visual multimodal & suara TTS.'}</div>
+                    </div>
+                    <span
+                      style={{ backgroundColor: `${activeAccentHex}18`, color: activeAccentHex }}
+                      className="text-[11px] font-semibold px-2.5 py-1 rounded-lg shrink-0"
+                    >
+                      {isEn ? 'Active' : 'Aktif'}
+                    </span>
+                  </div>
+
+                  {MARIA_PLUGINS.map((plugin) => {
+                    const pDisplay = isEn ? EN_PLUGIN_MAP[plugin.id] || plugin : plugin;
+                    const enabled = activePluginIds.includes(plugin.id);
+                    return (
+                      <div key={plugin.id} className="py-3 flex items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <div className={titleCls}>{pDisplay.name}</div>
+                          <div className={descCls}>{pDisplay.description}</div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Timbre Fine-Tuner */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className={`text-xs font-semibold ${isDark ? 'text-neutral-300' : 'text-slate-700'}`}>
-                      {isEn ? 'AI Engine Vocal Timbre' : 'Timbre Vokal AI Engine'}
-                    </label>
-                    <span className={`text-[10px] ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
-                      {isEn ? 'Active' : 'Aktif'}: {settings.geminiVoice || 'Aoede'}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                    {[
-                      { id: 'Aoede', label: 'Aoede', desc: isEn ? 'Female • Elegant' : 'Wanita • Elegan' },
-                      { id: 'Kore', label: 'Kore', desc: isEn ? 'Female • Soft' : 'Wanita • Lembut' },
-                      { id: 'Zephyr', label: 'Zephyr', desc: isEn ? 'Female • Cheerful' : 'Wanita • Ceria' },
-                      { id: 'Fenrir', label: 'Fenrir', desc: isEn ? 'Male • Firm' : 'Pria • Mantap' },
-                      { id: 'Puck', label: 'Puck', desc: isEn ? 'Male • Dynamic' : 'Pria • Dinamis' },
-                      { id: 'Charon', label: 'Charon', desc: isEn ? 'Male • Calm' : 'Pria • Tenang' },
-                    ].map((v) => {
-                      const isVoiceSelected = (settings.geminiVoice || 'Aoede') === v.id;
-                      return (
-                        <button
-                          key={v.id}
-                          type="button"
-                          onClick={() => handleUpdate('geminiVoice', v.id as any)}
-                          className={`p-2 rounded-xl border text-center cursor-pointer ${
-                            isVoiceSelected
-                              ? isDark
-                                ? 'bg-emerald-500/20 border-emerald-500 text-white font-bold'
-                                : 'bg-emerald-50 border-emerald-500 text-emerald-950 font-bold'
-                              : isDark
-                                ? 'bg-[#181a24] border-[#27293a] text-neutral-400 hover:text-white'
-                                : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900'
-                          }`}
-                        >
-                          <div className="text-xs font-bold">{v.label}</div>
-                          <div className={`text-[9px] mt-0.5 ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>{v.desc}</div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* Speed */}
-              <div>
-                <label className={`text-xs font-semibold block mb-1.5 ${isDark ? 'text-neutral-300' : 'text-slate-700'}`}>
-                  {isEn ? 'Speaking Speed' : 'Kecepatan Bicara'}
-                </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {['0.75x', '1x', '1.25x', '1.5x'].map((spd) => (
-                    <button
-                      key={spd}
-                      type="button"
-                      onClick={() => handleUpdate('speechSpeed', spd as any)}
-                      className={`py-2 rounded-xl border text-xs font-medium text-center cursor-pointer ${
-                        (settings.speechSpeed || '1x') === spd
-                          ? 'bg-[#2563eb] border-[#2563eb] text-white font-bold'
-                          : isDark
-                            ? 'bg-[#181a24] border-[#27293a] text-neutral-400 hover:text-white'
-                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      {spd}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Speech Pronunciation Dictionary */}
-              <div
-                className={`p-4 rounded-2xl border space-y-3 ${
-                  isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <BookOpen className={`w-4 h-4 ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`} />
-                    <span className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      {isEn ? 'Pronunciation Dictionary' : 'Kamus Pengucapan (Dictionary)'}
-                    </span>
-                  </div>
-                  <span className={`text-[10px] font-mono ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                    {(settings.speechDictionary || []).length} {isEn ? 'Entries' : 'Entri'}
-                  </span>
-                </div>
-                <p className={`text-[11px] ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                  {isEn
-                    ? 'Help the voice engine pronounce technical terms, acronyms, or custom names accurately.'
-                    : 'Bantu mesin suara melafalkan istilah teknis, singkatan, atau nama khusus dengan tepat.'}
-                </p>
-
-                <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2">
-                  <input
-                    type="text"
-                    value={dictTerm}
-                    onChange={(e) => setDictTerm(e.target.value)}
-                    placeholder={isEn ? 'Original word (e.g., API)' : 'Kata asli (misal: API)'}
-                    className={`px-3 py-2 border rounded-xl text-xs focus:outline-none focus:border-[#2563eb] ${
-                      isDark
-                        ? 'bg-[#12141c] border-[#292c3d] text-white placeholder-neutral-500'
-                        : 'bg-white border-slate-200 text-slate-900 placeholder-slate-400'
-                    }`}
-                  />
-                  <input
-                    type="text"
-                    value={dictPronunciation}
-                    onChange={(e) => setDictPronunciation(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddDictionaryEntry()}
-                    placeholder={isEn ? 'Pronunciation (e.g., A-P-I)' : 'Cara baca (misal: E-Pi-Ai)'}
-                    className={`px-3 py-2 border rounded-xl text-xs focus:outline-none focus:border-[#2563eb] ${
-                      isDark
-                        ? 'bg-[#12141c] border-[#292c3d] text-white placeholder-neutral-500'
-                        : 'bg-white border-slate-200 text-slate-900 placeholder-slate-400'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddDictionaryEntry}
-                    className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#2563eb] text-white hover:bg-[#1d4ed8] flex items-center justify-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>{isEn ? 'Add' : 'Tambah'}</span>
-                  </button>
-                </div>
-
-                {(settings.speechDictionary || []).length > 0 && (
-                  <div className="space-y-1.5 max-h-32 overflow-y-auto pt-1">
-                    {(settings.speechDictionary || []).map((entry) => (
-                      <div
-                        key={entry.id}
-                        className={`px-3 py-2 rounded-xl border flex items-center justify-between text-xs ${
-                          isDark ? 'bg-[#12141c] border-[#262838]' : 'bg-white border-slate-200'
-                        }`}
-                      >
-                        <div className="truncate">
-                          <span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{entry.term}</span>
-                          <span className={`mx-2 ${isDark ? 'text-neutral-500' : 'text-slate-400'}`}>-&gt;</span>
-                          <span className={isDark ? 'text-[#60a5fa]' : 'text-blue-600'}>{entry.pronunciation || entry.term}</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveDictionaryEntry(entry.id)}
-                          className={`p-1 cursor-pointer ${
-                            isDark ? 'text-neutral-500 hover:text-rose-400' : 'text-slate-400 hover:text-rose-500'
-                          }`}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {renderToggle(enabled, () => handleTogglePlugin(plugin.id), pDisplay.name)}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                    );
+                  })}
 
-              {/* Test Voice Card */}
-              {(() => {
-                const activePersona =
-                  VOICE_PERSONAS.find((p) => p.id === (settings.voicePersona || 'wanita')) || VOICE_PERSONAS[0];
-                const enPersonaLabels: Record<string, { label: string; category: string; sample: string }> = {
-                  wanita: { label: 'Adult Female', category: 'Adult', sample: "Hello! I'm Maria. This is my AI voice sample." },
-                  pria: { label: 'Adult Male', category: 'Adult', sample: "Hello! I'm Mario. This is my AI voice sample." },
-                  'remaja-perempuan': { label: 'Teen Female', category: 'Teen', sample: "Hey! I'm Maya. This is my AI voice sample." },
-                  'remaja-laki': { label: 'Teen Male', category: 'Teen', sample: "Hi! I'm Max. This is my AI voice sample." },
-                  'anak-perempuan': { label: 'Young Girl', category: 'Kids', sample: "Hi! I'm Mia. This is my AI voice sample." },
-                  'anak-laki': { label: 'Young Boy', category: 'Kids', sample: "Hello! I'm Milo. This is my AI voice sample." },
-                };
-                const activeEn = enPersonaLabels[activePersona.id];
-                return (
-                  <div
-                    className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
-                      isDark ? 'bg-[#131520] border-[#232537]' : 'bg-slate-50 border-slate-200'
-                    }`}
-                  >
-                    <div>
-                      <div className={`text-xs font-semibold flex items-center gap-1.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                        <Volume2 className={`w-3.5 h-3.5 ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`} />
-                        <span>
-                          {isEn
-                            ? `Test AI Voice Model: ${activePersona.name} (${activeEn?.label || activePersona.label})`
-                            : `Uji Suara Model AI: ${activePersona.name} (${activePersona.label})`}
-                        </span>
+                  {onOpenPluginsDirectory && (
+                    <div className="py-3.5 flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className={titleCls}>{isEn ? 'Plugins Directory' : 'Direktori Plugin Lengkap'}</div>
+                        <div className={descCls}>{isEn ? `${activePluginIds.length} of ${MARIA_PLUGINS.length} connectors active.` : `${activePluginIds.length} dari ${MARIA_PLUGINS.length} konektor sedang aktif.`}</div>
                       </div>
-                      <div className={`text-[11px] mt-0.5 ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                        {isEn
-                          ? `${activeEn?.category || activePersona.category} Model • Timbre ${settings.geminiVoice || activePersona.geminiVoice}`
-                          : `Model ${activePersona.category} • Timbre ${settings.geminiVoice || activePersona.geminiVoice}`}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        speechService.unlockAudio();
-                        if (speechState.isSpeaking && speechState.activeMessageId === 'settings_test') {
-                          speechService.stopSpeaking();
-                        } else {
-                          const testText = isEn
-                            ? activeEn?.sample || `Hello! I'm ${activePersona.name}.`
-                            : activePersona.sampleText ||
-                              `Halo! Saya ${activePersona.name}. Ini adalah suara asli model AI ${activePersona.label}.`;
-                          speechService.speak(testText, {
-                            messageId: 'settings_test',
-                            speed: settings.speechSpeed || '1x',
-                            voiceName: settings.geminiVoice || activePersona.geminiVoice,
-                            personaId: activePersona.id,
-                            ttsModel: settings.ttsModel || 'gemini-3.8-flash-lite-tts',
-                          });
-                        }
-                      }}
-                      className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold shrink-0 cursor-pointer ${
-                        speechState.isSpeaking && speechState.activeMessageId === 'settings_test'
-                          ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                          : 'bg-[#2563eb] text-white hover:bg-[#1d4ed8]'
-                      }`}
-                    >
-                      {speechState.isLoading && speechState.activeMessageId === 'settings_test' ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>{isEn ? 'Preparing Voice...' : 'Menyiapkan Suara...'}</span>
-                        </>
-                      ) : speechState.isSpeaking && speechState.activeMessageId === 'settings_test' ? (
-                        <>
-                          <VolumeX className="w-3.5 h-3.5" />
-                          <span>{isEn ? 'Stop Voice' : 'Hentikan Suara'}</span>
-                        </>
-                      ) : (
-                        <>
-                          <Volume2 className="w-3.5 h-3.5" />
-                          <span>{isEn ? `Test ${activePersona.name}'s Voice` : `Tes Suara ${activePersona.name}`}</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                );
-              })()}
-            </div>
-          )}
-
-          {/* TAB 4: CHAT & PROMPT */}
-          {activeTab === 'chat' && (
-            <div className="space-y-4">
-              <div
-                className={`p-4 rounded-2xl border flex items-center justify-between ${
-                  isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                }`}
-              >
-                <div>
-                  <div className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    {isEn ? 'Press Enter to Send' : 'Tekan Enter untuk Mengirim Pesan'}
-                  </div>
-                  <div className={`text-[11px] ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                    {isEn ? 'Shift + Enter for a new line' : 'Shift + Enter untuk membuat baris baru'}
-                  </div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settings.enterToSend !== false}
-                  onChange={(e) => handleUpdate('enterToSend', e.target.checked)}
-                  className="w-4 h-4 accent-[#2563eb] rounded cursor-pointer"
-                />
-              </div>
-
-              <div
-                className={`p-4 rounded-2xl border flex items-center justify-between ${
-                  isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                }`}
-              >
-                <div>
-                  <div className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    {isEn ? 'Save Chat History' : 'Simpan Riwayat Obrolan'}
-                  </div>
-                  <div className={`text-[11px] ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                    {isEn ? 'Auto-sync to Cloud Firestore and local device' : 'Simpan otomatis di Cloud Firestore dan perangkat lokal'}
-                  </div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settings.saveChatHistory !== false}
-                  onChange={(e) => handleUpdate('saveChatHistory', e.target.checked)}
-                  className="w-4 h-4 accent-[#2563eb] rounded cursor-pointer"
-                />
-              </div>
-
-              {/* Temporary Chat */}
-              <div
-                className={`p-4 rounded-2xl border flex items-center justify-between ${
-                  isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <EyeOff className="w-4 h-4 text-amber-400 shrink-0" />
-                  <div>
-                    <div className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      {isEn ? 'Temporary Chat Mode' : 'Mode Obrolan Sementara (Temporary Chat)'}
-                    </div>
-                    <div className={`text-[11px] ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                      {isEn
-                        ? 'New conversations will not be saved to cloud history or permanent memory'
-                        : 'Percakapan baru tidak akan dicatat ke riwayat cloud maupun memori permanen'}
-                    </div>
-                  </div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={Boolean(settings.temporaryChat)}
-                  onChange={(e) => handleUpdate('temporaryChat', e.target.checked)}
-                  className="w-4 h-4 accent-[#2563eb] rounded cursor-pointer"
-                />
-              </div>
-
-              {/* Notifications Section */}
-              <div
-                className={`p-4 rounded-2xl border space-y-3 ${
-                  isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Bell className={`w-4 h-4 ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`} />
-                  <span className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    {isEn ? 'Notification Preferences' : 'Preferensi Notifikasi'}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <label
-                    className={`p-2.5 rounded-xl border flex items-center justify-between text-xs cursor-pointer ${
-                      isDark ? 'bg-[#12141c] border-[#252737]' : 'bg-white border-slate-200'
-                    }`}
-                  >
-                    <span className={isDark ? 'text-neutral-200' : 'text-slate-700'}>
-                      {isEn ? 'Chat Status Updates' : 'Pembaruan Status Chat'}
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={settings.notifications?.statusUpdates !== false}
-                      onChange={(e) =>
-                        handleUpdate('notifications', {
-                          soundEnabled: settings.notifications?.soundEnabled ?? true,
-                          remindersEnabled: settings.notifications?.remindersEnabled ?? true,
-                          inAppNotifications: settings.notifications?.inAppNotifications ?? true,
-                          statusUpdates: e.target.checked,
-                        })
-                      }
-                      className="w-4 h-4 accent-[#2563eb]"
-                    />
-                  </label>
-
-                  <label
-                    className={`p-2.5 rounded-xl border flex items-center justify-between text-xs cursor-pointer ${
-                      isDark ? 'bg-[#12141c] border-[#252737]' : 'bg-white border-slate-200'
-                    }`}
-                  >
-                    <span className={isDark ? 'text-neutral-200' : 'text-slate-700'}>
-                      {isEn ? 'Reminders & Schedule' : 'Pengingat & Agenda'}
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={settings.notifications?.remindersEnabled !== false}
-                      onChange={(e) =>
-                        handleUpdate('notifications', {
-                          soundEnabled: settings.notifications?.soundEnabled ?? true,
-                          statusUpdates: settings.notifications?.statusUpdates ?? true,
-                          inAppNotifications: settings.notifications?.inAppNotifications ?? true,
-                          remindersEnabled: e.target.checked,
-                        })
-                      }
-                      className="w-4 h-4 accent-[#2563eb]"
-                    />
-                  </label>
-
-                  <label
-                    className={`p-2.5 rounded-xl border flex items-center justify-between text-xs cursor-pointer ${
-                      isDark ? 'bg-[#12141c] border-[#252737]' : 'bg-white border-slate-200'
-                    }`}
-                  >
-                    <span className={isDark ? 'text-neutral-200' : 'text-slate-700'}>
-                      {isEn ? 'Notification Sound Effects' : 'Efek Suara Notifikasi'}
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={settings.notifications?.soundEnabled !== false}
-                      onChange={(e) =>
-                        handleUpdate('notifications', {
-                          statusUpdates: settings.notifications?.statusUpdates ?? true,
-                          remindersEnabled: settings.notifications?.remindersEnabled ?? true,
-                          inAppNotifications: settings.notifications?.inAppNotifications ?? true,
-                          soundEnabled: e.target.checked,
-                        })
-                      }
-                      className="w-4 h-4 accent-[#2563eb]"
-                    />
-                  </label>
-
-                  <label
-                    className={`p-2.5 rounded-xl border flex items-center justify-between text-xs cursor-pointer ${
-                      isDark ? 'bg-[#12141c] border-[#252737]' : 'bg-white border-slate-200'
-                    }`}
-                  >
-                    <span className={isDark ? 'text-neutral-200' : 'text-slate-700'}>
-                      {isEn ? 'In-App Notifications' : 'Notifikasi Dalam Aplikasi'}
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={settings.notifications?.inAppNotifications !== false}
-                      onChange={(e) =>
-                        handleUpdate('notifications', {
-                          soundEnabled: settings.notifications?.soundEnabled ?? true,
-                          statusUpdates: settings.notifications?.statusUpdates ?? true,
-                          remindersEnabled: settings.notifications?.remindersEnabled ?? true,
-                          inAppNotifications: e.target.checked,
-                        })
-                      }
-                      className="w-4 h-4 accent-[#2563eb]"
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {/* About & Help Links */}
-              <div
-                className={`p-4 rounded-2xl border space-y-2.5 ${
-                  isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Info className={`w-4 h-4 ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`} />
-                    <span className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      {isEn ? 'About & Help Maria AI' : 'Tentang & Bantuan Maria AI'}
-                    </span>
-                  </div>
-                  <span className={`text-[10px] font-mono ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>v2.5</span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                  {[
-                    { label: isEn ? 'Help Center' : 'Pusat Bantuan', href: '/help.html' },
-                    { label: isEn ? 'Terms of Service' : 'Ketentuan Layanan', href: '/terms.html' },
-                    { label: isEn ? 'Privacy Policy' : 'Kebijakan Privasi', href: '/privacy.html' },
-                    { label: isEn ? 'Cookie Policy' : 'Kebijakan Cookie', href: '/cookies.html' },
-                  ].map((item) => (
-                    <a
-                      key={item.href}
-                      href={item.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`px-3 py-2 rounded-xl border text-[11px] font-medium flex items-center justify-between gap-1 ${
-                        isDark
-                          ? 'bg-[#12141c] border-[#252737] hover:border-[#3b3f54] text-neutral-200'
-                          : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
-                      }`}
-                    >
-                      <span className="truncate">{item.label}</span>
-                      <ExternalLink className="w-3 h-3 text-slate-400 shrink-0" />
-                    </a>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 5: PRIVACY & DATA */}
-          {activeTab === 'privacy' && (
-            <div className="space-y-4">
-              {/* Safety Toggle */}
-              <div
-                className={`p-4 rounded-2xl border flex items-center justify-between ${
-                  isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                }`}
-              >
-                <div>
-                  <div className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    {isEn ? 'Reduce Sensitive Content (Safety Mode)' : 'Kurangi Konten Sensitif (Safety Mode)'}
-                  </div>
-                  <div className={`text-[11px] ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                    {isEn
-                      ? 'Tighten filtering of sensitive topics in AI responses and search'
-                      : 'Memperketat penyaringan topik sensitif dalam jawaban AI dan pencarian'}
-                  </div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={Boolean(settings.reduceSensitiveContent)}
-                  onChange={(e) => handleUpdate('reduceSensitiveContent', e.target.checked)}
-                  className="w-4 h-4 accent-[#2563eb] rounded cursor-pointer"
-                />
-              </div>
-
-              <div
-                className={`p-4 rounded-2xl border flex items-center justify-between ${
-                  isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                }`}
-              >
-                <div>
-                  <div className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    {isEn ? 'Data Leak Prevention (DLP Shield)' : 'Pencegahan Kebocoran Data (DLP Shield)'}
-                  </div>
-                  <div className={`text-[11px] ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                    {isEn
-                      ? 'Mask sensitive tokens, API keys & personal credentials in outputs'
-                      : 'Menyamarkan token sensitif, API key & kredensial pribadi di output'}
-                  </div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settings.dlpEnabled !== false}
-                  onChange={(e) => handleUpdate('dlpEnabled', e.target.checked)}
-                  className="w-4 h-4 accent-[#2563eb] rounded cursor-pointer"
-                />
-              </div>
-
-              {/* Security & 2FA PIN Config */}
-              <div
-                className={`p-4 rounded-2xl border space-y-3 ${
-                  isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <KeyRound className="w-4 h-4 text-amber-400" />
-                    <span className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      {isEn ? 'Account Security & 2FA PIN' : 'Keamanan Akun & PIN 2FA'}
-                    </span>
-                  </div>
-                  <span className={`text-[10px] font-medium ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                    {settings.securityPin?.length === 6
-                      ? isEn
-                        ? 'Custom PIN Active'
-                        : 'PIN Kustom Aktif'
-                      : isEn
-                        ? 'Default PIN'
-                        : 'PIN Default'}
-                  </span>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    type="password"
-                    inputMode="numeric"
-                    maxLength={6}
-                    value={pinDraft}
-                    onChange={(e) => setPinDraft(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder={
-                      isEn ? 'Set 6-digit PIN to delete history...' : 'Atur PIN 6-digit untuk hapus riwayat...'
-                    }
-                    className={`flex-1 px-3 py-2 border rounded-xl text-xs focus:outline-none focus:border-[#2563eb] ${
-                      isDark ? 'bg-[#12141c] border-[#292c3d] text-white' : 'bg-white border-slate-200 text-slate-900'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSavePin}
-                    className="px-3.5 py-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-semibold cursor-pointer shrink-0 flex items-center gap-1.5"
-                  >
-                    <Lock className="w-3.5 h-3.5" />
-                    <span>{isEn ? 'Save 2FA PIN' : 'Simpan PIN 2FA'}</span>
-                  </button>
-                </div>
-
-                {pinFeedback && (
-                  <p className={`text-[11px] ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`}>{pinFeedback}</p>
-                )}
-
-                <label className="pt-1 flex items-center justify-between text-xs cursor-pointer">
-                  <span className={isDark ? 'text-neutral-300' : 'text-slate-600'}>
-                    {isEn
-                      ? 'Require security confirmation before sensitive actions'
-                      : 'Wajibkan konfirmasi keamanan sebelum eksekusi sensitif'}
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(settings.sessionLockEnabled)}
-                    onChange={(e) => handleUpdate('sessionLockEnabled', e.target.checked)}
-                    className="w-4 h-4 accent-[#2563eb]"
-                  />
-                </label>
-              </div>
-
-              {/* Storage Meter & Cache Cleaner */}
-              <div
-                className={`p-4 rounded-2xl border space-y-3 ${
-                  isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <HardDrive className={`w-4 h-4 ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`} />
-                    <span className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      {isEn ? 'Local Storage & Cache' : 'Penyimpanan Lokal & Cache'}
-                    </span>
-                  </div>
-                  <span className={`text-xs font-mono font-bold tabular-nums ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`}>
-                    {storageStats.totalLabel}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 text-[11px]">
-                  <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-[#12141c] border-[#252737]' : 'bg-white border-slate-200'}`}>
-                    <div className={isDark ? 'text-neutral-400' : 'text-slate-500'}>{isEn ? 'Settings' : 'Pengaturan'}</div>
-                    <div className={`font-mono font-semibold mt-0.5 tabular-nums ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      {storageStats.settingsLabel}
-                    </div>
-                  </div>
-                  <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-[#12141c] border-[#252737]' : 'bg-white border-slate-200'}`}>
-                    <div className={isDark ? 'text-neutral-400' : 'text-slate-500'}>{isEn ? 'AI Memory' : 'Memori AI'}</div>
-                    <div className={`font-mono font-semibold mt-0.5 tabular-nums ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      {storageStats.memoryLabel}
-                    </div>
-                  </div>
-                  <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-[#12141c] border-[#252737]' : 'bg-white border-slate-200'}`}>
-                    <div className={isDark ? 'text-neutral-400' : 'text-slate-500'}>{isEn ? 'Cache & Logs' : 'Cache & Log'}</div>
-                    <div className={`font-mono font-semibold mt-0.5 tabular-nums ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      {storageStats.otherLabel}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between gap-3 pt-1">
-                  <span className={`text-[11px] ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                    {cacheNotice ||
-                      (isEn
-                        ? 'Clear temporary cache without deleting your memories or settings.'
-                        : 'Bersihkan cache sementara tanpa menghapus memori atau pengaturan Anda.')}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleClearCache}
-                    className={`py-1.5 px-3 rounded-xl text-xs font-semibold shrink-0 cursor-pointer ${
-                      isDark ? 'bg-[#252737] hover:bg-[#31344a] text-white' : 'bg-slate-200 hover:bg-slate-300 text-slate-800'
-                    }`}
-                  >
-                    {isEn ? 'Clear Cache' : 'Bersihkan Cache'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Data Export */}
-              <div
-                className={`p-4 rounded-2xl border flex items-center justify-between gap-3 ${
-                  isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                }`}
-              >
-                <div>
-                  <div className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    {isEn ? 'Export User Data (JSON)' : 'Ekspor Data Pengguna (JSON)'}
-                  </div>
-                  <div className={`text-[11px] ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                    {isEn
-                      ? 'Download a backup of your settings, saved memories, and conversation list'
-                      : 'Unduh salinan pengaturan, memori tersimpan, dan daftar percakapan Anda'}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleExportData}
-                  className="py-1.5 px-3 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-semibold shrink-0 flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>{isEn ? 'Export JSON' : 'Ekspor JSON'}</span>
-                </button>
-              </div>
-
-              {/* Cookie Policy */}
-              <div
-                className={`p-4 rounded-2xl border flex items-center justify-between gap-3 ${
-                  isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0 ${
-                      isDark ? 'text-amber-400' : 'text-amber-500'
-                    }`}
-                  >
-                    <Cookie className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      {isEn ? 'Cookie & Data Storage Policy' : 'Kebijakan Cookie & Penyimpanan Data'}
-                    </div>
-                    <div className={`text-[11px] ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                      {isEn
-                        ? 'Firebase session transparency, audio cache, and zero ad cookies'
-                        : 'Transparansi sesi Firebase, audio cache, dan tanpa cookie iklan'}
-                    </div>
-                  </div>
-                </div>
-                <a
-                  href="/cookies.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`py-1.5 px-3 rounded-xl text-xs font-semibold border shrink-0 inline-flex items-center gap-1.5 ${
-                    isDark
-                      ? 'bg-white/10 hover:bg-white/20 text-white border-white/20'
-                      : 'bg-slate-200/80 hover:bg-slate-300/80 text-slate-800 border-slate-300'
-                  }`}
-                >
-                  <span>{isEn ? 'Open Policy' : 'Buka Kebijakan'}</span>
-                  <ExternalLink className={`w-3.5 h-3.5 ${isDark ? 'text-neutral-400' : 'text-slate-500'}`} />
-                </a>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-xs font-semibold text-rose-400">
-                    {isEn ? 'Delete All Chat History' : 'Hapus Seluruh Riwayat Percakapan'}
-                  </div>
-                  <div className={`text-[11px] ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                    {isEn
-                      ? 'Requires 2FA security verification before permanent deletion'
-                      : 'Memerlukan otentikasi keamanan 2FA sebelum diproses permanen'}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    onClearHistoryRequest();
-                  }}
-                  className="py-1.5 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-md flex items-center gap-1.5 cursor-pointer shrink-0"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>{isEn ? 'Delete History' : 'Hapus Riwayat'}</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 6: INTEGRATIONS & PLUGINS */}
-          {activeTab === 'integrations' && (
-            <div className="space-y-4">
-              <div
-                className={`p-4 rounded-2xl border flex items-center justify-between ${
-                  isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold">
-                    <Database className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      Google Cloud Firestore
-                    </div>
-                    <div className={`text-[11px] ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`}>
-                      {isEn ? 'Real-time history & profile synchronization' : 'Sinkronisasi riwayat & profil real-time'}
-                    </div>
-                  </div>
-                </div>
-                <span className="text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  {isEn ? 'Connected' : 'Terhubung'}
-                </span>
-              </div>
-
-              <div
-                className={`p-4 rounded-2xl border flex items-center justify-between ${
-                  isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center font-bold">
-                    <Sparkles className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                      Google Gemini 2.5 & 3.8 Flash
-                    </div>
-                    <div className={`text-[11px] ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`}>
-                      {isEn ? 'Text, multimodal video/photo & TTS audio processing' : 'Pemrosesan teks, multimodal video/foto & audio TTS'}
-                    </div>
-                  </div>
-                </div>
-                <span className="text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-purple-500/15 text-purple-300 border border-purple-500/30">
-                  {isEn ? 'Active' : 'Aktif'}
-                </span>
-              </div>
-
-              {/* Plugins / Connectors Toggle List */}
-              <div
-                className={`p-4 rounded-2xl border space-y-3 ${
-                  isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    {isEn ? 'Maria Plugins & Connectors' : 'Plugins & Konektor Maria'}
-                  </span>
-                  <div className="flex items-center gap-2.5">
-                    <span className={`text-[11px] font-mono font-semibold tabular-nums ${isDark ? 'text-[#60a5fa]' : 'text-blue-600'}`}>
-                      {activePluginIds.length} / {MARIA_PLUGINS.length} {isEn ? 'active' : 'aktif'}
-                    </span>
-                    {onOpenPluginsDirectory && (
                       <button
                         type="button"
                         onClick={() => {
                           onClose();
                           onOpenPluginsDirectory();
                         }}
-                        className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-semibold cursor-pointer whitespace-nowrap"
+                        className={actionBtnCls}
                       >
-                        {isEn ? 'Browse Plugins >' : 'Direktori Plugin >'}
+                        {isEn ? 'Open Directory' : 'Buka Direktori'}
                       </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  {MARIA_PLUGINS.map((plugin) => {
-                    const pDisplay = isEn ? EN_PLUGIN_MAP[plugin.id] || plugin : plugin;
-                    const enabled = activePluginIds.includes(plugin.id);
-                    return (
-                      <div
-                        key={plugin.id}
-                        className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${
-                          isDark ? 'bg-[#12141c] border-[#252737]' : 'bg-white border-slate-200'
-                        }`}
-                      >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                              {pDisplay.name}
-                            </span>
-                            <span className={`text-[10px] ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                              • {pDisplay.category}
-                            </span>
-                          </div>
-                          <div className={`text-[11px] mt-0.5 ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                            {pDisplay.description}
-                          </div>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={enabled}
-                          onChange={() => handleTogglePlugin(plugin.id)}
-                          className="w-4 h-4 accent-[#2563eb] rounded cursor-pointer shrink-0"
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 7: ACCOUNT */}
-          {activeTab === 'account' && (
-            <div className="space-y-4">
-              {user ? (
-                <div
-                  className={`p-5 rounded-2xl border flex items-center justify-between gap-3 ${
-                    isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                  }`}
-                >
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    {user.photoURL ? (
-                      <img src={user.photoURL} alt="Avatar" className="w-12 h-12 rounded-2xl object-cover ring-2 ring-[#2563eb]/40 shrink-0" />
-                    ) : (
-                      <div className="w-12 h-12 rounded-2xl bg-[#2563eb] text-white flex items-center justify-center font-bold text-lg shrink-0">
-                        {(user.displayName || user.email || 'M')[0].toUpperCase()}
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <div className={`text-sm font-bold flex items-center gap-2 flex-wrap ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                        <span className="truncate">{user.displayName || (isEn ? 'Maria AI User' : 'Pengguna Maria AI')}</span>
-                        {settings.isPlus ? (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#7c3aed]/20 text-[#a78bfa] border border-[#7c3aed]/40">
-                            MARIA Plus
-                          </span>
-                        ) : (
-                          <span
-                            className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${
-                              isDark ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-200 text-slate-600 border-slate-300'
-                            }`}
-                          >
-                            {isEn ? 'Free' : 'Gratis'}
-                          </span>
-                        )}
-                      </div>
-                      <div className={`text-xs truncate ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>{user.email}</div>
-                      <div className={`text-[11px] mt-0.5 ${isDark ? 'text-neutral-500' : 'text-slate-500'}`}>Workspace: Personal</div>
                     </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={signOut}
-                    className={`py-1.5 px-3 rounded-xl hover:bg-rose-500/20 text-xs font-medium cursor-pointer shrink-0 ${
-                      isDark ? 'bg-[#262838] text-neutral-300 hover:text-rose-400' : 'bg-slate-200 text-slate-700 hover:text-rose-600'
-                    }`}
-                  >
-                    {isEn ? 'Sign Out' : 'Keluar Akun'}
-                  </button>
-                </div>
-              ) : (
-                <div
-                  className={`p-5 rounded-2xl border space-y-3 ${
-                    isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                  }`}
-                >
-                  <div className={`flex items-center justify-between text-xs ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                    <span>{isEn ? 'Guest Mode (Local)' : 'Mode Tamu (Lokal)'}</span>
-                    <span>Workspace: Personal</span>
-                  </div>
-                  <div className={`text-xs leading-relaxed ${isDark ? 'text-neutral-300' : 'text-slate-600'}`}>
-                    {isEn
-                      ? 'Sign in with Google to enable automatic Cloud Firestore sync for your chat history.'
-                      : 'Masuk dengan akun Google untuk mengaktifkan sinkronisasi otomatis Cloud Firestore pada riwayat chat Anda.'}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={signIn}
-                    className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-50 text-[#1f2937] border border-slate-200/90 font-medium text-xs shadow-sm flex items-center justify-center gap-2.5 cursor-pointer"
-                  >
-                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
-                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                    </svg>
-                    <span>Continue with Google</span>
-                  </button>
+                  )}
                 </div>
               )}
 
-              {/* Usage & Model Quotas Card */}
-              <div
-                className={`p-4 rounded-2xl border space-y-2.5 ${
-                  isDark ? 'bg-[#171923] border-[#27293a]' : 'bg-slate-50/90 border-slate-200'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    {isEn ? 'Usage & Model Limits' : 'Penggunaan & Batas Model (Usage)'}
-                  </span>
-                  <span className={`text-[11px] font-mono ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
-                    {isEn ? 'Smart Quota Routing' : 'Routing Kuota Cerdas'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
-                  <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-[#12141c] border-[#252737]' : 'bg-white border-slate-200'}`}>
-                    <div className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Gemini 2.5 Flash Lite</div>
-                    <div className={`mt-0.5 ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                      {isEn ? 'Fast text chat • Priority 1' : 'Obrolan teks cepat • Prioritas 1'}
+              {/* TAB 5: SECURITY */}
+              {activeTab === 'security' && (
+                <div className={`divide-y ${isDark ? 'divide-[#212333]' : 'divide-slate-100'}`}>
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'DLP Shield' : 'Pelindung Kebocoran Data (DLP)'}</div>
+                      <div className={descCls}>{isEn ? 'Mask sensitive tokens & API credentials in outputs.' : 'Samarkan token sensitif dan kredensial pribadi di respons.'}</div>
                     </div>
+                    {renderToggle(settings.dlpEnabled !== false, (v) => handleUpdate('dlpEnabled', v), 'DLP Shield')}
                   </div>
-                  <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-[#12141c] border-[#252737]' : 'bg-white border-slate-200'}`}>
-                    <div className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Gemini 2.5 Flash</div>
-                    <div className={`mt-0.5 ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                      {isEn ? 'Video, photo & document analysis' : 'Analisis video, foto & dokumen'}
-                    </div>
-                  </div>
-                  <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-[#12141c] border-[#252737]' : 'bg-white border-slate-200'}`}>
-                    <div className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Gemini 3.8 Flash</div>
-                    <div className={`mt-0.5 ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>
-                      {isEn ? 'Deep reasoning & TTS' : 'Penalaran mendalam & TTS'}
-                    </div>
-                  </div>
-                </div>
-              </div>
 
-              {/* Maria PLUS Subscription Card */}
-              <div
-                className={`p-5 rounded-2xl border space-y-3 ${
-                  isDark
-                    ? 'bg-gradient-to-br from-[#1a152e] via-[#161726] to-[#12131d] border-indigo-500/30'
-                    : 'bg-gradient-to-br from-indigo-50 via-purple-50/70 to-white border-indigo-200'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center border ${
-                        isDark
-                          ? 'bg-indigo-600/20 text-indigo-400 border-indigo-500/30'
-                          : 'bg-indigo-500/15 text-indigo-600 border-indigo-300'
-                      }`}
-                    >
-                      <Sparkles className={`w-4 h-4 ${isDark ? 'fill-indigo-400' : 'fill-indigo-500'}`} />
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Safety Content Filter' : 'Filter Konten Sensitif'}</div>
+                      <div className={descCls}>{isEn ? 'Tighten filtering of sensitive topics in responses.' : 'Perketat penyaringan topik sensitif saat pencarian & chat.'}</div>
                     </div>
-                    <div>
-                      <div className={`text-xs font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                        <span>{isEn ? 'Maria Subscription Status' : 'Status Langganan Maria'}</span>
-                        {settings.isPlus ? (
-                          <span
-                            className={`px-2 py-0.5 rounded-full bg-emerald-500/20 text-[10px] font-bold border border-emerald-500/40 ${
-                              isDark ? 'text-emerald-300' : 'text-emerald-700'
-                            }`}
-                          >
-                            {isEn ? 'PLUS ACTIVE' : 'PLUS AKTIF'}
-                          </span>
-                        ) : (
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${
-                              isDark ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-200 text-slate-600 border-slate-300'
-                            }`}
-                          >
-                            {isEn ? 'FREE VERSION' : 'VERSI GRATIS'}
+                    {renderToggle(
+                      Boolean(settings.reduceSensitiveContent),
+                      (v) => handleUpdate('reduceSensitiveContent', v),
+                      'Safety Filter'
+                    )}
+                  </div>
+
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Sensitive Action Confirmation' : 'Konfirmasi Tindakan Sensitif'}</div>
+                      <div className={descCls}>{isEn ? 'Require security confirmation before permanent actions.' : 'Wajibkan konfirmasi keamanan sebelum eksekusi sensitif.'}</div>
+                    </div>
+                    {renderToggle(
+                      Boolean(settings.sessionLockEnabled),
+                      (v) => handleUpdate('sessionLockEnabled', v),
+                      'Session Lock'
+                    )}
+                  </div>
+
+                  <div className="py-3.5 space-y-2.5">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className={titleCls}>{isEn ? 'Two-Factor Security PIN' : 'PIN Keamanan 2FA (6-Digit)'}</div>
+                        <div className={descCls}>
+                          {settings.securityPin?.length === 6
+                            ? isEn
+                              ? 'Custom 6-digit PIN is active.'
+                              : 'PIN kustom 6-digit sedang aktif.'
+                            : isEn
+                              ? 'Protect destructive actions with a 6-digit PIN.'
+                              : 'Lindungi penghapusan riwayat dengan PIN 6-digit.'}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowPinEditor((s) => !s)}
+                        className={actionBtnCls}
+                      >
+                        {showPinEditor ? (isEn ? 'Close' : 'Tutup') : isEn ? 'Configure' : 'Atur PIN'}
+                      </button>
+                    </div>
+
+                    {showPinEditor && (
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <input
+                          type="password"
+                          inputMode="numeric"
+                          maxLength={6}
+                          value={pinDraft}
+                          onChange={(e) => setPinDraft(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          placeholder={isEn ? '6-digit numeric PIN' : 'Masukkan 6-digit PIN'}
+                          className={`w-44 px-3 py-1.5 border rounded-xl text-xs focus:outline-none ${
+                            isDark ? 'bg-[#181a25] border-[#2b2e40] text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                          }`}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSavePin}
+                          style={{ backgroundColor: activeAccentHex }}
+                          className="px-3 py-1.5 rounded-xl text-xs font-semibold text-white flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Lock className="w-3 h-3" />
+                          <span>{isEn ? 'Save PIN' : 'Simpan'}</span>
+                        </button>
+                        {pinFeedback && (
+                          <span style={{ color: activeAccentHex }} className="text-[11px] font-medium">
+                            {pinFeedback}
                           </span>
                         )}
                       </div>
-                      <div className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                        {settings.isPlus
-                          ? isEn
-                            ? 'Full access to Deep Research, Music Studio, 4K Images & top priority.'
-                            : 'Akses penuh Deep Research, Studio Musik, Gambar 4K & prioritas utama.'
-                          : isEn
-                            ? 'Unlock smart exclusive features by upgrading to Maria PLUS.'
-                            : 'Buka fitur eksklusif cerdas dengan upgrade ke Maria PLUS.'}
-                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 6: NOTIFICATIONS */}
+              {activeTab === 'notifications' && (
+                <div className={`divide-y ${isDark ? 'divide-[#212333]' : 'divide-slate-100'}`}>
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Chat Status Updates' : 'Pembaruan Status Chat'}</div>
+                      <div className={descCls}>{isEn ? 'Receive updates on replies and cloud sync status.' : 'Notifikasi progres balasan dan sinkronisasi cloud.'}</div>
+                    </div>
+                    {renderToggle(
+                      settings.notifications?.statusUpdates !== false,
+                      (val) =>
+                        handleUpdate('notifications', {
+                          soundEnabled: settings.notifications?.soundEnabled ?? true,
+                          remindersEnabled: settings.notifications?.remindersEnabled ?? true,
+                          inAppNotifications: settings.notifications?.inAppNotifications ?? true,
+                          statusUpdates: val,
+                        }),
+                      'Chat Status Updates'
+                    )}
+                  </div>
+
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Reminders & Schedule' : 'Pengingat & Agenda'}</div>
+                      <div className={descCls}>{isEn ? 'Get notified about active reminders & tasks.' : 'Pengingat otomatis untuk jadwal dan catatan aktif.'}</div>
+                    </div>
+                    {renderToggle(
+                      settings.notifications?.remindersEnabled !== false,
+                      (val) =>
+                        handleUpdate('notifications', {
+                          soundEnabled: settings.notifications?.soundEnabled ?? true,
+                          statusUpdates: settings.notifications?.statusUpdates ?? true,
+                          inAppNotifications: settings.notifications?.inAppNotifications ?? true,
+                          remindersEnabled: val,
+                        }),
+                      'Reminders'
+                    )}
+                  </div>
+
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Notification Sound' : 'Efek Suara Notifikasi'}</div>
+                      <div className={descCls}>{isEn ? 'Play subtle audio cues for notifications.' : 'Putar efek suara lembut saat ada pemberitahuan.'}</div>
+                    </div>
+                    {renderToggle(
+                      settings.notifications?.soundEnabled !== false,
+                      (val) =>
+                        handleUpdate('notifications', {
+                          statusUpdates: settings.notifications?.statusUpdates ?? true,
+                          remindersEnabled: settings.notifications?.remindersEnabled ?? true,
+                          inAppNotifications: settings.notifications?.inAppNotifications ?? true,
+                          soundEnabled: val,
+                        }),
+                      'Notification Sound'
+                    )}
+                  </div>
+
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'In-App Alerts' : 'Notifikasi Dalam Aplikasi'}</div>
+                      <div className={descCls}>{isEn ? 'Display subtle toast notifications while chatting.' : 'Tampilkan banner toast ringkas di dalam ruang chat.'}</div>
+                    </div>
+                    {renderToggle(
+                      settings.notifications?.inAppNotifications !== false,
+                      (val) =>
+                        handleUpdate('notifications', {
+                          soundEnabled: settings.notifications?.soundEnabled ?? true,
+                          statusUpdates: settings.notifications?.statusUpdates ?? true,
+                          remindersEnabled: settings.notifications?.remindersEnabled ?? true,
+                          inAppNotifications: val,
+                        }),
+                      'In-App Alerts'
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 7: VOICE */}
+              {activeTab === 'voice' && (
+                <div className={`divide-y ${isDark ? 'divide-[#212333]' : 'divide-slate-100'}`}>
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Voice Mode (Auto TTS)' : 'Respon Suara Otomatis (TTS)'}</div>
+                      <div className={descCls}>{isEn ? 'Read Maria replies aloud automatically in chat.' : 'Bacakan balasan Maria dengan suara AI secara otomatis.'}</div>
+                    </div>
+                    {renderToggle(
+                      Boolean(settings.voiceEnabled),
+                      (val) => {
+                        speechService.unlockAudio();
+                        handleUpdate('voiceEnabled', val);
+                      },
+                      'Voice Mode'
+                    )}
+                  </div>
+
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Voice Persona' : 'Karakter Suara AI'}</div>
+                      <div className={descCls}>{isEn ? 'Choose gender & character voice (Gemini 3.8 TTS).' : 'Pilih karakter suara AI dari 6 persona tersedia.'}</div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <select
+                        value={settings.voicePersona || 'wanita'}
+                        onChange={(e) => {
+                          const selected = VOICE_PERSONAS.find((p) => p.id === e.target.value);
+                          handleUpdate({
+                            voicePersona: e.target.value as any,
+                            ...(selected ? { geminiVoice: selected.geminiVoice } : {}),
+                          });
+                        }}
+                        className={selectCls}
+                      >
+                        {VOICE_PERSONAS.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {isEn ? EN_PERSONA_MAP[p.id]?.label || `${p.name} (${p.label})` : `${p.name} (${p.label})`}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          speechService.unlockAudio();
+                          if (speechState.isSpeaking && speechState.activeMessageId === 'settings_test') {
+                            speechService.stopSpeaking();
+                          } else {
+                            const sample = isEn
+                              ? EN_PERSONA_MAP[activePersonaObj.id]?.sampleText || `Hello! I'm ${activePersonaObj.name}.`
+                              : activePersonaObj.sampleText;
+                            speechService.speak(sample, {
+                              messageId: 'settings_test',
+                              speed: settings.speechSpeed || '1x',
+                              voiceName: settings.geminiVoice || activePersonaObj.geminiVoice,
+                              personaId: activePersonaObj.id,
+                              ttsModel: settings.ttsModel || 'gemini-3.8-flash-lite-tts',
+                            });
+                          }
+                        }}
+                        className={`${actionBtnCls} inline-flex items-center gap-1`}
+                      >
+                        {speechState.isLoading && speechState.activeMessageId === 'settings_test' ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : speechState.isSpeaking && speechState.activeMessageId === 'settings_test' ? (
+                          <VolumeX className="w-3.5 h-3.5 text-rose-500" />
+                        ) : (
+                          <Volume2 className="w-3.5 h-3.5" style={{ color: activeAccentHex }} />
+                        )}
+                        <span>{speechState.isSpeaking && speechState.activeMessageId === 'settings_test' ? (isEn ? 'Stop' : 'Stop') : isEn ? 'Test' : 'Tes'}</span>
+                      </button>
                     </div>
                   </div>
-                </div>
 
-                <div
-                  className={`pt-2 border-t flex items-center justify-between gap-3 ${
-                    isDark ? 'border-slate-800/80' : 'border-indigo-100'
-                  }`}
-                >
-                  <div className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {settings.isPlus
-                      ? isEn
-                        ? 'Plan: Annual Pro (VIP)'
-                        : 'Paket: Tahunan Pro (VIP)'
-                      : isEn
-                        ? 'Starting from Rp 33,250 / mo'
-                        : 'Mulai dari Rp 33.250 / bln'}
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Vocal Timbre' : 'Timbre Vokal'}</div>
+                      <div className={descCls}>{isEn ? 'Fine-tune Gemini AI Engine vocal tone.' : 'Sesuaikan karakter vokal pada mesin suara.'}</div>
+                    </div>
+                    <select
+                      value={settings.geminiVoice || 'Aoede'}
+                      onChange={(e) => handleUpdate('geminiVoice', e.target.value as any)}
+                      className={selectCls}
+                    >
+                      {VOICE_TIMBRES.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {isEn ? v.labelEn : v.labelId}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onClose();
-                      onOpenPlusModal?.();
-                    }}
-                    className={`py-1.5 px-3.5 rounded-xl font-bold text-xs shadow-md cursor-pointer flex items-center gap-1.5 ${
-                      settings.isPlus
-                        ? isDark
-                          ? 'bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-500/30'
-                          : 'bg-slate-200 hover:bg-slate-300 text-indigo-700 border border-indigo-300'
-                        : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white'
-                    }`}
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>
-                      {settings.isPlus
-                        ? isEn
-                          ? 'Manage Maria PLUS'
-                          : 'Kelola Maria PLUS'
-                        : isEn
-                          ? 'Upgrade to Maria PLUS'
-                          : 'Upgrade ke Maria PLUS'}
-                    </span>
-                  </button>
+
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Voice Language' : 'Bahasa Pengenalan Suara'}</div>
+                      <div className={descCls}>{isEn ? 'Set speech-to-text dictation language.' : 'Bahasa dikte suara saat menggunakan mikrofon.'}</div>
+                    </div>
+                    <select
+                      value={settings.voiceLanguage || 'auto'}
+                      onChange={(e) => handleUpdate('voiceLanguage', e.target.value as any)}
+                      className={selectCls}
+                    >
+                      <option value="auto">{isEn ? 'Auto' : 'Otomatis'}</option>
+                      <option value="id-ID">Indonesia</option>
+                      <option value="en-US">English</option>
+                    </select>
+                  </div>
+
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Speaking Speed' : 'Kecepatan Bicara'}</div>
+                      <div className={descCls}>{isEn ? 'Adjust voice playback tempo.' : 'Atur kecepatan pembacaan suara AI.'}</div>
+                    </div>
+                    <select
+                      value={settings.speechSpeed || '1x'}
+                      onChange={(e) => handleUpdate('speechSpeed', e.target.value as any)}
+                      className={selectCls}
+                    >
+                      <option value="0.75x">{isEn ? '0.75x (Slow)' : '0.75x (Pelan)'}</option>
+                      <option value="1x">{isEn ? '1x (Normal)' : '1x (Normal)'}</option>
+                      <option value="1.25x">{isEn ? '1.25x (Fast)' : '1.25x (Cepat)'}</option>
+                      <option value="1.5x">{isEn ? '1.5x (Faster)' : '1.5x (Sangat Cepat)'}</option>
+                    </select>
+                  </div>
+
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Background Playback' : 'Pemutaran Latar Belakang'}</div>
+                      <div className={descCls}>{isEn ? 'Keep voice active when switching views.' : 'Pertahankan suara tetap berjalan saat berpindah tab.'}</div>
+                    </div>
+                    {renderToggle(
+                      Boolean(settings.backgroundVoice),
+                      (v) => handleUpdate('backgroundVoice', v),
+                      'Background Playback'
+                    )}
+                  </div>
+
+                  <div className="py-3.5 space-y-2.5">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className={titleCls}>
+                          {isEn
+                            ? `Pronunciation Dictionary (${(settings.speechDictionary || []).length})`
+                            : `Kamus Pengucapan (${(settings.speechDictionary || []).length})`}
+                        </div>
+                        <div className={descCls}>{isEn ? 'Custom pronunciation rules for special acronyms.' : 'Atur pelafalan khusus untuk istilah atau singkatan.'}</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowDictEditor((s) => !s)}
+                        className={`${actionBtnCls} inline-flex items-center gap-1`}
+                      >
+                        <span>{showDictEditor ? (isEn ? 'Hide' : 'Tutup') : isEn ? 'Manage' : 'Kelola'}</span>
+                        {showDictEditor ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+
+                    {showDictEditor && (
+                      <div className="space-y-2 pt-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2">
+                          <input
+                            type="text"
+                            value={dictTerm}
+                            onChange={(e) => setDictTerm(e.target.value)}
+                            placeholder={isEn ? 'Term (e.g., API)' : 'Kata asli (misal: API)'}
+                            className={`px-3 py-1.5 border rounded-xl text-xs focus:outline-none ${
+                              isDark ? 'bg-[#181a25] border-[#2b2e40] text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            }`}
+                          />
+                          <input
+                            type="text"
+                            value={dictPronunciation}
+                            onChange={(e) => setDictPronunciation(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleAddDictionaryEntry()}
+                            placeholder={isEn ? 'Sounds like (e.g., A-P-I)' : 'Cara baca (misal: E-Pi-Ai)'}
+                            className={`px-3 py-1.5 border rounded-xl text-xs focus:outline-none ${
+                              isDark ? 'bg-[#181a25] border-[#2b2e40] text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                            }`}
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddDictionaryEntry}
+                            style={{ backgroundColor: activeAccentHex }}
+                            className="px-3 py-1.5 rounded-xl text-xs font-semibold text-white cursor-pointer"
+                          >
+                            {isEn ? 'Add' : 'Tambah'}
+                          </button>
+                        </div>
+
+                        {(settings.speechDictionary || []).length > 0 && (
+                          <div className={`divide-y rounded-xl border max-h-28 overflow-y-auto ${isDark ? 'border-[#252738] divide-[#212333] bg-[#12141c]' : 'border-slate-200 divide-slate-100 bg-slate-50/70'}`}>
+                            {(settings.speechDictionary || []).map((entry) => (
+                              <div key={entry.id} className="px-3 py-1.5 flex items-center justify-between text-xs">
+                                <span className="truncate">
+                                  <strong className={isDark ? 'text-white' : 'text-slate-900'}>{entry.term}</strong>
+                                  <span className="mx-1.5 opacity-50">→</span>
+                                  <span style={{ color: activeAccentHex }}>{entry.pronunciation || entry.term}</span>
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveDictionaryEntry(entry.id)}
+                                  className="text-neutral-400 hover:text-rose-500 p-0.5 cursor-pointer"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* TAB 8: DATA & PRIVACY */}
+              {activeTab === 'privacy' && (
+                <div className={`divide-y ${isDark ? 'divide-[#212333]' : 'divide-slate-100'}`}>
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Save Conversation History' : 'Simpan Riwayat Percakapan'}</div>
+                      <div className={descCls}>{isEn ? 'Sync chats automatically to Cloud Firestore.' : 'Simpan riwayat obrolan secara otomatis ke Cloud Firestore.'}</div>
+                    </div>
+                    {renderToggle(
+                      settings.saveChatHistory !== false,
+                      (v) => handleUpdate('saveChatHistory', v),
+                      'Save History'
+                    )}
+                  </div>
+
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Temporary Chat Mode' : 'Mode Obrolan Sementara'}</div>
+                      <div className={descCls}>{isEn ? 'Do not save new chats to history or permanent memory.' : 'Chat baru tidak akan dicatat ke riwayat cloud maupun memori.'}</div>
+                    </div>
+                    {renderToggle(
+                      Boolean(settings.temporaryChat),
+                      (v) => handleUpdate('temporaryChat', v),
+                      'Temporary Chat'
+                    )}
+                  </div>
+
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>
+                        {isEn ? `Local Storage (${storageStats.totalLabel})` : `Penyimpanan Lokal (${storageStats.totalLabel})`}
+                      </div>
+                      <div className={descCls}>
+                        {cacheNotice ||
+                          (isEn
+                            ? `Settings: ${storageStats.settingsLabel} • Memory: ${storageStats.memoryLabel} • Cache: ${storageStats.otherLabel}`
+                            : `Setelan: ${storageStats.settingsLabel} • Memori: ${storageStats.memoryLabel} • Cache: ${storageStats.otherLabel}`)}
+                      </div>
+                    </div>
+                    <button type="button" onClick={handleClearCache} className={actionBtnCls}>
+                      {isEn ? 'Clear Cache' : 'Bersihkan'}
+                    </button>
+                  </div>
+
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Export Account Data' : 'Ekspor Data Pengguna (JSON)'}</div>
+                      <div className={descCls}>{isEn ? 'Download settings, memories & conversation backup.' : 'Unduh salinan pengaturan, memori, dan daftar obrolan.'}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleExportData}
+                      className={`${actionBtnCls} inline-flex items-center gap-1.5`}
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>{isEn ? 'Export' : 'Ekspor'}</span>
+                    </button>
+                  </div>
+
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-semibold text-rose-500">
+                        {isEn ? 'Delete All Chat History' : 'Hapus Seluruh Riwayat Chat'}
+                      </div>
+                      <div className={descCls}>{isEn ? 'Requires 2FA PIN before permanent cloud deletion.' : 'Memerlukan otentikasi 2FA sebelum dihapus permanen.'}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onClearHistoryRequest();
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>{isEn ? 'Delete' : 'Hapus'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 9: ACCOUNT */}
+              {activeTab === 'account' && (
+                <div className={`divide-y ${isDark ? 'divide-[#212333]' : 'divide-slate-100'}`}>
+                  {user ? (
+                    <div className="py-3.5 flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {user.photoURL ? (
+                          <img
+                            src={user.photoURL}
+                            alt="Avatar"
+                            className="w-10 h-10 rounded-xl object-cover shrink-0 border border-slate-300/30"
+                          />
+                        ) : (
+                          <div
+                            style={{ backgroundColor: activeAccentHex }}
+                            className="w-10 h-10 rounded-xl text-white flex items-center justify-center font-bold text-sm shrink-0"
+                          >
+                            {(user.displayName || user.email || 'M')[0].toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <div className={`${titleCls} truncate`}>
+                            {user.displayName || (isEn ? 'Maria AI User' : 'Pengguna Maria AI')}
+                          </div>
+                          <div className={`${descCls} truncate`}>{user.email}</div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={signOut}
+                        className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-500/15 text-rose-500 hover:bg-rose-500/25 cursor-pointer shrink-0"
+                      >
+                        {isEn ? 'Sign Out' : 'Keluar'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="py-3.5 flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className={titleCls}>{isEn ? 'Guest Mode (Local)' : 'Mode Tamu (Lokal)'}</div>
+                        <div className={descCls}>{isEn ? 'Sign in with Google to sync history & library to Cloud.' : 'Masuk dengan Google untuk sinkronisasi riwayat & pustaka.'}</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={signIn}
+                        className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 text-xs font-semibold inline-flex items-center gap-2 cursor-pointer shrink-0 shadow-xs"
+                      >
+                        <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                        </svg>
+                        <span>{isEn ? 'Sign In' : 'Masuk Google'}</span>
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>
+                        {isEn ? 'Maria Subscription' : 'Langganan Maria PLUS'}
+                      </div>
+                      <div className={descCls}>
+                        {settings.isPlus
+                          ? isEn
+                            ? 'PLUS Active • Full access to Deep Research & Studio.'
+                            : 'PLUS Aktif • Akses penuh Deep Research, Musik & Gambar.'
+                          : isEn
+                            ? 'Free Tier • Upgrade for Deep Research & priority speed.'
+                            : 'Versi Gratis • Upgrade untuk Deep Research & prioritas.'}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenPlusModal?.();
+                      }}
+                      style={!settings.isPlus ? { backgroundColor: activeAccentHex } : undefined}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer shrink-0 ${
+                        settings.isPlus ? actionBtnCls : 'text-white'
+                      }`}
+                    >
+                      {settings.isPlus ? (isEn ? 'Manage' : 'Kelola') : isEn ? 'Upgrade PLUS' : 'Upgrade PLUS'}
+                    </button>
+                  </div>
+
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className={titleCls}>{isEn ? 'Smart Model Quota Routing' : 'Routing Kuota Model AI'}</div>
+                      <div className={descCls}>Gemini 2.5 Flash Lite · 2.5 Flash (Multimodal) · 3.8 Flash</div>
+                    </div>
+                    <span className="text-[11px] font-semibold text-emerald-500 shrink-0">
+                      {isEn ? 'Optimal' : 'Optimal'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 10: ABOUT */}
+              {activeTab === 'about' && (
+                <div className={`divide-y ${isDark ? 'divide-[#212333]' : 'divide-slate-100'}`}>
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div>
+                      <div className={titleCls}>{isEn ? 'Application' : 'Aplikasi'}</div>
+                      <div className={descCls}>Maria AI Assistant · Version 2.5</div>
+                    </div>
+                    <span className={`text-xs font-mono ${isDark ? 'text-neutral-400' : 'text-slate-500'}`}>v2.5</span>
+                  </div>
+
+                  <div className="py-3.5 flex items-center justify-between gap-4">
+                    <div>
+                      <div className={titleCls}>{isEn ? 'Developer' : 'Pengembang'}</div>
+                      <div className={descCls}>Created by Zan.Dev</div>
+                    </div>
+                    <Sliders className={`w-4 h-4 ${isDark ? 'text-neutral-500' : 'text-slate-400'}`} />
+                  </div>
+
+                  {[
+                    {
+                      label: isEn ? 'Help Center' : 'Pusat Bantuan',
+                      desc: isEn ? 'Usage guides and common troubleshooting.' : 'Panduan penggunaan & tanya jawab umum.',
+                      href: '/help.html',
+                    },
+                    {
+                      label: isEn ? 'Terms of Service' : 'Ketentuan Layanan',
+                      desc: isEn ? 'User agreement and platform guidelines.' : 'Aturan penggunaan layanan Maria AI.',
+                      href: '/terms.html',
+                    },
+                    {
+                      label: isEn ? 'Privacy Policy' : 'Kebijakan Privasi',
+                      desc: isEn ? 'How your data and chats are handled.' : 'Transparansi pengelolaan data dan percakapan.',
+                      href: '/privacy.html',
+                    },
+                    {
+                      label: isEn ? 'Cookie Policy' : 'Kebijakan Cookie',
+                      desc: isEn ? 'Local session and zero-ad cookie transparency.' : 'Informasi sesi lokal & bebas cookie iklan.',
+                      href: '/cookies.html',
+                    },
+                  ].map((docItem) => (
+                    <div key={docItem.href} className="py-3 flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className={titleCls}>{docItem.label}</div>
+                        <div className={descCls}>{docItem.desc}</div>
+                      </div>
+                      <a
+                        href={docItem.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`${actionBtnCls} inline-flex items-center gap-1`}
+                      >
+                        <span>{isEn ? 'Open' : 'Buka'}</span>
+                        <ExternalLink className="w-3 h-3 opacity-70" />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Clean Footer Bar */}
+            <div
+              className={`px-5 py-3 border-t flex items-center justify-between gap-3 shrink-0 ${
+                isDark ? 'border-[#212333] bg-[#13141d]' : 'border-slate-100 bg-slate-50/70'
+              }`}
+            >
+              <span
+                className={`text-xs font-medium flex items-center gap-1.5 ${
+                  savedSuccess
+                    ? 'text-emerald-500'
+                    : isDark
+                    ? 'text-neutral-400'
+                    : 'text-slate-500'
+                }`}
+              >
+                {savedSuccess ? (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>{isEn ? 'Changes saved automatically' : 'Perubahan tersimpan otomatis'}</span>
+                  </>
+                ) : (
+                  <span>{isEn ? 'Synced automatically' : 'Tersimpan otomatis'}</span>
+                )}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerSavedIndicator();
+                  onClose();
+                }}
+                style={{ backgroundColor: activeAccentHex }}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-white shadow-sm hover:opacity-95 cursor-pointer transition-opacity"
+              >
+                {isEn ? 'Done' : 'Selesai'}
+              </button>
+            </div>
+          </main>
         </div>
       </div>
     </div>

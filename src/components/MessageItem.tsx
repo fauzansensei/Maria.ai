@@ -29,6 +29,7 @@ import {
   MoreVertical,
   TextSelect,
   X,
+  Bookmark,
 } from 'lucide-react';
 import { Message, MediaAttachment } from '../types/index.ts';
 import { LaunchAction, detectLaunchAction } from '../lib/actionLauncher.ts';
@@ -47,6 +48,7 @@ interface MessageItemProps {
   onRegenerateMessage?: (messageId: string) => void;
   onLoadToInput?: (text: string) => void;
   onOpenImageStudio?: (baseImage?: string, prompt?: string) => void;
+  onSaveImageToLibrary?: (data: { id: string; imageUrl: string; title: string; model?: string; sourceMessageId?: string }) => void;
 }
 
 import { autoFormatMarkdown, sanitizeModelText } from '../lib/formatUtils.ts';
@@ -329,8 +331,10 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
   onRegenerateMessage,
   onLoadToInput,
   onOpenImageStudio,
+  onSaveImageToLibrary,
 }) => {
   const { isEn } = useLanguage();
+  const [savedToLibIds, setSavedToLibIds] = useState<Record<string, boolean>>({});
   const [copied, setCopied] = useState(false);
   const [shared, setShared] = useState(false);
   const [feedback, setFeedback] = useState<'like' | 'dislike' | null>(null);
@@ -840,6 +844,41 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
                     <Eye className="w-4 h-4" />
                     <span>Lihat</span>
                   </div>
+                  {onSaveImageToLibrary && (
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const bestUrl =
+                          img.originalUrl ||
+                          getOriginalMedia(img.id) ||
+                          getOriginalMedia(img.name) ||
+                          (await getOriginalMediaBlob(img.id)) ||
+                          (await getOriginalMediaBlob(img.name)) ||
+                          (img.base64Data ? `data:${img.mimeType || 'image/jpeg'};base64,${img.base64Data}` : '') ||
+                          img.previewUrl ||
+                          '';
+                        if (!bestUrl) return;
+                        const sourceKey = `att-${img.id}`;
+                        onSaveImageToLibrary({
+                          id: sourceKey,
+                          imageUrl: bestUrl,
+                          title: img.name || 'Gambar Chat',
+                          model: 'uploaded',
+                          sourceMessageId: message.id,
+                        });
+                        setSavedToLibIds((prev) => ({ ...prev, [sourceKey]: true }));
+                      }}
+                      title={isEn ? 'Save to Library' : 'Simpan ke Pustaka'}
+                      className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/65 hover:bg-blue-600 text-white transition-colors cursor-pointer"
+                    >
+                      {savedToLibIds[`att-${img.id}`] ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      ) : (
+                        <Bookmark className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -1318,7 +1357,37 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
                   <span>{isEn ? 'Edit Image' : 'Edit Gambar'}</span>
                 </button>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {onSaveImageToLibrary && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const sourceKey = `chat-img-${message.id}`;
+                        onSaveImageToLibrary({
+                          id: sourceKey,
+                          imageUrl: currentImageUri,
+                          title: (message.content || 'Gambar AI').slice(0, 120),
+                          model: message.model || 'gemini-image',
+                          sourceMessageId: message.id,
+                        });
+                        setSavedToLibIds((prev) => ({ ...prev, [sourceKey]: true }));
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-medium cursor-pointer"
+                      title={isEn ? 'Save to Library' : 'Simpan ke Pustaka'}
+                    >
+                      {savedToLibIds[`chat-img-${message.id}`] ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>{isEn ? 'Saved' : 'Tersimpan'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Bookmark className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">{isEn ? 'Save to Library' : 'Ke Pustaka'}</span>
+                        </>
+                      )}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => {

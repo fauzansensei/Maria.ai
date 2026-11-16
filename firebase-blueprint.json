@@ -151,12 +151,110 @@
         }
       },
       "required": ["id", "conversationId", "userId", "role", "content", "createdAt"]
+    },
+    "LibraryItem": {
+      "title": "LibraryItem",
+      "description": "Saved image asset or archived conversation snapshot persisted in Maria Library",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "category": {
+          "type": "string",
+          "enum": ["images", "documents", "audio", "bookmarked", "chat-history", "archive", "formulas"],
+          "maxLength": 40
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["image", "chat", "note"],
+          "maxLength": 20
+        },
+        "type": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "date": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "size": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "previewUrl": {
+          "type": "string",
+          "maxLength": 220000
+        },
+        "imageMediaKey": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "snippet": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "badge": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "sourceConvId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "sourceMessageId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "model": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "mode": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "archivedMessages": {
+          "type": "array",
+          "maxItems": 200
+        },
+        "createdAtIso": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "updatedAtIso": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "userId", "title", "category", "kind", "type", "date"]
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": "UserProfile",
       "description": "Private user profile records"
+    },
+    "/users/{userId}/library/{itemId}": {
+      "schema": "LibraryItem",
+      "description": "Persistent user library assets (saved images and full archived chat snapshots)"
     },
     "/conversations/{conversationId}": {
       "schema": "Conversation",

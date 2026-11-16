@@ -8,7 +8,8 @@
 - Messages at `/conversations/{conversationId}/messages/{messageId}` can only be created if the parent conversation belongs to the authenticated user (`get(/databases/$(database)/documents/conversations/$(conversationId)).data.userId == request.auth.uid`).
 - Updates to conversations only allow modifying `title`, `updatedAt`, and `mode`. `userId` and `createdAt` are immutable.
 - Messages are append-only / immutable once written to preserve conversation integrity.
-- Denial of Wallet & Injection guards: String lengths are strictly constrained (messages <= 50,000 chars, title <= 200 chars, ID <= 128 chars).
+- Library items and archived chat snapshots at `/users/{userId}/library/{itemId}` are strictly isolated to `request.auth.uid == userId`, validated by `isValidLibraryItem`, and decoupled from `/conversations/{conversationId}` so deleting an active chat never removes its archived snapshot.
+- Denial of Wallet & Injection guards: String lengths are strictly constrained (messages <= 50,000 chars, library previewUrl <= 220,000 chars, title <= 200 chars, ID <= 128 chars).
 
 ## 2. Dirty Dozen Security Payloads
 1. **Unauthenticated Read User Profile**: Attempting `GET /users/victim123` with `request.auth == null` -> PERMISSION_DENIED

@@ -7,7 +7,7 @@ import { ChatArea } from './components/ChatArea.tsx';
 import { LibraryArea } from './components/LibraryArea.tsx';
 import { DiscoverArea } from './components/DiscoverArea.tsx';
 import { NotebookArea } from './components/NotebookArea.tsx';
-import { ImagesArea } from './components/ImagesArea.tsx';
+import { ImagesArea, GalleryImageRecord } from './components/ImagesArea.tsx';
 import { ProjectsArea } from './components/ProjectsArea.tsx';
 import { PluginsArea } from './components/PluginsArea.tsx';
 import { StudentsArea } from './components/StudentsArea.tsx';
@@ -43,7 +43,23 @@ import {
   deleteConversation,
   updateConversation,
   getUserProfile,
+  getConversationMessages,
+  subscribeLibraryItems,
+  saveLibraryItemToCloud,
+  deleteLibraryItemFromCloud,
+  restoreArchivedConversation,
 } from './lib/firestoreService.ts';
+import {
+  LibraryItem,
+  loadLibraryItems,
+  upsertLibraryItem,
+  removeLibraryItemLocal,
+  mergeRemoteLibraryItems,
+  markChatImagesMoved,
+  buildSavedImageItem,
+  buildArchivedChatItem,
+  subscribeLibrary,
+} from './lib/libraryStore.ts';
 import { userMemoryService } from './lib/userMemoryService.ts';
 import {
   NotebookItem,
@@ -88,6 +104,25 @@ function AppContent() {
   const [isPlusModalOpen, setIsPlusModalOpen] = useState(false);
   const [studioBaseImage, setStudioBaseImage] = useState<string | null>(null);
   const [studioPrompt, setStudioPrompt] = useState<string>('');
+  const [libraryItems, setLibraryItems] = useState<LibraryItem[]>(() => loadLibraryItems());
+  const [globalToast, setGlobalToast] = useState<{
+    message: string;
+    actionLabel?: string;
+    onAction?: () => void;
+  } | null>(null);
+
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showGlobalToast = (
+    message: string,
+    actionLabel?: string,
+    onAction?: () => void
+  ) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setGlobalToast({ message, actionLabel, onAction });
+    toastTimerRef.current = setTimeout(() => {
+      setGlobalToast(null);
+    }, 4500);
+  };
 
   // User Settings for TTS, voice, and preferences
   const [settings, setSettings] = useState<UserSettings>(() => {
@@ -300,6 +335,34 @@ function AppContent() {
     return () => unsubscribe();
   }, [user]);
 
+  // 2b. Sync Persistent Maria Library (local cache + Firestore cloud sync)
+  useEffect(() => {
+    setLibraryItems(loadLibraryItems());
+    const unsubLocal = subscribeLibrary(() => {
+      setLibraryItems(loadLibraryItems());
+    });
+
+    if (!user?.uid) {
+      return () => unsubLocal();
+    }
+
+    const unsubCloud = subscribeLibraryItems(
+      user.uid,
+      (remoteItems) => {
+        const merged = mergeRemoteLibraryItems(remoteItems);
+        setLibraryItems(merged);
+      },
+      (err) => {
+        console.warn('Library Firestore sync warning:', err);
+      }
+    );
+
+    return () => {
+      unsubLocal();
+      unsubCloud();
+    };
+  }, [user?.uid]);
+
   // 3. Subscribe to Active Conversation Messages
   useEffect(() => {
     const prevCtx = prevSubscribedConvRef.current;
@@ -439,15 +502,185 @@ function AppContent() {
     });
   };
 
-  // Handler: Archive Conversation to Library
-  const handleArchiveConversation = (convId: string) => {
+  // Handler: Archive Full Conversation Snapshot to Library (survives Sidebar deletion/purge)
+  const handleArchiveConversation = async (convId: string) => {
     const conv = conversations.find((c) => c.id === convId);
-    if (conv) {
-      alert(`Percakapan "${conv.title}" berhasil diarsipkan ke Pustaka Maria!`);
+    const isEnglish = settings.language === 'English';
+
+    try {
+      let targetMessages: Message[] = [];
+      if (convId === activeConvIdRef.current && messages.length > 0) {
+        targetMessages = messages;
+      } else if (user) {
+        targetMessages = await getConversationMessages(convId);
+      } else {
+        targetMessages = guestMessages;
+      }
+
+      const archivedItem = await buildArchivedChatItem({
+        userId: user?.uid || 'guest',
+        conv: conv || {
+          id: convId,
+          title:
+            targetMessages.find((m) => m.role === 'user')?.content?.slice(0, 60) ||
+            (isEnglish ? 'Archived Chat' : 'Arsip Percakapan'),
+          mode: activeMode,
+          model: 'gemini-3.5-flash',
+        },
+        messages: targetMessages,
+      });
+
+      upsertLibraryItem(archivedItem);
+      if (user) {
+        await saveLibraryItemToCloud(user.uid, archivedItem).catch((err) => {
+          console.warn('Cloud archive save warning:', err);
+        });
+      }
+
+      showGlobalToast(
+        isEnglish
+          ? `Archived "${archivedItem.title}" (${archivedItem.archivedMessages?.length || 0} messages) to Library.`
+          : `"${archivedItem.title}" (${archivedItem.archivedMessages?.length || 0} pesan) disimpan permanen ke Pustaka.`,
+        isEnglish ? 'Open Library' : 'Buka Pustaka',
+        () => setActiveView('library')
+      );
+    } catch (err) {
+      console.error('Failed to archive conversation:', err);
+      showGlobalToast(
+        isEnglish
+          ? 'Could not archive conversation. Please try again.'
+          : 'Gagal mengarsipkan percakapan. Silakan coba lagi.'
+      );
     }
   };
 
-  // Handler: Clear All History with 2FA verification
+  // Handler: Move a single chat/studio image into Library and hide it from ImagesArea
+  const handleMoveImageToLibrary = async (img: GalleryImageRecord) => {
+    const libItem = await buildSavedImageItem({
+      userId: user?.uid || 'guest',
+      sourceId: img.id,
+      title: img.prompt,
+      imageUrl: img.imageUrl,
+      model: img.model,
+      sourceConvId: activeConvIdRef.current || undefined,
+      sourceMessageId: img.sourceMessageId || img.id,
+    });
+    markChatImagesMoved([img.id]);
+    upsertLibraryItem(libItem);
+    if (user) {
+      await saveLibraryItemToCloud(user.uid, libItem).catch((err) => {
+        console.warn('Cloud library image save warning:', err);
+      });
+    }
+  };
+
+  // Handler: Move all visible chat images into Library in one click
+  const handleMoveAllImagesToLibrary = async (imgs: GalleryImageRecord[]) => {
+    if (imgs.length === 0) return;
+    markChatImagesMoved(imgs.map((i) => i.id));
+    for (const img of imgs) {
+      const libItem = await buildSavedImageItem({
+        userId: user?.uid || 'guest',
+        sourceId: img.id,
+        title: img.prompt,
+        imageUrl: img.imageUrl,
+        model: img.model,
+        sourceConvId: activeConvIdRef.current || undefined,
+        sourceMessageId: img.sourceMessageId || img.id,
+      });
+      upsertLibraryItem(libItem);
+      if (user) {
+        await saveLibraryItemToCloud(user.uid, libItem).catch(() => {});
+      }
+    }
+  };
+
+  // Handler: Quick-save image directly from a chat bubble into Library
+  const handleSaveImageFromChat = async (data: {
+    id: string;
+    imageUrl: string;
+    title: string;
+    model?: string;
+    sourceMessageId?: string;
+  }) => {
+    const isEnglish = settings.language === 'English';
+    const libItem = await buildSavedImageItem({
+      userId: user?.uid || 'guest',
+      sourceId: data.id,
+      title: data.title,
+      imageUrl: data.imageUrl,
+      model: data.model,
+      sourceConvId: activeConvIdRef.current || undefined,
+      sourceMessageId: data.sourceMessageId || data.id,
+    });
+    upsertLibraryItem(libItem);
+    if (user) {
+      await saveLibraryItemToCloud(user.uid, libItem).catch(() => {});
+    }
+    showGlobalToast(
+      isEnglish ? 'Image saved to Maria Library' : 'Gambar disimpan ke Pustaka Maria',
+      isEnglish ? 'Open Library' : 'Buka Pustaka',
+      () => setActiveView('library')
+    );
+  };
+
+  // Handler: Delete an item from Library
+  const handleDeleteLibraryItem = async (itemId: string) => {
+    removeLibraryItemLocal(itemId);
+    if (user) {
+      await deleteLibraryItemFromCloud(user.uid, itemId).catch((err) => {
+        console.warn('Cloud library delete warning:', err);
+      });
+    }
+  };
+
+  // Handler: Restore an archived chat snapshot back into active Chat Sidebar
+  const handleRestoreArchivedChat = async (item: LibraryItem) => {
+    const isEnglish = settings.language === 'English';
+    try {
+      if (user) {
+        const restoredId = await restoreArchivedConversation(user.uid, item);
+        activeConvIdRef.current = restoredId;
+        setActiveConvId(restoredId);
+        setActiveView('chat');
+      } else {
+        const restoredMsgs: Message[] = (item.archivedMessages || []).map((m, idx) => ({
+          id: m.id || `restored_${Date.now()}_${idx}`,
+          conversationId: 'guest_conv',
+          userId: 'guest',
+          role: m.role,
+          content: m.content,
+          model: m.model,
+          mode: (m.mode as AiMode) || 'general',
+          imageUri: m.imageUri,
+          attachments: m.attachments?.map((a) => ({
+            ...a,
+            previewUrl: a.previewUrl || '',
+            base64Data: '',
+          })),
+          groundingLinks: m.groundingLinks,
+          createdAt: m.createdAtIso ? new Date(m.createdAtIso) : new Date(),
+        }));
+        activeConvIdRef.current = null;
+        setActiveConvId(null);
+        setGuestMessages(restoredMsgs);
+        setMessages(restoredMsgs);
+        setActiveView('chat');
+      }
+      showGlobalToast(
+        isEnglish
+          ? `Restored "${item.title}" back to chat.`
+          : `Chat "${item.title}" berhasil dipulihkan.`
+      );
+    } catch (err) {
+      console.error('Failed to restore archived chat:', err);
+      showGlobalToast(
+        isEnglish ? 'Failed to restore chat.' : 'Gagal memulihkan arsip chat.'
+      );
+    }
+  };
+
+  // Handler: Clear All Active History with 2FA verification (Library archives remain intact!)
   const handleConfirmPurgeAllHistory = async () => {
     const toDelete = [...conversations];
     hasAutoSelectedConvRef.current = true;
@@ -463,7 +696,11 @@ function AppContent() {
           await deleteConversation(conv.id, user.uid);
         }
       }
-      alert('Seluruh riwayat percakapan berhasil dihapus secara aman.');
+      showGlobalToast(
+        settings.language === 'English'
+          ? 'Active chat history cleared. Library archives remain intact.'
+          : 'Riwayat chat aktif dihapus. Arsip & gambar di Pustaka tetap aman.'
+      );
     } catch (err) {
       console.error('Error purging history:', err);
     }
@@ -1558,13 +1795,23 @@ function AppContent() {
             webSearchDefault={settings.webSearchDefault !== false}
             homepageSuggestions={settings.homepageSuggestions !== false}
             temporaryChat={Boolean(settings.temporaryChat)}
+            onArchiveConversation={handleArchiveConversation}
+            onSaveImageToLibrary={handleSaveImageFromChat}
           />
         )}
 
         {activeView === 'library' && (
           <LibraryArea
+            items={libraryItems}
             onBackToChat={() => setActiveView('chat')}
             onOpenSidebar={() => setIsSidebarOpen(true)}
+            onDeleteItem={handleDeleteLibraryItem}
+            onRestoreArchivedChat={handleRestoreArchivedChat}
+            onOpenImageStudio={handleOpenImageStudio}
+            onSendImageToChat={(imageUrl, prompt, model) => {
+              setActiveView('chat');
+              handleSendStudioImageToChat(imageUrl, prompt, model);
+            }}
             onSelectPrompt={(prompt) => {
               setActiveView('chat');
               handleSendMessage(prompt, 'general');
@@ -1602,6 +1849,9 @@ function AppContent() {
             onBackToChat={() => setActiveView('chat')}
             onOpenSidebar={() => setIsSidebarOpen(true)}
             onOpenImageStudio={handleOpenImageStudio}
+            onMoveImageToLibrary={handleMoveImageToLibrary}
+            onMoveAllImagesToLibrary={handleMoveAllImagesToLibrary}
+            onOpenLibrary={() => setActiveView('library')}
             onSendImageToChat={(imageUrl, prompt, model) => {
               setActiveView('chat');
               handleSendStudioImageToChat(imageUrl, prompt, model);
@@ -1755,6 +2005,26 @@ function AppContent() {
         isPlus={Boolean(settings.isPlus)}
         onTogglePlus={handleTogglePlus}
       />
+
+      {/* Global Non-Blocking Feedback Toast */}
+      {globalToast && (
+        <div className="fixed bottom-5 right-4 sm:right-6 z-50 max-w-sm px-4 py-3 rounded-2xl bg-slate-900 dark:bg-[#171b28] text-white border border-slate-700/80 shadow-2xl flex items-center justify-between gap-3 text-xs animate-in fade-in duration-150">
+          <span className="leading-snug">{globalToast.message}</span>
+          {globalToast.actionLabel && globalToast.onAction && (
+            <button
+              type="button"
+              onClick={() => {
+                const fn = globalToast.onAction;
+                setGlobalToast(null);
+                fn?.();
+              }}
+              className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shrink-0 cursor-pointer"
+            >
+              {globalToast.actionLabel}
+            </button>
+          )}
+        </div>
+      )}
     </div>
     </LanguageProvider>
   );

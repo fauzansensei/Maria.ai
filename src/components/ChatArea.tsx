@@ -14,6 +14,7 @@ import {
   Trash2,
   X,
   User as UserIcon,
+  Archive,
 } from 'lucide-react';
 import { Message, Conversation, AiMode, MediaAttachment, VoicePersonaGender, LaunchAction } from '../types/index.ts';
 import { PROMPT_STARTERS } from '../constants.ts';
@@ -62,6 +63,8 @@ interface ChatAreaProps {
   webSearchDefault?: boolean;
   homepageSuggestions?: boolean;
   temporaryChat?: boolean;
+  onArchiveConversation?: (convId: string) => void;
+  onSaveImageToLibrary?: (data: { id: string; imageUrl: string; title: string; model?: string; sourceMessageId?: string }) => void;
 }
 
 interface NotificationItem {
@@ -102,6 +105,8 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
   webSearchDefault = true,
   homepageSuggestions = true,
   temporaryChat = false,
+  onArchiveConversation,
+  onSaveImageToLibrary,
 }) => {
   const { isEn } = useLanguage();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -465,6 +470,20 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
                           <Pencil className="w-4 h-4 text-gray-500 dark:text-slate-400 shrink-0" />
                           <span>{isEn ? 'Rename' : 'Ubah nama'}</span>
                         </button>
+
+                        {onArchiveConversation && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onArchiveConversation(activeConversation.id);
+                              setShowChatMenu(false);
+                            }}
+                            className="w-full min-h-[38px] flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-[#232634] text-left cursor-pointer"
+                          >
+                            <Archive className="w-4 h-4 text-blue-500 shrink-0" />
+                            <span>{isEn ? 'Archive to Library' : 'Arsipkan ke Pustaka'}</span>
+                          </button>
+                        )}
                       </>
                     )}
 
@@ -662,6 +681,7 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
                 onRegenerateMessage={onRegenerateMessage}
                 onLoadToInput={handleLoadToInput}
                 onOpenImageStudio={onOpenImageStudio}
+                onSaveImageToLibrary={onSaveImageToLibrary}
               />
             ))}
 

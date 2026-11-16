@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from './firebase.ts';
 import { Conversation, Message, AiMode, UserProfile } from '../types/index.ts';
+import { LibraryItem, ArchivedMessageSnapshot } from './libraryStore.ts';
 
 // Generate a URL-safe unique ID
 export function generateId(prefix: string = 'doc'): string {
@@ -316,5 +317,265 @@ export async function deleteMessage(
     handleFirestoreError(error, OperationType.DELETE, path);
   }
 }
+
+// Fetch all messages for any conversation one-time (used when archiving chats)
+export async function getConversationMessages(convId: string): Promise<Message[]> {
+  const collPath = `conversations/${convId}/messages`;
+  try {
+    const q = query(
+      collection(db, 'conversations', convId, 'messages'),
+      orderBy('createdAt', 'asc')
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map((docSnap) => {
+      const data = docSnap.data();
+      return {
+        id: docSnap.id,
+        conversationId: data.conversationId,
+        userId: data.userId,
+        role: data.role,
+        content: data.content || '',
+        model: data.model,
+        mode: data.mode,
+        imageUri: data.imageUri,
+        attachments: data.attachments,
+        groundingLinks: data.groundingLinks,
+        thinkingProcess: data.thinkingProcess,
+        audioUri: data.audioUri,
+        launchAction: data.launchAction,
+        createdAt: data.createdAt,
+      };
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, collPath);
+    return [];
+  }
+}
+
+function sanitizeArchivedMessagesForFirestore(
+  msgs?: ArchivedMessageSnapshot[]
+): ArchivedMessageSnapshot[] {
+  if (!Array.isArray(msgs) || msgs.length === 0) return [];
+  // Enforce <= 200 messages and keep total serialized size well below Firestore 1MB limit
+  const trimmed = msgs.slice(-200);
+  let runningBytes = 0;
+  const MAX_TOTAL_BYTES = 550000;
+  const result: ArchivedMessageSnapshot[] = [];
+
+  for (const m of trimmed) {
+    const contentBudget = trimmed.length > 60 ? 3500 : 8000;
+    const content = String(m.content || '').slice(0, contentBudget);
+    let imageUri = m.imageUri && String(m.imageUri).length <= 40000 ? String(m.imageUri) : undefined;
+
+    const cleanAttachments = Array.isArray(m.attachments)
+      ? m.attachments.slice(0, 8).map((a) => ({
+          id: String(a.id || 'att').slice(0, 64),
+          name: String(a.name || 'Lampiran').slice(0, 128),
+          size: typeof a.size === 'number' ? a.size : 0,
+          mimeType: String(a.mimeType || 'application/octet-stream').slice(0, 64),
+          type: (a.type || 'file') as 'image' | 'video' | 'file',
+          ...(a.previewUrl && String(a.previewUrl).length <= 24000
+            ? { previewUrl: String(a.previewUrl) }
+            : {}),
+        }))
+      : undefined;
+
+    const cleanLinks = Array.isArray(m.groundingLinks)
+      ? m.groundingLinks.slice(0, 10).map((g) => ({
+          title: String(g.title || '').slice(0, 160),
+          uri: String(g.uri || '').slice(0, 600),
+        }))
+      : undefined;
+
+    const entrySize =
+      content.length +
+      (imageUri?.length || 0) +
+      JSON.stringify(cleanAttachments || []).length +
+      JSON.stringify(cleanLinks || []).length;
+
+    if (runningBytes + entrySize > MAX_TOTAL_BYTES) {
+      // Strip inline base64 previews first if approaching Firestore budget while preserving all message text
+      imageUri = imageUri && imageUri.startsWith('http') ? imageUri : undefined;
+    }
+
+    runningBytes += content.length + (imageUri?.length || 0);
+    if (runningBytes > 680000) break;
+
+    const entry: ArchivedMessageSnapshot = {
+      id: String(m.id || generateId('msg')).slice(0, 64),
+      role: m.role,
+      content,
+      ...(m.model ? { model: String(m.model).slice(0, 100) } : {}),
+      ...(m.mode ? { mode: String(m.mode).slice(0, 50) } : {}),
+      ...(imageUri ? { imageUri } : {}),
+      ...(cleanAttachments && cleanAttachments.length > 0 ? { attachments: cleanAttachments } : {}),
+      ...(cleanLinks && cleanLinks.length > 0 ? { groundingLinks: cleanLinks } : {}),
+      ...(m.createdAtIso ? { createdAtIso: String(m.createdAtIso).slice(0, 60) } : {}),
+    };
+    result.push(entry);
+  }
+  return result;
+}
+
+// Subscribe to User Library Items & Archived Chats
+export function subscribeLibraryItems(
+  userId: string,
+  onUpdate: (items: LibraryItem[]) => void,
+  onError?: (error: any) => void
+) {
+  const collPath = `users/${userId}/library`;
+  const q = query(collection(db, 'users', userId, 'library'), where('userId', '==', userId));
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const items: LibraryItem[] = snapshot.docs.map((docSnap) => {
+        const d = docSnap.data();
+        return {
+          id: docSnap.id,
+          userId: d.userId,
+          title: d.title || 'Item Pustaka',
+          category: d.category || 'archive',
+          kind: d.kind || 'note',
+          type: d.type || 'Item',
+          date: d.date || '',
+          size: d.size,
+          previewUrl: d.previewUrl,
+          imageMediaKey: d.imageMediaKey,
+          snippet: d.snippet,
+          badge: d.badge,
+          sourceConvId: d.sourceConvId,
+          sourceMessageId: d.sourceMessageId,
+          model: d.model,
+          mode: d.mode,
+          archivedMessages: Array.isArray(d.archivedMessages) ? d.archivedMessages : undefined,
+          createdAtIso: d.createdAtIso || new Date().toISOString(),
+          updatedAtIso: d.updatedAtIso || d.createdAtIso || new Date().toISOString(),
+        };
+      });
+      items.sort((a, b) =>
+        String(b.updatedAtIso || b.createdAtIso).localeCompare(String(a.updatedAtIso || a.createdAtIso))
+      );
+      onUpdate(items);
+    },
+    (error) => {
+      onError?.(error);
+      handleFirestoreError(error, OperationType.LIST, collPath);
+    }
+  );
+}
+
+// Persist or update a Library Item (image or archived chat snapshot) in Firestore
+export async function saveLibraryItemToCloud(
+  userId: string,
+  item: LibraryItem
+): Promise<void> {
+  const safeId = String(item.id).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 128);
+  const path = `users/${userId}/library/${safeId}`;
+  const docRef = doc(db, 'users', userId, 'library', safeId);
+  const cleanPreview =
+    item.previewUrl && item.previewUrl.length <= 210000 ? item.previewUrl : undefined;
+  const cleanArchivedMessages =
+    item.kind === 'chat' ? sanitizeArchivedMessagesForFirestore(item.archivedMessages) : undefined;
+  const safeTitle = (item.title || '').trim().slice(0, 200) || 'Item Pustaka';
+
+  let docExists = false;
+  try {
+    const existingSnap = await getDoc(docRef);
+    docExists = existingSnap.exists();
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, path);
+    return;
+  }
+
+  if (docExists) {
+    try {
+      const updatePayload: Record<string, any> = {
+        title: safeTitle,
+        type: (item.type || 'Item').slice(0, 100),
+        date: (item.date || '').slice(0, 60),
+        updatedAtIso: (item.updatedAtIso || new Date().toISOString()).slice(0, 60),
+        updatedAt: serverTimestamp(),
+      };
+      if (cleanPreview !== undefined) updatePayload.previewUrl = cleanPreview;
+      if (item.imageMediaKey) updatePayload.imageMediaKey = String(item.imageMediaKey).slice(0, 128);
+      if (item.snippet) updatePayload.snippet = String(item.snippet).slice(0, 1000);
+      if (cleanArchivedMessages !== undefined) updatePayload.archivedMessages = cleanArchivedMessages;
+      await updateDoc(docRef, updatePayload);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, path);
+    }
+    return;
+  }
+
+  try {
+    const createPayload: Record<string, any> = {
+      id: safeId,
+      userId,
+      title: safeTitle,
+      category: item.category,
+      kind: item.kind,
+      type: (item.type || 'Item').slice(0, 100),
+      date: (item.date || '').slice(0, 60),
+      createdAtIso: (item.createdAtIso || new Date().toISOString()).slice(0, 60),
+      updatedAtIso: (item.updatedAtIso || new Date().toISOString()).slice(0, 60),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+
+    if (item.size) createPayload.size = String(item.size).slice(0, 40);
+    if (cleanPreview) createPayload.previewUrl = cleanPreview;
+    if (item.imageMediaKey) createPayload.imageMediaKey = String(item.imageMediaKey).slice(0, 128);
+    if (item.snippet) createPayload.snippet = String(item.snippet).slice(0, 1000);
+    if (item.badge) createPayload.badge = String(item.badge).slice(0, 50);
+    if (item.sourceConvId) createPayload.sourceConvId = String(item.sourceConvId).slice(0, 128);
+    if (item.sourceMessageId) createPayload.sourceMessageId = String(item.sourceMessageId).slice(0, 128);
+    if (item.model) createPayload.model = String(item.model).slice(0, 100);
+    if (item.mode) createPayload.mode = String(item.mode).slice(0, 50);
+    if (cleanArchivedMessages !== undefined) createPayload.archivedMessages = cleanArchivedMessages;
+
+    await setDoc(docRef, createPayload);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+  }
+}
+
+export async function deleteLibraryItemFromCloud(
+  userId: string,
+  itemId: string
+): Promise<void> {
+  const safeId = String(itemId).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 128);
+  const path = `users/${userId}/library/${safeId}`;
+  try {
+    await deleteDoc(doc(db, 'users', userId, 'library', safeId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+// Restore an archived conversation snapshot back into active Cloud Firestore conversations
+export async function restoreArchivedConversation(
+  userId: string,
+  archivedItem: LibraryItem
+): Promise<string> {
+  const mode = (archivedItem.mode as AiMode) || 'general';
+  const model = archivedItem.model || 'gemini-3.5-flash';
+  const newConvId = await createConversation(userId, archivedItem.title || 'Percakapan Dipulihkan', mode, model);
+
+  const msgs = archivedItem.archivedMessages || [];
+  for (const m of msgs) {
+    await addMessage(newConvId, userId, {
+      role: m.role,
+      content: m.content || '',
+      model: m.model,
+      mode: m.mode,
+      imageUri: m.imageUri,
+      attachments: m.attachments,
+      groundingLinks: m.groundingLinks,
+    });
+  }
+  return newConvId;
+}
+
 
 

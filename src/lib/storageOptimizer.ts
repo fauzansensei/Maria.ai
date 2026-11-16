@@ -86,6 +86,8 @@ export function pruneLocalStorageBloat(): void {
       'maria_study_sets',
       'maria_connectors',
       'maria_video_storyboards',
+      'maria_library_items',
+      'maria_moved_chat_image_ids',
     ]);
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
