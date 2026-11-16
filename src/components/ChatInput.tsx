@@ -872,26 +872,33 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
                 </div>
               )}
 
-              {/* Circular Loading Spinner while file is downloading/processing offline data (Matching Video) */}
+              {/* Circular Loading Spinner while file is downloading/processing offline data (On-track concentric ring) */}
               {att.isLoading && (
-                <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-10">
-                  <div className="relative w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center">
-                    <svg className="w-6 h-6 sm:w-7 sm:h-7 animate-spin text-white" viewBox="0 0 24 24" fill="none">
-                      <circle
-                        className="opacity-30"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                      />
-                      <path
-                        className="opacity-95"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                      />
-                    </svg>
-                  </div>
+                <div className="absolute inset-0 bg-black/55 flex items-center justify-center z-10">
+                  <svg
+                    className="w-6 h-6 sm:w-7 sm:h-7 animate-spin text-white block"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="9.5"
+                      stroke="currentColor"
+                      strokeOpacity="0.28"
+                      strokeWidth="2.8"
+                    />
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="9.5"
+                      stroke="currentColor"
+                      strokeWidth="2.8"
+                      strokeLinecap="round"
+                      strokeDasharray="16 44"
+                    />
+                  </svg>
                 </div>
               )}
 
