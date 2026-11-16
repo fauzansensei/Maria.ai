@@ -254,7 +254,7 @@ export async function addMessage(
     }
 
     if (message.attachments && Array.isArray(message.attachments) && message.attachments.length > 0) {
-      // Sanitize attachments: only store lightweight metadata and thumbnail to never breach 1MB document limit
+      // Sanitize attachments: only store lightweight metadata and thumbnail/compact voice note to never breach 1MB document limit
       dataToSave.attachments = message.attachments.slice(0, 10).map((a) => ({
         id: String(a.id || generateId('att')).slice(0, 64),
         name: String(a.name || 'Berkas').slice(0, 128),
@@ -262,6 +262,10 @@ export async function addMessage(
         mimeType: String(a.mimeType || 'image/jpeg').slice(0, 64),
         type: String(a.type || 'image').slice(0, 20),
         previewUrl: typeof a.previewUrl === 'string' && a.previewUrl.length <= 200000 ? a.previewUrl : '',
+        ...(typeof a.duration === 'number' && Number.isFinite(a.duration) ? { duration: Math.max(0, Math.round(a.duration * 10) / 10) } : {}),
+        ...(Array.isArray(a.waveform)
+          ? { waveform: a.waveform.slice(0, 64).map((n: unknown) => Math.max(0.05, Math.min(1, Number(n) || 0.2))) }
+          : {}),
       }));
     }
 
@@ -373,10 +377,12 @@ function sanitizeArchivedMessagesForFirestore(
           name: String(a.name || 'Lampiran').slice(0, 128),
           size: typeof a.size === 'number' ? a.size : 0,
           mimeType: String(a.mimeType || 'application/octet-stream').slice(0, 64),
-          type: (a.type || 'file') as 'image' | 'video' | 'file',
-          ...(a.previewUrl && String(a.previewUrl).length <= 24000
+          type: (a.type || 'file') as 'image' | 'video' | 'audio' | 'file',
+          ...(a.previewUrl && String(a.previewUrl).length <= (a.type === 'audio' ? 80000 : 24000)
             ? { previewUrl: String(a.previewUrl) }
             : {}),
+          ...(typeof a.duration === 'number' ? { duration: a.duration } : {}),
+          ...(Array.isArray(a.waveform) ? { waveform: a.waveform.slice(0, 48) } : {}),
         }))
       : undefined;
 

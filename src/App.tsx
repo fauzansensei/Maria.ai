@@ -1123,7 +1123,22 @@ function AppContent() {
 
       // Create conversation if first turn for logged-in user (skipped in Temporary Chat)
       if (user && !currentConvId && !isEphemeral) {
-        const titleSnippet = safeContent.length > 35 ? safeContent.slice(0, 35) + '...' : (attachments?.[0]?.name || safeContent);
+        const firstAtt = attachments?.[0];
+        const voiceTitle =
+          firstAtt?.type === 'audio'
+            ? `Pesan Suara (${
+                typeof firstAtt.duration === 'number'
+                  ? `${Math.floor(firstAtt.duration / 60)}:${Math.floor(firstAtt.duration % 60)
+                      .toString()
+                      .padStart(2, '0')}`
+                  : '0:01'
+              })`
+            : firstAtt?.name;
+        const trimmed = safeContent.trim();
+        const titleSnippet =
+          trimmed.length > 35
+            ? trimmed.slice(0, 35) + '...'
+            : trimmed || voiceTitle || 'Percakapan Baru';
         currentConvId = await createConversation(user.uid, titleSnippet, mode);
         resolvedConvId = currentConvId;
         activeConvIdRef.current = currentConvId;
@@ -1144,6 +1159,8 @@ function AppContent() {
             mimeType: a.mimeType,
             type: a.type,
             previewUrl: a.previewUrl,
+            ...(typeof a.duration === 'number' ? { duration: a.duration } : {}),
+            ...(Array.isArray(a.waveform) ? { waveform: a.waveform } : {}),
             ...(a.fileUri ? { fileUri: a.fileUri } : {}),
           })),
         });

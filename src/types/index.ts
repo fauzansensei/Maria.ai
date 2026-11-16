@@ -10,12 +10,13 @@ export interface MediaAttachment {
   name: string;
   size: number;
   mimeType: string;
-  type: 'image' | 'video' | 'file';
+  type: 'image' | 'video' | 'audio' | 'file';
   previewUrl: string;
   originalUrl?: string;
   base64Data: string;
   fileUri?: string;
   duration?: number;
+  waveform?: number[];
   isLoading?: boolean;
   progress?: number;
 }

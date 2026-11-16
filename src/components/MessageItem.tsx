@@ -30,12 +30,20 @@ import {
   TextSelect,
   X,
   Bookmark,
+  Mic,
+  Pause,
 } from 'lucide-react';
 import { Message, MediaAttachment } from '../types/index.ts';
 import { LaunchAction, detectLaunchAction } from '../lib/actionLauncher.ts';
 import { MariaLogo } from './MariaLogo.tsx';
 import { speechService, SpeechState } from '../lib/speechService.ts';
-import { formatBytes, getOriginalMedia, getOriginalMediaBlob, getMediaBase64 } from '../lib/mediaUtils.ts';
+import {
+  formatBytes,
+  formatAudioDuration,
+  getOriginalMedia,
+  getOriginalMediaBlob,
+  getMediaBase64,
+} from '../lib/mediaUtils.ts';
 import { MediaLightboxModal, LightboxMedia } from './MediaLightboxModal.tsx';
 import { useLanguage } from '../context/LanguageContext.tsx';
 
@@ -124,6 +132,323 @@ const HighResImage: React.FC<{
       className={className}
       style={{ imageRendering: 'auto' }}
     />
+  );
+};
+
+// Interactive WhatsApp-style Voice Note player bubble
+const VoiceNoteBubble: React.FC<{
+  audio: MediaAttachment;
+  userPhoto?: string | null;
+  userName?: string | null;
+  onContextMenu?: (e: React.MouseEvent) => void;
+  onTouchStart?: () => void;
+  onTouchEnd?: () => void;
+  onTouchMove?: () => void;
+}> = ({
+  audio: audioAtt,
+  userPhoto,
+  userName,
+  onContextMenu,
+  onTouchStart,
+  onTouchEnd,
+  onTouchMove,
+}) => {
+  const { isEn } = useLanguage();
+  const [resolvedUrl, setResolvedUrl] = useState<string>(() => {
+    const cachedB64 = audioAtt.base64Data || getMediaBase64(audioAtt.id) || getMediaBase64(audioAtt.name);
+    return (
+      audioAtt.originalUrl ||
+      getOriginalMedia(audioAtt.id) ||
+      getOriginalMedia(audioAtt.name) ||
+      (cachedB64 ? `data:${audioAtt.mimeType || 'audio/webm'};base64,${cachedB64}` : '') ||
+      (audioAtt.previewUrl?.startsWith('data:audio') ? audioAtt.previewUrl : '') ||
+      audioAtt.previewUrl ||
+      ''
+    );
+  });
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState<number>(() =>
+    typeof audioAtt.duration === 'number' && Number.isFinite(audioAtt.duration) ? audioAtt.duration : 0
+  );
+  const [speed, setSpeed] = useState<1 | 1.5 | 2>(1);
+
+  const isScrubbingRef = useRef(false);
+  const audioElRef = useRef<HTMLAudioElement | null>(null);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+
+  const bars = useMemo(() => {
+    if (Array.isArray(audioAtt.waveform) && audioAtt.waveform.length >= 12) {
+      return audioAtt.waveform.slice(0, 32);
+    }
+    return Array.from({ length: 28 }, (_, i) =>
+      Number((0.22 + 0.58 * Math.abs(Math.sin(i * 0.72 + (audioAtt.id.charCodeAt(0) || 3)))).toFixed(2))
+    );
+  }, [audioAtt.waveform, audioAtt.id]);
+
+  // Hydrate full audio blob from IndexedDB if not in memory yet
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const blobUrl =
+        (await getOriginalMediaBlob(audioAtt.id)) || (await getOriginalMediaBlob(audioAtt.name));
+      if (blobUrl && mounted) {
+        setResolvedUrl(blobUrl);
+      } else if (!resolvedUrl && mounted) {
+        const cachedB64 =
+          audioAtt.base64Data || getMediaBase64(audioAtt.id) || getMediaBase64(audioAtt.name);
+        if (cachedB64) {
+          setResolvedUrl(`data:${audioAtt.mimeType || 'audio/webm'};base64,${cachedB64}`);
+        } else if (audioAtt.previewUrl) {
+          setResolvedUrl(audioAtt.previewUrl);
+        }
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [audioAtt.id, audioAtt.name, audioAtt.base64Data, audioAtt.mimeType, audioAtt.previewUrl, resolvedUrl]);
+
+  // Manage audio playback element lifecycle & coordinate single-active-player across bubbles
+  useEffect(() => {
+    const handleOtherPlay = (e: Event) => {
+      const custom = e as CustomEvent<string>;
+      if (custom.detail !== audioAtt.id && audioElRef.current && !audioElRef.current.paused) {
+        audioElRef.current.pause();
+        setIsPlaying(false);
+      }
+    };
+    window.addEventListener('maria-vn-play', handleOtherPlay);
+    return () => {
+      window.removeEventListener('maria-vn-play', handleOtherPlay);
+      if (audioElRef.current) {
+        audioElRef.current.pause();
+        audioElRef.current.src = '';
+        audioElRef.current = null;
+      }
+    };
+  }, [audioAtt.id]);
+
+  const ensureAudioElement = (urlOverride?: string): HTMLAudioElement | null => {
+    const targetUrl = urlOverride || resolvedUrl;
+    if (!targetUrl) return null;
+    if (!audioElRef.current) {
+      const el = new Audio(targetUrl);
+      el.preload = 'metadata';
+      el.onloadedmetadata = () => {
+        if (Number.isFinite(el.duration) && el.duration > 0) {
+          setDuration(el.duration);
+        }
+      };
+      el.ondurationchange = () => {
+        if (Number.isFinite(el.duration) && el.duration > 0) {
+          setDuration(el.duration);
+        }
+      };
+      el.ontimeupdate = () => {
+        if (!isScrubbingRef.current) {
+          setCurrentTime(el.currentTime || 0);
+        }
+      };
+      el.onended = () => {
+        setIsPlaying(false);
+        setCurrentTime(0);
+      };
+      el.onwaiting = () => setIsBuffering(true);
+      el.oncanplay = () => setIsBuffering(false);
+      el.onerror = () => {
+        setIsPlaying(false);
+        setIsBuffering(false);
+      };
+      audioElRef.current = el;
+    } else if (audioElRef.current.src !== targetUrl && !audioElRef.current.src.endsWith(targetUrl)) {
+      audioElRef.current.src = targetUrl;
+    }
+    audioElRef.current.playbackRate = speed;
+    return audioElRef.current;
+  };
+
+  const togglePlay = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    let el = ensureAudioElement();
+    if (!el) {
+      const blobUrl =
+        (await getOriginalMediaBlob(audioAtt.id)) || (await getOriginalMediaBlob(audioAtt.name));
+      if (blobUrl) {
+        setResolvedUrl(blobUrl);
+        el = ensureAudioElement(blobUrl);
+      }
+    }
+    if (!el) return;
+
+    if (isPlaying) {
+      el.pause();
+      setIsPlaying(false);
+      return;
+    }
+
+    speechService.stopSpeaking();
+    window.dispatchEvent(new CustomEvent('maria-vn-play', { detail: audioAtt.id }));
+    setIsBuffering(true);
+    try {
+      await el.play();
+      setIsPlaying(true);
+    } catch {
+      setIsPlaying(false);
+    } finally {
+      setIsBuffering(false);
+    }
+  };
+
+  const cycleSpeed = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next: 1 | 1.5 | 2 = speed === 1 ? 1.5 : speed === 1.5 ? 2 : 1;
+    setSpeed(next);
+    if (audioElRef.current) {
+      audioElRef.current.playbackRate = next;
+    }
+  };
+
+  const effectiveDuration =
+    duration > 0 && Number.isFinite(duration)
+      ? duration
+      : typeof audioAtt.duration === 'number' && audioAtt.duration > 0
+      ? audioAtt.duration
+      : 0;
+  const progressPct =
+    effectiveDuration > 0 ? Math.max(0, Math.min(1, currentTime / effectiveDuration)) : 0;
+
+  const seekFromClientX = (clientX: number) => {
+    const track = trackRef.current;
+    if (!track || effectiveDuration <= 0) return;
+    const rect = track.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const targetSec = pct * effectiveDuration;
+    setCurrentTime(targetSec);
+    const el = ensureAudioElement();
+    if (el && Number.isFinite(targetSec)) {
+      try {
+        el.currentTime = targetSec;
+      } catch {}
+    }
+  };
+
+  const handleTrackPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    isScrubbingRef.current = true;
+    seekFromClientX(e.clientX);
+    try {
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    } catch {}
+  };
+
+  const handleTrackPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isScrubbingRef.current) return;
+    seekFromClientX(e.clientX);
+  };
+
+  const handleTrackPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isScrubbingRef.current) return;
+    seekFromClientX(e.clientX);
+    isScrubbingRef.current = false;
+  };
+
+  const userInitial = (userName?.trim()?.[0] || 'U').toUpperCase();
+
+  return (
+    <div
+      onContextMenu={onContextMenu}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      onTouchMove={onTouchMove}
+      className="w-[264px] sm:w-[300px] rounded-2xl rounded-br-sm px-3 py-2.5 shadow-sm bg-[#1d4ed8] dark:bg-[#1e3a8a] text-white flex items-center gap-2.5 select-none"
+    >
+      {/* Play / Pause Button */}
+      <button
+        type="button"
+        onClick={togglePlay}
+        aria-label={isPlaying ? (isEn ? 'Pause voice note' : 'Jeda pesan suara') : (isEn ? 'Play voice note' : 'Putar pesan suara')}
+        className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center shrink-0 cursor-pointer active:scale-95 transition-colors"
+      >
+        {isBuffering ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : isPlaying ? (
+          <Pause className="w-4 h-4 fill-current" />
+        ) : (
+          <Play className="w-4 h-4 ml-0.5 fill-current" />
+        )}
+      </button>
+
+      {/* Center: Seekable Waveform + Time & Speed */}
+      <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
+        <div
+          ref={trackRef}
+          onPointerDown={handleTrackPointerDown}
+          onPointerMove={handleTrackPointerMove}
+          onPointerUp={handleTrackPointerUp}
+          onPointerCancel={handleTrackPointerUp}
+          role="slider"
+          aria-label={isEn ? 'Voice note progress' : 'Progres pesan suara'}
+          aria-valuemin={0}
+          aria-valuemax={Math.round(effectiveDuration)}
+          aria-valuenow={Math.round(currentTime)}
+          className="relative h-6 flex items-center justify-between gap-[2px] cursor-pointer touch-none"
+        >
+          {bars.map((peak, idx) => {
+            const barPct = (idx + 0.5) / bars.length;
+            const isPlayed = barPct <= progressPct;
+            return (
+              <span
+                key={idx}
+                className={`w-[2.5px] rounded-full transition-colors duration-75 ${
+                  isPlayed ? 'bg-sky-200' : 'bg-white/35'
+                }`}
+                style={{
+                  height: `${Math.round(Math.max(4, peak * 22))}px`,
+                }}
+              />
+            );
+          })}
+
+          {/* Scrubber Dot */}
+          <span
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-sky-300 shadow-sm pointer-events-none transition-[left] duration-75"
+            style={{ left: `${Math.max(2, Math.min(98, progressPct * 100))}%` }}
+          />
+        </div>
+
+        <div className="flex items-center justify-between text-[10px] text-white/80 font-mono tabular-nums leading-none">
+          <span>
+            {formatAudioDuration(isPlaying || currentTime > 0 ? currentTime : effectiveDuration)}
+            {audioAtt.size ? ` · ${formatBytes(audioAtt.size)}` : ''}
+          </span>
+          <button
+            type="button"
+            onClick={cycleSpeed}
+            title={isEn ? 'Playback speed' : 'Kecepatan putar'}
+            className="px-1.5 py-0.5 rounded-full bg-white/15 hover:bg-white/25 text-white font-sans font-bold text-[9.5px] cursor-pointer transition-colors"
+          >
+            {speed}x
+          </button>
+        </div>
+      </div>
+
+      {/* Right: Avatar + WhatsApp-Style Mic Badge */}
+      <div className="relative shrink-0 ml-0.5">
+        <div className="w-9 h-9 rounded-full overflow-hidden border border-white/25 bg-blue-950/60 flex items-center justify-center text-xs font-bold text-white">
+          {userPhoto ? (
+            <img src={userPhoto} alt={userName || 'User'} className="w-full h-full object-cover" />
+          ) : (
+            <span>{userInitial}</span>
+          )}
+        </div>
+        <span className="absolute -bottom-0.5 -left-1 w-4 h-4 rounded-full bg-[#1d4ed8] dark:bg-[#1e3a8a] border border-white/25 flex items-center justify-center shadow-xs">
+          <Mic className="w-2.5 h-2.5 text-sky-300" />
+        </span>
+      </div>
+    </div>
   );
 };
 
@@ -326,6 +651,8 @@ const GeminiActionCard: React.FC<{ action: LaunchAction }> = ({ action }) => {
 
 export const MessageItem: React.FC<MessageItemProps> = React.memo(({
   message,
+  userPhoto,
+  userName,
   speechSpeed = '1x',
   onEditMessage,
   onRegenerateMessage,
@@ -733,9 +1060,13 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
 
   const images = message.attachments?.filter((a) => a.type === 'image') || [];
   const videos = message.attachments?.filter((a) => a.type === 'video') || [];
+  const voiceNotes =
+    message.attachments?.filter((a) => a.type === 'audio' || a.mimeType?.startsWith('audio/')) || [];
   const files =
     message.attachments?.filter(
-      (a) => a.type === 'file' || (!images.includes(a) && !videos.includes(a))
+      (a) =>
+        a.type === 'file' ||
+        (!images.includes(a) && !videos.includes(a) && !voiceNotes.includes(a))
     ) || [];
   const hasGrounding = message.groundingLinks && message.groundingLinks.length > 0;
 
@@ -999,6 +1330,27 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
             </div>
           )}
 
+          {/* WhatsApp-Style Voice Note Bubbles */}
+          {voiceNotes.length > 0 && (
+            <div className="flex flex-col gap-1.5 items-end">
+              {voiceNotes.map((vn) => (
+                <VoiceNoteBubble
+                  key={vn.id}
+                  audio={vn}
+                  userPhoto={userPhoto}
+                  userName={userName}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setShowContextMenu(true);
+                  }}
+                  onTouchStart={startLongPress}
+                  onTouchEnd={cancelLongPress}
+                  onTouchMove={cancelLongPress}
+                />
+              ))}
+            </div>
+          )}
+
           {/* Sleek Compact Text Bubble (No noisy inner header) */}
           {(message.content.trim() || isEditing) && (
             <div
@@ -1074,16 +1426,18 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
           {/* Subtle User Bubble Quick Actions Beneath Bubble (Copy, Edit, Context Menu) */}
           {!isEditing && (
             <div className="flex items-center gap-0.5 text-slate-400 dark:text-slate-500">
-              <button
-                type="button"
-                onClick={handleCopyText}
-                title={isEn ? 'Copy message' : 'Salin pesan'}
-                className="p-1.5 rounded-lg hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer"
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-              </button>
+              {message.content.trim() && (
+                <button
+                  type="button"
+                  onClick={handleCopyText}
+                  title={isEn ? 'Copy message' : 'Salin pesan'}
+                  className="p-1.5 rounded-lg hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
+              )}
 
-              {onEditMessage && (
+              {onEditMessage && message.content.trim() && (
                 <button
                   type="button"
                   onClick={() => {

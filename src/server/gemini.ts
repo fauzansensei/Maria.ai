@@ -25,7 +25,7 @@ export function getGeminiClient(): GoogleGenAI {
 }
 
 export interface ChatAttachment {
-  type: 'image' | 'video' | 'file';
+  type: 'image' | 'video' | 'audio' | 'file';
   mimeType: string;
   data?: string; // base64
   fileUri?: string; // Gemini Files API URI
@@ -174,8 +174,13 @@ function sanitizeConversationTurns(messages: ChatMessageTurn[]) {
         const resolveCleanMime = (): string => {
           let cleanMime = rawMime;
           if (!cleanMime || cleanMime === 'application/octet-stream') {
-            if (name.endsWith('.mp4')) cleanMime = 'video/mp4';
-            else if (name.endsWith('.webm')) cleanMime = 'video/webm';
+            if (name.endsWith('.mp4')) cleanMime = att.type === 'audio' ? 'audio/mp4' : 'video/mp4';
+            else if (name.endsWith('.m4a')) cleanMime = 'audio/mp4';
+            else if (name.endsWith('.mp3')) cleanMime = 'audio/mpeg';
+            else if (name.endsWith('.wav')) cleanMime = 'audio/wav';
+            else if (name.endsWith('.ogg')) cleanMime = 'audio/ogg';
+            else if (name.endsWith('.aac')) cleanMime = 'audio/aac';
+            else if (name.endsWith('.webm')) cleanMime = att.type === 'audio' ? 'audio/webm' : 'video/webm';
             else if (name.endsWith('.mov')) cleanMime = 'video/quicktime';
             else if (name.endsWith('.3gp')) cleanMime = 'video/3gpp';
             else if (name.endsWith('.avi')) cleanMime = 'video/x-msvideo';
@@ -184,9 +189,10 @@ function sanitizeConversationTurns(messages: ChatMessageTurn[]) {
             else if (name.endsWith('.jpg') || name.endsWith('.jpeg')) cleanMime = 'image/jpeg';
             else if (name.endsWith('.png')) cleanMime = 'image/png';
             else if (name.endsWith('.webp')) cleanMime = 'image/webp';
-            else cleanMime = att.type === 'video' ? 'video/mp4' : att.type === 'image' ? 'image/jpeg' : 'application/pdf';
+            else cleanMime = att.type === 'video' ? 'video/mp4' : att.type === 'audio' ? 'audio/webm' : att.type === 'image' ? 'image/jpeg' : 'application/pdf';
           }
           if (cleanMime === 'video/x-matroska') cleanMime = 'video/webm';
+          if (cleanMime === 'audio/x-m4a') cleanMime = 'audio/mp4';
           return cleanMime;
         };
 
@@ -202,9 +208,11 @@ function sanitizeConversationTurns(messages: ChatMessageTurn[]) {
             ? att.data.split(',')[1].trim()
             : att.data.trim();
           if (cleanData) {
+            const isAudio = att.type === 'audio' || rawMime.startsWith('audio/');
             const isTextDoc =
-              att.type === 'file' ||
-              rawMime.startsWith('text/') ||
+              !isAudio &&
+              (att.type === 'file' ||
+                rawMime.startsWith('text/') ||
               rawMime.includes('json') ||
               rawMime.includes('javascript') ||
               rawMime.includes('typescript') ||
@@ -221,7 +229,7 @@ function sanitizeConversationTurns(messages: ChatMessageTurn[]) {
               name.endsWith('.yaml') ||
               name.endsWith('.yml') ||
               name.endsWith('.sql') ||
-              name.endsWith('.sh');
+              name.endsWith('.sh'));
 
             if (isTextDoc && rawMime !== 'application/pdf') {
               try {
@@ -265,9 +273,17 @@ function sanitizeConversationTurns(messages: ChatMessageTurn[]) {
           (a.mimeType && a.mimeType.toLowerCase().startsWith('video/')) ||
           (a.name && /\.(mp4|webm|mov|mkv|3gp|avi)$/i.test(a.name))
       );
+      const hasAudio = m.attachments?.some(
+        (a) =>
+          a.type === 'audio' ||
+          (a.mimeType && a.mimeType.toLowerCase().startsWith('audio/')) ||
+          (a.name && /\.(mp3|wav|ogg|m4a|aac|opus)$/i.test(a.name))
+      );
       parts.push({
         text: hasVid
           ? 'Mohon tonton dan analisis seluruh isi video ini secara mendalam (alur kejadian, visual, objek, suara, dan teks), lalu berikan penjelasan yang lengkap dan ramah.'
+          : hasAudio
+          ? 'Dengarkan pesan suara (voice note) dari pengguna ini dengan saksama, pahami isi pembicaraannya, lalu tanggapi secara langsung, natural, dan membantu dalam bahasa yang digunakan pengguna.'
           : 'Mohon amati, baca, dan jelaskan berkas atau gambar lampiran ini secara mendalam.',
       });
     }

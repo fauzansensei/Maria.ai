@@ -18,8 +18,10 @@ export interface ArchivedAttachmentSnapshot {
   name: string;
   size: number;
   mimeType: string;
-  type: 'image' | 'video' | 'file';
+  type: 'image' | 'video' | 'audio' | 'file';
   previewUrl?: string;
+  duration?: number;
+  waveform?: number[];
 }
 
 export interface ArchivedMessageSnapshot {
