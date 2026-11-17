@@ -1,4 +1,4 @@
-import { GoogleGenAI, ThinkingLevel } from '@google/genai';
+import { GoogleGenAI, ThinkingLevel, Type } from '@google/genai';
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 import { sanitizeModelText } from '../lib/formatUtils.ts';
 import {
@@ -16,6 +16,23 @@ export function getGeminiClient(): GoogleGenAI {
   }
   return new GoogleGenAI({
     apiKey,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      },
+    },
+  });
+}
+
+// Live API (gemini-3.8-live) requires v1beta endpoint in @google/genai v3+
+export function getGeminiLiveClient(apiVersion: 'v1beta' | 'v1alpha' = 'v1beta'): GoogleGenAI {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY environment variable is missing.');
+  }
+  return new GoogleGenAI({
+    apiKey,
+    apiVersion,
     httpOptions: {
       headers: {
         'User-Agent': 'aistudio-build',
@@ -1704,4 +1721,161 @@ export async function generateSpeechAudio(
     notice: 'Layanan suara AI sedang mencapai batas kuota sementara. Silakan coba putar ulang beberapa saat lagi.',
   };
 }
+
+export interface LiveHttpTurnOptions {
+  audioBase64?: string;
+  audioMimeType?: string;
+  imageBase64?: string;
+  imageMimeType?: string;
+  textPrompt?: string;
+  history?: Array<{ role: 'user' | 'model'; content: string }>;
+  voiceName?: string;
+  personaId?: string;
+  customInstruction?: string;
+  userMemories?: string;
+  userName?: string;
+  deviceTime?: DeviceTimeInfo;
+  allowEmojis?: boolean;
+  voiceLanguage?: 'auto' | 'id-ID' | 'en-US';
+}
+
+export async function generateLiveTurnResponse(options: LiveHttpTurnOptions) {
+  const ai = getGeminiClient();
+  const baseSys = buildSystemInstruction(
+    options.deviceTime,
+    options.customInstruction,
+    options.userMemories,
+    options.userName,
+    Boolean(options.allowEmojis)
+  );
+
+  const langRule =
+    options.voiceLanguage === 'en-US'
+      ? 'Respond in English unless the user speaks Indonesian.'
+      : options.voiceLanguage === 'id-ID'
+      ? 'Balas dalam Bahasa Indonesia yang natural kecuali pengguna berbicara bahasa lain.'
+      : 'Match the language spoken or written by the user naturally (Indonesian or English).';
+
+  const systemInstruction = `${baseSys}
+
+MODE MARIA LIVE (SUARA & VISUAL LANGSUNG):
+- ${langRule}
+- Jika ada rekaman audio pengguna, tuliskan transkrip akurat ucapan pengguna pada field JSON "userTranscript" (kosongkan string jika hanya ada teks/gambar tanpa ucapan, atau isi ringkasan ucapan bila jelas).
+- Jika audio kosong atau hanya noise/hening tanpa kata-kata jelas, set "userTranscript" ke "" dan "replyText" ke "".
+- Tuliskan jawaban lisan Maria yang natural, hangat, ekspresif, ringkas, dan siap dibacakan pada field JSON "replyText" tanpa simbol markdown (*, #, \`).
+- Bila ada gambar kamera/layar/foto, amati dan tanggapi visualnya secara langsung.`;
+
+  const contents: any[] = [];
+  if (Array.isArray(options.history)) {
+    for (const h of options.history.slice(-8)) {
+      if (!h?.content?.trim()) continue;
+      contents.push({
+        role: h.role === 'model' ? 'model' : 'user',
+        parts: [{ text: h.content.trim() }],
+      });
+    }
+  }
+
+  const userParts: any[] = [];
+  if (options.imageBase64) {
+    const cleanImg = options.imageBase64.includes(',')
+      ? options.imageBase64.split(',')[1].trim()
+      : options.imageBase64.trim();
+    if (cleanImg) {
+      userParts.push({
+        inlineData: {
+          mimeType: options.imageMimeType || 'image/jpeg',
+          data: cleanImg,
+        },
+      });
+    }
+  }
+  if (options.audioBase64) {
+    const cleanAudio = options.audioBase64.includes(',')
+      ? options.audioBase64.split(',')[1].trim()
+      : options.audioBase64.trim();
+    if (cleanAudio) {
+      userParts.push({
+        inlineData: {
+          mimeType: options.audioMimeType || 'audio/wav',
+          data: cleanAudio,
+        },
+      });
+    }
+  }
+  if (options.textPrompt?.trim()) {
+    userParts.push({ text: options.textPrompt.trim() });
+  } else {
+    userParts.push({
+      text: options.audioBase64
+        ? 'Dengarkan audio pengguna dan berikan transkrip serta jawaban lisan Maria.'
+        : 'Lihat gambar yang dibagikan dan beri tanggapan lisan Maria.',
+    });
+  }
+
+  contents.push({ role: 'user', parts: userParts });
+
+  const modelsToTry = ['gemini-4-hydrogen', 'gemini-3.1-flash-lite'];
+  let lastErr: any = null;
+  let parsed: { userTranscript?: string; replyText?: string } = {};
+  let usedModel = modelsToTry[0];
+
+  for (const modelName of modelsToTry) {
+    try {
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents,
+        config: {
+          systemInstruction,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              userTranscript: {
+                type: Type.STRING,
+                description: 'Accurate verbatim transcription of user speech, or empty string if silent/no speech.',
+              },
+              replyText: {
+                type: Type.STRING,
+                description: 'Natural concise spoken response from Maria without markdown symbols, or empty string if user speech was empty noise.',
+              },
+            },
+            required: ['userTranscript', 'replyText'],
+          },
+        },
+      });
+      usedModel = modelName;
+      const rawJson = (response.text || '{}').trim();
+      parsed = JSON.parse(rawJson);
+      break;
+    } catch (err: any) {
+      lastErr = err;
+    }
+  }
+
+  if (!parsed.replyText && lastErr && !parsed.userTranscript) {
+    throw lastErr;
+  }
+
+  const userTranscript = sanitizeModelText(String(parsed.userTranscript || '').trim());
+  const replyText = sanitizeModelText(String(parsed.replyText || '').trim());
+
+  let audioUrl: string | null = null;
+  if (replyText) {
+    const ttsResult = await generateSpeechAudio(
+      replyText,
+      options.voiceName || 'Aoede',
+      options.personaId
+    ).catch(() => null);
+    audioUrl = ttsResult?.audioUrl || null;
+  }
+
+  return {
+    userTranscript,
+    replyText,
+    audioUrl,
+    model: usedModel,
+  };
+}
+
 

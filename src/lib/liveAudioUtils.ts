@@ -1,6 +1,7 @@
 /**
  * Client-side PCM audio utilities for Gemini Live API:
- * - Downsamples microphone Float32 PCM (44.1kHz / 48kHz / 16kHz) -> 16kHz 16-bit LE PCM Base64
+ * - Downsamples microphone Float32 PCM (44.1kHz / 48kHz / 16kHz) -> 16kHz 16-bit LE PCM Int16 & Base64
+ * - Encodes 16kHz Int16 PCM chunks into a standard WAV Base64 payload (used in serverless HTTP live fallback)
  * - Decodes 24kHz 16-bit LE PCM Base64 from Gemini Live -> Float32Array + RMS volume level
  */
 
@@ -27,7 +28,7 @@ export function base64ToUint8(base64: string): Uint8Array {
 export function downsampleTo16kPcmBase64(
   input: Float32Array,
   inputSampleRate: number
-): { base64: string; rms: number } {
+): { base64: string; int16: Int16Array; rms: number } {
   const targetRate = 16000;
 
   let sumSq = 0;
@@ -54,18 +55,62 @@ export function downsampleTo16kPcmBase64(
     }
   }
 
+  const int16 = new Int16Array(resampled.length);
   const pcmBuffer = new ArrayBuffer(resampled.length * 2);
   const view = new DataView(pcmBuffer);
   for (let i = 0; i < resampled.length; i++) {
     const clamped = Math.max(-1, Math.min(1, resampled[i]));
-    const int16 = clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff;
-    view.setInt16(i * 2, int16, true);
+    const val = Math.round(clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff);
+    int16[i] = val;
+    view.setInt16(i * 2, val, true);
   }
 
   return {
     base64: uint8ToBase64(new Uint8Array(pcmBuffer)),
+    int16,
     rms,
   };
+}
+
+export function encode16kInt16ChunksToWavBase64(chunks: Int16Array[]): string {
+  let totalSamples = 0;
+  for (const c of chunks) totalSamples += c.length;
+  if (totalSamples === 0) return '';
+
+  const sampleRate = 16000;
+  const dataBytes = totalSamples * 2;
+  const buffer = new ArrayBuffer(44 + dataBytes);
+  const view = new DataView(buffer);
+
+  const writeStr = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++) {
+      view.setUint8(offset + i, str.charCodeAt(i));
+    }
+  };
+
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + dataBytes, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true); // PCM chunk size
+  view.setUint16(20, 1, true); // PCM format
+  view.setUint16(22, 1, true); // mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true); // byte rate
+  view.setUint16(32, 2, true); // block align
+  view.setUint16(34, 16, true); // bits per sample
+  writeStr(36, 'data');
+  view.setUint32(40, dataBytes, true);
+
+  let offset = 44;
+  for (const chunk of chunks) {
+    for (let i = 0; i < chunk.length; i++) {
+      view.setInt16(offset, chunk[i], true);
+      offset += 2;
+    }
+  }
+
+  return uint8ToBase64(new Uint8Array(buffer));
 }
 
 export function decode24kPcmToFloat32(base64: string): {

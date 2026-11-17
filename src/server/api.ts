@@ -8,6 +8,7 @@ import {
   generateAiImage,
   generateSpeechAudio,
   uploadMediaFileToGemini,
+  generateLiveTurnResponse,
 } from './gemini.ts';
 import { testAndDiscoverConnector } from './connectorsEngine.ts';
 
@@ -32,7 +33,8 @@ apiRouter.get('/health', (_req: Request, res: Response) => {
   sendJson(res, 200, {
     status: 'ok',
     timestamp: new Date().toISOString(),
-    geminiAvailable: Boolean(process.env.GEMINI_API_KEY),
+    geminiAvailable: Boolean(process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY),
+    liveWsSupported: !process.env.VERCEL,
   });
 });
 
@@ -383,6 +385,57 @@ apiRouter.post('/tts', async (req: Request, res: Response) => {
     console.error('TTS endpoint error:', error);
     sendJson(res, 500, {
       error: error?.message || 'Gagal memproses suara AI.',
+    });
+  }
+});
+
+// Serverless HTTP Turn-Based Live Voice & Vision Endpoint (Vercel Fallback when WS upgrade is unavailable)
+apiRouter.post('/live-turn', async (req: Request, res: Response) => {
+  try {
+    const {
+      audioBase64,
+      audioMimeType,
+      imageBase64,
+      imageMimeType,
+      textPrompt,
+      history,
+      voiceName,
+      personaId,
+      customInstruction,
+      userMemories,
+      userName,
+      deviceTime,
+      allowEmojis,
+      voiceLanguage,
+    } = req.body || {};
+
+    if (!audioBase64 && !imageBase64 && !textPrompt) {
+      sendJson(res, 400, { error: 'Input suara, visual, atau teks wajib disertakan.' });
+      return;
+    }
+
+    const result = await generateLiveTurnResponse({
+      audioBase64,
+      audioMimeType,
+      imageBase64,
+      imageMimeType,
+      textPrompt,
+      history,
+      voiceName,
+      personaId,
+      customInstruction,
+      userMemories,
+      userName,
+      deviceTime,
+      allowEmojis,
+      voiceLanguage,
+    });
+
+    sendJson(res, 200, result);
+  } catch (error: any) {
+    console.error('Live HTTP turn error:', error);
+    sendJson(res, 500, {
+      error: error?.message || 'Gagal memproses percakapan Maria Live.',
     });
   }
 });

@@ -3,7 +3,7 @@ import { LiveServerMessage, Modality, type Session } from '@google/genai';
 import { WebSocket, WebSocketServer } from 'ws';
 import {
   buildSystemInstruction,
-  getGeminiClient,
+  getGeminiLiveClient,
   type DeviceTimeInfo,
 } from './gemini.ts';
 
@@ -96,7 +96,7 @@ export function attachLiveWebSocketServer(httpServer: Server) {
 
       let ai;
       try {
-        ai = getGeminiClient();
+        ai = getGeminiLiveClient('v1beta');
       } catch (err: any) {
         sendJson(clientWs, {
           type: 'error',
@@ -141,6 +141,13 @@ export function attachLiveWebSocketServer(httpServer: Server) {
 - Berikan jawaban lisan yang natural, jelas, ekspresif, hangat, dan ringkas agar nyaman didengar secara langsung (jangan membacakan simbol markdown seperti bintang/pagar/backtick).
 - Apabila pengguna mengaktifkan kamera, membagikan layar, atau mengirim gambar/berkas, analisis visual yang masuk secara akurat dan responsif seperti rekan diskusi langsung.${contextBlock}`;
 
+      let errorSent = false;
+      const emitErrorOnce = (msg: string) => {
+        if (errorSent || isClosing) return;
+        errorSent = true;
+        sendJson(clientWs, { type: 'error', error: msg });
+      };
+
       sessionPromise = ai.live
         .connect({
           model: 'gemini-3.8-live',
@@ -159,7 +166,7 @@ export function attachLiveWebSocketServer(httpServer: Server) {
           },
           callbacks: {
             onopen: () => {
-              sendJson(clientWs, { type: 'ready', voiceName });
+              // Wait for connect() promise resolution (setupComplete) before emitting 'ready'
             },
             onmessage: (message: LiveServerMessage) => {
               const content = message.serverContent;
@@ -198,16 +205,14 @@ export function attachLiveWebSocketServer(httpServer: Server) {
               }
             },
             onerror: (err: any) => {
-              console.error('Gemini Live session error:', err);
-              sendJson(clientWs, {
-                type: 'error',
-                error:
-                  err?.message ||
-                  'Koneksi sesi Gemini Live terputus atau mengalami kendala.',
-              });
+              const msg =
+                err?.message ||
+                'Koneksi sesi Gemini Live terputus atau mengalami kendala.';
+              console.error('Gemini Live session error:', msg);
+              emitErrorOnce(msg);
             },
             onclose: (event: any) => {
-              if (!isClosing) {
+              if (!isClosing && !errorSent) {
                 sendJson(clientWs, {
                   type: 'closed',
                   reason: event?.reason || undefined,
@@ -229,15 +234,13 @@ export function attachLiveWebSocketServer(httpServer: Server) {
           return session;
         })
         .catch((err: any) => {
-          console.error('Failed to connect Gemini Live:', err);
-          sendJson(clientWs, {
-            type: 'error',
-            error:
-              err?.message ||
-              'Gagal terhubung ke layanan suara Maria Live (gemini-3.8-live).',
-          });
+          const msg =
+            err?.message ||
+            'Gagal terhubung ke layanan suara Maria Live (gemini-3.8-live).';
+          console.error('Failed to connect Gemini Live:', msg);
+          emitErrorOnce(msg);
           cleanup();
-          throw err;
+          return null as unknown as Session;
         });
     };
 

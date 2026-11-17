@@ -18,6 +18,7 @@ import { useLanguage } from '../context/LanguageContext.tsx';
 import {
   decode24kPcmToFloat32,
   downsampleTo16kPcmBase64,
+  encode16kInt16ChunksToWavBase64,
 } from '../lib/liveAudioUtils.ts';
 import { generateImageThumbnail, readFileAsDataUrl } from '../lib/mediaUtils.ts';
 
@@ -37,7 +38,7 @@ interface GeminiLiveOverlayProps {
   onCommitLiveTurn: (role: 'user' | 'model', text: string) => void;
 }
 
-type LiveStatus = 'connecting' | 'listening' | 'speaking' | 'muted' | 'error';
+type LiveStatus = 'connecting' | 'listening' | 'thinking' | 'speaking' | 'muted' | 'error';
 
 export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
   liveConfig,
@@ -51,6 +52,7 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(false);
+  const [isCameraReady, setIsCameraReady] = useState(false);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
@@ -58,11 +60,15 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
   const [liveModelCaption, setLiveModelCaption] = useState('');
   const [orbEnergy, setOrbEnergy] = useState(0);
 
-  // Refs to prevent stale closures inside audio/video callbacks
+  // Refs to avoid stale closures inside audio/video/VAD callbacks
   const isMutedRef = useRef(false);
   const isUnmountedRef = useRef(false);
   const isClosingRef = useRef(false);
+
+  const transportModeRef = useRef<'ws' | 'http'>('ws');
   const wsRef = useRef<WebSocket | null>(null);
+  const wsReadyRef = useRef(false);
+  const wsApiErrorRef = useRef(false);
 
   const inputCtxRef = useRef<AudioContext | null>(null);
   const outputCtxRef = useRef<AudioContext | null>(null);
@@ -71,12 +77,27 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
   const nextStartTimeRef = useRef<number>(0);
   const activeSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
 
+  // HTTP fallback playback & VAD refs
+  const httpAudioElRef = useRef<HTMLAudioElement | null>(null);
+  const httpSpeakingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const httpHistoryRef = useRef<Array<{ role: 'user' | 'model'; content: string }>>([]);
+  const httpTurnInFlightRef = useRef(false);
+  const vadPreRollRef = useRef<Int16Array[]>([]);
+  const vadSpeechChunksRef = useRef<Int16Array[]>([]);
+  const vadIsSpeakingRef = useRef(false);
+  const vadLastVoiceAtRef = useRef(0);
+  const vadSpeechStartAtRef = useRef(0);
+
   const cameraStreamRef = useRef<MediaStream | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
   const cameraVideoRef = useRef<HTMLVideoElement | null>(null);
   const screenVideoRef = useRef<HTMLVideoElement | null>(null);
   const captureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const videoLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isCameraOnRef = useRef(false);
+  const isScreenSharingRef = useRef(false);
+  isCameraOnRef.current = isCameraOn;
+  isScreenSharingRef.current = isScreenSharing;
 
   const inputEnergyRef = useRef(0);
   const outputEnergyRef = useRef(0);
@@ -116,7 +137,23 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     }
   }, []);
 
+  const stopHttpAudioPlayback = useCallback(() => {
+    if (httpSpeakingTimerRef.current) {
+      clearInterval(httpSpeakingTimerRef.current);
+      httpSpeakingTimerRef.current = null;
+    }
+    if (httpAudioElRef.current) {
+      try {
+        httpAudioElRef.current.pause();
+        httpAudioElRef.current.src = '';
+      } catch {}
+      httpAudioElRef.current = null;
+    }
+    outputEnergyRef.current = 0;
+  }, []);
+
   const stopAllOutputAudio = useCallback(() => {
+    stopHttpAudioPlayback();
     for (const source of activeSourcesRef.current) {
       try {
         source.stop();
@@ -131,7 +168,7 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     } else {
       nextStartTimeRef.current = 0;
     }
-  }, []);
+  }, [stopHttpAudioPlayback]);
 
   const stopCameraStream = useCallback(() => {
     if (cameraStreamRef.current) {
@@ -141,6 +178,7 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     if (cameraVideoRef.current) {
       cameraVideoRef.current.srcObject = null;
     }
+    setIsCameraReady(false);
     setIsCameraOn(false);
   }, []);
 
@@ -207,6 +245,156 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     onClose();
   }, [cleanupAllResources, flushModelTurn, flushUserTurn, onClose]);
 
+  const captureCurrentVideoFrameBase64 = useCallback((): string | undefined => {
+    const videoEl = isCameraOnRef.current
+      ? cameraVideoRef.current
+      : isScreenSharingRef.current
+      ? screenVideoRef.current
+      : null;
+
+    if (!videoEl || videoEl.readyState < 2) return undefined;
+    const vw = videoEl.videoWidth;
+    const vh = videoEl.videoHeight;
+    if (!vw || !vh) return undefined;
+
+    const maxEdge = 768;
+    const scale = Math.min(1, maxEdge / Math.max(vw, vh));
+    const cw = Math.max(1, Math.round(vw * scale));
+    const ch = Math.max(1, Math.round(vh * scale));
+
+    if (!captureCanvasRef.current) {
+      captureCanvasRef.current = document.createElement('canvas');
+    }
+    const canvas = captureCanvasRef.current;
+    canvas.width = cw;
+    canvas.height = ch;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return undefined;
+
+    ctx.drawImage(videoEl, 0, 0, cw, ch);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
+    return dataUrl.split(',')[1];
+  }, []);
+
+  const getDeviceTimePayload = () => {
+    const now = new Date();
+    return {
+      iso: now.toISOString(),
+      localTime: now.toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      }),
+      localDate: now.toLocaleDateString('id-ID', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }),
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Jakarta',
+    };
+  };
+
+  const sendHttpLiveTurn = useCallback(
+    async (payload: {
+      audioBase64?: string;
+      imageBase64?: string;
+      textPrompt?: string;
+    }) => {
+      if (isUnmountedRef.current || isClosingRef.current || httpTurnInFlightRef.current) return;
+      httpTurnInFlightRef.current = true;
+      setStatus('thinking');
+
+      try {
+        const cfg = liveConfigRef.current;
+        const frame = payload.imageBase64 || captureCurrentVideoFrameBase64();
+        const res = await fetch('/api/live-turn', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            audioBase64: payload.audioBase64,
+            audioMimeType: payload.audioBase64 ? 'audio/wav' : undefined,
+            imageBase64: frame,
+            imageMimeType: frame ? 'image/jpeg' : undefined,
+            textPrompt: payload.textPrompt,
+            history: httpHistoryRef.current.slice(-8),
+            voiceName: cfg.voiceName || 'Aoede',
+            customInstruction: cfg.customInstruction,
+            userMemories: cfg.userMemories,
+            userName: cfg.userName,
+            allowEmojis: cfg.allowEmojis,
+            voiceLanguage: cfg.voiceLanguage || 'auto',
+            deviceTime: getDeviceTimePayload(),
+          }),
+        });
+
+        if (isUnmountedRef.current || isClosingRef.current) return;
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(
+            errData?.error || `Server merespon status ${res.status}`
+          );
+        }
+
+        const data = await res.json();
+        const userText = String(data.userTranscript || '').trim();
+        const replyText = String(data.replyText || '').trim();
+
+        if (userText) {
+          setLiveUserCaption(userText);
+          httpHistoryRef.current.push({ role: 'user', content: userText });
+          onCommitLiveTurnRef.current('user', userText);
+        }
+
+        if (replyText) {
+          setLiveModelCaption(replyText);
+          httpHistoryRef.current.push({ role: 'model', content: replyText });
+          onCommitLiveTurnRef.current('model', replyText);
+        }
+
+        if (data.audioUrl && !isClosingRef.current && !isUnmountedRef.current) {
+          stopHttpAudioPlayback();
+          const audio = new Audio(data.audioUrl);
+          httpAudioElRef.current = audio;
+          setStatus('speaking');
+
+          let phase = 0;
+          httpSpeakingTimerRef.current = setInterval(() => {
+            phase += 0.45;
+            outputEnergyRef.current = 0.35 + Math.abs(Math.sin(phase)) * 0.45;
+          }, 70);
+
+          const finishPlayback = () => {
+            stopHttpAudioPlayback();
+            if (!isUnmountedRef.current && !isClosingRef.current) {
+              setStatus(isMutedRef.current ? 'muted' : 'listening');
+            }
+          };
+
+          audio.onended = finishPlayback;
+          audio.onerror = finishPlayback;
+          audio.play().catch(finishPlayback);
+        } else {
+          setStatus(isMutedRef.current ? 'muted' : 'listening');
+        }
+      } catch (err: any) {
+        if (isUnmountedRef.current || isClosingRef.current) return;
+        const msg = err?.message || 'Gagal memproses suara Maria Live.';
+        if (/GEMINI_API_KEY|API key|403|401/i.test(msg)) {
+          setStatus('error');
+          setErrorMessage(msg);
+        } else {
+          showTempNotice(msg);
+          setStatus(isMutedRef.current ? 'muted' : 'listening');
+        }
+      } finally {
+        httpTurnInFlightRef.current = false;
+      }
+    },
+    [captureCurrentVideoFrameBase64, showTempNotice, stopHttpAudioPlayback]
+  );
+
   const play24kAudioChunk = useCallback((base64Data: string) => {
     const ctx = outputCtxRef.current;
     if (!ctx || isUnmountedRef.current || isClosingRef.current) return;
@@ -269,7 +457,7 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     const tick = (now: number) => {
       if (isUnmountedRef.current) return;
       inputEnergyRef.current *= 0.88;
-      if (activeSourcesRef.current.size === 0) {
+      if (activeSourcesRef.current.size === 0 && !httpSpeakingTimerRef.current) {
         outputEnergyRef.current *= 0.85;
       }
       if (now - lastUpdate > 45) {
@@ -285,10 +473,14 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     };
   }, []);
 
-  // Initialize WebSocket + 16kHz Mic Capture + 24kHz Playback on mount
+  // Initialize Mic + WebSocket Live (with automatic seamless Serverless HTTP fallback when WS upgrade is unsupported)
   useEffect(() => {
     isUnmountedRef.current = false;
     isClosingRef.current = false;
+    wsReadyRef.current = false;
+    wsApiErrorRef.current = false;
+    transportModeRef.current = 'ws';
+    httpHistoryRef.current = [];
 
     const startSession = async () => {
       try {
@@ -304,6 +496,11 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
           window.AudioContext ||
           (window as unknown as { webkitAudioContext: typeof AudioContext })
             .webkitAudioContext;
+
+        // Probe server capability quickly in parallel while requesting mic access
+        const healthProbePromise = fetch('/api/health')
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null);
 
         const micStream = await navigator.mediaDevices.getUserMedia({
           audio: {
@@ -338,107 +535,117 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
           await outputCtx.resume().catch(() => {});
         }
 
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${window.location.host}/api/live`;
-        const ws = new WebSocket(wsUrl);
-        wsRef.current = ws;
+        const health = await healthProbePromise;
+        const canTryWs = health?.liveWsSupported !== false;
 
-        ws.onopen = () => {
+        const activateHttpLiveMode = () => {
           if (isUnmountedRef.current || isClosingRef.current) return;
-          const now = new Date();
-          const cfg = liveConfigRef.current;
-          ws.send(
-            JSON.stringify({
-              type: 'setup',
-              voiceName: cfg.voiceName || 'Aoede',
-              customInstruction: cfg.customInstruction,
-              userMemories: cfg.userMemories,
-              userName: cfg.userName,
-              allowEmojis: cfg.allowEmojis,
-              voiceLanguage: cfg.voiceLanguage || 'auto',
-              recentContext: cfg.recentContext,
-              deviceTime: {
-                iso: now.toISOString(),
-                localTime: now.toLocaleTimeString('id-ID', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit',
-                }),
-                localDate: now.toLocaleDateString('id-ID', {
-                  weekday: 'long',
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                }),
-                timeZone:
-                  Intl.DateTimeFormat().resolvedOptions().timeZone ||
-                  'Asia/Jakarta',
-              },
-            })
-          );
+          transportModeRef.current = 'http';
+          setErrorMessage(null);
+          setStatus(isMutedRef.current ? 'muted' : 'listening');
         };
 
-        ws.onmessage = (event) => {
-          if (isUnmountedRef.current || isClosingRef.current) return;
-          let msg: any;
-          try {
-            msg = JSON.parse(event.data);
-          } catch {
-            return;
-          }
+        if (canTryWs) {
+          const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const wsUrl = `${wsProtocol}//${window.location.host}/api/live`;
+          const ws = new WebSocket(wsUrl);
+          wsRef.current = ws;
 
-          if (msg.type === 'ready') {
-            setStatus(isMutedRef.current ? 'muted' : 'listening');
-          } else if (msg.type === 'inputTranscript' && msg.text) {
-            userTurnBufRef.current += msg.text;
-            setLiveUserCaption(userTurnBufRef.current.trim());
-          } else if (msg.type === 'outputTranscript' && msg.text) {
-            flushUserTurn();
-            modelTurnBufRef.current += msg.text;
-            setLiveModelCaption(modelTurnBufRef.current.trim());
-          } else if (msg.type === 'audio' && msg.data) {
-            flushUserTurn();
-            play24kAudioChunk(msg.data);
-          } else if (msg.type === 'interrupted') {
-            stopAllOutputAudio();
-            flushModelTurn();
-            setLiveModelCaption('');
-            setStatus(isMutedRef.current ? 'muted' : 'listening');
-          } else if (msg.type === 'turnComplete') {
-            flushUserTurn();
-            flushModelTurn();
-          } else if (msg.type === 'error') {
-            setStatus('error');
-            setErrorMessage(
-              msg.error ||
-                (isEn
-                  ? 'Maria Live encountered a connection error.'
-                  : 'Maria Live mengalami kendala koneksi.')
+          ws.onopen = () => {
+            if (isUnmountedRef.current || isClosingRef.current) return;
+            const cfg = liveConfigRef.current;
+            ws.send(
+              JSON.stringify({
+                type: 'setup',
+                voiceName: cfg.voiceName || 'Aoede',
+                customInstruction: cfg.customInstruction,
+                userMemories: cfg.userMemories,
+                userName: cfg.userName,
+                allowEmojis: cfg.allowEmojis,
+                voiceLanguage: cfg.voiceLanguage || 'auto',
+                recentContext: cfg.recentContext,
+                deviceTime: getDeviceTimePayload(),
+              })
             );
-          } else if (msg.type === 'closed') {
-            flushUserTurn();
-            flushModelTurn();
-            if (!isClosingRef.current) {
+          };
+
+          ws.onmessage = (event) => {
+            if (isUnmountedRef.current || isClosingRef.current) return;
+            let msg: any;
+            try {
+              msg = JSON.parse(event.data);
+            } catch {
+              return;
+            }
+
+            if (msg.type === 'ready') {
+              wsReadyRef.current = true;
+              setStatus(isMutedRef.current ? 'muted' : 'listening');
+            } else if (msg.type === 'inputTranscript' && msg.text) {
+              userTurnBufRef.current += msg.text;
+              setLiveUserCaption(userTurnBufRef.current.trim());
+            } else if (msg.type === 'outputTranscript' && msg.text) {
+              flushUserTurn();
+              modelTurnBufRef.current += msg.text;
+              setLiveModelCaption(modelTurnBufRef.current.trim());
+            } else if (msg.type === 'audio' && msg.data) {
+              flushUserTurn();
+              play24kAudioChunk(msg.data);
+            } else if (msg.type === 'interrupted') {
+              stopAllOutputAudio();
+              flushModelTurn();
+              setLiveModelCaption('');
+              setStatus(isMutedRef.current ? 'muted' : 'listening');
+            } else if (msg.type === 'turnComplete') {
+              flushUserTurn();
+              flushModelTurn();
+            } else if (msg.type === 'error') {
+              wsApiErrorRef.current = true;
+              setStatus('error');
+              setErrorMessage(
+                msg.error ||
+                  (isEn
+                    ? 'Maria Live encountered a connection error.'
+                    : 'Maria Live mengalami kendala koneksi.')
+              );
+            } else if (msg.type === 'closed') {
+              flushUserTurn();
+              flushModelTurn();
+              if (!isClosingRef.current && wsReadyRef.current && !wsApiErrorRef.current) {
+                setStatus('error');
+                setErrorMessage(
+                  isEn
+                    ? 'Live session ended by server.'
+                    : 'Sesi Maria Live telah berakhir.'
+                );
+              }
+            }
+          };
+
+          ws.onerror = () => {
+            if (isUnmountedRef.current || isClosingRef.current) return;
+            // If WebSocket upgrade itself failed before Gemini API error (e.g. serverless host), fallback seamlessly to HTTP Live turns
+            if (!wsReadyRef.current && !wsApiErrorRef.current) {
+              activateHttpLiveMode();
+            } else if (!wsApiErrorRef.current) {
               setStatus('error');
               setErrorMessage(
                 isEn
-                  ? 'Live session ended by server.'
-                  : 'Sesi Maria Live telah berakhir.'
+                  ? 'Unable to connect to Maria Live server.'
+                  : 'Gagal terhubung ke server Maria Live.'
               );
             }
-          }
-        };
+          };
 
-        ws.onerror = () => {
-          if (!isUnmountedRef.current && !isClosingRef.current) {
-            setStatus('error');
-            setErrorMessage(
-              isEn
-                ? 'Unable to connect to Maria Live server.'
-                : 'Gagal terhubung ke server Maria Live.'
-            );
-          }
-        };
+          ws.onclose = () => {
+            if (isUnmountedRef.current || isClosingRef.current) return;
+            if (!wsReadyRef.current && !wsApiErrorRef.current) {
+              activateHttpLiveMode();
+            }
+          };
+        } else {
+          activateHttpLiveMode();
+        }
 
         const source = inputCtx.createMediaStreamSource(micStream);
         const processor = inputCtx.createScriptProcessor(4096, 1, 1);
@@ -452,25 +659,77 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
           if (isUnmountedRef.current || isClosingRef.current) return;
           if (isMutedRef.current) {
             inputEnergyRef.current = 0;
+            vadIsSpeakingRef.current = false;
+            vadSpeechChunksRef.current = [];
             return;
           }
-          const socket = wsRef.current;
-          if (!socket || socket.readyState !== WebSocket.OPEN) return;
 
           const inputData = e.inputBuffer.getChannelData(0);
-          const { base64, rms } = downsampleTo16kPcmBase64(
+          const { base64, int16, rms } = downsampleTo16kPcmBase64(
             inputData,
             inputCtx.sampleRate
           );
           inputEnergyRef.current = Math.min(1, rms * 5.5);
 
-          socket.send(
-            JSON.stringify({
-              type: 'audio',
-              data: base64,
-              mimeType: 'audio/pcm;rate=16000',
-            })
-          );
+          if (transportModeRef.current === 'ws') {
+            const socket = wsRef.current;
+            if (socket && socket.readyState === WebSocket.OPEN && wsReadyRef.current) {
+              socket.send(
+                JSON.stringify({
+                  type: 'audio',
+                  data: base64,
+                  mimeType: 'audio/pcm;rate=16000',
+                })
+              );
+            }
+            return;
+          }
+
+          // Serverless HTTP VAD mode: detect speech start, collect PCM, auto-send after silence
+          if (httpTurnInFlightRef.current) return;
+
+          const now = Date.now();
+          const speechThreshold = 0.028;
+
+          if (!vadIsSpeakingRef.current) {
+            vadPreRollRef.current.push(int16);
+            if (vadPreRollRef.current.length > 3) {
+              vadPreRollRef.current.shift();
+            }
+
+            if (rms > speechThreshold) {
+              // Barge-in: stop Maria's TTS if user speaks clearly
+              if (httpAudioElRef.current) {
+                stopHttpAudioPlayback();
+                setStatus('listening');
+              }
+              vadIsSpeakingRef.current = true;
+              vadSpeechStartAtRef.current = now;
+              vadLastVoiceAtRef.current = now;
+              vadSpeechChunksRef.current = [...vadPreRollRef.current];
+              vadPreRollRef.current = [];
+            }
+          } else {
+            vadSpeechChunksRef.current.push(int16);
+            if (rms > speechThreshold * 0.7) {
+              vadLastVoiceAtRef.current = now;
+            }
+
+            const silenceDuration = now - vadLastVoiceAtRef.current;
+            const totalDuration = now - vadSpeechStartAtRef.current;
+
+            if (silenceDuration >= 1050 || totalDuration >= 15000) {
+              const chunks = vadSpeechChunksRef.current;
+              vadIsSpeakingRef.current = false;
+              vadSpeechChunksRef.current = [];
+              if (totalDuration >= 450 && chunks.length > 0) {
+                const wavBase64 = encode16kInt16ChunksToWavBase64(chunks);
+                if (wavBase64) {
+                  sendHttpLiveTurn({ audioBase64: wavBase64 });
+                }
+              }
+            }
+          }
         };
 
         source.connect(processor);
@@ -499,7 +758,16 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
       isUnmountedRef.current = true;
       cleanupAllResources();
     };
-  }, [cleanupAllResources, flushModelTurn, flushUserTurn, isEn, play24kAudioChunk, stopAllOutputAudio]);
+  }, [
+    cleanupAllResources,
+    flushModelTurn,
+    flushUserTurn,
+    isEn,
+    play24kAudioChunk,
+    sendHttpLiveTurn,
+    stopAllOutputAudio,
+    stopHttpAudioPlayback,
+  ]);
 
   // Attach MediaStream to camera <video> and manage 1 FPS video streaming (Camera OR Screen Share)
   useEffect(() => {
@@ -524,31 +792,14 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
 
     if (!isCameraOn && !isScreenSharing) return;
 
-    const sendFrameFromVideo = (videoEl: HTMLVideoElement | null) => {
-      if (!videoEl || videoEl.readyState < 2) return;
-      const vw = videoEl.videoWidth;
-      const vh = videoEl.videoHeight;
-      if (!vw || !vh) return;
+    // Strict <= 1 FPS streaming rate in WebSocket mode per Gemini Live API guidelines
+    videoLoopRef.current = setInterval(() => {
+      if (isClosingRef.current || isUnmountedRef.current) return;
+      if (transportModeRef.current !== 'ws' || !wsReadyRef.current) return;
       const socket = wsRef.current;
       if (!socket || socket.readyState !== WebSocket.OPEN) return;
 
-      const maxEdge = 768;
-      const scale = Math.min(1, maxEdge / Math.max(vw, vh));
-      const cw = Math.max(1, Math.round(vw * scale));
-      const ch = Math.max(1, Math.round(vh * scale));
-
-      if (!captureCanvasRef.current) {
-        captureCanvasRef.current = document.createElement('canvas');
-      }
-      const canvas = captureCanvasRef.current;
-      canvas.width = cw;
-      canvas.height = ch;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      ctx.drawImage(videoEl, 0, 0, cw, ch);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
-      const base64 = dataUrl.split(',')[1];
+      const base64 = captureCurrentVideoFrameBase64();
       if (!base64) return;
 
       socket.send(
@@ -558,16 +809,6 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
           mimeType: 'image/jpeg',
         })
       );
-    };
-
-    // Strict <= 1 FPS streaming rate per Gemini Live API guidelines
-    videoLoopRef.current = setInterval(() => {
-      if (isClosingRef.current || isUnmountedRef.current) return;
-      if (isCameraOn && cameraVideoRef.current) {
-        sendFrameFromVideo(cameraVideoRef.current);
-      } else if (isScreenSharing && screenVideoRef.current) {
-        sendFrameFromVideo(screenVideoRef.current);
-      }
     }, 1000);
 
     return () => {
@@ -576,7 +817,7 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
         videoLoopRef.current = null;
       }
     };
-  }, [isCameraOn, isScreenSharing]);
+  }, [captureCurrentVideoFrameBase64, isCameraOn, isScreenSharing]);
 
   const startCamera = useCallback(
     async (mode: 'environment' | 'user') => {
@@ -586,8 +827,9 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
             isEn ? 'Camera not supported in this browser.' : 'Kamera tidak didukung di browser ini.'
           );
         }
-        // Stop screen share cleanly if switching to camera
         stopScreenStream();
+        setIsCameraReady(false);
+        setIsCameraOn(true);
         if (cameraStreamRef.current) {
           cameraStreamRef.current.getTracks().forEach((t) => t.stop());
         }
@@ -601,9 +843,13 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
         });
         cameraStreamRef.current = stream;
         setFacingMode(mode);
-        setIsCameraOn(true);
+        if (cameraVideoRef.current) {
+          cameraVideoRef.current.srcObject = stream;
+          cameraVideoRef.current.play().catch(() => {});
+        }
       } catch (err: any) {
         setIsCameraOn(false);
+        setIsCameraReady(false);
         showTempNotice(
           err?.message ||
             (isEn ? 'Unable to access camera.' : 'Gagal mengakses kamera perangkat.')
@@ -671,9 +917,15 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     setIsMuted(next);
     if (next) {
       inputEnergyRef.current = 0;
+      vadIsSpeakingRef.current = false;
+      vadSpeechChunksRef.current = [];
       setStatus('muted');
     } else {
-      setStatus(activeSourcesRef.current.size > 0 ? 'speaking' : 'listening');
+      setStatus(
+        activeSourcesRef.current.size > 0 || httpAudioElRef.current
+          ? 'speaking'
+          : 'listening'
+      );
     }
   };
 
@@ -687,27 +939,22 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
       const compressedDataUrl = await generateImageThumbnail(file, 1024, 0.8);
       const base64 = compressedDataUrl.split(',')[1];
       if (!base64) throw new Error('Invalid image');
-      const socket = wsRef.current;
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(
-          JSON.stringify({
-            type: 'video',
-            data: base64,
-            mimeType: 'image/jpeg',
-          })
+
+      const prompt = isEn
+        ? `I just shared an image named "${file.name}". Please look at it and respond naturally.`
+        : `Saya baru saja membagikan foto bernama "${file.name}". Tolong lihat dan jelaskan/tanggapi foto tersebut.`;
+
+      if (transportModeRef.current === 'ws' && wsReadyRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
+          JSON.stringify({ type: 'video', data: base64, mimeType: 'image/jpeg' })
         );
-        socket.send(
-          JSON.stringify({
-            type: 'text',
-            text: isEn
-              ? `I just shared an image named "${file.name}". Please look at it and respond naturally.`
-              : `Saya baru saja membagikan foto bernama "${file.name}". Tolong lihat dan jelaskan/tanggapi foto tersebut.`,
-          })
-        );
-        showTempNotice(
-          isEn ? `Photo "${file.name}" shared to Maria Live` : `Foto "${file.name}" dikirim ke Maria Live`
-        );
+        wsRef.current.send(JSON.stringify({ type: 'text', text: prompt }));
+      } else {
+        sendHttpLiveTurn({ imageBase64: base64, textPrompt: prompt });
       }
+      showTempNotice(
+        isEn ? `Photo "${file.name}" shared to Maria Live` : `Foto "${file.name}" dikirim ke Maria Live`
+      );
     } catch {
       showTempNotice(
         isEn ? 'Failed to send photo to Live session.' : 'Gagal mengirim foto ke Maria Live.'
@@ -722,16 +969,22 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     if (!file) return;
 
     try {
-      const socket = wsRef.current;
-      if (!socket || socket.readyState !== WebSocket.OPEN) return;
-
       if (file.type.startsWith('image/')) {
         const compressedDataUrl = await generateImageThumbnail(file, 1024, 0.8);
         const base64 = compressedDataUrl.split(',')[1];
         if (base64) {
-          socket.send(
-            JSON.stringify({ type: 'video', data: base64, mimeType: 'image/jpeg' })
-          );
+          if (transportModeRef.current === 'ws' && wsReadyRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(
+              JSON.stringify({ type: 'video', data: base64, mimeType: 'image/jpeg' })
+            );
+          } else {
+            sendHttpLiveTurn({
+              imageBase64: base64,
+              textPrompt: isEn
+                ? `Analyze and briefly describe "${file.name}".`
+                : `Analisis dan jelaskan singkat isi gambar "${file.name}".`,
+            });
+          }
           showTempNotice(
             isEn ? `Image "${file.name}" shared` : `Gambar "${file.name}" dikirim ke Maria Live`
           );
@@ -739,35 +992,28 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
         return;
       }
 
+      let promptText: string;
       if (
         file.type.startsWith('text/') ||
         /\.(txt|md|json|csv|ts|tsx|js|jsx|py|html|css|xml|yaml|yml|log)$/i.test(file.name)
       ) {
         const text = await file.text();
-        const snippet = text.slice(0, 12000);
-        socket.send(
-          JSON.stringify({
-            type: 'text',
-            text: `File "${file.name}":\n${snippet}`,
-          })
-        );
-        showTempNotice(
-          isEn ? `File "${file.name}" shared` : `Berkas "${file.name}" dikirim ke Maria Live`
-        );
+        promptText = `File "${file.name}":\n${text.slice(0, 12000)}`;
       } else {
         const dataUrl = await readFileAsDataUrl(file);
-        socket.send(
-          JSON.stringify({
-            type: 'text',
-            text: isEn
-              ? `User selected file "${file.name}" (${file.type || 'document'}, ${Math.round(file.size / 1024)} KB).`
-              : `Pengguna melampirkan berkas "${file.name}" (${file.type || 'dokumen'}, ${Math.round(file.size / 1024)} KB, length ${dataUrl.length}).`,
-          })
-        );
-        showTempNotice(
-          isEn ? `File "${file.name}" noted` : `Info berkas "${file.name}" dikirim ke Maria Live`
-        );
+        promptText = isEn
+          ? `User selected file "${file.name}" (${file.type || 'document'}, ${Math.round(file.size / 1024)} KB).`
+          : `Pengguna melampirkan berkas "${file.name}" (${file.type || 'dokumen'}, ${Math.round(file.size / 1024)} KB, ukuran data ${dataUrl.length}).`;
       }
+
+      if (transportModeRef.current === 'ws' && wsReadyRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'text', text: promptText }));
+      } else {
+        sendHttpLiveTurn({ textPrompt: promptText });
+      }
+      showTempNotice(
+        isEn ? `File "${file.name}" shared` : `Berkas "${file.name}" dikirim ke Maria Live`
+      );
     } catch {
       showTempNotice(
         isEn ? 'Unable to read selected file.' : 'Gagal membaca berkas yang dipilih.'
@@ -783,6 +1029,10 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
       ? isEn
         ? 'Connecting Maria Live...'
         : 'Menghubungkan Maria Live...'
+      : status === 'thinking'
+      ? isEn
+        ? 'Maria Live Thinking...'
+        : 'Maria Live Memproses...'
       : status === 'speaking'
       ? isEn
         ? 'Maria Live Speaking'
@@ -817,18 +1067,27 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
         onChange={handleFilePicked}
       />
 
-      {/* Full-Stage Live Camera Viewfinder Overlay (Matches Video 00:34–00:36) */}
+      {/* Full-Stage Live Camera Viewfinder Overlay */}
       {isCameraOn && (
-        <div className="fixed inset-x-3 sm:inset-x-6 top-16 bottom-28 sm:bottom-32 z-30 rounded-3xl overflow-hidden bg-black border border-slate-700/70 shadow-2xl flex items-center justify-center animate-in fade-in duration-150">
+        <div className="fixed inset-x-3 sm:inset-x-6 top-16 bottom-28 sm:bottom-32 z-30 rounded-3xl overflow-hidden bg-slate-950 border border-slate-700/70 shadow-2xl flex items-center justify-center animate-in fade-in duration-150">
           <video
             ref={cameraVideoRef}
             autoPlay
             playsInline
             muted
-            className={`w-full h-full object-cover ${
-              facingMode === 'user' ? 'scale-x-[-1]' : ''
-            }`}
+            onLoadedData={() => setIsCameraReady(true)}
+            onPlaying={() => setIsCameraReady(true)}
+            className={`w-full h-full object-cover transition-opacity duration-200 ${
+              isCameraReady ? 'opacity-100' : 'opacity-0'
+            } ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
           />
+
+          {!isCameraReady && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-300 text-xs">
+              <div className="w-6 h-6 border-2 border-slate-600 border-t-blue-400 rounded-full animate-spin" />
+              <span>{isEn ? 'Starting camera...' : 'Menyiapkan kamera...'}</span>
+            </div>
+          )}
 
           {/* Top Bar inside Camera View */}
           <div className="absolute top-3 inset-x-3 flex items-center justify-between pointer-events-none">
@@ -923,7 +1182,7 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
           </div>
         )}
 
-        {/* Live Transcript / Caption Card (Matches Video 00:12–00:33 & Screenshot 064820) */}
+        {/* Live Transcript / Caption Card */}
         {(liveModelCaption || liveUserCaption) && (
           <div className="mb-2.5 mx-auto max-w-xl px-4 py-2.5 rounded-2xl bg-slate-900/88 dark:bg-[#141720]/92 backdrop-blur-md text-white border border-slate-700/70 shadow-xl space-y-1 text-xs leading-relaxed">
             {liveUserCaption && (
@@ -943,7 +1202,7 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
           </div>
         )}
 
-        {/* Live Attachment Popover above [+] button (Matches Video 00:38) */}
+        {/* Live Attachment Popover above [+] button */}
         <div className="relative flex flex-col items-center">
           {isPlusMenuOpen && (
             <div
@@ -987,7 +1246,7 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
 
           {/* Main Floating Live Pill Controls: [+] [Camera] [Glowing Orb] [Mute] [End X] */}
           <div className="flex items-center justify-center gap-2 sm:gap-3 py-1">
-            {/* + Button (Screen Share, Photos, Files) */}
+            {/* + Button */}
             <button
               type="button"
               onClick={() => setIsPlusMenuOpen((prev) => !prev)}
@@ -1027,7 +1286,7 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
               style={{
                 transform: `scale(${orbScale.toFixed(3)})`,
                 boxShadow: `0 0 ${orbGlow}px rgba(37, 99, 235, ${
-                  status === 'speaking' ? 0.65 : status === 'connecting' ? 0.35 : 0.45
+                  status === 'speaking' ? 0.65 : status === 'connecting' || status === 'thinking' ? 0.45 : 0.4
                 })`,
                 background:
                   'radial-gradient(circle at 50% 85%, #60a5fa 0%, #2563eb 36%, #0f172a 78%, #020617 100%)',
@@ -1036,13 +1295,15 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
             >
               <div
                 className={`absolute inset-x-3 bottom-0 h-5 rounded-full blur-md pointer-events-none transition-opacity duration-150 ${
-                  status === 'connecting' ? 'animate-pulse bg-sky-400/70' : 'bg-sky-300/75'
+                  status === 'connecting' || status === 'thinking'
+                    ? 'animate-pulse bg-sky-400/75'
+                    : 'bg-sky-300/75'
                 }`}
                 style={{
                   opacity: Math.min(1, 0.35 + orbEnergy * 0.8),
                 }}
               />
-              {status === 'connecting' && (
+              {(status === 'connecting' || status === 'thinking') && (
                 <div className="w-4 h-4 border-2 border-sky-200/40 border-t-white rounded-full animate-spin relative z-10" />
               )}
             </div>
