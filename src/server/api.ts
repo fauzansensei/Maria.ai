@@ -407,6 +407,7 @@ apiRouter.post('/live-turn', async (req: Request, res: Response) => {
       deviceTime,
       allowEmojis,
       voiceLanguage,
+      appLanguage,
     } = req.body || {};
 
     if (!audioBase64 && !imageBase64 && !textPrompt) {
@@ -429,6 +430,7 @@ apiRouter.post('/live-turn', async (req: Request, res: Response) => {
       deviceTime,
       allowEmojis,
       voiceLanguage,
+      appLanguage,
     });
 
     sendJson(res, 200, result);

@@ -29,6 +29,7 @@ export interface GeminiLiveConfig {
   userName?: string;
   allowEmojis?: boolean;
   voiceLanguage?: 'auto' | 'id-ID' | 'en-US';
+  appLanguage?: 'Indonesia' | 'English';
   recentContext?: string;
 }
 
@@ -87,6 +88,7 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
   const vadIsSpeakingRef = useRef(false);
   const vadLastVoiceAtRef = useRef(0);
   const vadSpeechStartAtRef = useRef(0);
+  const hasShownTtsLimitNoticeRef = useRef(false);
 
   const cameraStreamRef = useRef<MediaStream | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
@@ -324,6 +326,7 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
             userName: cfg.userName,
             allowEmojis: cfg.allowEmojis,
             voiceLanguage: cfg.voiceLanguage || 'auto',
+            appLanguage: cfg.appLanguage || 'Indonesia',
             deviceTime: getDeviceTimePayload(),
           }),
         });
@@ -376,6 +379,10 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
           audio.onerror = finishPlayback;
           audio.play().catch(finishPlayback);
         } else {
+          if (!data.audioUrl && data.ttsNotice && !hasShownTtsLimitNoticeRef.current) {
+            hasShownTtsLimitNoticeRef.current = true;
+            showTempNotice(data.ttsNotice);
+          }
           setStatus(isMutedRef.current ? 'muted' : 'listening');
         }
       } catch (err: any) {
@@ -563,6 +570,7 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
                 userName: cfg.userName,
                 allowEmojis: cfg.allowEmojis,
                 voiceLanguage: cfg.voiceLanguage || 'auto',
+                appLanguage: cfg.appLanguage || 'Indonesia',
                 recentContext: cfg.recentContext,
                 deviceTime: getDeviceTimePayload(),
               })

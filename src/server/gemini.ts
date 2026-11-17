@@ -1,5 +1,4 @@
 import { GoogleGenAI, ThinkingLevel, Type } from '@google/genai';
-import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 import { sanitizeModelText } from '../lib/formatUtils.ts';
 import {
   ActiveConnectorConfig,
@@ -1591,7 +1590,7 @@ export async function generateSpeechAudio(
     styleHint = 'Ceria, lincah, ingin tahu, penuh rasa penasaran dalam bahasa Indonesia';
   }
 
-  // 2. PRIMARY: Gemini AI Voice Engine (bypass silently if free-tier quota cooldown is active)
+  // 2. EXCLUSIVELY Gemini TTS (no fallback to built-in/Edge/Google default voices; if limited, disable voice cleanly)
   const targetTtsModel =
     preferredModel === 'gemini-3.8-flash-tts'
       ? 'gemini-3.8-flash-tts'
@@ -1603,122 +1602,146 @@ export async function generateSpeechAudio(
     geminiTtsCooldownUntil = 0;
   }
 
-  if (currentApiKey && Date.now() >= geminiTtsCooldownUntil) {
-    try {
-      const ai = getGeminiClient();
-      const response = await ai.models.generateContent({
-        model: targetTtsModel,
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              {
-                text: cleanText,
-                speechMetadata: {
-                  style: styleHint,
-                },
-              },
-            ],
-          },
-        ],
-        config: {
-          responseModalities: ['AUDIO'],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: selectedVoice },
-            },
-          },
-        },
-      });
-
-      const base64Audio =
-        response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-
-      if (base64Audio) {
-        const result = {
-          audioUrl: `data:audio/wav;base64,${base64Audio}`,
-          model: targetTtsModel,
-          voice: selectedVoice,
-        };
-        if (serverAudioCache.size > 200) serverAudioCache.clear();
-        serverAudioCache.set(cacheKey, result);
-        return result;
-      }
-    } catch (ttsErr: any) {
-      if (isGeminiTtsQuotaOrRateError(ttsErr)) {
-        geminiTtsCooldownUntil = Date.now() + parseTtsRetryDelayMs(ttsErr);
-      } else {
-        geminiTtsCooldownUntil = Date.now() + 30_000;
-      }
-    }
+  if (!currentApiKey) {
+    return {
+      audioUrl: null,
+      model: 'none',
+      voice: selectedVoice,
+      limited: true,
+      notice: 'Kunci API Gemini belum dikonfigurasi, suara Gemini TTS tidak tersedia.',
+    };
   }
 
-  // 3. Fallback to Neural Voice (MsEdgeTTS) seamlessly without noisy error telemetry
-  let tts: MsEdgeTTS | null = null;
-  try {
-    const isMale =
-      personaId === 'pria' || personaId === 'remaja-laki' || personaId === 'anak-laki';
-    const edgeVoice = isMale ? 'id-ID-ArdiNeural' : 'id-ID-GadisNeural';
+  if (Date.now() < geminiTtsCooldownUntil) {
+    return {
+      audioUrl: null,
+      model: 'none',
+      voice: selectedVoice,
+      limited: true,
+      notice: 'Kuota Gemini TTS sedang mencapai batas sementara. Suara dinonaktifkan hingga kuota pulih.',
+    };
+  }
 
-    let pitch = '+0Hz';
-    let rate = 1.0;
-    if (personaId === 'anak-perempuan') {
-      pitch = '+28Hz';
-      rate = 1.10;
-    } else if (personaId === 'anak-laki') {
-      pitch = '+26Hz';
-      rate = 1.10;
-    } else if (personaId === 'remaja-perempuan') {
-      pitch = '+12Hz';
-      rate = 1.04;
-    } else if (personaId === 'remaja-laki') {
-      pitch = '+10Hz';
-      rate = 1.04;
-    } else if (personaId === 'pria') {
-      pitch = '-2Hz';
-      rate = 0.98;
+  const callGeminiTts = async (
+    modelToUse: string,
+    voiceToUse: string,
+    useSpeechMetadata: boolean = true,
+    useV1Beta: boolean = false
+  ) => {
+    const ai = useV1Beta ? getGeminiLiveClient('v1beta') : getGeminiClient();
+    const userPart: any = useSpeechMetadata
+      ? {
+          text: cleanText,
+          speechMetadata: {
+            style: styleHint,
+          },
+        }
+      : { text: cleanText };
+
+    const response = await ai.models.generateContent({
+      model: modelToUse,
+      contents: [
+        {
+          role: 'user',
+          parts: [userPart],
+        },
+      ],
+      config: {
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: voiceToUse },
+          },
+        },
+      },
+    });
+    return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || '';
+  };
+
+  try {
+    let base64Audio = '';
+    let usedTtsModel = targetTtsModel;
+    const isMalePersona =
+      personaId === 'pria' || personaId === 'remaja-laki' || personaId === 'anak-laki';
+    const altVoice = selectedVoice === 'Kore' || selectedVoice === 'Puck'
+      ? selectedVoice
+      : (isMalePersona ? 'Puck' : 'Kore');
+    const secondaryModel =
+      targetTtsModel === 'gemini-3.8-flash-lite-tts'
+        ? 'gemini-3.8-flash-tts'
+        : 'gemini-3.8-flash-lite-tts';
+
+    const attempts: Array<{ model: string; voice: string; meta: boolean; v1beta: boolean }> = [
+      { model: targetTtsModel, voice: selectedVoice, meta: true, v1beta: false },
+      ...(altVoice !== selectedVoice
+        ? [{ model: targetTtsModel, voice: altVoice, meta: true, v1beta: false }]
+        : []),
+      { model: targetTtsModel, voice: altVoice, meta: false, v1beta: false },
+      { model: secondaryModel, voice: altVoice, meta: true, v1beta: false },
+      { model: targetTtsModel, voice: altVoice, meta: true, v1beta: true },
+    ];
+
+    let lastTtsErr: any = null;
+    for (const attempt of attempts) {
+      try {
+        const audio = await callGeminiTts(attempt.model, attempt.voice, attempt.meta, attempt.v1beta);
+        if (audio) {
+          base64Audio = audio;
+          usedTtsModel = attempt.model;
+          selectedVoice = attempt.voice;
+          lastTtsErr = null;
+          break;
+        }
+      } catch (err: any) {
+        lastTtsErr = err;
+        if (isGeminiTtsQuotaOrRateError(err)) {
+          throw err;
+        }
+      }
     }
 
-    tts = new MsEdgeTTS();
-    await tts.setMetadata(edgeVoice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-    const { audioStream } = tts.toStream(cleanText.slice(0, 4500), { pitch, rate });
-    const chunks: Buffer[] = [];
-    audioStream.on('data', (c: Buffer) => chunks.push(c));
+    if (!base64Audio && lastTtsErr) {
+      throw lastTtsErr;
+    }
 
-    await Promise.race([
-      new Promise<void>((resolve, reject) => {
-        audioStream.on('end', () => resolve());
-        audioStream.on('error', (err: any) => reject(err));
-      }),
-      new Promise<void>((_, reject) =>
-        setTimeout(() => reject(new Error('Audio generation timeout')), 12000)
-      ),
-    ]);
-
-    const buffer = Buffer.concat(chunks);
-    if (buffer.length > 0) {
+    if (base64Audio) {
       const result = {
-        audioUrl: `data:audio/mp3;base64,${buffer.toString('base64')}`,
-        model: `gemini-ai-voice-${personaId || 'wanita'}`,
-        voice: edgeVoice,
+        audioUrl: `data:audio/wav;base64,${base64Audio}`,
+        model: usedTtsModel,
+        voice: selectedVoice,
       };
       if (serverAudioCache.size > 200) serverAudioCache.clear();
       serverAudioCache.set(cacheKey, result);
       return result;
     }
-  } catch {
-    // Fallback error handled gracefully below
-  } finally {
-    try {
-      tts?.close();
-    } catch {}
+  } catch (ttsErr: any) {
+    const errMsg = String(ttsErr?.message || ttsErr || '');
+    console.warn('Gemini TTS error (fallback disabled by user preference):', errMsg);
+    if (isGeminiTtsQuotaOrRateError(ttsErr)) {
+      geminiTtsCooldownUntil = Date.now() + parseTtsRetryDelayMs(ttsErr);
+      return {
+        audioUrl: null,
+        model: 'none',
+        voice: selectedVoice,
+        limited: true,
+        notice: 'Kuota Gemini TTS sedang mencapai batas sementara. Suara dinonaktifkan sementara hingga kuota pulih.',
+      };
+    }
+    return {
+      audioUrl: null,
+      model: 'none',
+      voice: selectedVoice,
+      limited: true,
+      notice: 'Layanan suara Gemini TTS sedang tidak tersedia atau mencapai batas.',
+    };
   }
 
   return {
     audioUrl: null,
     model: 'none',
     voice: selectedVoice,
-    notice: 'Layanan suara AI sedang mencapai batas kuota sementara. Silakan coba putar ulang beberapa saat lagi.',
+    limited: true,
+    notice: 'Layanan suara Gemini TTS sedang tidak tersedia.',
   };
 }
 
@@ -1737,6 +1760,7 @@ export interface LiveHttpTurnOptions {
   deviceTime?: DeviceTimeInfo;
   allowEmojis?: boolean;
   voiceLanguage?: 'auto' | 'id-ID' | 'en-US';
+  appLanguage?: 'Indonesia' | 'English';
 }
 
 export async function generateLiveTurnResponse(options: LiveHttpTurnOptions) {
@@ -1749,12 +1773,13 @@ export async function generateLiveTurnResponse(options: LiveHttpTurnOptions) {
     Boolean(options.allowEmojis)
   );
 
-  const langRule =
-    options.voiceLanguage === 'en-US'
-      ? 'Respond in English unless the user speaks Indonesian.'
-      : options.voiceLanguage === 'id-ID'
-      ? 'Balas dalam Bahasa Indonesia yang natural kecuali pengguna berbicara bahasa lain.'
-      : 'Match the language spoken or written by the user naturally (Indonesian or English).';
+  const preferEnglish =
+    options.voiceLanguage === 'en-US' ||
+    (options.voiceLanguage !== 'id-ID' && options.appLanguage === 'English');
+
+  const langRule = preferEnglish
+    ? 'Respond in English unless the user explicitly speaks Indonesian.'
+    : 'BAHASA WAJIB: Anda WAJIB selalu menjawab dan menyapa dalam Bahasa Indonesia yang natural dan fasih. Jangan kembali ke bahasa Inggris/default kecuali pengguna secara eksplisit berbicara Bahasa Inggris atau meminta terjemahan.';
 
   const systemInstruction = `${baseSys}
 
@@ -1861,6 +1886,7 @@ MODE MARIA LIVE (SUARA & VISUAL LANGSUNG):
   const replyText = sanitizeModelText(String(parsed.replyText || '').trim());
 
   let audioUrl: string | null = null;
+  let ttsNotice: string | undefined;
   if (replyText) {
     const ttsResult = await generateSpeechAudio(
       replyText,
@@ -1868,12 +1894,16 @@ MODE MARIA LIVE (SUARA & VISUAL LANGSUNG):
       options.personaId
     ).catch(() => null);
     audioUrl = ttsResult?.audioUrl || null;
+    if (!audioUrl && (ttsResult as any)?.notice) {
+      ttsNotice = (ttsResult as any).notice;
+    }
   }
 
   return {
     userTranscript,
     replyText,
     audioUrl,
+    ttsNotice,
     model: usedModel,
   };
 }

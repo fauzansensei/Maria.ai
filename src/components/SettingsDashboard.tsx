@@ -1542,60 +1542,67 @@ export const SettingsDashboard: React.FC<SettingsDashboardProps> = React.memo(({
                     )}
                   </div>
 
-                  <div className="py-3.5 flex items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className={titleCls}>{isEn ? 'Voice Persona' : 'Karakter Suara AI'}</div>
-                      <div className={descCls}>{isEn ? 'Choose gender & character voice (Gemini 3.8 TTS).' : 'Pilih karakter suara AI dari 6 persona tersedia.'}</div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <select
-                        value={settings.voicePersona || 'wanita'}
-                        onChange={(e) => {
-                          const selected = VOICE_PERSONAS.find((p) => p.id === e.target.value);
-                          handleUpdate({
-                            voicePersona: e.target.value as any,
-                            ...(selected ? { geminiVoice: selected.geminiVoice } : {}),
-                          });
-                        }}
-                        className={selectCls}
-                      >
-                        {VOICE_PERSONAS.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {isEn ? EN_PERSONA_MAP[p.id]?.label || `${p.name} (${p.label})` : `${p.name} (${p.label})`}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          speechService.unlockAudio();
-                          if (speechState.isSpeaking && speechState.activeMessageId === 'settings_test') {
-                            speechService.stopSpeaking();
-                          } else {
-                            const sample = isEn
-                              ? EN_PERSONA_MAP[activePersonaObj.id]?.sampleText || `Hello! I'm ${activePersonaObj.name}.`
-                              : activePersonaObj.sampleText;
-                            speechService.speak(sample, {
-                              messageId: 'settings_test',
-                              speed: settings.speechSpeed || '1x',
-                              voiceName: settings.geminiVoice || activePersonaObj.geminiVoice,
-                              personaId: activePersonaObj.id,
-                              ttsModel: settings.ttsModel || 'gemini-3.8-flash-lite-tts',
+                  <div className="py-3.5 space-y-2">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className={titleCls}>{isEn ? 'Voice Persona' : 'Karakter Suara AI'}</div>
+                        <div className={descCls}>{isEn ? 'Choose gender & character voice (Gemini 3.8 TTS).' : 'Pilih karakter suara AI dari 6 persona tersedia.'}</div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <select
+                          value={settings.voicePersona || 'wanita'}
+                          onChange={(e) => {
+                            const selected = VOICE_PERSONAS.find((p) => p.id === e.target.value);
+                            handleUpdate({
+                              voicePersona: e.target.value as any,
+                              ...(selected ? { geminiVoice: selected.geminiVoice } : {}),
                             });
-                          }
-                        }}
-                        className={`${actionBtnCls} inline-flex items-center gap-1`}
-                      >
-                        {speechState.isLoading && speechState.activeMessageId === 'settings_test' ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : speechState.isSpeaking && speechState.activeMessageId === 'settings_test' ? (
-                          <VolumeX className="w-3.5 h-3.5 text-rose-500" />
-                        ) : (
-                          <Volume2 className="w-3.5 h-3.5" style={{ color: activeAccentHex }} />
-                        )}
-                        <span>{speechState.isSpeaking && speechState.activeMessageId === 'settings_test' ? (isEn ? 'Stop' : 'Stop') : isEn ? 'Test' : 'Tes'}</span>
-                      </button>
+                          }}
+                          className={selectCls}
+                        >
+                          {VOICE_PERSONAS.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {isEn ? EN_PERSONA_MAP[p.id]?.label || `${p.name} (${p.label})` : `${p.name} (${p.label})`}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            speechService.unlockAudio();
+                            if (speechState.isSpeaking && speechState.activeMessageId === 'settings_test') {
+                              speechService.stopSpeaking();
+                            } else {
+                              const sample = isEn
+                                ? EN_PERSONA_MAP[activePersonaObj.id]?.sampleText || `Hello! I'm ${activePersonaObj.name}.`
+                                : activePersonaObj.sampleText;
+                              speechService.speak(sample, {
+                                messageId: 'settings_test',
+                                speed: settings.speechSpeed || '1x',
+                                voiceName: settings.geminiVoice || activePersonaObj.geminiVoice,
+                                personaId: activePersonaObj.id,
+                                ttsModel: settings.ttsModel || 'gemini-3.8-flash-lite-tts',
+                              });
+                            }
+                          }}
+                          className={`${actionBtnCls} inline-flex items-center gap-1`}
+                        >
+                          {speechState.isLoading && speechState.activeMessageId === 'settings_test' ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : speechState.isSpeaking && speechState.activeMessageId === 'settings_test' ? (
+                            <VolumeX className="w-3.5 h-3.5 text-rose-500" />
+                          ) : (
+                            <Volume2 className="w-3.5 h-3.5" style={{ color: activeAccentHex }} />
+                          )}
+                          <span>{speechState.isSpeaking && speechState.activeMessageId === 'settings_test' ? (isEn ? 'Stop' : 'Stop') : isEn ? 'Test' : 'Tes'}</span>
+                        </button>
+                      </div>
                     </div>
+                    {speechState.error && (
+                      <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                        {speechState.error}
+                      </p>
+                    )}
                   </div>
 
                   <div className="py-3.5 flex items-center justify-between gap-4">

@@ -83,6 +83,7 @@ export const MARIA_PLUGINS: Array<{
 
 export const DEFAULT_SETTINGS: UserSettings = {
   username: "User",
+  language: "Indonesia",
   tone: "Professional",
   languageStyle: "Baku",
   regionalLanguage: "",

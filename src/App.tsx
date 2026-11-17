@@ -1889,6 +1889,7 @@ function AppContent() {
               userName: activeLiveUserName,
               allowEmojis: shouldAllowEmojis(settings),
               voiceLanguage: settings.voiceLanguage || 'auto',
+              appLanguage: settings.language || 'Indonesia',
             }}
             onCommitLiveTurn={handleCommitLiveTurn}
           />

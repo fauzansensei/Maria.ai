@@ -113,7 +113,7 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
   liveConfig,
   onCommitLiveTurn,
 }) => {
-  const { isEn } = useLanguage();
+  const { language, isEn } = useLanguage();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const menuContainerRef = useRef<HTMLDivElement>(null);
   const notifContainerRef = useRef<HTMLDivElement>(null);
@@ -727,6 +727,7 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
               userName: liveConfig?.userName,
               allowEmojis: liveConfig?.allowEmojis,
               voiceLanguage: liveConfig?.voiceLanguage || voiceLanguage,
+              appLanguage: liveConfig?.appLanguage || language,
               recentContext: messages
                 .slice(-6)
                 .filter((m) => m.content.trim().length > 0)

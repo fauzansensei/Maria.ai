@@ -16,6 +16,7 @@ interface LiveSetupPayload {
   deviceTime?: DeviceTimeInfo;
   allowEmojis?: boolean;
   voiceLanguage?: 'auto' | 'id-ID' | 'en-US';
+  appLanguage?: 'Indonesia' | 'English';
   recentContext?: string;
 }
 
@@ -124,12 +125,13 @@ export function attachLiveWebSocketServer(httpServer: Server) {
         Boolean(setup?.allowEmojis)
       );
 
-      const languageHint =
-        setup?.voiceLanguage === 'en-US'
-          ? 'Gunakan Bahasa Inggris sebagai bahasa utama percakapan suara kecuali pengguna berbicara Bahasa Indonesia.'
-          : setup?.voiceLanguage === 'id-ID'
-          ? 'Gunakan Bahasa Indonesia yang natural sebagai bahasa utama percakapan suara kecuali pengguna berbicara bahasa lain.'
-          : 'Sesuaikan bahasa bicara Anda secara otomatis mengikuti bahasa yang diucapkan pengguna (Bahasa Indonesia atau Inggris).';
+      const preferEnglish =
+        setup?.voiceLanguage === 'en-US' ||
+        (setup?.voiceLanguage !== 'id-ID' && setup?.appLanguage === 'English');
+
+      const languageHint = preferEnglish
+        ? 'Gunakan Bahasa Inggris sebagai bahasa utama percakapan suara kecuali pengguna berbicara Bahasa Indonesia.'
+        : 'BAHASA WAJIB: Anda WAJIB berbicara, menyapa, dan menjawab dalam Bahasa Indonesia yang natural dan fasih. Jangan kembali ke bahasa Inggris/default Google kecuali pengguna secara eksplisit berbicara dalam Bahasa Inggris atau meminta terjemahan.';
 
       const contextBlock = setup?.recentContext?.trim()
         ? `\n\nKONTEKS PERCAKAPAN SEBELUMNYA DI ROOM CHAT INI:\n${setup.recentContext.trim()}`
