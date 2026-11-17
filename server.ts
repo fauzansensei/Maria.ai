@@ -19,6 +19,12 @@ async function startServer() {
   // Enable reverse proxy trust (e.g. Vercel, Cloudflare, Google Cloud Run)
   app.set('trust proxy', 1);
 
+  // Allow screen capture, camera, and microphone across supported browser contexts
+  app.use((_req, res, next) => {
+    res.setHeader('Permissions-Policy', 'display-capture=*, camera=*, microphone=*');
+    next();
+  });
+
   // Mount API app
   app.use(apiApp);
 

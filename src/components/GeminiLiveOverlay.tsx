@@ -56,6 +56,10 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [screenShareMode, setScreenShareMode] = useState<'display' | 'app' | 'screenshot' | null>(null);
+  const [sharedScreenPreviewUrl, setSharedScreenPreviewUrl] = useState<string | null>(null);
+  const [showScreenFallbackSheet, setShowScreenFallbackSheet] = useState(false);
+  const [screenFallbackReason, setScreenFallbackReason] = useState<string | null>(null);
   const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
   const [liveUserCaption, setLiveUserCaption] = useState('');
   const [liveModelCaption, setLiveModelCaption] = useState('');
@@ -98,8 +102,11 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
   const videoLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isCameraOnRef = useRef(false);
   const isScreenSharingRef = useRef(false);
+  const screenShareModeRef = useRef<'display' | 'app' | 'screenshot' | null>(null);
+  const sharedScreenBase64Ref = useRef<string | null>(null);
   isCameraOnRef.current = isCameraOn;
   isScreenSharingRef.current = isScreenSharing;
+  screenShareModeRef.current = screenShareMode;
 
   const inputEnergyRef = useRef(0);
   const outputEnergyRef = useRef(0);
@@ -108,6 +115,7 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
 
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const screenPickerInputRef = useRef<HTMLInputElement | null>(null);
 
   const userTurnBufRef = useRef('');
   const modelTurnBufRef = useRef('');
@@ -192,6 +200,9 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     if (screenVideoRef.current) {
       screenVideoRef.current.srcObject = null;
     }
+    sharedScreenBase64Ref.current = null;
+    setSharedScreenPreviewUrl(null);
+    setScreenShareMode(null);
     setIsScreenSharing(false);
   }, []);
 
@@ -247,7 +258,129 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     onClose();
   }, [cleanupAllResources, flushModelTurn, flushUserTurn, onClose]);
 
+  // Safe Canvas2D renderer for capturing visible Maria AI app content without tainted-canvas errors
+  const renderAppScreenToDataUrl = useCallback((): string | null => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return null;
+    try {
+      const vw = Math.max(320, window.innerWidth || 390);
+      const vh = Math.max(480, window.innerHeight || 844);
+      const maxDim = 960;
+      const scale = Math.min(1.5, maxDim / Math.max(vw, vh));
+      const cw = Math.round(vw * scale);
+      const ch = Math.round(vh * scale);
+
+      if (!captureCanvasRef.current) {
+        captureCanvasRef.current = document.createElement('canvas');
+      }
+      const canvas = captureCanvasRef.current;
+      canvas.width = cw;
+      canvas.height = ch;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+
+      const isDark = document.documentElement.classList.contains('dark');
+      ctx.fillStyle = isDark ? '#0e0f12' : '#f8fafc';
+      ctx.fillRect(0, 0, cw, ch);
+
+      ctx.save();
+      ctx.scale(scale, scale);
+
+      // Draw visible headings, chat bubbles, code blocks, paragraphs, inputs
+      const nodes = document.querySelectorAll(
+        'header, [data-message-role], h1, h2, h3, p, pre, li, img'
+      );
+      const seenBoxes = new Set<string>();
+
+      nodes.forEach((el) => {
+        if ((el as HTMLElement).closest?.('[data-maria-live-dock="true"]')) return;
+        const rect = el.getBoundingClientRect();
+        if (rect.width < 12 || rect.height < 8 || rect.bottom < 0 || rect.top > vh) return;
+
+        if (el.tagName === 'IMG') {
+          const imgEl = el as HTMLImageElement;
+          const src = imgEl.currentSrc || imgEl.src || '';
+          const isSafeSrc =
+            src.startsWith('data:') ||
+            src.startsWith('blob:') ||
+            src.startsWith('/') ||
+            src.startsWith(window.location.origin);
+          if (isSafeSrc && imgEl.complete && imgEl.naturalWidth > 0) {
+            try {
+              ctx.drawImage(imgEl, rect.left, rect.top, rect.width, rect.height);
+            } catch {}
+          }
+          return;
+        }
+
+        const tag = el.tagName;
+        if (tag === 'PRE' || el.hasAttribute('data-message-role')) {
+          ctx.fillStyle = isDark ? '#171b26' : '#ffffff';
+          ctx.strokeStyle = isDark ? '#2a3042' : '#e2e8f0';
+          ctx.lineWidth = 1;
+          ctx.fillRect(rect.left, rect.top, rect.width, Math.min(rect.height, vh));
+          ctx.strokeRect(rect.left, rect.top, rect.width, Math.min(rect.height, vh));
+        }
+
+        const hasBlockChildren = el.querySelector('p, pre, li, h1, h2, h3');
+        if (hasBlockChildren && el.hasAttribute('data-message-role')) return;
+
+        const text = (el.textContent || '').replace(/\s+/g, ' ').trim();
+        if (!text) return;
+        const boxKey = `${Math.round(rect.left)}:${Math.round(rect.top)}:${text.slice(0, 24)}`;
+        if (seenBoxes.has(boxKey)) return;
+        seenBoxes.add(boxKey);
+
+        const style = window.getComputedStyle(el);
+        const fontSize = Math.max(10, Math.min(24, parseFloat(style.fontSize) || 14));
+        const isBold = Number(style.fontWeight) >= 600 || tag === 'H1' || tag === 'H2' || tag === 'H3';
+        ctx.font = `${isBold ? '600 ' : ''}${fontSize}px ${tag === 'PRE' ? 'monospace' : 'sans-serif'}`;
+        ctx.fillStyle = isDark ? '#e2e8f0' : '#0f172a';
+
+        const maxWidth = Math.max(40, rect.width - 12);
+        const words = text.split(' ');
+        let line = '';
+        let y = rect.top + fontSize + 4;
+        const lineHeight = fontSize * 1.35;
+
+        for (const word of words) {
+          const testLine = line ? `${line} ${word}` : word;
+          if (ctx.measureText(testLine).width > maxWidth && line) {
+            ctx.fillText(line, rect.left + 6, y, maxWidth);
+            line = word;
+            y += lineHeight;
+            if (y > rect.bottom + 8 || y > vh - 10) break;
+          } else {
+            line = testLine;
+          }
+        }
+        if (line && y <= rect.bottom + 8 && y <= vh - 10) {
+          ctx.fillText(line, rect.left + 6, y, maxWidth);
+        }
+      });
+
+      ctx.restore();
+      return canvas.toDataURL('image/jpeg', 0.72);
+    } catch {
+      return null;
+    }
+  }, []);
+
   const captureCurrentVideoFrameBase64 = useCallback((): string | undefined => {
+    if (!isCameraOnRef.current && isScreenSharingRef.current) {
+      if (screenShareModeRef.current === 'screenshot') {
+        return sharedScreenBase64Ref.current || undefined;
+      }
+      if (screenShareModeRef.current === 'app') {
+        const dataUrl = renderAppScreenToDataUrl();
+        if (dataUrl) {
+          const b64 = dataUrl.split(',')[1];
+          sharedScreenBase64Ref.current = b64;
+          return b64;
+        }
+        return sharedScreenBase64Ref.current || undefined;
+      }
+    }
+
     const videoEl = isCameraOnRef.current
       ? cameraVideoRef.current
       : isScreenSharingRef.current
@@ -276,7 +409,7 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     ctx.drawImage(videoEl, 0, 0, cw, ch);
     const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
     return dataUrl.split(',')[1];
-  }, []);
+  }, [renderAppScreenToDataUrl]);
 
   const getDeviceTimePayload = () => {
     const now = new Date();
@@ -881,24 +1014,138 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     startCamera(nextMode);
   };
 
+  const startAppScreenShare = useCallback(() => {
+    stopCameraStream();
+    stopScreenStream();
+    const initialDataUrl = renderAppScreenToDataUrl();
+    if (!initialDataUrl) {
+      showTempNotice(
+        isEn ? 'Unable to capture app view.' : 'Gagal menangkap tampilan layar aplikasi.'
+      );
+      return;
+    }
+    const base64 = initialDataUrl.split(',')[1];
+    sharedScreenBase64Ref.current = base64;
+    setSharedScreenPreviewUrl(initialDataUrl);
+    setScreenShareMode('app');
+    setIsScreenSharing(true);
+    setShowScreenFallbackSheet(false);
+
+    if (
+      transportModeRef.current === 'ws' &&
+      wsReadyRef.current &&
+      wsRef.current?.readyState === WebSocket.OPEN &&
+      base64
+    ) {
+      wsRef.current.send(
+        JSON.stringify({ type: 'video', data: base64, mimeType: 'image/jpeg' })
+      );
+    }
+    showTempNotice(
+      isEn ? 'App screen sharing active' : 'Berbagi tampilan layar aplikasi aktif'
+    );
+  }, [isEn, renderAppScreenToDataUrl, showTempNotice, stopCameraStream, stopScreenStream]);
+
+  const applySharedScreenshotFile = useCallback(
+    async (file: File) => {
+      try {
+        stopCameraStream();
+        if (screenStreamRef.current) {
+          screenStreamRef.current.getTracks().forEach((t) => t.stop());
+          screenStreamRef.current = null;
+        }
+        const compressedDataUrl = await generateImageThumbnail(file, 1024, 0.84);
+        const base64 = compressedDataUrl.split(',')[1];
+        if (!base64) throw new Error('Invalid image');
+
+        sharedScreenBase64Ref.current = base64;
+        setSharedScreenPreviewUrl(compressedDataUrl);
+        setScreenShareMode('screenshot');
+        setIsScreenSharing(true);
+        setShowScreenFallbackSheet(false);
+
+        if (
+          transportModeRef.current === 'ws' &&
+          wsReadyRef.current &&
+          wsRef.current?.readyState === WebSocket.OPEN
+        ) {
+          wsRef.current.send(
+            JSON.stringify({ type: 'video', data: base64, mimeType: 'image/jpeg' })
+          );
+        }
+        showTempNotice(
+          isEn
+            ? 'Screen image shared with Maria Live'
+            : 'Tangkapan layar aktif dibagikan ke Maria Live'
+        );
+      } catch {
+        showTempNotice(
+          isEn
+            ? 'Unable to load screenshot image.'
+            : 'Gagal memuat gambar tangkapan layar.'
+        );
+      }
+    },
+    [isEn, showTempNotice, stopCameraStream]
+  );
+
+  const handleScreenScreenshotPicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    await applySharedScreenshotFile(file);
+  };
+
+  // Allow pasting a screenshot image directly while Maria Live is active
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            applySharedScreenshotFile(file);
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [applySharedScreenshotFile]);
+
   const handleToggleScreenShare = async () => {
     setIsPlusMenuOpen(false);
     if (isScreenSharing) {
       stopScreenStream();
       return;
     }
-    if (!navigator.mediaDevices?.getDisplayMedia) {
-      showTempNotice(
+
+    const mediaDevicesAny = navigator.mediaDevices as any;
+    const navAny = navigator as any;
+    const getDisplayMediaFn: ((constraints?: any) => Promise<MediaStream>) | null =
+      mediaDevicesAny?.getDisplayMedia
+        ? mediaDevicesAny.getDisplayMedia.bind(mediaDevicesAny)
+        : navAny?.getDisplayMedia
+        ? navAny.getDisplayMedia.bind(navAny)
+        : null;
+
+    if (!getDisplayMediaFn) {
+      setScreenFallbackReason(
         isEn
-          ? 'Screen share is unavailable in this browser. Use Camera or Photos instead.'
-          : 'Berbagi layar belum didukung di browser ini. Gunakan Kamera atau Foto sebagai gantinya.'
+          ? 'Mobile Chrome does not expose system screen recording API. Choose an instant screen share mode below:'
+          : 'Browser Chrome mobile membatasi rekam layar OS langsung. Pilih mode berbagi layar cepat di bawah ini:'
       );
+      setShowScreenFallbackSheet(true);
       return;
     }
+
     try {
       stopCameraStream();
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { frameRate: { ideal: 2, max: 5 } },
+      const stream = await getDisplayMediaFn({
+        video: true,
         audio: false,
       });
       const videoTrack = stream.getVideoTracks()[0];
@@ -907,10 +1154,26 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
           stopScreenStream();
         };
       }
+      sharedScreenBase64Ref.current = null;
+      setSharedScreenPreviewUrl(null);
       screenStreamRef.current = stream;
+      setScreenShareMode('display');
       setIsScreenSharing(true);
     } catch (err: any) {
-      if (err?.name !== 'AbortError' && err?.name !== 'NotAllowedError') {
+      const errMsg = String(err?.message || '');
+      const isPolicyOrUnsupported =
+        err?.name === 'NotSupportedError' ||
+        err?.name === 'SecurityError' ||
+        /policy|disallowed|permissions|not supported|iframe/i.test(errMsg);
+
+      if (isPolicyOrUnsupported) {
+        setScreenFallbackReason(
+          isEn
+            ? 'Direct tab/system screen capture is restricted by this embedded browser context. Choose an alternative mode below:'
+            : 'Tangkap layar sistem dibatasi oleh konteks jendela/browser ini. Pilih mode berbagi layar alternatif di bawah:'
+        );
+        setShowScreenFallbackSheet(true);
+      } else if (err?.name !== 'AbortError' && err?.name !== 'NotAllowedError') {
         showTempNotice(
           err?.message ||
             (isEn ? 'Screen sharing failed.' : 'Gagal memulai berbagi layar.')
@@ -1074,6 +1337,110 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
         className="hidden"
         onChange={handleFilePicked}
       />
+      <input
+        ref={screenPickerInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleScreenScreenshotPicked}
+      />
+
+      {/* Mobile / Restricted Context Screen Share Alternative Sheet */}
+      {showScreenFallbackSheet && (
+        <div
+          data-maria-live-dock="true"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150"
+          onClick={() => setShowScreenFallbackSheet(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-3xl bg-white dark:bg-[#151822] border border-slate-200 dark:border-[#2a2f42] p-4 shadow-2xl space-y-3 text-slate-900 dark:text-slate-100"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold">
+                  {isEn ? 'Share Screen with Maria' : 'Bagikan Layar ke Maria'}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                  {screenFallbackReason}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowScreenFallbackSheet(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-[#222636] flex items-center justify-center text-slate-600 dark:text-slate-300 shrink-0 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={startAppScreenShare}
+                className="w-full p-3 rounded-2xl border border-blue-500/30 bg-blue-50/70 dark:bg-blue-950/35 hover:bg-blue-100/70 dark:hover:bg-blue-900/40 flex items-center gap-3 text-left cursor-pointer transition"
+              >
+                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0">
+                  <MonitorUp className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-slate-900 dark:text-white">
+                    {isEn ? 'Share App View (Live)' : 'Bagikan Tampilan Aplikasi (Live)'}
+                  </div>
+                  <div className="text-[11px] text-slate-600 dark:text-slate-300">
+                    {isEn
+                      ? 'Maria reads your current Maria AI screen in real time'
+                      : 'Maria membaca layar obrolan/kode aplikasi secara langsung'}
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => screenPickerInputRef.current?.click()}
+                className="w-full p-3 rounded-2xl border border-slate-200 dark:border-[#2a2f42] hover:bg-slate-50 dark:hover:bg-[#1e2230] flex items-center gap-3 text-left cursor-pointer transition"
+              >
+                <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                  <ImageIcon className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-slate-900 dark:text-white">
+                    {isEn ? 'Share Phone Screenshot' : 'Bagikan Tangkapan Layar (Screenshot)'}
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {isEn
+                      ? 'Pick or paste a screenshot of another app on your phone'
+                      : 'Pilih atau tempel screenshot aplikasi lain dari HP Anda'}
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowScreenFallbackSheet(false);
+                  startCamera('environment');
+                }}
+                className="w-full p-3 rounded-2xl border border-slate-200 dark:border-[#2a2f42] hover:bg-slate-50 dark:hover:bg-[#1e2230] flex items-center gap-3 text-left cursor-pointer transition"
+              >
+                <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                  <Video className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-slate-900 dark:text-white">
+                    {isEn ? 'Point Rear Camera' : 'Gunakan Kamera Belakang'}
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {isEn
+                      ? 'Show another device screen directly via camera'
+                      : 'Arahkan kamera langsung ke layar atau objek di sekitar'}
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Full-Stage Live Camera Viewfinder Overlay */}
       {isCameraOn && (
@@ -1127,25 +1494,46 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
       )}
 
       {/* Bottom Maria Live Dock */}
-      <div className="max-w-3xl mx-auto w-full px-3 sm:px-4 select-none relative z-40">
+      <div
+        data-maria-live-dock="true"
+        className="max-w-3xl mx-auto w-full px-3 sm:px-4 select-none relative z-40"
+      >
         {/* Screen Share Preview Card */}
         {isScreenSharing && (
-          <div className="mb-2.5 mx-auto max-w-md rounded-2xl bg-slate-900/95 dark:bg-[#151822]/95 border border-blue-500/40 p-2 flex items-center justify-between gap-3 shadow-xl text-white">
+          <div className="mb-2.5 mx-auto max-w-md rounded-2xl bg-slate-900/95 dark:bg-[#151822]/95 border border-blue-500/40 p-2 flex items-center justify-between gap-2.5 shadow-xl text-white">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-16 h-10 rounded-lg overflow-hidden bg-black border border-white/15 shrink-0">
-                <video
-                  ref={screenVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover"
-                />
+                {screenShareMode === 'display' ? (
+                  <video
+                    ref={screenVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                ) : sharedScreenPreviewUrl ? (
+                  <img
+                    src={sharedScreenPreviewUrl}
+                    alt="Screen preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : null}
               </div>
               <div className="min-w-0">
                 <div className="text-xs font-semibold flex items-center gap-1.5 text-blue-300">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
                   <span className="truncate">
-                    {isEn ? 'Screen Sharing Active' : 'Berbagi Layar Aktif'}
+                    {screenShareMode === 'app'
+                      ? isEn
+                        ? 'App Screen Active'
+                        : 'Layar Aplikasi Aktif'
+                      : screenShareMode === 'screenshot'
+                      ? isEn
+                        ? 'Screenshot Share Active'
+                        : 'Layar Screenshot Aktif'
+                      : isEn
+                      ? 'Screen Sharing Active'
+                      : 'Berbagi Layar Aktif'}
                   </span>
                 </div>
                 <p className="text-[10px] text-slate-300 truncate">
@@ -1155,14 +1543,25 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={stopScreenStream}
-              className="px-2.5 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/35 text-rose-200 border border-rose-400/30 text-[11px] font-semibold flex items-center gap-1 shrink-0 cursor-pointer"
-            >
-              <Square className="w-3 h-3 fill-current" />
-              <span>{isEn ? 'Stop' : 'Hentikan'}</span>
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {screenShareMode === 'screenshot' && (
+                <button
+                  type="button"
+                  onClick={() => screenPickerInputRef.current?.click()}
+                  className="px-2 py-1.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/35 text-blue-200 border border-blue-400/30 text-[11px] font-semibold cursor-pointer"
+                >
+                  {isEn ? 'Swap' : 'Ganti'}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={stopScreenStream}
+                className="px-2.5 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/35 text-rose-200 border border-rose-400/30 text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+              >
+                <Square className="w-3 h-3 fill-current" />
+                <span>{isEn ? 'Stop' : 'Hentikan'}</span>
+              </button>
+            </div>
           </div>
         )}
 
