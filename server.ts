@@ -4,6 +4,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { apiApp } from './src/server/api.ts';
+import { attachLiveWebSocketServer } from './src/server/liveBridge.ts';
 
 dotenv.config();
 
@@ -75,9 +76,11 @@ async function startServer() {
     });
   }
 
-  app.listen(port, '0.0.0.0', () => {
+  const httpServer = app.listen(port, '0.0.0.0', () => {
     console.log(`Maria AI server running on http://0.0.0.0:${port} (${isProd ? 'production' : 'development'})`);
   });
+
+  attachLiveWebSocketServer(httpServer);
 }
 
 startServer().catch((err) => {

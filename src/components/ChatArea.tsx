@@ -21,6 +21,7 @@ import { PROMPT_STARTERS } from '../constants.ts';
 import { MessageItem } from './MessageItem.tsx';
 import { ChatInput } from './ChatInput.tsx';
 import { MariaLogo } from './MariaLogo.tsx';
+import { GeminiLiveOverlay, type GeminiLiveConfig } from './GeminiLiveOverlay.tsx';
 import { speechService } from '../lib/speechService.ts';
 import { useLanguage } from '../context/LanguageContext.tsx';
 
@@ -65,6 +66,8 @@ interface ChatAreaProps {
   temporaryChat?: boolean;
   onArchiveConversation?: (convId: string) => void;
   onSaveImageToLibrary?: (data: { id: string; imageUrl: string; title: string; model?: string; sourceMessageId?: string }) => void;
+  liveConfig?: GeminiLiveConfig;
+  onCommitLiveTurn?: (role: 'user' | 'model', text: string) => void;
 }
 
 interface NotificationItem {
@@ -107,6 +110,8 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
   temporaryChat = false,
   onArchiveConversation,
   onSaveImageToLibrary,
+  liveConfig,
+  onCommitLiveTurn,
 }) => {
   const { isEn } = useLanguage();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -119,6 +124,7 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
   const [renameDraft, setRenameDraft] = useState('');
   const [shareToast, setShareToast] = useState<string | null>(null);
   const [loadedInputText, setLoadedInputText] = useState('');
+  const [isLiveActive, setIsLiveActive] = useState(false);
 
   const isInChat = messages.length > 0 || activeConversation !== null;
   const isPinned = Boolean(activeConversation?.title?.startsWith('📌 '));
@@ -710,25 +716,48 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
         )}
       </div>
 
-      {/* Bottom Chat Input Dock */}
+      {/* Bottom Chat Input Dock OR Maria Live Floating Bar */}
       <div className="shrink-0 pt-2 pb-2 border-t shadow-xs bg-white border-slate-200 dark:bg-[#0e0f12] dark:border-[#1e2028]">
-        <ChatInput
-          onSendMessage={onSendMessage}
-          isLoading={isLoading}
-          activeMode={activeMode}
-          onModeChange={onModeChange}
-          onOpenScienceScout={onOpenScienceScout}
-          loadedText={loadedInputText}
-          onClearLoadedText={handleClearLoadedText}
-          onOpenImageStudio={handleOpenImageStudioEmpty}
-          onOpenMusicVoice={onOpenMusicVoice}
-          onOpenCanvasCode={onOpenCanvasCode}
-          isPlus={isPlus}
-          onOpenPlusModal={onOpenPlusModal}
-          enterToSend={enterToSend}
-          voiceLanguage={voiceLanguage}
-          webSearchDefault={webSearchDefault}
-        />
+        {isLiveActive ? (
+          <GeminiLiveOverlay
+            liveConfig={{
+              voiceName: liveConfig?.voiceName || 'Aoede',
+              customInstruction: liveConfig?.customInstruction,
+              userMemories: liveConfig?.userMemories,
+              userName: liveConfig?.userName,
+              allowEmojis: liveConfig?.allowEmojis,
+              voiceLanguage: liveConfig?.voiceLanguage || voiceLanguage,
+              recentContext: messages
+                .slice(-6)
+                .filter((m) => m.content.trim().length > 0)
+                .map((m) => `${m.role === 'user' ? 'Pengguna' : 'Maria'}: ${m.content.slice(0, 400)}`)
+                .join('\n'),
+            }}
+            onClose={() => setIsLiveActive(false)}
+            onCommitLiveTurn={(role, text) => {
+              onCommitLiveTurn?.(role, text);
+            }}
+          />
+        ) : (
+          <ChatInput
+            onSendMessage={onSendMessage}
+            isLoading={isLoading}
+            activeMode={activeMode}
+            onModeChange={onModeChange}
+            onOpenScienceScout={onOpenScienceScout}
+            loadedText={loadedInputText}
+            onClearLoadedText={handleClearLoadedText}
+            onOpenImageStudio={handleOpenImageStudioEmpty}
+            onOpenMusicVoice={onOpenMusicVoice}
+            onOpenCanvasCode={onOpenCanvasCode}
+            isPlus={isPlus}
+            onOpenPlusModal={onOpenPlusModal}
+            enterToSend={enterToSend}
+            voiceLanguage={voiceLanguage}
+            webSearchDefault={webSearchDefault}
+            onStartLive={() => setIsLiveActive(true)}
+          />
+        )}
       </div>
     </div>
   );

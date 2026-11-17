@@ -103,7 +103,7 @@ Kemampuan Studio Gambar & Visual AI:
 - Anda memiliki kapabilitas membuat dan mengedit gambar AI secara penuh (bertenaga Gemini Nano Banana & Flux AI). Jangan pernah mengatakan Anda tidak dapat membuat gambar.`;
 
 // Build dynamic system instruction with user personality priority, real-time clock, and user memories
-function buildSystemInstruction(
+export function buildSystemInstruction(
   deviceTime?: DeviceTimeInfo,
   custom?: string,
   userMemories?: string,

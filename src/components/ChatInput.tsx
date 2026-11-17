@@ -76,6 +76,7 @@ interface ChatInputProps {
   enterToSend?: boolean;
   voiceLanguage?: 'auto' | 'id-ID' | 'en-US';
   webSearchDefault?: boolean;
+  onStartLive?: () => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = React.memo(({
@@ -93,6 +94,7 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
   enterToSend = true,
   voiceLanguage = 'auto',
   webSearchDefault = true,
+  onStartLive,
 }) => {
   const { isEn } = useLanguage();
   const [text, setText] = useState('');
@@ -1057,6 +1059,12 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
     speechService.unlockAudio();
     if (text.trim()) {
       handleSubmit();
+    } else if (isRecording) {
+      toggleRecording();
+    } else if (onStartLive) {
+      speechService.stopSpeaking();
+      setIsAttachmentOpen(false);
+      onStartLive();
     } else {
       toggleRecording();
     }
@@ -1632,9 +1640,10 @@ export const ChatInput: React.FC<ChatInputProps> = React.memo(({
                       ? 'Stop voice dictation'
                       : 'Berhenti mendengarkan dikte'
                     : isEn
-                    ? 'Voice dictation (Speech-to-Text)'
-                    : 'Dikte suara ke teks'
+                    ? 'Maria Live (Real-time Voice & Video Call)'
+                    : 'Maria Live (Panggilan Suara & Video Langsung)'
                 }
+                aria-label={isEn ? 'Start Maria Live' : 'Mulai Maria Live'}
                 className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full border flex items-center justify-center shadow-xs shrink-0 cursor-pointer transition-colors ${
                   isRecording
                     ? 'bg-rose-500 text-white border-rose-400 animate-pulse'

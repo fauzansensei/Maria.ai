@@ -1,6 +1,6 @@
 {
   "name": "Maria AI by Zan.dev",
   "description": "Maria AI dikembangkan oleh Zan.dev — Asisten AI cerdas dengan percakapan real-time, pencarian Google terintegrasi, analisis gambar, dan suara AI.",
-  "requestFramePermissions": ["geolocation", "microphone"],
+  "requestFramePermissions": ["geolocation", "microphone", "camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -1736,6 +1736,74 @@ function AppContent() {
     }
   };
 
+  const liveConvCreatePromiseRef = useRef<Promise<string | null> | null>(null);
+
+  const handleCommitLiveTurn = async (role: 'user' | 'model', text: string) => {
+    const cleanText = text.trim();
+    if (!cleanText) return;
+
+    const isEphemeral = Boolean(settings.temporaryChat) || settings.saveChatHistory === false;
+    let convId: string | null = isEphemeral ? null : activeConvIdRef.current;
+
+    if (user && !convId && !isEphemeral) {
+      if (!liveConvCreatePromiseRef.current) {
+        const titleSnippet =
+          cleanText.length > 35 ? cleanText.slice(0, 35) + '...' : cleanText || 'Maria Live';
+        liveConvCreatePromiseRef.current = createConversation(user.uid, titleSnippet, 'general')
+          .then((newId) => {
+            activeConvIdRef.current = newId;
+            setActiveConvId(newId);
+            return newId;
+          })
+          .catch(() => null)
+          .finally(() => {
+            liveConvCreatePromiseRef.current = null;
+          });
+      }
+      convId = await liveConvCreatePromiseRef.current;
+    }
+
+    if (settings.memoryEnabled !== false && !isEphemeral && role === 'user') {
+      userMemoryService.extractFromUserText(cleanText);
+    }
+
+    const msgObj: Message = {
+      id: `${role === 'user' ? 'usr' : 'ai'}_live_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2, 6)}`,
+      conversationId: convId || 'guest_conv',
+      userId: user ? user.uid : 'guest',
+      role,
+      content: cleanText,
+      ...(role === 'model' ? { model: 'gemini-3.8-live' } : {}),
+      createdAt: new Date(),
+    };
+
+    setMessages((prev) => [...prev, msgObj]);
+    if (!user || isEphemeral || !convId) {
+      setGuestMessages((prev) => [...prev, msgObj]);
+    } else {
+      await addMessage(convId, user.uid, {
+        role,
+        content: cleanText,
+        ...(role === 'model' ? { model: 'gemini-3.8-live' } : {}),
+      }).catch((err) => {
+        console.warn('Failed to persist live transcript message:', err);
+      });
+    }
+  };
+
+  const livePersonaObj = VOICE_PERSONAS.find(
+    (p) => p.id === (settings.voicePersona || 'wanita')
+  );
+  const activeLiveVoiceName =
+    livePersonaObj?.geminiVoice || settings.geminiVoice || 'Aoede';
+  const activeLiveUserName = user?.displayName || settings.username || '';
+  const activeLiveMemories =
+    settings.memoryEnabled !== false
+      ? userMemoryService.getFormattedMemoryPrompt(activeLiveUserName)
+      : '';
+
   const isEnApp = settings.language === 'English';
 
   return (
@@ -1814,6 +1882,15 @@ function AppContent() {
             temporaryChat={Boolean(settings.temporaryChat)}
             onArchiveConversation={handleArchiveConversation}
             onSaveImageToLibrary={handleSaveImageFromChat}
+            liveConfig={{
+              voiceName: activeLiveVoiceName,
+              customInstruction: buildSettingsSystemAddendum(settings),
+              userMemories: activeLiveMemories,
+              userName: activeLiveUserName,
+              allowEmojis: shouldAllowEmojis(settings),
+              voiceLanguage: settings.voiceLanguage || 'auto',
+            }}
+            onCommitLiveTurn={handleCommitLiveTurn}
           />
         )}
 
