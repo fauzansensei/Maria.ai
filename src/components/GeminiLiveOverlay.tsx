@@ -21,6 +21,7 @@ import {
   encode16kInt16ChunksToWavBase64,
 } from '../lib/liveAudioUtils.ts';
 import { generateImageThumbnail, readFileAsDataUrl } from '../lib/mediaUtils.ts';
+import { captureAppViewportToDataUrl } from '../lib/appScreenCapture.ts';
 
 export interface GeminiLiveConfig {
   voiceName: string;
@@ -258,111 +259,9 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     onClose();
   }, [cleanupAllResources, flushModelTurn, flushUserTurn, onClose]);
 
-  // Safe Canvas2D renderer for capturing visible Maria AI app content without tainted-canvas errors
+  // Full-layout Canvas2D DOM viewport capture (styles, cards, icons, gradients, & Maria Live dock)
   const renderAppScreenToDataUrl = useCallback((): string | null => {
-    if (typeof window === 'undefined' || typeof document === 'undefined') return null;
-    try {
-      const vw = Math.max(320, window.innerWidth || 390);
-      const vh = Math.max(480, window.innerHeight || 844);
-      const maxDim = 960;
-      const scale = Math.min(1.5, maxDim / Math.max(vw, vh));
-      const cw = Math.round(vw * scale);
-      const ch = Math.round(vh * scale);
-
-      if (!captureCanvasRef.current) {
-        captureCanvasRef.current = document.createElement('canvas');
-      }
-      const canvas = captureCanvasRef.current;
-      canvas.width = cw;
-      canvas.height = ch;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return null;
-
-      const isDark = document.documentElement.classList.contains('dark');
-      ctx.fillStyle = isDark ? '#0e0f12' : '#f8fafc';
-      ctx.fillRect(0, 0, cw, ch);
-
-      ctx.save();
-      ctx.scale(scale, scale);
-
-      // Draw visible headings, chat bubbles, code blocks, paragraphs, inputs
-      const nodes = document.querySelectorAll(
-        'header, [data-message-role], h1, h2, h3, p, pre, li, img'
-      );
-      const seenBoxes = new Set<string>();
-
-      nodes.forEach((el) => {
-        if ((el as HTMLElement).closest?.('[data-maria-live-dock="true"]')) return;
-        const rect = el.getBoundingClientRect();
-        if (rect.width < 12 || rect.height < 8 || rect.bottom < 0 || rect.top > vh) return;
-
-        if (el.tagName === 'IMG') {
-          const imgEl = el as HTMLImageElement;
-          const src = imgEl.currentSrc || imgEl.src || '';
-          const isSafeSrc =
-            src.startsWith('data:') ||
-            src.startsWith('blob:') ||
-            src.startsWith('/') ||
-            src.startsWith(window.location.origin);
-          if (isSafeSrc && imgEl.complete && imgEl.naturalWidth > 0) {
-            try {
-              ctx.drawImage(imgEl, rect.left, rect.top, rect.width, rect.height);
-            } catch {}
-          }
-          return;
-        }
-
-        const tag = el.tagName;
-        if (tag === 'PRE' || el.hasAttribute('data-message-role')) {
-          ctx.fillStyle = isDark ? '#171b26' : '#ffffff';
-          ctx.strokeStyle = isDark ? '#2a3042' : '#e2e8f0';
-          ctx.lineWidth = 1;
-          ctx.fillRect(rect.left, rect.top, rect.width, Math.min(rect.height, vh));
-          ctx.strokeRect(rect.left, rect.top, rect.width, Math.min(rect.height, vh));
-        }
-
-        const hasBlockChildren = el.querySelector('p, pre, li, h1, h2, h3');
-        if (hasBlockChildren && el.hasAttribute('data-message-role')) return;
-
-        const text = (el.textContent || '').replace(/\s+/g, ' ').trim();
-        if (!text) return;
-        const boxKey = `${Math.round(rect.left)}:${Math.round(rect.top)}:${text.slice(0, 24)}`;
-        if (seenBoxes.has(boxKey)) return;
-        seenBoxes.add(boxKey);
-
-        const style = window.getComputedStyle(el);
-        const fontSize = Math.max(10, Math.min(24, parseFloat(style.fontSize) || 14));
-        const isBold = Number(style.fontWeight) >= 600 || tag === 'H1' || tag === 'H2' || tag === 'H3';
-        ctx.font = `${isBold ? '600 ' : ''}${fontSize}px ${tag === 'PRE' ? 'monospace' : 'sans-serif'}`;
-        ctx.fillStyle = isDark ? '#e2e8f0' : '#0f172a';
-
-        const maxWidth = Math.max(40, rect.width - 12);
-        const words = text.split(' ');
-        let line = '';
-        let y = rect.top + fontSize + 4;
-        const lineHeight = fontSize * 1.35;
-
-        for (const word of words) {
-          const testLine = line ? `${line} ${word}` : word;
-          if (ctx.measureText(testLine).width > maxWidth && line) {
-            ctx.fillText(line, rect.left + 6, y, maxWidth);
-            line = word;
-            y += lineHeight;
-            if (y > rect.bottom + 8 || y > vh - 10) break;
-          } else {
-            line = testLine;
-          }
-        }
-        if (line && y <= rect.bottom + 8 && y <= vh - 10) {
-          ctx.fillText(line, rect.left + 6, y, maxWidth);
-        }
-      });
-
-      ctx.restore();
-      return canvas.toDataURL('image/jpeg', 0.72);
-    } catch {
-      return null;
-    }
+    return captureAppViewportToDataUrl({ includeMariaLiveDock: true });
   }, []);
 
   const captureCurrentVideoFrameBase64 = useCallback((): string | undefined => {
@@ -1044,6 +943,28 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     showTempNotice(
       isEn ? 'App screen sharing active' : 'Berbagi tampilan layar aplikasi aktif'
     );
+
+    // Refresh capture right after modal unmounts and Screen Share dock renders
+    setTimeout(() => {
+      if (isUnmountedRef.current || isClosingRef.current || screenShareModeRef.current !== 'app') {
+        return;
+      }
+      const settledDataUrl = renderAppScreenToDataUrl();
+      if (!settledDataUrl) return;
+      const settledB64 = settledDataUrl.split(',')[1];
+      sharedScreenBase64Ref.current = settledB64;
+      setSharedScreenPreviewUrl(settledDataUrl);
+      if (
+        transportModeRef.current === 'ws' &&
+        wsReadyRef.current &&
+        wsRef.current?.readyState === WebSocket.OPEN &&
+        settledB64
+      ) {
+        wsRef.current.send(
+          JSON.stringify({ type: 'video', data: settledB64, mimeType: 'image/jpeg' })
+        );
+      }
+    }, 180);
   }, [isEn, renderAppScreenToDataUrl, showTempNotice, stopCameraStream, stopScreenStream]);
 
   const applySharedScreenshotFile = useCallback(
@@ -1348,7 +1269,7 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
       {/* Mobile / Restricted Context Screen Share Alternative Sheet */}
       {showScreenFallbackSheet && (
         <div
-          data-maria-live-dock="true"
+          data-maria-screen-modal="true"
           className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150"
           onClick={() => setShowScreenFallbackSheet(false)}
         >
@@ -1502,7 +1423,10 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
         {isScreenSharing && (
           <div className="mb-2.5 mx-auto max-w-md rounded-2xl bg-slate-900/95 dark:bg-[#151822]/95 border border-blue-500/40 p-2 flex items-center justify-between gap-2.5 shadow-xl text-white">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-16 h-10 rounded-lg overflow-hidden bg-black border border-white/15 shrink-0">
+              <div
+                data-maria-live-preview-thumb="true"
+                className="w-16 h-10 rounded-lg overflow-hidden bg-black border border-white/15 shrink-0"
+              >
                 {screenShareMode === 'display' ? (
                   <video
                     ref={screenVideoRef}
