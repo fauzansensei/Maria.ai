@@ -13,6 +13,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Square,
+  Copy,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext.tsx';
 import {
@@ -58,6 +59,11 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [screenShareMode, setScreenShareMode] = useState<'display' | 'app' | 'screenshot' | null>(null);
+  const [displaySurfaceInfo, setDisplaySurfaceInfo] = useState<{
+    surface: 'browser' | 'window' | 'monitor' | 'unknown';
+    width?: number;
+    height?: number;
+  } | null>(null);
   const [sharedScreenPreviewUrl, setSharedScreenPreviewUrl] = useState<string | null>(null);
   const [showScreenFallbackSheet, setShowScreenFallbackSheet] = useState(false);
   const [screenFallbackReason, setScreenFallbackReason] = useState<string | null>(null);
@@ -105,6 +111,7 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
   const isScreenSharingRef = useRef(false);
   const screenShareModeRef = useRef<'display' | 'app' | 'screenshot' | null>(null);
   const sharedScreenBase64Ref = useRef<string | null>(null);
+  const lastVideoSentAtRef = useRef(0);
   isCameraOnRef.current = isCameraOn;
   isScreenSharingRef.current = isScreenSharing;
   screenShareModeRef.current = screenShareMode;
@@ -202,6 +209,7 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
       screenVideoRef.current.srcObject = null;
     }
     sharedScreenBase64Ref.current = null;
+    setDisplaySurfaceInfo(null);
     setSharedScreenPreviewUrl(null);
     setScreenShareMode(null);
     setIsScreenSharing(false);
@@ -291,7 +299,14 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     const vh = videoEl.videoHeight;
     if (!vw || !vh) return undefined;
 
-    const maxEdge = 768;
+    const isDesktopDisplay =
+      !isCameraOnRef.current &&
+      isScreenSharingRef.current &&
+      screenShareModeRef.current === 'display';
+
+    // Crisp 1280px HD resolution for Chrome Desktop tabs/windows/code, lightweight 896px for camera
+    const maxEdge = isDesktopDisplay ? 1280 : 896;
+    const jpegQuality = isDesktopDisplay ? 0.82 : 0.74;
     const scale = Math.min(1, maxEdge / Math.max(vw, vh));
     const cw = Math.max(1, Math.round(vw * scale));
     const ch = Math.max(1, Math.round(vh * scale));
@@ -305,10 +320,35 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return undefined;
 
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(videoEl, 0, 0, cw, ch);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
+    const dataUrl = canvas.toDataURL('image/jpeg', jpegQuality);
     return dataUrl.split(',')[1];
   }, [renderAppScreenToDataUrl]);
+
+  const pushCurrentVideoFrameNow = useCallback(() => {
+    if (isClosingRef.current || isUnmountedRef.current) return false;
+    if (transportModeRef.current !== 'ws' || !wsReadyRef.current) return false;
+    const socket = wsRef.current;
+    if (!socket || socket.readyState !== WebSocket.OPEN) return false;
+
+    const base64 = captureCurrentVideoFrameBase64();
+    if (!base64) return false;
+
+    lastVideoSentAtRef.current = Date.now();
+    socket.send(
+      JSON.stringify({
+        type: 'video',
+        data: base64,
+        mimeType: 'image/jpeg',
+      })
+    );
+    return true;
+  }, [captureCurrentVideoFrameBase64]);
+
+  const pushCurrentVideoFrameNowRef = useRef(pushCurrentVideoFrameNow);
+  pushCurrentVideoFrameNowRef.current = pushCurrentVideoFrameNow;
 
   const getDeviceTimePayload = () => {
     const now = new Date();
@@ -697,6 +737,16 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
 
         processor.onaudioprocess = (e) => {
           if (isUnmountedRef.current || isClosingRef.current) return;
+
+          // Web Audio callback keeps ticking even when Chrome tab is in background; ensure 1 FPS screen frames never stall
+          if (
+            transportModeRef.current === 'ws' &&
+            (isCameraOnRef.current || isScreenSharingRef.current) &&
+            Date.now() - lastVideoSentAtRef.current >= 1050
+          ) {
+            pushCurrentVideoFrameNowRef.current();
+          }
+
           if (isMutedRef.current) {
             inputEnergyRef.current = 0;
             vadIsSpeakingRef.current = false;
@@ -833,22 +883,11 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     if (!isCameraOn && !isScreenSharing) return;
 
     // Strict <= 1 FPS streaming rate in WebSocket mode per Gemini Live API guidelines
+    pushCurrentVideoFrameNow();
     videoLoopRef.current = setInterval(() => {
-      if (isClosingRef.current || isUnmountedRef.current) return;
-      if (transportModeRef.current !== 'ws' || !wsReadyRef.current) return;
-      const socket = wsRef.current;
-      if (!socket || socket.readyState !== WebSocket.OPEN) return;
-
-      const base64 = captureCurrentVideoFrameBase64();
-      if (!base64) return;
-
-      socket.send(
-        JSON.stringify({
-          type: 'video',
-          data: base64,
-          mimeType: 'image/jpeg',
-        })
-      );
+      if (Date.now() - lastVideoSentAtRef.current >= 950) {
+        pushCurrentVideoFrameNow();
+      }
     }, 1000);
 
     return () => {
@@ -857,7 +896,7 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
         videoLoopRef.current = null;
       }
     };
-  }, [captureCurrentVideoFrameBase64, isCameraOn, isScreenSharing]);
+  }, [isCameraOn, isScreenSharing, pushCurrentVideoFrameNow]);
 
   const startCamera = useCallback(
     async (mode: 'environment' | 'user') => {
@@ -1037,13 +1076,7 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     return () => window.removeEventListener('paste', onPaste);
   }, [applySharedScreenshotFile]);
 
-  const handleToggleScreenShare = async () => {
-    setIsPlusMenuOpen(false);
-    if (isScreenSharing) {
-      stopScreenStream();
-      return;
-    }
-
+  const startDesktopDisplayShare = useCallback(async () => {
     const mediaDevicesAny = navigator.mediaDevices as any;
     const navAny = navigator as any;
     const getDisplayMediaFn: ((constraints?: any) => Promise<MediaStream>) | null =
@@ -1064,20 +1097,64 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     }
 
     try {
+      let stream: MediaStream;
+      try {
+        // Chrome Desktop optimized display capture (supports tab switching bar & crisp HD stream)
+        stream = await getDisplayMediaFn({
+          video: {
+            width: { ideal: 1920, max: 2560 },
+            height: { ideal: 1080, max: 1440 },
+            frameRate: { ideal: 5, max: 10 },
+          },
+          audio: false,
+          surfaceSwitching: 'include',
+          selfBrowserSurface: 'include',
+          monitorTypeSurfaces: 'include',
+        });
+      } catch (optErr: any) {
+        if (
+          optErr?.name === 'TypeError' ||
+          optErr?.name === 'OverconstrainedError'
+        ) {
+          stream = await getDisplayMediaFn({ video: true, audio: false });
+        } else {
+          throw optErr;
+        }
+      }
+
+      // Stop old stream only after user picked the new tab/window/screen
+      if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
       stopCameraStream();
-      const stream = await getDisplayMediaFn({
-        video: true,
-        audio: false,
-      });
+
       const videoTrack = stream.getVideoTracks()[0];
       if (videoTrack) {
-        videoTrack.onended = () => {
-          stopScreenStream();
+        const settings = (videoTrack.getSettings?.() || {}) as MediaTrackSettings & {
+          displaySurface?: 'browser' | 'window' | 'monitor';
         };
+        setDisplaySurfaceInfo({
+          surface: settings.displaySurface || 'unknown',
+          width: settings.width,
+          height: settings.height,
+        });
+        videoTrack.onended = () => {
+          // Only stop if this track belongs to the currently active stream
+          if (screenStreamRef.current === stream) {
+            stopScreenStream();
+          }
+        };
+      } else {
+        setDisplaySurfaceInfo({ surface: 'unknown' });
       }
+
       sharedScreenBase64Ref.current = null;
       setSharedScreenPreviewUrl(null);
       screenStreamRef.current = stream;
+      if (screenVideoRef.current) {
+        screenVideoRef.current.srcObject = stream;
+        screenVideoRef.current.play().catch(() => {});
+      }
       setScreenShareMode('display');
       setIsScreenSharing(true);
     } catch (err: any) {
@@ -1090,8 +1167,8 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
       if (isPolicyOrUnsupported) {
         setScreenFallbackReason(
           isEn
-            ? 'Direct tab/system screen capture is restricted by this embedded browser context. Choose an alternative mode below:'
-            : 'Tangkap layar sistem dibatasi oleh konteks jendela/browser ini. Pilih mode berbagi layar alternatif di bawah:'
+            ? 'Direct Chrome screen capture is blocked inside this embedded preview frame. Open the app URL in a standalone Chrome tab for full tab/window sharing, or pick an option below:'
+            : 'Tangkap layar Chrome dibatasi oleh jendela pratinjau tertanam (iframe). Buka link aplikasi di tab Chrome mandiri untuk berbagi tab/web lain secara live, atau pilih mode cepat di bawah:'
         );
         setShowScreenFallbackSheet(true);
       } else if (err?.name !== 'AbortError' && err?.name !== 'NotAllowedError') {
@@ -1101,6 +1178,15 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
         );
       }
     }
+  }, [isEn, showTempNotice, stopCameraStream, stopScreenStream]);
+
+  const handleToggleScreenShare = async () => {
+    setIsPlusMenuOpen(false);
+    if (isScreenSharing) {
+      stopScreenStream();
+      return;
+    }
+    await startDesktopDisplayShare();
   };
 
   const handleToggleMute = () => {
@@ -1358,6 +1444,42 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
                   </div>
                 </div>
               </button>
+
+              {typeof window !== 'undefined' && window.self !== window.top && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(window.location.href);
+                      setShowScreenFallbackSheet(false);
+                      showTempNotice(
+                        isEn
+                          ? 'App URL copied! Paste in a new Chrome Desktop tab for full screen sharing.'
+                          : 'Link disalin! Tempel di tab Chrome Desktop baru untuk berbagi tab/layar penuh.'
+                      );
+                    } catch {
+                      showTempNotice(
+                        isEn ? 'Unable to copy link.' : 'Gagal menyalin link.'
+                      );
+                    }
+                  }}
+                  className="w-full p-3 rounded-2xl border border-amber-500/30 bg-amber-50/70 dark:bg-amber-950/25 hover:bg-amber-100/70 dark:hover:bg-amber-900/35 flex items-center gap-3 text-left cursor-pointer transition"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-amber-600 text-white flex items-center justify-center shrink-0">
+                    <Copy className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-slate-900 dark:text-white">
+                      {isEn ? 'Copy Link for Standalone Chrome Tab' : 'Salin Link untuk Tab Penuh Chrome Desktop'}
+                    </div>
+                    <div className="text-[11px] text-slate-600 dark:text-slate-300">
+                      {isEn
+                        ? 'Open directly outside preview iframe to share any Chrome tab or window'
+                        : 'Buka di luar frame pratinjau agar bisa berbagi tab web lain atau layar penuh'}
+                    </div>
+                  </div>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1433,6 +1555,17 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
                     autoPlay
                     playsInline
                     muted
+                    onLoadedData={() => {
+                      const v = screenVideoRef.current;
+                      if (v && v.videoWidth && v.videoHeight) {
+                        setDisplaySurfaceInfo((prev) => ({
+                          surface: prev?.surface || 'unknown',
+                          width: v.videoWidth,
+                          height: v.videoHeight,
+                        }));
+                      }
+                      pushCurrentVideoFrameNow();
+                    }}
                     className="w-full h-full object-cover"
                   />
                 ) : sharedScreenPreviewUrl ? (
@@ -1455,19 +1588,45 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
                       ? isEn
                         ? 'Screenshot Share Active'
                         : 'Layar Screenshot Aktif'
+                      : displaySurfaceInfo?.surface === 'browser'
+                      ? isEn
+                        ? 'Chrome Tab Shared'
+                        : 'Tab Chrome Dibagikan'
+                      : displaySurfaceInfo?.surface === 'window'
+                      ? isEn
+                        ? 'Window Shared'
+                        : 'Jendela Dibagikan'
+                      : displaySurfaceInfo?.surface === 'monitor'
+                      ? isEn
+                        ? 'Entire Screen Shared'
+                        : 'Seluruh Layar Dibagikan'
                       : isEn
                       ? 'Screen Sharing Active'
                       : 'Berbagi Layar Aktif'}
                   </span>
                 </div>
                 <p className="text-[10px] text-slate-300 truncate">
-                  {isEn
+                  {screenShareMode === 'display' && displaySurfaceInfo?.width && displaySurfaceInfo?.height
+                    ? `${displaySurfaceInfo.width}×${displaySurfaceInfo.height} · ${
+                        isEn ? 'HD live feed to Maria' : 'Tampilan HD aktif ke Maria'
+                      }`
+                    : isEn
                     ? 'Maria Live can see your screen'
                     : 'Maria Live melihat tampilan layar Anda'}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
+              {screenShareMode === 'display' && (
+                <button
+                  type="button"
+                  onClick={() => startDesktopDisplayShare()}
+                  title={isEn ? 'Switch shared tab, window, or screen' : 'Tukar tab, jendela, atau layar yang dibagikan'}
+                  className="px-2 py-1.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/35 text-blue-200 border border-blue-400/30 text-[11px] font-semibold cursor-pointer"
+                >
+                  {isEn ? 'Switch' : 'Tukar'}
+                </button>
+              )}
               {screenShareMode === 'screenshot' && (
                 <button
                   type="button"
@@ -1594,6 +1753,29 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
                   isPlusMenuOpen ? 'rotate-45' : ''
                 }`}
               />
+            </button>
+
+            {/* Desktop 1-Click Screen Share Button */}
+            <button
+              type="button"
+              onClick={handleToggleScreenShare}
+              title={
+                isScreenSharing
+                  ? isEn
+                    ? 'Stop Screen Share'
+                    : 'Hentikan Bagikan Layar'
+                  : isEn
+                  ? 'Share Chrome Tab, Window, or Screen'
+                  : 'Bagikan Tab Chrome, Jendela, atau Layar'
+              }
+              aria-label={isEn ? 'Share screen' : 'Bagikan layar'}
+              className={`hidden sm:flex w-11 h-11 rounded-full border items-center justify-center cursor-pointer active:scale-95 transition-colors shadow-sm ${
+                isScreenSharing
+                  ? 'bg-blue-600 border-blue-500 text-white'
+                  : 'bg-slate-100 border-slate-200 text-slate-800 hover:bg-slate-200 dark:bg-[#1c1f29] dark:border-[#2e3242] dark:text-slate-100 dark:hover:bg-[#262a37]'
+              }`}
+            >
+              <MonitorUp className="w-[18px] h-[18px]" />
             </button>
 
             {/* Camera Toggle Button */}
