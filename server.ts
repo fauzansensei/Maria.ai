@@ -52,10 +52,34 @@ async function startServer() {
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
-        hmr: process.env.DISABLE_HMR !== 'true',
-        watch: process.env.DISABLE_HMR === 'true' ? null : {},
+        hmr: false,
+        ws: false,
+        watch: null,
       },
       appType: 'spa',
+    });
+
+    // Vite 8 injects /@vite/client which attempts an HMR WebSocket connection to port 24678
+    // even when hmr/ws are disabled in middlewareMode, causing console errors & unhandled rejections
+    // behind Cloud Run reverse proxies. Preserve exports (updateStyle, createHotContext) without connecting WS.
+    app.get('/@vite/client', async (_req, res, next) => {
+      try {
+        const result = await vite.transformRequest('/@vite/client');
+        if (!result) return next();
+        const patchedCode = result.code.replace(
+          'transport.connect(createHMRHandler(handleMessage));',
+          'void 0;'
+        );
+        res
+          .status(200)
+          .set({
+            'Content-Type': 'application/javascript; charset=utf-8',
+            'Cache-Control': 'no-cache',
+          })
+          .end(patchedCode);
+      } catch (err) {
+        next(err);
+      }
     });
 
     app.use(vite.middlewares);
