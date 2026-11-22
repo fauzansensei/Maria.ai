@@ -68,8 +68,6 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
   const [showScreenFallbackSheet, setShowScreenFallbackSheet] = useState(false);
   const [screenFallbackReason, setScreenFallbackReason] = useState<string | null>(null);
   const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
-  const [liveUserCaption, setLiveUserCaption] = useState('');
-  const [liveModelCaption, setLiveModelCaption] = useState('');
   const [orbEnergy, setOrbEnergy] = useState(0);
 
   // Refs to avoid stale closures inside audio/video/VAD callbacks
@@ -417,13 +415,11 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
         const replyText = String(data.replyText || '').trim();
 
         if (userText) {
-          setLiveUserCaption(userText);
           httpHistoryRef.current.push({ role: 'user', content: userText });
           onCommitLiveTurnRef.current('user', userText);
         }
 
         if (replyText) {
-          setLiveModelCaption(replyText);
           httpHistoryRef.current.push({ role: 'model', content: replyText });
           onCommitLiveTurnRef.current('model', replyText);
         }
@@ -663,18 +659,15 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
               setStatus(isMutedRef.current ? 'muted' : 'listening');
             } else if (msg.type === 'inputTranscript' && msg.text) {
               userTurnBufRef.current += msg.text;
-              setLiveUserCaption(userTurnBufRef.current.trim());
             } else if (msg.type === 'outputTranscript' && msg.text) {
               flushUserTurn();
               modelTurnBufRef.current += msg.text;
-              setLiveModelCaption(modelTurnBufRef.current.trim());
             } else if (msg.type === 'audio' && msg.data) {
               flushUserTurn();
               play24kAudioChunk(msg.data);
             } else if (msg.type === 'interrupted') {
               stopAllOutputAudio();
               flushModelTurn();
-              setLiveModelCaption('');
               setStatus(isMutedRef.current ? 'muted' : 'listening');
             } else if (msg.type === 'turnComplete') {
               flushUserTurn();
@@ -1669,26 +1662,6 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
           <div className="mb-2 mx-auto max-w-fit px-3 py-1.5 rounded-full bg-slate-900/90 dark:bg-[#1b1f2e] text-white border border-slate-700/70 text-[11px] font-medium flex items-center gap-1.5 shadow-lg">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             <span>{noticeMessage}</span>
-          </div>
-        )}
-
-        {/* Live Transcript / Caption Card */}
-        {(liveModelCaption || liveUserCaption) && (
-          <div className="mb-2.5 mx-auto max-w-xl px-4 py-2.5 rounded-2xl bg-slate-900/88 dark:bg-[#141720]/92 backdrop-blur-md text-white border border-slate-700/70 shadow-xl space-y-1 text-xs leading-relaxed">
-            {liveUserCaption && (
-              <p className="text-slate-300">
-                <span className="font-semibold text-sky-300">
-                  {isEn ? 'You: ' : 'Anda: '}
-                </span>
-                <span>{liveUserCaption}</span>
-              </p>
-            )}
-            {liveModelCaption && (
-              <p className="text-white font-normal">
-                <span className="font-semibold text-blue-400">Maria: </span>
-                <span>{liveModelCaption}</span>
-              </p>
-            )}
           </div>
         )}
 
