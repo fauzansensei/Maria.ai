@@ -12,7 +12,6 @@ import {
   FileText,
   AlertCircle,
   CheckCircle2,
-  Square,
   Copy,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext.tsx';
@@ -59,15 +58,11 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [screenShareMode, setScreenShareMode] = useState<'display' | 'app' | 'screenshot' | null>(null);
-  const [displaySurfaceInfo, setDisplaySurfaceInfo] = useState<{
-    surface: 'browser' | 'window' | 'monitor' | 'unknown';
-    width?: number;
-    height?: number;
-  } | null>(null);
-  const [sharedScreenPreviewUrl, setSharedScreenPreviewUrl] = useState<string | null>(null);
   const [showScreenFallbackSheet, setShowScreenFallbackSheet] = useState(false);
   const [screenFallbackReason, setScreenFallbackReason] = useState<string | null>(null);
   const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
+  const [liveUserCaption, setLiveUserCaption] = useState('');
+  const [liveModelCaption, setLiveModelCaption] = useState('');
   const [orbEnergy, setOrbEnergy] = useState(0);
 
   // Refs to avoid stale closures inside audio/video/VAD callbacks
@@ -207,8 +202,6 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
       screenVideoRef.current.srcObject = null;
     }
     sharedScreenBase64Ref.current = null;
-    setDisplaySurfaceInfo(null);
-    setSharedScreenPreviewUrl(null);
     setScreenShareMode(null);
     setIsScreenSharing(false);
   }, []);
@@ -415,11 +408,13 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
         const replyText = String(data.replyText || '').trim();
 
         if (userText) {
+          setLiveUserCaption(userText);
           httpHistoryRef.current.push({ role: 'user', content: userText });
           onCommitLiveTurnRef.current('user', userText);
         }
 
         if (replyText) {
+          setLiveModelCaption(replyText);
           httpHistoryRef.current.push({ role: 'model', content: replyText });
           onCommitLiveTurnRef.current('model', replyText);
         }
@@ -659,15 +654,18 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
               setStatus(isMutedRef.current ? 'muted' : 'listening');
             } else if (msg.type === 'inputTranscript' && msg.text) {
               userTurnBufRef.current += msg.text;
+              setLiveUserCaption(userTurnBufRef.current.trim());
             } else if (msg.type === 'outputTranscript' && msg.text) {
               flushUserTurn();
               modelTurnBufRef.current += msg.text;
+              setLiveModelCaption(modelTurnBufRef.current.trim());
             } else if (msg.type === 'audio' && msg.data) {
               flushUserTurn();
               play24kAudioChunk(msg.data);
             } else if (msg.type === 'interrupted') {
               stopAllOutputAudio();
               flushModelTurn();
+              setLiveModelCaption('');
               setStatus(isMutedRef.current ? 'muted' : 'listening');
             } else if (msg.type === 'turnComplete') {
               flushUserTurn();
@@ -957,7 +955,6 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     }
     const base64 = initialDataUrl.split(',')[1];
     sharedScreenBase64Ref.current = base64;
-    setSharedScreenPreviewUrl(initialDataUrl);
     setScreenShareMode('app');
     setIsScreenSharing(true);
     setShowScreenFallbackSheet(false);
@@ -985,7 +982,6 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
       if (!settledDataUrl) return;
       const settledB64 = settledDataUrl.split(',')[1];
       sharedScreenBase64Ref.current = settledB64;
-      setSharedScreenPreviewUrl(settledDataUrl);
       if (
         transportModeRef.current === 'ws' &&
         wsReadyRef.current &&
@@ -1012,7 +1008,6 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
         if (!base64) throw new Error('Invalid image');
 
         sharedScreenBase64Ref.current = base64;
-        setSharedScreenPreviewUrl(compressedDataUrl);
         setScreenShareMode('screenshot');
         setIsScreenSharing(true);
         setShowScreenFallbackSheet(false);
@@ -1123,26 +1118,15 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
 
       const videoTrack = stream.getVideoTracks()[0];
       if (videoTrack) {
-        const settings = (videoTrack.getSettings?.() || {}) as MediaTrackSettings & {
-          displaySurface?: 'browser' | 'window' | 'monitor';
-        };
-        setDisplaySurfaceInfo({
-          surface: settings.displaySurface || 'unknown',
-          width: settings.width,
-          height: settings.height,
-        });
         videoTrack.onended = () => {
           // Only stop if this track belongs to the currently active stream
           if (screenStreamRef.current === stream) {
             stopScreenStream();
           }
         };
-      } else {
-        setDisplaySurfaceInfo({ surface: 'unknown' });
       }
 
       sharedScreenBase64Ref.current = null;
-      setSharedScreenPreviewUrl(null);
       screenStreamRef.current = stream;
       if (screenVideoRef.current) {
         screenVideoRef.current.srcObject = stream;
@@ -1534,111 +1518,18 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
         data-maria-live-dock="true"
         className="max-w-3xl mx-auto w-full px-3 sm:px-4 select-none relative z-40"
       >
-        {/* Screen Share Preview Card */}
-        {isScreenSharing && (
-          <div className="mb-2.5 mx-auto max-w-md rounded-2xl bg-slate-900/95 dark:bg-[#151822]/95 border border-blue-500/40 p-2 flex items-center justify-between gap-2.5 shadow-xl text-white">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div
-                data-maria-live-preview-thumb="true"
-                className="w-16 h-10 rounded-lg overflow-hidden bg-black border border-white/15 shrink-0"
-              >
-                {screenShareMode === 'display' ? (
-                  <video
-                    ref={screenVideoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    onLoadedData={() => {
-                      const v = screenVideoRef.current;
-                      if (v && v.videoWidth && v.videoHeight) {
-                        setDisplaySurfaceInfo((prev) => ({
-                          surface: prev?.surface || 'unknown',
-                          width: v.videoWidth,
-                          height: v.videoHeight,
-                        }));
-                      }
-                      pushCurrentVideoFrameNow();
-                    }}
-                    className="w-full h-full object-cover"
-                  />
-                ) : sharedScreenPreviewUrl ? (
-                  <img
-                    src={sharedScreenPreviewUrl}
-                    alt="Screen preview"
-                    className="w-full h-full object-cover"
-                  />
-                ) : null}
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-semibold flex items-center gap-1.5 text-blue-300">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                  <span className="truncate">
-                    {screenShareMode === 'app'
-                      ? isEn
-                        ? 'App Screen Active'
-                        : 'Layar Aplikasi Aktif'
-                      : screenShareMode === 'screenshot'
-                      ? isEn
-                        ? 'Screenshot Share Active'
-                        : 'Layar Screenshot Aktif'
-                      : displaySurfaceInfo?.surface === 'browser'
-                      ? isEn
-                        ? 'Chrome Tab Shared'
-                        : 'Tab Chrome Dibagikan'
-                      : displaySurfaceInfo?.surface === 'window'
-                      ? isEn
-                        ? 'Window Shared'
-                        : 'Jendela Dibagikan'
-                      : displaySurfaceInfo?.surface === 'monitor'
-                      ? isEn
-                        ? 'Entire Screen Shared'
-                        : 'Seluruh Layar Dibagikan'
-                      : isEn
-                      ? 'Screen Sharing Active'
-                      : 'Berbagi Layar Aktif'}
-                  </span>
-                </div>
-                <p className="text-[10px] text-slate-300 truncate">
-                  {screenShareMode === 'display' && displaySurfaceInfo?.width && displaySurfaceInfo?.height
-                    ? `${displaySurfaceInfo.width}×${displaySurfaceInfo.height} · ${
-                        isEn ? 'HD live feed to Maria' : 'Tampilan HD aktif ke Maria'
-                      }`
-                    : isEn
-                    ? 'Maria Live can see your screen'
-                    : 'Maria Live melihat tampilan layar Anda'}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              {screenShareMode === 'display' && (
-                <button
-                  type="button"
-                  onClick={() => startDesktopDisplayShare()}
-                  title={isEn ? 'Switch shared tab, window, or screen' : 'Tukar tab, jendela, atau layar yang dibagikan'}
-                  className="px-2 py-1.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/35 text-blue-200 border border-blue-400/30 text-[11px] font-semibold cursor-pointer"
-                >
-                  {isEn ? 'Switch' : 'Tukar'}
-                </button>
-              )}
-              {screenShareMode === 'screenshot' && (
-                <button
-                  type="button"
-                  onClick={() => screenPickerInputRef.current?.click()}
-                  className="px-2 py-1.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/35 text-blue-200 border border-blue-400/30 text-[11px] font-semibold cursor-pointer"
-                >
-                  {isEn ? 'Swap' : 'Ganti'}
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={stopScreenStream}
-                className="px-2.5 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/35 text-rose-200 border border-rose-400/30 text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
-              >
-                <Square className="w-3 h-3 fill-current" />
-                <span>{isEn ? 'Stop' : 'Hentikan'}</span>
-              </button>
-            </div>
-          </div>
+        {/* Hidden video element to decode Chrome DisplayMedia frames cleanly */}
+        {isScreenSharing && screenShareMode === 'display' && (
+          <video
+            ref={screenVideoRef}
+            autoPlay
+            playsInline
+            muted
+            onLoadedData={() => {
+              pushCurrentVideoFrameNow();
+            }}
+            className="fixed -left-[9999px] -top-[9999px] w-1 h-1 opacity-0 pointer-events-none"
+          />
         )}
 
         {/* Inline Error or Action Notice Banner */}
@@ -1662,6 +1553,26 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
           <div className="mb-2 mx-auto max-w-fit px-3 py-1.5 rounded-full bg-slate-900/90 dark:bg-[#1b1f2e] text-white border border-slate-700/70 text-[11px] font-medium flex items-center gap-1.5 shadow-lg">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             <span>{noticeMessage}</span>
+          </div>
+        )}
+
+        {/* Live Transcript / Caption Card */}
+        {(liveModelCaption || liveUserCaption) && (
+          <div className="mb-2.5 mx-auto max-w-xl px-4 py-2.5 rounded-2xl bg-slate-900/88 dark:bg-[#141720]/92 backdrop-blur-md text-white border border-slate-700/70 shadow-xl space-y-1 text-xs leading-relaxed">
+            {liveUserCaption && (
+              <p className="text-slate-300">
+                <span className="font-semibold text-sky-300">
+                  {isEn ? 'You: ' : 'Anda: '}
+                </span>
+                <span>{liveUserCaption}</span>
+              </p>
+            )}
+            {liveModelCaption && (
+              <p className="text-white font-normal">
+                <span className="font-semibold text-blue-400">Maria: </span>
+                <span>{liveModelCaption}</span>
+              </p>
+            )}
           </div>
         )}
 
