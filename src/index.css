@@ -89,3 +89,55 @@ body {
   animation: gentlePulse 2s ease-in-out infinite;
 }
 
+@keyframes mariaOrbit {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes mariaOrbitReverse {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes mariaHaloPulse {
+  0%, 100% { opacity: 0.65; transform: scale(0.96); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+
+@keyframes mariaCoreWave {
+  0%, 100% { opacity: 0.35; transform: scaleY(0.75) scaleX(0.92); }
+  50% { opacity: 0.95; transform: scaleY(1.05) scaleX(1.02); }
+}
+
+.animate-maria-orbit {
+  animation: mariaOrbit 1.05s linear infinite;
+  transform-origin: center;
+  will-change: transform;
+}
+
+.animate-maria-orbit-reverse {
+  animation: mariaOrbitReverse 1.75s linear infinite;
+  transform-origin: center;
+  will-change: transform;
+}
+
+.animate-maria-halo {
+  animation: mariaHaloPulse 1.6s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-maria-core-wave {
+  animation: mariaCoreWave 1.3s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-maria-orbit,
+  .animate-maria-orbit-reverse,
+  .animate-maria-halo,
+  .animate-maria-core-wave {
+    animation: none;
+  }
+}
+

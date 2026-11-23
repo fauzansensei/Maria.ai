@@ -751,8 +751,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
     let lastTime = performance.now();
 
     const updateTypewriter = (time: number) => {
-      // Step roughly every 30ms (~33Hz) to slash Markdown AST re-parsing CPU overhead while streaming
-      if (time - lastTime >= 30) {
+      if (time - lastTime >= 16) {
         lastTime = time;
         setDisplayedContent((current) => {
           const target = message.content;
@@ -761,13 +760,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
           }
 
           const delta = target.length - current.length;
-          let advance = 2;
-          if (delta > 120) advance = 14;
-          else if (delta > 60) advance = 9;
-          else if (delta > 25) advance = 6;
-          else if (delta > 6) advance = 3;
-          else advance = 2;
-
+          const advance = Math.max(4, Math.ceil(delta * 0.45));
           return target.slice(0, current.length + advance);
         });
       }
@@ -1555,9 +1548,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
         {/* Minimal Identity & Collapsible Thought Status Row (Zero Pill Clutter) */}
         <div className="flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
           <div className="flex items-center gap-2 flex-wrap">
-            <div className={message.isStreaming ? 'animate-gentle-pulse' : ''}>
-              <MariaLogo size="sm" withOnlineDot={false} />
-            </div>
+            <MariaLogo size="sm" isResponding={Boolean(message.isStreaming)} withOnlineDot={false} />
             <span className="font-semibold text-slate-800 dark:text-slate-200 tracking-tight">
               Maria AI
             </span>
@@ -1586,8 +1577,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
             {message.isStreaming && (
               <>
                 <span aria-hidden="true">·</span>
-                <span className="inline-flex items-center gap-1.5 text-[11px] text-blue-600 dark:text-blue-400 font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
+                <span className="inline-flex items-center text-[11px] text-blue-600 dark:text-blue-400 font-medium">
                   <span>{isEn ? 'Responding...' : 'Sedang menjawab...'}</span>
                 </span>
               </>

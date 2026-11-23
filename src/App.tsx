@@ -1118,57 +1118,66 @@ function AppContent() {
       setGuestMessages((prev) => [...prev, userMessageObj]);
     }
 
+    const streamAiId = `ai_${Date.now()}`;
     try {
       let currentConvId = resolvedConvId;
+      const isImageRequest = mode === 'image' || isImageIntent(safeContent);
 
-      // Create conversation if first turn for logged-in user (skipped in Temporary Chat)
-      if (user && !currentConvId && !isEphemeral) {
-        const firstAtt = attachments?.[0];
-        const voiceTitle =
-          firstAtt?.type === 'audio'
-            ? `Pesan Suara (${
-                typeof firstAtt.duration === 'number'
-                  ? `${Math.floor(firstAtt.duration / 60)}:${Math.floor(firstAtt.duration % 60)
-                      .toString()
-                      .padStart(2, '0')}`
-                  : '0:01'
-              })`
-            : firstAtt?.name;
-        const trimmed = safeContent.trim();
-        const titleSnippet =
-          trimmed.length > 35
-            ? trimmed.slice(0, 35) + '...'
-            : trimmed || voiceTitle || 'Percakapan Baru';
-        currentConvId = await createConversation(user.uid, titleSnippet, mode);
-        resolvedConvId = currentConvId;
-        activeConvIdRef.current = currentConvId;
-        setActiveConvId(currentConvId);
-        setMessages((prev) =>
-          prev.map((m) => (m.id === userMsgId ? { ...m, conversationId: currentConvId! } : m))
-        );
-      }
+      // Run Firestore conversation creation & user message persistence concurrently so it never blocks AI response latency
+      const userPersistPromise: Promise<string | null> = (async () => {
+        if (!user || isEphemeral) return currentConvId;
+        let convId = currentConvId;
+        if (!convId) {
+          const firstAtt = attachments?.[0];
+          const voiceTitle =
+            firstAtt?.type === 'audio'
+              ? `Pesan Suara (${
+                  typeof firstAtt.duration === 'number'
+                    ? `${Math.floor(firstAtt.duration / 60)}:${Math.floor(firstAtt.duration % 60)
+                        .toString()
+                        .padStart(2, '0')}`
+                    : '0:01'
+                })`
+              : firstAtt?.name;
+          const trimmed = safeContent.trim();
+          const titleSnippet =
+            trimmed.length > 35
+              ? trimmed.slice(0, 35) + '...'
+              : trimmed || voiceTitle || 'Percakapan Baru';
+          convId = await createConversation(user.uid, titleSnippet, mode);
+          currentConvId = convId;
+          resolvedConvId = convId;
+          activeConvIdRef.current = convId;
+          setActiveConvId(convId);
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === userMsgId || m.id === streamAiId ? { ...m, conversationId: convId! } : m
+            )
+          );
+        }
 
-      if (user && currentConvId && !isEphemeral) {
-        await addMessage(currentConvId, user.uid, {
-          role: 'user',
-          content,
-          attachments: attachments?.map((a) => ({
-            id: a.id,
-            name: a.name,
-            size: a.size,
-            mimeType: a.mimeType,
-            type: a.type,
-            previewUrl: a.previewUrl,
-            ...(typeof a.duration === 'number' ? { duration: a.duration } : {}),
-            ...(Array.isArray(a.waveform) ? { waveform: a.waveform } : {}),
-            ...(a.fileUri ? { fileUri: a.fileUri } : {}),
-          })),
-        });
-      }
+        if (convId) {
+          await addMessage(convId, user.uid, {
+            role: 'user',
+            content,
+            attachments: attachments?.map((a) => ({
+              id: a.id,
+              name: a.name,
+              size: a.size,
+              mimeType: a.mimeType,
+              type: a.type,
+              previewUrl: a.previewUrl,
+              ...(typeof a.duration === 'number' ? { duration: a.duration } : {}),
+              ...(Array.isArray(a.waveform) ? { waveform: a.waveform } : {}),
+              ...(a.fileUri ? { fileUri: a.fileUri } : {}),
+            })),
+          });
+        }
+        return convId;
+      })();
 
       // Handle Image Generation & Editing Mode (Explicit Mode OR Auto-Detected Intent from prompt)
-      const isAutoImage = isImageIntent(safeContent);
-      if (mode === 'image' || isAutoImage) {
+      if (isImageRequest) {
         const imgAttachment = attachments?.find((a) => a.type === 'image');
         const baseImage = imgAttachment?.base64Data || imgAttachment?.originalUrl || imgAttachment?.previewUrl;
         const mimeType = imgAttachment?.mimeType;
@@ -1205,9 +1214,10 @@ function AppContent() {
           messageContent += `\n\n> ℹ️ ${imgData.notice}`;
         }
 
+        const persistedConvId = await userPersistPromise;
         const modelMessageObj: Message = {
           id: `ai_${Date.now()}`,
-          conversationId: currentConvId || 'guest_conv',
+          conversationId: persistedConvId || currentConvId || 'guest_conv',
           userId: user ? user.uid : 'guest',
           role: 'model',
           content: messageContent,
@@ -1217,8 +1227,8 @@ function AppContent() {
           createdAt: new Date(),
         };
 
-        if (user && currentConvId && !isEphemeral) {
-          await addMessage(currentConvId, user.uid, {
+        if (user && persistedConvId && !isEphemeral) {
+          await addMessage(persistedConvId, user.uid, {
             role: 'model',
             content: modelMessageObj.content,
             model: modelMessageObj.model,
@@ -1242,6 +1252,27 @@ function AppContent() {
 
         setIsLoading(false);
         return;
+      }
+
+      // Show orbital responding animation immediately at t=0ms in Maria's message slot
+      let streamModel = webSearchEnabled && (settings.enabledPlugins?.includes('google-search') ?? true)
+        ? 'gemini-4-hydrogen'
+        : 'gemini-3.1-flash-lite';
+      const initialAiMsg: Message = {
+        id: streamAiId,
+        conversationId: currentConvId || 'guest_conv',
+        userId: user ? user.uid : 'guest',
+        role: 'model',
+        content: '',
+        model: streamModel,
+        mode,
+        launchAction: launchAction || undefined,
+        isStreaming: true,
+        createdAt: new Date(),
+      };
+      setMessages((prev) => [...prev, initialAiMsg]);
+      if (!user || !currentConvId) {
+        setGuestMessages((prev) => [...prev, initialAiMsg]);
       }
 
       // Handle Standard, Thinking, Fast, Search, Maps, Science Chat
@@ -1378,9 +1409,7 @@ function AppContent() {
 
       // Stream SSE response for instant real-time tokens (Zero waiting time!)
       let streamedSuccess = false;
-      const streamAiId = `ai_${Date.now()}`;
       let fullText = '';
-      let streamModel = effectiveWebSearch ? 'gemini-flash-latest' : 'gemini-3.1-flash-lite';
       let streamGroundingLinks: any[] = [];
 
       const allowEmojis = shouldAllowEmojis(settings);
@@ -1417,30 +1446,14 @@ function AppContent() {
                 ? 'Terlalu banyak permintaan. Tunggu 1 menit lalu coba kembali.'
                 : `Permintaan tidak dapat diproses (HTTP ${streamRes.status}).`;
           }
+          setMessages((prev) => prev.filter((m) => m.id !== streamAiId));
+          setGuestMessages((prev) => prev.filter((m) => m.id !== streamAiId));
         } else if (streamRes.ok && streamRes.body && contentType.includes('text/event-stream')) {
           const reader = streamRes.body.getReader();
           const decoder = new TextDecoder();
           let buffer = '';
 
-          const initialAiMsg: Message = {
-            id: streamAiId,
-            conversationId: currentConvId || 'guest_conv',
-            userId: user ? user.uid : 'guest',
-            role: 'model',
-            content: '',
-            model: streamModel,
-            mode,
-            launchAction: launchAction || undefined,
-            isStreaming: true,
-            createdAt: new Date(),
-          };
-
-          setMessages((prev) => [...prev, initialAiMsg]);
-          if (!user || !currentConvId) {
-            setGuestMessages((prev) => [...prev, initialAiMsg]);
-          }
-
-          setIsLoading(false); // Stop loading indicator immediately as tokens begin streaming
+          setIsLoading(false); // Release input lock cleanly as SSE stream opens
 
           while (true) {
             const { done, value } = await reader.read();
@@ -1526,8 +1539,9 @@ function AppContent() {
               )
             );
 
-            if (user && currentConvId && !isEphemeral) {
-              await addMessage(currentConvId, user.uid, {
+            const persistedConvId = await userPersistPromise;
+            if (user && persistedConvId && !isEphemeral) {
+              await addMessage(persistedConvId, user.uid, {
                 role: 'model',
                 content: fullText,
                 model: streamModel,
@@ -1570,6 +1584,9 @@ function AppContent() {
             setMessages((prev) => prev.filter((m) => m.id !== streamAiId));
             setGuestMessages((prev) => prev.filter((m) => m.id !== streamAiId));
           }
+        } else {
+          setMessages((prev) => prev.filter((m) => m.id !== streamAiId));
+          setGuestMessages((prev) => prev.filter((m) => m.id !== streamAiId));
         }
       } catch (streamErr) {
         console.warn('Streaming failed, falling back to standard completion:', streamErr);
@@ -1657,9 +1674,10 @@ function AppContent() {
           executeLaunch(finalLaunchAction);
         }
 
+        const persistedConvId = await userPersistPromise;
         const modelMessageObj: Message = {
           id: `ai_${Date.now()}`,
-          conversationId: currentConvId || 'guest_conv',
+          conversationId: persistedConvId || currentConvId || 'guest_conv',
           userId: user ? user.uid : 'guest',
           role: 'model',
           content: data.text || 'Tidak ada teks yang dihasilkan.',
@@ -1671,8 +1689,8 @@ function AppContent() {
           createdAt: new Date(),
         };
 
-        if (user && currentConvId && !isEphemeral) {
-          await addMessage(currentConvId, user.uid, {
+        if (user && persistedConvId && !isEphemeral) {
+          await addMessage(persistedConvId, user.uid, {
             role: 'model',
             content: modelMessageObj.content,
             model: modelMessageObj.model,
@@ -1705,6 +1723,8 @@ function AppContent() {
         }
       }
     } catch (err: any) {
+      setMessages((prev) => prev.filter((m) => m.id !== streamAiId));
+      setGuestMessages((prev) => prev.filter((m) => m.id !== streamAiId));
       const rawMsg = err?.message || 'Koneksi gagal';
       const friendlyMsg = /failed to fetch|load failed|networkerror/i.test(rawMsg)
         ? 'Koneksi ke server terputus sementara atau ukuran lampiran melebihi batas jaringan. Silakan coba kirim ulang.'

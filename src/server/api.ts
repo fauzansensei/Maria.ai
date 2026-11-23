@@ -177,6 +177,10 @@ apiRouter.post('/chat-stream', async (req: Request, res: Response) => {
       Connection: 'keep-alive',
       'X-Accel-Buffering': 'no',
     });
+    if (typeof (res as any).flushHeaders === 'function') {
+      (res as any).flushHeaders();
+    }
+    res.write(': stream-open\n\n');
 
     let tokensSent = 0;
     try {

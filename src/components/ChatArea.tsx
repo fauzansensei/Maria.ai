@@ -691,18 +691,16 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
               />
             ))}
 
-            {/* Loading Indicator */}
-            {isLoading && (
+            {/* Loading Indicator (only when no active streaming MessageItem placeholder is already shown) */}
+            {isLoading && !messages.some((m) => m.role === 'model' && m.isStreaming) && (
               <div className="py-3 px-4 sm:px-6 flex items-center gap-3 animate-in fade-in">
-                <MariaLogo size="sm" />
+                <MariaLogo size="sm" isResponding={true} />
                 {activeConnectingAction ? (
                   <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-[#1e2330] border border-slate-700 text-xs text-white shadow-sm">
-                    <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping shrink-0" />
                     <span className="font-medium">{activeConnectingAction.statusText}...</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
                     <span className="font-medium">
                       {isEn ? 'Maria is thinking & formulating a response...' : 'Maria sedang berpikir & merumuskan jawaban...'}
                     </span>

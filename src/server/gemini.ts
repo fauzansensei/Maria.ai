@@ -408,14 +408,14 @@ function recordChatModelCooldown(model: string, err: any) {
   const secMatch =
     raw.match(/"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/i) ||
     raw.match(/retry in\s+(\d+(?:\.\d+)?)s/i);
-  let ms = 60_000;
+  let ms = 10 * 60_000;
   if (secMatch) {
     const secs = Number(secMatch[1]);
     if (Number.isFinite(secs) && secs > 0) {
-      ms = Math.max(15_000, Math.min(secs * 1000, 15 * 60_000));
+      ms = Math.max(60_000, Math.min(secs * 1000, 15 * 60_000));
     }
   } else if (/PerDay|Daily|GenerateRequestsPerDay/i.test(raw)) {
-    ms = 10 * 60_000;
+    ms = 15 * 60_000;
   }
   chatModelCooldowns.set(model, Date.now() + ms);
 }
@@ -466,11 +466,6 @@ function couldBeThoughtPrefix(sample: string): boolean {
   if (targets.some((t) => s.startsWith(t) || (s.length < t.length && t.startsWith(s)))) {
     return true;
   }
-  // Hold briefly while still inside initial 160 chars or mid-clause lowercase fragment
-  if (trimmed.length < 160) return true;
-  if (/^[a-z]/.test(trimmed) && trimmed.length < 1200 && sanitizeModelText(trimmed).trim().length === 0) {
-    return true;
-  }
   return false;
 }
 
@@ -504,7 +499,7 @@ async function* streamSanitizedModelOutput(
           leadingBuffer += piece;
           const sanitized = sanitizeModelText(leadingBuffer);
           const stillCollecting =
-            leadingBuffer.length < 4000 &&
+            leadingBuffer.length < 1500 &&
             (couldBeThoughtPrefix(leadingBuffer) ||
               (sanitized.trim().length === 0 && leadingBuffer.trim().length > 0));
 
@@ -516,7 +511,7 @@ async function* streamSanitizedModelOutput(
               text: cleanOutChunk(sanitized),
               model: modelName,
             };
-          } else if (leadingBuffer.length >= 4000) {
+          } else if (leadingBuffer.length >= 1500) {
             streamPassedThoughtGate = true;
             leadingBuffer = '';
             if (sanitized) {
@@ -557,22 +552,14 @@ function prepareCandidateConfig(
   builtConnectors: BuiltConnectorTools
 ) {
   const candidateConfig: any = { ...baseConfig };
-  const isLite = candidate === 'gemini-2.5-flash-lite' || candidate === 'gemini-3.1-flash-lite';
+  const isLite = candidate === 'gemini-3.1-flash-lite';
 
-  if (candidate === 'gemini-2.5-flash') {
-    candidateConfig.thinkingConfig =
-      mode === 'thinking'
-        ? { thinkingBudget: 8192, includeThoughts: false }
-        : { thinkingBudget: 0, includeThoughts: false };
-  } else if (!candidate.startsWith('gemini-3') && !candidate.startsWith('gemini-4')) {
+  if (candidate === 'gemini-4-hydrogen') {
+    candidateConfig.thinkingConfig = {
+      thinkingLevel: mode === 'thinking' ? ThinkingLevel.HIGH : ThinkingLevel.LOW,
+    };
+  } else {
     delete candidateConfig.thinkingConfig;
-  } else if (candidate === 'gemini-3.1-flash-lite') {
-    delete candidateConfig.thinkingConfig;
-  } else if (candidate === 'gemini-4-hydrogen' || candidate === 'gemini-3.8-flash') {
-    candidateConfig.thinkingConfig =
-      mode === 'thinking'
-        ? { thinkingLevel: ThinkingLevel.HIGH, includeThoughts: false }
-        : { thinkingLevel: ThinkingLevel.LOW, includeThoughts: false };
   }
 
   const baseTools: any[] =
@@ -585,7 +572,7 @@ function prepareCandidateConfig(
 
   if (builtConnectors.declarations.length > 0 && !hasVideo) {
     const canCombineWithBuiltin =
-      (candidate.startsWith('gemini-4') || candidate.startsWith('gemini-3.8')) &&
+      candidate === 'gemini-4-hydrogen' &&
       baseTools.some((t) => Boolean(t?.googleSearch));
 
     if (canCombineWithBuiltin) {
@@ -655,7 +642,6 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
   if (effectiveMode === 'thinking') {
     config.thinkingConfig = {
       thinkingLevel: ThinkingLevel.HIGH,
-      includeThoughts: false,
     };
   } else if (effectiveMode === 'maps') {
     config.tools = [{ googleMaps: {} }];
@@ -688,23 +674,10 @@ export async function* generateChatResponseStream(options: GenerateOptions) {
         (a.name && /\.(mp4|webm|mov|mkv|3gp|avi)$/i.test(a.name))
     )
   );
-  const hasMedia = messages.some((m) => m.attachments && m.attachments.length > 0);
-
-  let baseCandidates: string[];
-  if (hasVideo) {
-    baseCandidates = ['gemini-4-hydrogen', 'gemini-2.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest'];
-  } else if (effectiveMode === 'thinking') {
-    baseCandidates = ['gemini-4-hydrogen', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-flash-latest'];
-  } else if (builtConnectors.declarations.length > 0) {
-    baseCandidates = ['gemini-4-hydrogen', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-3.1-flash-lite'];
-  } else if (hasMedia && isSearchActive) {
-    baseCandidates = ['gemini-4-hydrogen', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite'];
-  } else if (hasMedia) {
-    baseCandidates = ['gemini-4-hydrogen', 'gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.8-flash'];
-  } else {
-    baseCandidates = ['gemini-4-hydrogen', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest'];
-  }
-
+  const baseCandidates =
+    effectiveMode === 'fast'
+      ? ['gemini-3.1-flash-lite', 'gemini-4-hydrogen']
+      : ['gemini-4-hydrogen', 'gemini-3.1-flash-lite'];
   const candidateModels = orderAvailableCandidates(baseCandidates);
   const groundingLinks: Array<{ title?: string; uri: string }> = [];
   const cleanOutChunk = (val: string) => (allowEmojis ? val : stripEmojis(val));
@@ -959,7 +932,6 @@ export async function generateChatResponse(options: GenerateOptions) {
   if (effectiveMode === 'thinking') {
     config.thinkingConfig = {
       thinkingLevel: ThinkingLevel.HIGH,
-      includeThoughts: false,
     };
   } else if (effectiveMode === 'maps') {
     config.tools = [{ googleMaps: {} }];
@@ -992,23 +964,10 @@ export async function generateChatResponse(options: GenerateOptions) {
         (a.name && /\.(mp4|webm|mov|mkv|3gp|avi)$/i.test(a.name))
     )
   );
-  const hasMedia = messages.some((m) => m.attachments && m.attachments.length > 0);
-
-  let baseCandidates: string[];
-  if (hasVideo) {
-    baseCandidates = ['gemini-4-hydrogen', 'gemini-2.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest'];
-  } else if (effectiveMode === 'thinking') {
-    baseCandidates = ['gemini-4-hydrogen', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-flash-latest'];
-  } else if (builtConnectors.declarations.length > 0) {
-    baseCandidates = ['gemini-4-hydrogen', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-3.1-flash-lite'];
-  } else if (hasMedia && isSearchActive) {
-    baseCandidates = ['gemini-4-hydrogen', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite'];
-  } else if (hasMedia) {
-    baseCandidates = ['gemini-4-hydrogen', 'gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.8-flash'];
-  } else {
-    baseCandidates = ['gemini-4-hydrogen', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest'];
-  }
-
+  const baseCandidates =
+    effectiveMode === 'fast'
+      ? ['gemini-3.1-flash-lite', 'gemini-4-hydrogen']
+      : ['gemini-4-hydrogen', 'gemini-3.1-flash-lite'];
   const candidateModels = orderAvailableCandidates(baseCandidates);
   const groundingLinks: Array<{ title?: string; uri: string }> = [];
 
@@ -1840,7 +1799,7 @@ MODE MARIA LIVE (SUARA & VISUAL LANGSUNG):
 
   contents.push({ role: 'user', parts: userParts });
 
-  const modelsToTry = ['gemini-4-hydrogen', 'gemini-3.1-flash-lite'];
+  const modelsToTry = orderAvailableCandidates(['gemini-4-hydrogen', 'gemini-3.1-flash-lite']);
   let lastErr: any = null;
   let parsed: { userTranscript?: string; replyText?: string } = {};
   let usedModel = modelsToTry[0];
@@ -1869,12 +1828,16 @@ MODE MARIA LIVE (SUARA & VISUAL LANGSUNG):
           },
         },
       });
+      chatModelCooldowns.delete(modelName);
       usedModel = modelName;
       const rawJson = (response.text || '{}').trim();
       parsed = JSON.parse(rawJson);
       break;
     } catch (err: any) {
       lastErr = err;
+      if (isChatQuotaOrRateError(err)) {
+        recordChatModelCooldown(modelName, err);
+      }
     }
   }
 
