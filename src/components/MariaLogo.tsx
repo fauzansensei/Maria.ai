@@ -1,4 +1,5 @@
 import React, { useId } from 'react';
+import { MariaOrb3D } from './MariaOrb3D.tsx';
 
 interface MariaLogoProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'hero';
@@ -35,107 +36,15 @@ export const MariaLogo: React.FC<MariaLogoProps> = ({
         glow ? 'drop-shadow-[0_4px_16px_rgba(20,24,38,0.25)]' : ''
       }`}
     >
-      {/* Active Response Orbital Energy Ring (transitions cleanly back to MariaLogo when done) */}
-      <div
-        aria-hidden={!isResponding}
-        className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out ${
-          isResponding
-            ? 'opacity-100 scale-100'
-            : 'opacity-0 scale-110 pointer-events-none'
-        }`}
-      >
-        {/* Outer electric-blue radial glow halo */}
-        <span
-          className="absolute -inset-1 rounded-full animate-maria-halo pointer-events-none"
-          style={{
-            background:
-              'radial-gradient(circle, rgba(56,189,248,0.38) 0%, rgba(37,99,235,0.22) 48%, rgba(37,99,235,0) 74%)',
-          }}
-        />
-
-        <svg
-          viewBox="0 0 100 100"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="relative w-full h-full overflow-visible"
+      {/* True 3D WebGL Volumetric Orbital Sphere while Maria AI is responding */}
+      {isResponding && (
+        <div
+          aria-hidden="true"
+          className="absolute -inset-1.5 flex items-center justify-center pointer-events-none"
         >
-          <defs>
-            <radialGradient id={`maria-orb-core-${uid}`} cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#0f2557" />
-              <stop offset="55%" stopColor="#081330" />
-              <stop offset="100%" stopColor="#030712" />
-            </radialGradient>
-
-            <linearGradient id={`maria-comet-arc-${uid}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
-              <stop offset="32%" stopColor="#7dd3fc" stopOpacity="0.95" />
-              <stop offset="68%" stopColor="#3b82f6" stopOpacity="0.55" />
-              <stop offset="100%" stopColor="#1d4ed8" stopOpacity="0" />
-            </linearGradient>
-
-            <linearGradient id={`maria-comet-tail-${uid}`} x1="100%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.8" />
-              <stop offset="55%" stopColor="#2563eb" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="#1e3a8a" stopOpacity="0" />
-            </linearGradient>
-
-            <radialGradient id={`maria-aperture-glow-${uid}`} cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#e0f2fe" stopOpacity="0.95" />
-              <stop offset="40%" stopColor="#38bdf8" stopOpacity="0.45" />
-              <stop offset="100%" stopColor="#1d4ed8" stopOpacity="0" />
-            </radialGradient>
-
-            <filter id={`maria-arc-blur-${uid}`} x="-30%" y="-30%" width="160%" height="160%">
-              <feGaussianBlur stdDeviation="2.4" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-
-          {/* Dark Circular Energy Sphere & Subtle Rim */}
-          <circle
-            cx="50"
-            cy="50"
-            r="43"
-            fill={`url(#maria-orb-core-${uid})`}
-            stroke="rgba(125, 211, 252, 0.28)"
-            strokeWidth="1.6"
-          />
-
-          {/* Inner Luminous Vertical/Radial Pulse Core */}
-          <ellipse
-            cx="50"
-            cy="50"
-            rx="7"
-            ry="20"
-            fill={`url(#maria-aperture-glow-${uid})`}
-            className="animate-maria-core-wave"
-          />
-
-          {/* Counter-Rotating Soft Secondary Blue Aura Arc */}
-          <g className="animate-maria-orbit-reverse">
-            <path
-              d="M 50 11 A 39 39 0 0 1 86 64"
-              stroke={`url(#maria-comet-tail-${uid})`}
-              strokeWidth="4.2"
-              strokeLinecap="round"
-            />
-          </g>
-
-          {/* Primary Bright Cyan/White Sweeping Orbital Crescent */}
-          <g className="animate-maria-orbit" filter={`url(#maria-arc-blur-${uid})`}>
-            <path
-              d="M 50 9 A 41 41 0 0 1 89 61"
-              stroke={`url(#maria-comet-arc-${uid})`}
-              strokeWidth="5.5"
-              strokeLinecap="round"
-            />
-            <circle cx="50" cy="9" r="3" fill="#ffffff" />
-          </g>
-        </svg>
-      </div>
+          <MariaOrb3D className="w-full h-full" />
+        </div>
+      )}
 
       {/* Standard Maria AI Brand Logo */}
       <svg
