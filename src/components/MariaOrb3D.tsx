@@ -416,7 +416,7 @@ export const MariaOrb3D: React.FC<MariaOrb3DProps> = ({ className = '' }) => {
       };
 
       const handleContextRestored = () => {
-        if (!disposed && !prefersReducedMotion) {
+        if (!disposed) {
           tick();
         }
       };
@@ -436,7 +436,8 @@ export const MariaOrb3D: React.FC<MariaOrb3DProps> = ({ className = '' }) => {
       });
       resizeObserver.observe(container);
 
-      const clock = new THREE.Clock();
+      const timer = new THREE.Timer();
+      timer.connect(document);
       let elapsed = 0;
 
       const updateScene = (t: number) => {
@@ -444,24 +445,24 @@ export const MariaOrb3D: React.FC<MariaOrb3DProps> = ({ className = '' }) => {
         auraMat.uniforms.uTime.value = t;
 
         // Core dark globe gentle 3D rotation
-        coreMesh.rotation.y = t * 0.42;
-        coreMesh.rotation.x = Math.sin(t * 0.35) * 0.24;
+        coreMesh.rotation.y = t * 0.65;
+        coreMesh.rotation.x = Math.sin(t * 0.48) * 0.28;
 
         // Primary 3D orbital crescent: full 3D pitch/yaw/roll tumbling matching reference
-        primaryRingGroup.rotation.y = t * 1.48;
-        primaryRingGroup.rotation.x = Math.sin(t * 0.96) * 0.68 + 0.28;
-        primaryRingGroup.rotation.z = t * 0.62;
-        primaryRingMat.uniforms.uPhase.value = t * 2.1;
-        innerArcMat.uniforms.uPhase.value = t * 2.1 + 0.15;
+        primaryRingGroup.rotation.y = t * 2.15;
+        primaryRingGroup.rotation.x = Math.sin(t * 1.35) * 0.78 + 0.32;
+        primaryRingGroup.rotation.z = t * 0.95;
+        primaryRingMat.uniforms.uPhase.value = t * 3.1;
+        innerArcMat.uniforms.uPhase.value = t * 3.1 + 0.18;
 
         // Secondary volumetric cobalt aura ring counter-tumbling
-        secondaryRingGroup.rotation.y = -t * 1.05 + 0.85;
-        secondaryRingGroup.rotation.x = Math.cos(t * 0.82) * 0.72 - 0.35;
-        secondaryRingGroup.rotation.z = -t * 0.48;
-        secondaryRingMat.uniforms.uPhase.value = -t * 1.6;
+        secondaryRingGroup.rotation.y = -t * 1.45 + 0.85;
+        secondaryRingGroup.rotation.x = Math.cos(t * 1.1) * 0.75 - 0.35;
+        secondaryRingGroup.rotation.z = -t * 0.72;
+        secondaryRingMat.uniforms.uPhase.value = -t * 2.2;
 
         // Subtle volumetric breathing scale
-        const breathe = 1.0 + Math.sin(t * 2.2) * 0.025;
+        const breathe = 1.0 + Math.sin(t * 2.6) * 0.032;
         orbRoot.scale.setScalar(breathe);
       };
 
@@ -471,13 +472,15 @@ export const MariaOrb3D: React.FC<MariaOrb3DProps> = ({ className = '' }) => {
         if (typeof gl.fenceSync === 'function') {
           const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
           gl.flush();
+          let polls = 0;
           const poll = () => {
             if (disposed) {
               if (sync) gl.deleteSync(sync);
               return;
             }
+            polls += 1;
             const state = sync && gl.getSyncParameter(sync, gl.SYNC_STATUS);
-            if (state === gl.UNSIGNALED) {
+            if (state === gl.UNSIGNALED && polls < 20) {
               frameId = window.setTimeout(poll, 5);
             } else {
               if (sync) gl.deleteSync(sync);
@@ -490,10 +493,13 @@ export const MariaOrb3D: React.FC<MariaOrb3DProps> = ({ className = '' }) => {
         }
       };
 
+      const motionFactor = prefersReducedMotion ? 0.35 : 1.0;
+
       const tick = () => {
         if (disposed || !renderer) return;
-        const delta = Math.min(clock.getDelta(), 0.05);
-        elapsed += delta;
+        timer.update();
+        const delta = Math.max(0, Math.min(timer.getDelta(), 0.05));
+        elapsed += delta * motionFactor;
         updateScene(elapsed);
         renderer.render(scene, camera);
         if (isSoftwareGl) {
@@ -503,17 +509,13 @@ export const MariaOrb3D: React.FC<MariaOrb3DProps> = ({ className = '' }) => {
         }
       };
 
-      if (prefersReducedMotion) {
-        updateScene(0.8);
-        renderer.render(scene, camera);
-      } else {
-        tick();
-      }
+      tick();
 
       return () => {
         disposed = true;
         cancelAnimationFrame(frameId);
         window.clearTimeout(frameId);
+        timer.dispose();
         resizeObserver.disconnect();
         canvas.removeEventListener('webglcontextlost', handleContextLost);
         canvas.removeEventListener('webglcontextrestored', handleContextRestored);

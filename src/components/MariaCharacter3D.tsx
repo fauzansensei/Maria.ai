@@ -544,7 +544,7 @@ export const MariaCharacter3D: React.FC<MariaCharacter3DProps> = ({
       };
 
       const handleContextRestored = () => {
-        if (!disposed && !prefersReducedMotion) {
+        if (!disposed) {
           tick();
         }
       };
@@ -564,7 +564,8 @@ export const MariaCharacter3D: React.FC<MariaCharacter3DProps> = ({
       });
       resizeObserver.observe(container);
 
-      const clock = new THREE.Clock();
+      const timer = new THREE.Timer();
+      timer.connect(document);
       let elapsed = 0;
       let haloPhase = 0;
       let haloRotY = 0.25;
@@ -871,13 +872,15 @@ export const MariaCharacter3D: React.FC<MariaCharacter3DProps> = ({
         if (typeof gl.fenceSync === 'function') {
           const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
           gl.flush();
+          let polls = 0;
           const poll = () => {
             if (disposed) {
               if (sync) gl.deleteSync(sync);
               return;
             }
+            polls += 1;
             const syncState = sync && gl.getSyncParameter(sync, gl.SYNC_STATUS);
-            if (syncState === gl.UNSIGNALED) {
+            if (syncState === gl.UNSIGNALED && polls < 20) {
               frameId = window.setTimeout(poll, 5);
             } else {
               if (sync) gl.deleteSync(sync);
@@ -890,9 +893,12 @@ export const MariaCharacter3D: React.FC<MariaCharacter3DProps> = ({
         }
       };
 
+      const motionFactor = prefersReducedMotion ? 0.35 : 1.0;
+
       const tick = () => {
         if (disposed || !renderer) return;
-        const delta = Math.min(clock.getDelta(), 0.05);
+        timer.update();
+        const delta = Math.max(0, Math.min(timer.getDelta(), 0.05)) * motionFactor;
         elapsed += delta;
         updateScene(delta, elapsed);
         renderer.render(scene, camera);
@@ -903,17 +909,13 @@ export const MariaCharacter3D: React.FC<MariaCharacter3DProps> = ({
         }
       };
 
-      if (prefersReducedMotion) {
-        updateScene(0.016, 0.5);
-        renderer.render(scene, camera);
-      } else {
-        tick();
-      }
+      tick();
 
       return () => {
         disposed = true;
         cancelAnimationFrame(frameId);
         window.clearTimeout(frameId);
+        timer.dispose();
         resizeObserver.disconnect();
         canvas.removeEventListener('webglcontextlost', handleContextLost);
         canvas.removeEventListener('webglcontextrestored', handleContextRestored);
