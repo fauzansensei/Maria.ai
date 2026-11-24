@@ -13,6 +13,8 @@ import {
   AlertCircle,
   CheckCircle2,
   Copy,
+  ChevronDown,
+  Maximize2,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext.tsx';
 import {
@@ -22,6 +24,7 @@ import {
 } from '../lib/liveAudioUtils.ts';
 import { generateImageThumbnail, readFileAsDataUrl } from '../lib/mediaUtils.ts';
 import { captureAppViewportToDataUrl } from '../lib/appScreenCapture.ts';
+import { MariaCharacter3D, type MariaCharacterState } from './MariaCharacter3D.tsx';
 
 export interface GeminiLiveConfig {
   voiceName: string;
@@ -61,6 +64,7 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
   const [showScreenFallbackSheet, setShowScreenFallbackSheet] = useState(false);
   const [screenFallbackReason, setScreenFallbackReason] = useState<string | null>(null);
   const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
+  const [isStageExpanded, setIsStageExpanded] = useState(true);
   const [liveUserCaption, setLiveUserCaption] = useState('');
   const [liveModelCaption, setLiveModelCaption] = useState('');
   const [orbEnergy, setOrbEnergy] = useState(0);
@@ -1276,8 +1280,7 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     }
   };
 
-  const orbScale = 1 + Math.min(0.12, orbEnergy * 0.14);
-  const orbGlow = 14 + Math.round(orbEnergy * 26);
+  const characterState: MariaCharacterState = status;
 
   const statusText =
     status === 'connecting'
@@ -1513,6 +1516,34 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
         </div>
       )}
 
+      {/* Immersive 3D Animated Maria Character Stage (when Live is active & camera is off) */}
+      {!isCameraOn && isStageExpanded && (
+        <div className="fixed inset-x-4 bottom-24 sm:bottom-28 z-30 flex justify-center pointer-events-none animate-in fade-in duration-200">
+          <div className="pointer-events-auto relative w-full max-w-[280px] sm:max-w-[300px] rounded-3xl bg-[#0b1020]/94 border border-slate-700/70 shadow-2xl px-5 pt-3 pb-4 flex flex-col items-center">
+            <div className="w-full flex items-center justify-between gap-2 mb-1">
+              <span className="text-[11px] font-medium text-sky-200/90 tracking-tight truncate">
+                {statusText}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsStageExpanded(false)}
+                title={isEn ? 'Minimize 3D stage' : 'Kecilkan tampilan 3D'}
+                aria-label={isEn ? 'Minimize 3D stage' : 'Kecilkan tampilan 3D'}
+                className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 flex items-center justify-center cursor-pointer transition-colors shrink-0"
+              >
+                <ChevronDown className="w-4 h-4" />
+              </button>
+            </div>
+            <MariaCharacter3D
+              state={characterState}
+              energy={orbEnergy}
+              size="stage"
+              interactive={true}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Bottom Maria Live Dock */}
       <div
         data-maria-live-dock="true"
@@ -1677,33 +1708,63 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
               {isCameraOn ? <VideoOff className="w-[18px] h-[18px]" /> : <Video className="w-[18px] h-[18px]" />}
             </button>
 
-            {/* Center Audio-Reactive Gemini Live Glowing Orb Pill */}
-            <div
-              className="relative h-11 sm:h-12 w-28 sm:w-36 rounded-full overflow-hidden flex items-center justify-center border border-blue-400/40 select-none transition-transform duration-75"
-              style={{
-                transform: `scale(${orbScale.toFixed(3)})`,
-                boxShadow: `0 0 ${orbGlow}px rgba(37, 99, 235, ${
-                  status === 'speaking' ? 0.65 : status === 'connecting' || status === 'thinking' ? 0.45 : 0.4
-                })`,
-                background:
-                  'radial-gradient(circle at 50% 85%, #60a5fa 0%, #2563eb 36%, #0f172a 78%, #020617 100%)',
-              }}
-              aria-label={statusText}
-            >
-              <div
-                className={`absolute inset-x-3 bottom-0 h-5 rounded-full blur-md pointer-events-none transition-opacity duration-150 ${
-                  status === 'connecting' || status === 'thinking'
-                    ? 'animate-pulse bg-sky-400/75'
-                    : 'bg-sky-300/75'
-                }`}
-                style={{
-                  opacity: Math.min(1, 0.35 + orbEnergy * 0.8),
+            {/* Center Audio-Reactive 3D Character / Live Presence Control */}
+            {!isCameraOn && isStageExpanded ? (
+              <button
+                type="button"
+                onClick={() => setIsStageExpanded(false)}
+                title={isEn ? 'Minimize 3D Maria' : 'Kecilkan Maria 3D'}
+                aria-label={statusText}
+                className="relative h-11 sm:h-12 w-28 sm:w-36 rounded-full flex items-center justify-center gap-1.5 border border-sky-400/40 bg-[#0b1328] hover:bg-[#111c3a] cursor-pointer transition-colors px-4 shadow-md"
+              >
+                {[0.55, 0.85, 1.0, 0.72, 0.95, 0.68, 0.5].map((weight, idx) => {
+                  const activeBoost =
+                    status === 'speaking'
+                      ? 0.35 + orbEnergy * 0.95 * weight
+                      : status === 'listening'
+                      ? 0.25 + orbEnergy * 0.75 * weight
+                      : status === 'thinking' || status === 'connecting'
+                      ? 0.45 * weight
+                      : 0.16;
+                  return (
+                    <span
+                      key={idx}
+                      className={`w-1 rounded-full transition-transform duration-100 ${
+                        status === 'error'
+                          ? 'bg-rose-400'
+                          : status === 'muted'
+                          ? 'bg-slate-500'
+                          : 'bg-sky-300'
+                      }`}
+                      style={{
+                        height: '22px',
+                        transform: `scaleY(${Math.min(1, Math.max(0.18, activeBoost)).toFixed(3)})`,
+                      }}
+                    />
+                  );
+                })}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isCameraOn) setIsStageExpanded(true);
                 }}
-              />
-              {(status === 'connecting' || status === 'thinking') && (
-                <div className="w-4 h-4 border-2 border-sky-200/40 border-t-white rounded-full animate-spin relative z-10" />
-              )}
-            </div>
+                title={!isCameraOn ? (isEn ? 'Expand 3D Maria' : 'Perbesar Maria 3D') : statusText}
+                aria-label={statusText}
+                className="relative h-11 sm:h-12 w-28 sm:w-36 rounded-full flex items-center justify-center gap-2 border border-sky-400/45 bg-[#091022] hover:bg-[#101a36] cursor-pointer transition-colors px-3 shadow-md"
+              >
+                <MariaCharacter3D
+                  state={characterState}
+                  energy={orbEnergy}
+                  size="compact"
+                  interactive={false}
+                />
+                {!isCameraOn && (
+                  <Maximize2 className="w-3.5 h-3.5 text-sky-300/80 shrink-0" />
+                )}
+              </button>
+            )}
 
             {/* Mute / Unmute Microphone Button */}
             <button

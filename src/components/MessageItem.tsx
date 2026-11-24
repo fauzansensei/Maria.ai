@@ -1548,7 +1548,11 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
         {/* Minimal Identity & Collapsible Thought Status Row (Zero Pill Clutter) */}
         <div className="flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
           <div className="flex items-center gap-2 flex-wrap">
-            <MariaLogo size="sm" isResponding={Boolean(message.isStreaming)} withOnlineDot={false} />
+            <MariaLogo
+              size="sm"
+              isResponding={Boolean(message.isStreaming || isThisSpeaking || isThisLoading)}
+              withOnlineDot={false}
+            />
             <span className="font-semibold text-slate-800 dark:text-slate-200 tracking-tight">
               Maria AI
             </span>
@@ -1595,7 +1599,7 @@ export const MessageItem: React.FC<MessageItemProps> = React.memo(({
               <>
                 <span aria-hidden="true">·</span>
                 <span className="inline-flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 font-medium">
-                  <Volume2 className="w-3 h-3 animate-pulse" />
+                  <Volume2 className="w-3 h-3" />
                   <span>{isEn ? 'Speaking' : 'Berbicara'}</span>
                 </span>
               </>

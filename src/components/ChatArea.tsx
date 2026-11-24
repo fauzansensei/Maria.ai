@@ -21,8 +21,9 @@ import { PROMPT_STARTERS } from '../constants.ts';
 import { MessageItem } from './MessageItem.tsx';
 import { ChatInput } from './ChatInput.tsx';
 import { MariaLogo } from './MariaLogo.tsx';
+import { MariaCharacter3D } from './MariaCharacter3D.tsx';
 import { GeminiLiveOverlay, type GeminiLiveConfig } from './GeminiLiveOverlay.tsx';
-import { speechService } from '../lib/speechService.ts';
+import { speechService, type SpeechState } from '../lib/speechService.ts';
 import { useLanguage } from '../context/LanguageContext.tsx';
 
 interface ChatAreaProps {
@@ -125,6 +126,7 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
   const [shareToast, setShareToast] = useState<string | null>(null);
   const [loadedInputText, setLoadedInputText] = useState('');
   const [isLiveActive, setIsLiveActive] = useState(false);
+  const [speechState, setSpeechState] = useState<SpeechState>(() => speechService.getState());
 
   const isInChat = messages.length > 0 || activeConversation !== null;
   const isPinned = Boolean(activeConversation?.title?.startsWith('📌 '));
@@ -142,7 +144,9 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
   }, [onOpenImageStudio]);
 
   useEffect(() => {
-    return speechService.subscribe(() => {});
+    return speechService.subscribe((next) => {
+      setSpeechState(next);
+    });
   }, []);
 
   // Dismiss header popovers on outside click or Escape
@@ -646,8 +650,20 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
         {messages.length === 0 ? (
           /* Empty State Hero */
           <div className="flex-1 flex flex-col items-center justify-center px-4 -mt-10 sm:-mt-16 select-none">
-            <div className="mb-6">
-              <MariaLogo size="hero" glow={false} />
+            <div className="mb-4">
+              <MariaCharacter3D
+                state={
+                  isLoading
+                    ? 'thinking'
+                    : speechState.isSpeaking
+                    ? 'speaking'
+                    : speechState.isLoading
+                    ? 'connecting'
+                    : 'idle'
+                }
+                size="hero"
+                interactive={true}
+              />
             </div>
 
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-center text-[#0f172a] dark:text-white">
