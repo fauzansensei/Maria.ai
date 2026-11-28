@@ -44,17 +44,20 @@ const THREAT_PATTERNS: Array<{ pattern: RegExp; id: string; en: string }> = [
 const FATIGUE_FRUSTRATION_RE =
   /\b(capek|cape|lelah|pusing|stuck|error terus|gagal terus|gagal lagi|frustrasi|stres|stress|menyerah|nyerah|bingung banget|nggak jalan|gak jalan|not working|tired|exhausted|frustrated|burnt out|annoying)\b/i;
 
+const MODEL_CALM_EMPATHY_RE =
+  /\b(tenang|sabar|pelan-pelan|jangan khawatir|tidak apa-apa|gapapa|wajar kok|take your time|don't worry|it's okay|step by step)\b/i;
+
 const CELEBRATION_RE =
-  /\b(berhasil|sukses|mantap|keren|hebat|juara|akhirnya jalan|sudah bisa|udah bisa|makasih|terima kasih|thank you|thanks|fixed|solved|it works|awesome|perfect|yay)\b/i;
+  /\b(berhasil|sukses|mantap|keren|hebat|juara|selamat|akhirnya jalan|sudah bisa|udah bisa|makasih|terima kasih|thank you|thanks|fixed|solved|it works|awesome|perfect|yay|congrats|congratulations)\b/i;
 
 const CODING_RE =
   /(```|`[^`]+`|\b(coding|code|kode|debug|debugging|typescript|javascript|python|react|three\.?js|webgl|shader|api|endpoint|server|database|firestore|sql|css|html|tailwind|compile|syntax|bug|stack trace|npm|vite|component|function|useEffect|useState|error|exception|crash)\b)/i;
 
 const IDEA_RE =
-  /\b(ide|brainstorm|saran|rekomendasi|gimana kalau|bagaimana jika|usul|konsep|desain|rencana|idea|suggest|recommend)\b/i;
+  /\b(ide|brainstorm|saran|rekomendasi|gimana kalau|bagaimana jika|usul|konsep|desain|rencana|tips|trik|idea|suggest|recommend)\b/i;
 
 export function analyzeMariaContext(params: {
-  messages: Message[];
+  messages: Array<Pick<Message, 'role' | 'content'>>;
   isLoading: boolean;
   isStreaming: boolean;
   isSpeaking: boolean;
@@ -71,10 +74,12 @@ export function analyzeMariaContext(params: {
   } = params;
 
   const recent = messages.slice(-4);
+  const lastMessage = recent[recent.length - 1];
   const latestUser = [...recent].reverse().find((m) => m.role === 'user');
   const latestModel = [...recent].reverse().find((m) => m.role === 'model');
   const latestUserText = latestUser?.content || '';
   const latestModelText = latestModel?.content || '';
+  const modelIsLatestTurn = lastMessage?.role === 'model' && latestModelText.trim().length > 0;
   const combinedRecent = `${latestUserText}\n${latestModelText}`;
 
   // 1. Spy Guard Security Check
@@ -100,7 +105,7 @@ export function analyzeMariaContext(params: {
     }
   }
 
-  // 2. Workspace View Context (Notebook / Projects / etc.)
+  // 2. Workspace View Context (Notebook / Projects)
   if (activeView === 'notebooks') {
     return {
       mood: 'explaining',
@@ -120,75 +125,89 @@ export function analyzeMariaContext(params: {
     };
   }
 
-  // 3. Mood & Fatigue / Empathy Detection
-  if (FATIGUE_FRUSTRATION_RE.test(latestUserText)) {
+  // 3. While waiting for first token (pure thinking state)
+  if (isLoading && !isStreaming) {
+    const isCodeTopic = CODING_RE.test(latestUserText);
+    return {
+      mood: isCodeTopic ? 'coding' : 'neutral',
+      spyGuardThreat: false,
+      threatReason: null,
+      statusLabelId: isCodeTopic ? 'Menganalisis kode...' : 'Sedang berpikir...',
+      statusLabelEn: isCodeTopic ? 'Analyzing code...' : 'Thinking...',
+    };
+  }
+
+  // 4. Mood & Empathy Detection (User fatigue OR Maria comforting reply)
+  if (
+    FATIGUE_FRUSTRATION_RE.test(latestUserText) ||
+    (modelIsLatestTurn && MODEL_CALM_EMPATHY_RE.test(latestModelText))
+  ) {
     return {
       mood: 'calm',
       spyGuardThreat: false,
       threatReason: null,
-      statusLabelId: 'Tenang, kita selesaikan pelan-pelan',
-      statusLabelEn: 'Calm mode · Here to help',
+      statusLabelId: isSpeaking
+        ? 'Memberi semangat...'
+        : 'Tenang, kita selesaikan pelan-pelan',
+      statusLabelEn: isSpeaking ? 'Encouraging you...' : 'Calm mode · Here to help',
     };
   }
 
-  // 4. Celebration Detection (only when not currently loading a fresh prompt)
-  if (!isLoading && !isStreaming && CELEBRATION_RE.test(latestUserText)) {
+  // 5. Celebration Detection (User praise/solved OR Maria congratulating)
+  if (
+    !isLoading &&
+    (CELEBRATION_RE.test(latestUserText) ||
+      (modelIsLatestTurn && /\b(selamat|berhasil|mantap sekali|awesome|congrats|hore)\b/i.test(latestModelText)))
+  ) {
     return {
       mood: 'celebrating',
       spyGuardThreat: false,
       threatReason: null,
-      statusLabelId: 'Berhasil! Ikut merayakan',
+      statusLabelId: isSpeaking ? 'Merayakan bersama!' : 'Berhasil! Ikut merayakan',
       statusLabelEn: 'Celebrating success!',
     };
   }
 
-  // 5. Coding & Debugging Detection
+  // 6. Coding & Debugging Detection
   if (CODING_RE.test(combinedRecent)) {
-    if (isLoading && !isStreaming) {
-      return {
-        mood: 'coding',
-        spyGuardThreat: false,
-        threatReason: null,
-        statusLabelId: 'Menganalisis kode...',
-        statusLabelEn: 'Analyzing code...',
-      };
-    }
     if (isStreaming || isSpeaking) {
       return {
         mood: 'explaining',
         spyGuardThreat: false,
         threatReason: null,
-        statusLabelId: 'Menjelaskan solusi kode',
-        statusLabelEn: 'Explaining code solution',
+        statusLabelId: isSpeaking ? 'Menjelaskan solusi kode' : 'Menulis solusi kode...',
+        statusLabelEn: isSpeaking ? 'Explaining code solution' : 'Writing code solution...',
       };
     }
     return {
       mood: 'coding',
       spyGuardThreat: false,
       threatReason: null,
-      statusLabelId: 'Mode Asisten Coding',
+      statusLabelId: 'Siap bantu coding!',
       statusLabelEn: 'Coding Assistant Ready',
     };
   }
 
-  // 6. Idea / Explaining / Speaking States
+  // 7. Idea / Explaining / Speaking States
+  if (IDEA_RE.test(latestUserText) || (modelIsLatestTurn && /\b(ide|tips|rekomendasi|saran)\b/i.test(latestModelText))) {
+    if (!isStreaming && !isSpeaking) {
+      return {
+        mood: 'idea',
+        spyGuardThreat: false,
+        threatReason: null,
+        statusLabelId: 'Punya ide cerdas!',
+        statusLabelEn: 'Smart idea ready!',
+      };
+    }
+  }
+
   if (isStreaming || isSpeaking) {
     return {
       mood: 'explaining',
       spyGuardThreat: false,
       threatReason: null,
-      statusLabelId: isSpeaking ? 'Sedang berbicara' : 'Menjelaskan jawaban',
-      statusLabelEn: isSpeaking ? 'Speaking aloud' : 'Explaining answer',
-    };
-  }
-
-  if (IDEA_RE.test(latestUserText)) {
-    return {
-      mood: 'idea',
-      spyGuardThreat: false,
-      threatReason: null,
-      statusLabelId: 'Punya ide cerdas!',
-      statusLabelEn: 'Smart idea ready!',
+      statusLabelId: isSpeaking ? 'Maria sedang berbicara' : 'Maria sedang menjawab...',
+      statusLabelEn: isSpeaking ? 'Maria is speaking' : 'Maria is answering...',
     };
   }
 
@@ -196,7 +215,7 @@ export function analyzeMariaContext(params: {
     mood: 'neutral',
     spyGuardThreat: false,
     threatReason: null,
-    statusLabelId: isLoading ? 'Sedang berpikir...' : 'Siap membantu!',
-    statusLabelEn: isLoading ? 'Thinking...' : 'Ready to help!',
+    statusLabelId: 'Siap membantu!',
+    statusLabelEn: 'Ready to help!',
   };
 }

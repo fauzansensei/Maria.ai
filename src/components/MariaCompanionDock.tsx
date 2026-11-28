@@ -1,6 +1,6 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { ShieldAlert, ShieldCheck, Minimize2, Sparkles } from 'lucide-react';
-import { MariaCharacter3D, type MariaCharacterState } from './MariaCharacter3D.tsx';
+import { MariaCharacter2D, type MariaCharacterState } from './MariaCharacter2D.tsx';
 import { analyzeMariaContext } from '../lib/mariaContextAnalyzer.ts';
 import { speechService, type SpeechState } from '../lib/speechService.ts';
 import { useLanguage } from '../context/LanguageContext.tsx';
@@ -28,7 +28,9 @@ export const MariaCompanionDock: React.FC<MariaCompanionDockProps> = ({
   const [speechState, setSpeechState] = useState<SpeechState>(() => speechService.getState());
   const [isExpanded, setIsExpanded] = useState<boolean>(() => {
     try {
-      const saved = localStorage.getItem('maria_3d_companion_open');
+      const saved =
+        localStorage.getItem('maria_companion_open') ??
+        localStorage.getItem('maria_3d_companion_open');
       return saved === null ? true : saved === 'true';
     } catch {
       return true;
@@ -44,9 +46,11 @@ export const MariaCompanionDock: React.FC<MariaCompanionDockProps> = ({
   const toggleExpanded = (next: boolean) => {
     setIsExpanded(next);
     try {
-      localStorage.setItem('maria_3d_companion_open', String(next));
+      localStorage.setItem('maria_companion_open', String(next));
     } catch {}
   };
+
+  const getLiveEnergy = useCallback(() => speechService.getSpeechAmplitude(), []);
 
   const isStreaming = useMemo(
     () => messages.some((m) => m.role === 'model' && m.isStreaming),
@@ -66,16 +70,18 @@ export const MariaCompanionDock: React.FC<MariaCompanionDockProps> = ({
     [messages, isLoading, isStreaming, speechState.isSpeaking, activeView, manualSpyGuardAlert]
   );
 
-  // Yield WebGL stage cleanly when Gemini Live 3D overlay is open
+  // Yield cleanly when Maria Live overlay is open
   if (isLiveActive) return null;
 
   const characterState: MariaCharacterState = contextSignal.spyGuardThreat
     ? 'error'
     : speechState.isSpeaking
     ? 'speaking'
+    : isStreaming
+    ? 'explaining'
     : speechState.isLoading
     ? 'connecting'
-    : isLoading || isStreaming
+    : isLoading
     ? 'thinking'
     : 'idle';
 
@@ -89,7 +95,7 @@ export const MariaCompanionDock: React.FC<MariaCompanionDockProps> = ({
         <button
           type="button"
           onClick={() => toggleExpanded(true)}
-          title={isEn ? 'Open 3D Maria Companion' : 'Buka Asisten 3D Maria'}
+          title={isEn ? 'Open Maria Companion' : 'Buka Asisten Maria'}
           className={`flex items-center gap-2 px-3.5 py-2 rounded-full border text-xs font-semibold shadow-lg cursor-pointer transition-colors ${
             isAlert
               ? 'bg-[#2a0810] border-rose-500/80 text-rose-100 hover:bg-[#3b0b17]'
@@ -102,7 +108,7 @@ export const MariaCompanionDock: React.FC<MariaCompanionDockProps> = ({
             <Sparkles className="w-4 h-4 text-sky-400 shrink-0" />
           )}
           <span className="whitespace-nowrap">
-            {isAlert ? 'Spy Guard Alert' : 'Maria 3D'}
+            {isAlert ? 'Spy Guard Alert' : 'Maria'}
           </span>
         </button>
       </div>
@@ -151,20 +157,21 @@ export const MariaCompanionDock: React.FC<MariaCompanionDockProps> = ({
           <button
             type="button"
             onClick={() => toggleExpanded(false)}
-            title={isEn ? 'Minimize 3D companion' : 'Kecilkan asisten 3D'}
-            aria-label={isEn ? 'Minimize 3D companion' : 'Kecilkan asisten 3D'}
+            title={isEn ? 'Minimize companion' : 'Kecilkan asisten'}
+            aria-label={isEn ? 'Minimize companion' : 'Kecilkan asisten'}
             className="w-6 h-6 rounded-full bg-white/8 hover:bg-white/18 text-slate-300 flex items-center justify-center cursor-pointer transition-colors shrink-0"
           >
             <Minimize2 className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {/* Full-Body 3D Robot Mascot */}
-        <MariaCharacter3D
+        {/* Full-Body 2D Sparkle-Style Robot Mascot */}
+        <MariaCharacter2D
           state={characterState}
           mood={contextSignal.mood}
           activeView={activeView}
           spyGuardAlert={isAlert}
+          getLiveEnergy={getLiveEnergy}
           size="companion"
           interactive={true}
         />

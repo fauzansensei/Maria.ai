@@ -24,8 +24,8 @@ import {
 } from '../lib/liveAudioUtils.ts';
 import { generateImageThumbnail, readFileAsDataUrl } from '../lib/mediaUtils.ts';
 import { captureAppViewportToDataUrl } from '../lib/appScreenCapture.ts';
-import { MariaCharacter3D, type MariaCharacterState } from './MariaCharacter3D.tsx';
-import type { MariaMood } from '../lib/mariaContextAnalyzer.ts';
+import { MariaCharacter2D, type MariaCharacterState } from './MariaCharacter2D.tsx';
+import { analyzeMariaContext, type MariaMood } from '../lib/mariaContextAnalyzer.ts';
 import type { SidebarView } from './Sidebar.tsx';
 
 export interface GeminiLiveConfig {
@@ -89,6 +89,8 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
 
   const inputCtxRef = useRef<AudioContext | null>(null);
   const outputCtxRef = useRef<AudioContext | null>(null);
+  const outputAnalyserRef = useRef<AnalyserNode | null>(null);
+  const outputAnalyserDataRef = useRef<Float32Array<ArrayBuffer> | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
   const nextStartTimeRef = useRef<number>(0);
@@ -246,6 +248,8 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
       inputCtxRef.current.close().catch(() => {});
       inputCtxRef.current = null;
     }
+    outputAnalyserRef.current = null;
+    outputAnalyserDataRef.current = null;
     if (outputCtxRef.current) {
       outputCtxRef.current.close().catch(() => {});
       outputCtxRef.current = null;
@@ -432,27 +436,67 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
         }
 
         if (data.audioUrl && !isClosingRef.current && !isUnmountedRef.current) {
-          stopHttpAudioPlayback();
-          const audio = new Audio(data.audioUrl);
-          httpAudioElRef.current = audio;
-          setStatus('speaking');
+          stopAllOutputAudio();
+          let playedViaAnalyser = false;
+          const ctx = outputCtxRef.current;
+          const analyser = outputAnalyserRef.current;
 
-          let phase = 0;
-          httpSpeakingTimerRef.current = setInterval(() => {
-            phase += 0.45;
-            outputEnergyRef.current = 0.35 + Math.abs(Math.sin(phase)) * 0.45;
-          }, 70);
-
-          const finishPlayback = () => {
-            stopHttpAudioPlayback();
-            if (!isUnmountedRef.current && !isClosingRef.current) {
-              setStatus(isMutedRef.current ? 'muted' : 'listening');
+          if (ctx && analyser && String(data.audioUrl).startsWith('data:audio/')) {
+            try {
+              if (ctx.state === 'suspended') {
+                await ctx.resume();
+              }
+              const b64 = String(data.audioUrl).split(',')[1] || '';
+              const bin = window.atob(b64);
+              const bytes = new Uint8Array(bin.length);
+              for (let i = 0; i < bin.length; i++) {
+                bytes[i] = bin.charCodeAt(i);
+              }
+              const audioBuffer = await ctx.decodeAudioData(bytes.buffer);
+              if (!isUnmountedRef.current && !isClosingRef.current) {
+                const source = ctx.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(analyser);
+                activeSourcesRef.current.add(source);
+                setStatus('speaking');
+                source.onended = () => {
+                  activeSourcesRef.current.delete(source);
+                  if (activeSourcesRef.current.size === 0 && !isClosingRef.current && !isUnmountedRef.current) {
+                    outputEnergyRef.current = 0;
+                    setStatus(isMutedRef.current ? 'muted' : 'listening');
+                  }
+                };
+                source.start(0);
+                playedViaAnalyser = true;
+              }
+            } catch {
+              playedViaAnalyser = false;
             }
-          };
+          }
 
-          audio.onended = finishPlayback;
-          audio.onerror = finishPlayback;
-          audio.play().catch(finishPlayback);
+          if (!playedViaAnalyser && !isUnmountedRef.current && !isClosingRef.current) {
+            const audio = new Audio(data.audioUrl);
+            httpAudioElRef.current = audio;
+            setStatus('speaking');
+
+            let phase = 0;
+            httpSpeakingTimerRef.current = setInterval(() => {
+              phase += 0.45;
+              const gate = Math.sin(phase * 0.4) > -0.5 ? 1 : 0.05;
+              outputEnergyRef.current = gate * (0.28 + Math.abs(Math.sin(phase)) * 0.48);
+            }, 60);
+
+            const finishPlayback = () => {
+              stopHttpAudioPlayback();
+              if (!isUnmountedRef.current && !isClosingRef.current) {
+                setStatus(isMutedRef.current ? 'muted' : 'listening');
+              }
+            };
+
+            audio.onended = finishPlayback;
+            audio.onerror = finishPlayback;
+            audio.play().catch(finishPlayback);
+          }
         } else {
           if (!data.audioUrl && data.ttsNotice && !hasShownTtsLimitNoticeRef.current) {
             hasShownTtsLimitNoticeRef.current = true;
@@ -485,10 +529,9 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
       ctx.resume().catch(() => {});
     }
 
-    const { float32, rms } = decode24kPcmToFloat32(base64Data);
+    const { float32 } = decode24kPcmToFloat32(base64Data);
     if (float32.length === 0) return;
 
-    outputEnergyRef.current = Math.min(1, Math.max(outputEnergyRef.current, rms * 4.5));
     setStatus('speaking');
 
     const audioBuffer = ctx.createBuffer(1, float32.length, 24000);
@@ -496,7 +539,11 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
 
     const source = ctx.createBufferSource();
     source.buffer = audioBuffer;
-    source.connect(ctx.destination);
+    if (outputAnalyserRef.current) {
+      source.connect(outputAnalyserRef.current);
+    } else {
+      source.connect(ctx.destination);
+    }
 
     const startTime = Math.max(ctx.currentTime + 0.02, nextStartTimeRef.current);
     nextStartTimeRef.current = startTime + audioBuffer.duration;
@@ -533,15 +580,35 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
     };
   }, [isPlusMenuOpen]);
 
-  // Smooth orb energy animation loop
+  // Smooth real-time audio energy loop (reads actual AnalyserNode speaker RMS!)
   useEffect(() => {
     let lastUpdate = 0;
     const tick = (now: number) => {
       if (isUnmountedRef.current) return;
       inputEnergyRef.current *= 0.88;
-      if (activeSourcesRef.current.size === 0 && !httpSpeakingTimerRef.current) {
-        outputEnergyRef.current *= 0.85;
+
+      const analyser = outputAnalyserRef.current;
+      const analyserData = outputAnalyserDataRef.current;
+      if (
+        analyser &&
+        analyserData &&
+        outputCtxRef.current?.state === 'running' &&
+        activeSourcesRef.current.size > 0
+      ) {
+        analyser.getFloatTimeDomainData(analyserData);
+        let sum = 0;
+        for (let i = 0; i < analyserData.length; i++) {
+          const s = analyserData[i];
+          sum += s * s;
+        }
+        const rms = Math.sqrt(sum / analyserData.length);
+        const gated = rms < 0.01 ? 0 : Math.min(1, (rms - 0.01) * 5.2);
+        outputEnergyRef.current =
+          outputEnergyRef.current * 0.35 + gated * 0.65;
+      } else if (activeSourcesRef.current.size === 0 && !httpSpeakingTimerRef.current) {
+        outputEnergyRef.current *= 0.78;
       }
+
       if (now - lastUpdate > 45) {
         lastUpdate = now;
         const combined = Math.max(inputEnergyRef.current, outputEnergyRef.current);
@@ -616,6 +683,12 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
         if (outputCtx.state === 'suspended') {
           await outputCtx.resume().catch(() => {});
         }
+        const analyser = outputCtx.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.45;
+        analyser.connect(outputCtx.destination);
+        outputAnalyserRef.current = analyser;
+        outputAnalyserDataRef.current = new Float32Array(new ArrayBuffer(analyser.fftSize * 4));
 
         const health = await healthProbePromise;
         const canTryWs = health?.liveWsSupported !== false;
@@ -1290,6 +1363,29 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
 
   const characterState: MariaCharacterState = status;
 
+  const liveTranscriptSignal = React.useMemo(() => {
+    const fakeMessages = [
+      ...(liveUserCaption
+        ? [{ id: 'live-u', role: 'user' as const, content: liveUserCaption, timestamp: Date.now() }]
+        : []),
+      ...(liveModelCaption
+        ? [{ id: 'live-m', role: 'model' as const, content: liveModelCaption, timestamp: Date.now() }]
+        : []),
+    ];
+    if (fakeMessages.length === 0) return null;
+    return analyzeMariaContext({
+      messages: fakeMessages,
+      isLoading: status === 'thinking' || status === 'connecting',
+      isStreaming: false,
+      isSpeaking: status === 'speaking',
+      activeView,
+      manualSpyGuardAlert: spyGuardAlert,
+    });
+  }, [liveUserCaption, liveModelCaption, status, activeView, spyGuardAlert]);
+
+  const effectiveMood: MariaMood = liveTranscriptSignal ? liveTranscriptSignal.mood : mood;
+  const effectiveAlert = spyGuardAlert || Boolean(liveTranscriptSignal?.spyGuardThreat);
+
   const statusText =
     status === 'connecting'
       ? isEn
@@ -1524,12 +1620,12 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
         </div>
       )}
 
-      {/* Immersive 3D Animated Maria Character Stage (when Live is active & camera is off) */}
+      {/* Animated 2D Maria Mascot Stage (when Live is active & camera is off) */}
       {!isCameraOn && isStageExpanded && (
         <div className="fixed inset-x-4 bottom-24 sm:bottom-28 z-30 flex justify-center pointer-events-none animate-in fade-in duration-200">
           <div
             className={`pointer-events-auto relative w-full max-w-[280px] sm:max-w-[300px] rounded-3xl border shadow-2xl px-5 pt-3 pb-4 flex flex-col items-center transition-colors duration-300 ${
-              spyGuardAlert || status === 'error'
+              effectiveAlert || status === 'error'
                 ? 'bg-[#2a0810]/96 border-rose-500/80 shadow-[0_8px_32px_rgba(244,63,94,0.35)]'
                 : 'bg-[#0b1020]/94 border-slate-700/70'
             }`}
@@ -1537,10 +1633,10 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
             <div className="w-full flex items-center justify-between gap-2 mb-1">
               <span
                 className={`text-[11px] font-medium tracking-tight truncate ${
-                  spyGuardAlert || status === 'error' ? 'text-rose-200' : 'text-sky-200/90'
+                  effectiveAlert || status === 'error' ? 'text-rose-200' : 'text-sky-200/90'
                 }`}
               >
-                {spyGuardAlert
+                {effectiveAlert
                   ? isEn
                     ? 'Spy Guard: Red Alert'
                     : 'Spy Guard: Mode Siaga Merah'
@@ -1549,19 +1645,20 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
               <button
                 type="button"
                 onClick={() => setIsStageExpanded(false)}
-                title={isEn ? 'Minimize 3D stage' : 'Kecilkan tampilan 3D'}
-                aria-label={isEn ? 'Minimize 3D stage' : 'Kecilkan tampilan 3D'}
+                title={isEn ? 'Minimize Maria stage' : 'Kecilkan tampilan Maria'}
+                aria-label={isEn ? 'Minimize Maria stage' : 'Kecilkan tampilan Maria'}
                 className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 flex items-center justify-center cursor-pointer transition-colors shrink-0"
               >
                 <ChevronDown className="w-4 h-4" />
               </button>
             </div>
-            <MariaCharacter3D
+            <MariaCharacter2D
               state={characterState}
-              mood={mood}
+              mood={effectiveMood}
               activeView={activeView}
-              spyGuardAlert={spyGuardAlert}
+              spyGuardAlert={effectiveAlert}
               energy={orbEnergy}
+              getLiveEnergy={() => outputEnergyRef.current}
               size="stage"
               interactive={true}
             />
@@ -1733,12 +1830,12 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
               {isCameraOn ? <VideoOff className="w-[18px] h-[18px]" /> : <Video className="w-[18px] h-[18px]" />}
             </button>
 
-            {/* Center Audio-Reactive 3D Character / Live Presence Control */}
+            {/* Center Audio-Reactive 2D Character / Live Presence Control */}
             {!isCameraOn && isStageExpanded ? (
               <button
                 type="button"
                 onClick={() => setIsStageExpanded(false)}
-                title={isEn ? 'Minimize 3D Maria' : 'Kecilkan Maria 3D'}
+                title={isEn ? 'Minimize Maria' : 'Kecilkan Maria'}
                 aria-label={statusText}
                 className="relative h-11 sm:h-12 w-28 sm:w-36 rounded-full flex items-center justify-center gap-1.5 border border-sky-400/40 bg-[#0b1328] hover:bg-[#111c3a] cursor-pointer transition-colors px-4 shadow-md"
               >
@@ -1775,16 +1872,17 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
                 onClick={() => {
                   if (!isCameraOn) setIsStageExpanded(true);
                 }}
-                title={!isCameraOn ? (isEn ? 'Expand 3D Maria' : 'Perbesar Maria 3D') : statusText}
+                title={!isCameraOn ? (isEn ? 'Expand Maria' : 'Perbesar Maria') : statusText}
                 aria-label={statusText}
                 className="relative h-11 sm:h-12 w-28 sm:w-36 rounded-full flex items-center justify-center gap-2 border border-sky-400/45 bg-[#091022] hover:bg-[#101a36] cursor-pointer transition-colors px-3 shadow-md"
               >
-                <MariaCharacter3D
+                <MariaCharacter2D
                   state={characterState}
-                  mood={mood}
+                  mood={effectiveMood}
                   activeView={activeView}
-                  spyGuardAlert={spyGuardAlert}
+                  spyGuardAlert={effectiveAlert}
                   energy={orbEnergy}
+                  getLiveEnergy={() => outputEnergyRef.current}
                   size="compact"
                   interactive={false}
                 />

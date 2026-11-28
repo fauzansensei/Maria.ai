@@ -15,8 +15,13 @@ type SpeechListener = (state: SpeechState) => void;
 
 class MariaSpeechService {
   private audioCtx: AudioContext | null = null;
+  private analyserNode: AnalyserNode | null = null;
+  private analyserData: Float32Array<ArrayBuffer> | null = null;
   private currentSourceNode: AudioBufferSourceNode | null = null;
   private reusableAudio: HTMLAudioElement | null = null;
+  private mediaElementSource: MediaElementAudioSourceNode | null = null;
+  private smoothedFallbackAmp = 0;
+  private lastAmpReadAt = 0;
   private listeners: Set<SpeechListener> = new Set();
   private ttsCache: Map<string, string> = new Map();
   private pendingPrefetches: Set<string> = new Set();
@@ -126,6 +131,13 @@ class MariaSpeechService {
         if (this.audioCtx.state === 'suspended') {
           this.audioCtx.resume().catch(() => {});
         }
+        if (!this.analyserNode) {
+          this.analyserNode = this.audioCtx.createAnalyser();
+          this.analyserNode.fftSize = 256;
+          this.analyserNode.smoothingTimeConstant = 0.45;
+          this.analyserNode.connect(this.audioCtx.destination);
+          this.analyserData = new Float32Array(new ArrayBuffer(this.analyserNode.fftSize * 4));
+        }
       }
 
       if (!this.reusableAudio) {
@@ -135,6 +147,40 @@ class MariaSpeechService {
     } catch (e) {
       console.warn('Audio unlock warning:', e);
     }
+  }
+
+  /**
+   * Returns real-time normalized speech amplitude (0..1) from the playing audio output
+   * so animated characters lip-sync naturally with actual syllables and pauses.
+   */
+  public getSpeechAmplitude(): number {
+    if (!this.state.isSpeaking) {
+      this.smoothedFallbackAmp = 0;
+      return 0;
+    }
+
+    if (this.analyserNode && this.analyserData && this.audioCtx?.state === 'running') {
+      this.analyserNode.getFloatTimeDomainData(this.analyserData);
+      let sum = 0;
+      for (let i = 0; i < this.analyserData.length; i++) {
+        const s = this.analyserData[i];
+        sum += s * s;
+      }
+      const rms = Math.sqrt(sum / this.analyserData.length);
+      // Map typical speech RMS (~0.015..0.28) cleanly into 0..1 with noise gate
+      const gated = rms < 0.012 ? 0 : Math.min(1, (rms - 0.012) * 5.2);
+      return gated;
+    }
+
+    // Gentle fallback cadence if HTMLAudio plays without WebAudio analyser
+    const now = performance.now();
+    const dt = this.lastAmpReadAt ? Math.min(0.05, (now - this.lastAmpReadAt) / 1000) : 0.016;
+    this.lastAmpReadAt = now;
+    const t = now / 1000;
+    const phraseGate = Math.sin(t * 2.4) > -0.55 ? 1 : 0.08;
+    const raw = phraseGate * (0.25 + 0.45 * Math.abs(Math.sin(t * 9.2)) * Math.abs(Math.cos(t * 5.7)));
+    this.smoothedFallbackAmp += (raw - this.smoothedFallbackAmp) * Math.min(1, dt * 14);
+    return this.smoothedFallbackAmp;
   }
 
   public stopSpeaking() {
@@ -426,7 +472,11 @@ class MariaSpeechService {
           }
         };
 
-        sourceNode.connect(this.audioCtx.destination);
+        if (this.analyserNode) {
+          sourceNode.connect(this.analyserNode);
+        } else {
+          sourceNode.connect(this.audioCtx.destination);
+        }
         sourceNode.start(0);
 
         this.setState({
@@ -451,6 +501,15 @@ class MariaSpeechService {
         this.reusableAudio = audio;
         audio.src = audioUrl;
         audio.playbackRate = Math.min(2.0, Math.max(0.5, speed));
+
+        if (this.audioCtx && this.analyserNode && !this.mediaElementSource) {
+          try {
+            this.mediaElementSource = this.audioCtx.createMediaElementSource(audio);
+            this.mediaElementSource.connect(this.analyserNode);
+          } catch {
+            // Ignore if browser blocks MediaElementSource for cross-origin/state reasons
+          }
+        }
 
         audio.onplay = () => {
           this.setState({
