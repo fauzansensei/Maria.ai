@@ -24,6 +24,7 @@ import { MariaLogo } from './MariaLogo.tsx';
 import { GeminiLiveOverlay, type GeminiLiveConfig } from './GeminiLiveOverlay.tsx';
 import { speechService } from '../lib/speechService.ts';
 import { useLanguage } from '../context/LanguageContext.tsx';
+import type { MariaMood } from '../lib/mariaContextAnalyzer.ts';
 
 interface ChatAreaProps {
   activeConversation: Conversation | null;
@@ -68,6 +69,9 @@ interface ChatAreaProps {
   onSaveImageToLibrary?: (data: { id: string; imageUrl: string; title: string; model?: string; sourceMessageId?: string }) => void;
   liveConfig?: GeminiLiveConfig;
   onCommitLiveTurn?: (role: 'user' | 'model', text: string) => void;
+  onLiveStateChange?: (active: boolean) => void;
+  spyGuardAlert?: boolean;
+  liveMood?: MariaMood;
 }
 
 interface NotificationItem {
@@ -112,6 +116,9 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
   onSaveImageToLibrary,
   liveConfig,
   onCommitLiveTurn,
+  onLiveStateChange,
+  spyGuardAlert = false,
+  liveMood = 'neutral',
 }) => {
   const { language, isEn } = useLanguage();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -125,6 +132,10 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
   const [shareToast, setShareToast] = useState<string | null>(null);
   const [loadedInputText, setLoadedInputText] = useState('');
   const [isLiveActive, setIsLiveActive] = useState(false);
+
+  useEffect(() => {
+    onLiveStateChange?.(isLiveActive);
+  }, [isLiveActive, onLiveStateChange]);
 
   const isInChat = messages.length > 0 || activeConversation !== null;
   const isPinned = Boolean(activeConversation?.title?.startsWith('📌 '));
@@ -732,6 +743,9 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
                 .map((m) => `${m.role === 'user' ? 'Pengguna' : 'Maria'}: ${m.content.slice(0, 400)}`)
                 .join('\n'),
             }}
+            mood={liveMood}
+            activeView="chat"
+            spyGuardAlert={spyGuardAlert}
             onClose={() => setIsLiveActive(false)}
             onCommitLiveTurn={(role, text) => {
               onCommitLiveTurn?.(role, text);

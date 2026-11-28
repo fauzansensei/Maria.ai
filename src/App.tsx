@@ -20,6 +20,8 @@ import { ImageStudioModal } from './components/ImageStudioModal.tsx';
 import { MusicVoiceModal } from './components/MusicVoiceModal.tsx';
 import { CanvasCodeModal } from './components/CanvasCodeModal.tsx';
 import { MariaPlusModal } from './components/MariaPlusModal.tsx';
+import { MariaCompanionDock } from './components/MariaCompanionDock.tsx';
+import { analyzeMariaContext } from './lib/mariaContextAnalyzer.ts';
 import { Conversation, Message, AiMode, UserSettings, MediaAttachment } from './types/index.ts';
 import { DEFAULT_SETTINGS, VOICE_PERSONAS, ACCENT_COLORS } from './constants.ts';
 import { speechService } from './lib/speechService.ts';
@@ -92,6 +94,8 @@ function AppContent() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeMode, setActiveMode] = useState<AiMode>('search');
+  const [isLiveActive, setIsLiveActive] = useState(false);
+  const [manualSpyGuardAlert, setManualSpyGuardAlert] = useState(false);
 
   // Modals & Drawers - default closed so chat has full focus and hamburger menu is clean
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
@@ -1912,6 +1916,28 @@ function AppContent() {
               appLanguage: settings.language || 'Indonesia',
             }}
             onCommitLiveTurn={handleCommitLiveTurn}
+            onLiveStateChange={setIsLiveActive}
+            spyGuardAlert={
+              manualSpyGuardAlert ||
+              analyzeMariaContext({
+                messages,
+                isLoading,
+                isStreaming: messages.some((m) => m.role === 'model' && m.isStreaming),
+                isSpeaking: false,
+                activeView,
+                manualSpyGuardAlert,
+              }).spyGuardThreat
+            }
+            liveMood={
+              analyzeMariaContext({
+                messages,
+                isLoading,
+                isStreaming: messages.some((m) => m.role === 'model' && m.isStreaming),
+                isSpeaking: false,
+                activeView,
+                manualSpyGuardAlert,
+              }).mood
+            }
           />
         )}
 
@@ -2119,6 +2145,16 @@ function AppContent() {
         onClose={() => setIsPlusModalOpen(false)}
         isPlus={Boolean(settings.isPlus)}
         onTogglePlus={handleTogglePlus}
+      />
+
+      {/* Context-Aware 3D Sparkle Companion Dock (Notebook/Projects pointing, Coding wrench, Mood, & Spy Guard) */}
+      <MariaCompanionDock
+        messages={messages}
+        isLoading={isLoading}
+        activeView={activeView}
+        isLiveActive={isLiveActive}
+        manualSpyGuardAlert={manualSpyGuardAlert}
+        onToggleSpyGuardAlert={() => setManualSpyGuardAlert((prev) => !prev)}
       />
 
       {/* Global Non-Blocking Feedback Toast */}

@@ -25,6 +25,8 @@ import {
 import { generateImageThumbnail, readFileAsDataUrl } from '../lib/mediaUtils.ts';
 import { captureAppViewportToDataUrl } from '../lib/appScreenCapture.ts';
 import { MariaCharacter3D, type MariaCharacterState } from './MariaCharacter3D.tsx';
+import type { MariaMood } from '../lib/mariaContextAnalyzer.ts';
+import type { SidebarView } from './Sidebar.tsx';
 
 export interface GeminiLiveConfig {
   voiceName: string;
@@ -39,6 +41,9 @@ export interface GeminiLiveConfig {
 
 interface GeminiLiveOverlayProps {
   liveConfig: GeminiLiveConfig;
+  mood?: MariaMood;
+  activeView?: SidebarView;
+  spyGuardAlert?: boolean;
   onClose: () => void;
   onCommitLiveTurn: (role: 'user' | 'model', text: string) => void;
 }
@@ -47,6 +52,9 @@ type LiveStatus = 'connecting' | 'listening' | 'thinking' | 'speaking' | 'muted'
 
 export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
   liveConfig,
+  mood = 'neutral',
+  activeView = 'chat',
+  spyGuardAlert = false,
   onClose,
   onCommitLiveTurn,
 }) => {
@@ -1519,10 +1527,24 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
       {/* Immersive 3D Animated Maria Character Stage (when Live is active & camera is off) */}
       {!isCameraOn && isStageExpanded && (
         <div className="fixed inset-x-4 bottom-24 sm:bottom-28 z-30 flex justify-center pointer-events-none animate-in fade-in duration-200">
-          <div className="pointer-events-auto relative w-full max-w-[280px] sm:max-w-[300px] rounded-3xl bg-[#0b1020]/94 border border-slate-700/70 shadow-2xl px-5 pt-3 pb-4 flex flex-col items-center">
+          <div
+            className={`pointer-events-auto relative w-full max-w-[280px] sm:max-w-[300px] rounded-3xl border shadow-2xl px-5 pt-3 pb-4 flex flex-col items-center transition-colors duration-300 ${
+              spyGuardAlert || status === 'error'
+                ? 'bg-[#2a0810]/96 border-rose-500/80 shadow-[0_8px_32px_rgba(244,63,94,0.35)]'
+                : 'bg-[#0b1020]/94 border-slate-700/70'
+            }`}
+          >
             <div className="w-full flex items-center justify-between gap-2 mb-1">
-              <span className="text-[11px] font-medium text-sky-200/90 tracking-tight truncate">
-                {statusText}
+              <span
+                className={`text-[11px] font-medium tracking-tight truncate ${
+                  spyGuardAlert || status === 'error' ? 'text-rose-200' : 'text-sky-200/90'
+                }`}
+              >
+                {spyGuardAlert
+                  ? isEn
+                    ? 'Spy Guard: Red Alert'
+                    : 'Spy Guard: Mode Siaga Merah'
+                  : statusText}
               </span>
               <button
                 type="button"
@@ -1536,6 +1558,9 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
             </div>
             <MariaCharacter3D
               state={characterState}
+              mood={mood}
+              activeView={activeView}
+              spyGuardAlert={spyGuardAlert}
               energy={orbEnergy}
               size="stage"
               interactive={true}
@@ -1756,6 +1781,9 @@ export const GeminiLiveOverlay: React.FC<GeminiLiveOverlayProps> = ({
               >
                 <MariaCharacter3D
                   state={characterState}
+                  mood={mood}
+                  activeView={activeView}
+                  spyGuardAlert={spyGuardAlert}
                   energy={orbEnergy}
                   size="compact"
                   interactive={false}
