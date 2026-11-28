@@ -146,10 +146,8 @@ export function analyzeMariaContext(params: {
       mood: 'calm',
       spyGuardThreat: false,
       threatReason: null,
-      statusLabelId: isSpeaking
-        ? 'Memberi semangat...'
-        : 'Tenang, kita selesaikan pelan-pelan',
-      statusLabelEn: isSpeaking ? 'Encouraging you...' : 'Calm mode · Here to help',
+      statusLabelId: isSpeaking ? 'Memberi semangat...' : 'Tenang, pelan-pelan',
+      statusLabelEn: isSpeaking ? 'Encouraging you...' : 'Calm mode · Ready',
     };
   }
 
@@ -163,7 +161,7 @@ export function analyzeMariaContext(params: {
       mood: 'celebrating',
       spyGuardThreat: false,
       threatReason: null,
-      statusLabelId: isSpeaking ? 'Merayakan bersama!' : 'Berhasil! Ikut merayakan',
+      statusLabelId: isSpeaking ? 'Merayakan bersama!' : 'Berhasil! Mantap!',
       statusLabelEn: 'Celebrating success!',
     };
   }
@@ -175,8 +173,8 @@ export function analyzeMariaContext(params: {
         mood: 'explaining',
         spyGuardThreat: false,
         threatReason: null,
-        statusLabelId: isSpeaking ? 'Menjelaskan solusi kode' : 'Menulis solusi kode...',
-        statusLabelEn: isSpeaking ? 'Explaining code solution' : 'Writing code solution...',
+        statusLabelId: isSpeaking ? 'Menjelaskan kode' : 'Menulis kode...',
+        statusLabelEn: isSpeaking ? 'Explaining code' : 'Writing code...',
       };
     }
     return {
@@ -184,7 +182,7 @@ export function analyzeMariaContext(params: {
       spyGuardThreat: false,
       threatReason: null,
       statusLabelId: 'Siap bantu coding!',
-      statusLabelEn: 'Coding Assistant Ready',
+      statusLabelEn: 'Coding Ready',
     };
   }
 
@@ -206,8 +204,8 @@ export function analyzeMariaContext(params: {
       mood: 'explaining',
       spyGuardThreat: false,
       threatReason: null,
-      statusLabelId: isSpeaking ? 'Maria sedang berbicara' : 'Maria sedang menjawab...',
-      statusLabelEn: isSpeaking ? 'Maria is speaking' : 'Maria is answering...',
+      statusLabelId: isSpeaking ? 'Sedang berbicara' : 'Sedang menjawab...',
+      statusLabelEn: isSpeaking ? 'Speaking' : 'Answering...',
     };
   }
 

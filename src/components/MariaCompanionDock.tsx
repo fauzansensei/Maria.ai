@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { ShieldAlert, ShieldCheck, Minimize2, Sparkles } from 'lucide-react';
 import { MariaCharacter2D, type MariaCharacterState } from './MariaCharacter2D.tsx';
 import { analyzeMariaContext } from '../lib/mariaContextAnalyzer.ts';
-import { speechService, type SpeechState } from '../lib/speechService.ts';
+import { speechService } from '../lib/speechService.ts';
 import { useLanguage } from '../context/LanguageContext.tsx';
 import type { Message } from '../types/index.ts';
 import type { SidebarView } from './Sidebar.tsx';
@@ -25,7 +25,12 @@ export const MariaCompanionDock: React.FC<MariaCompanionDockProps> = ({
   onToggleSpyGuardAlert,
 }) => {
   const { isEn } = useLanguage();
-  const [speechState, setSpeechState] = useState<SpeechState>(() => speechService.getState());
+  const [isAudioSpeaking, setIsAudioSpeaking] = useState<boolean>(
+    () => speechService.getState().isSpeaking
+  );
+  const [isAudioLoading, setIsAudioLoading] = useState<boolean>(
+    () => speechService.getState().isLoading
+  );
   const [isExpanded, setIsExpanded] = useState<boolean>(() => {
     try {
       const saved =
@@ -37,10 +42,28 @@ export const MariaCompanionDock: React.FC<MariaCompanionDockProps> = ({
     }
   });
 
+  // Real-time audio synchronization via speechService.onStart & speechService.onStop
   useEffect(() => {
-    return speechService.subscribe((next) => {
-      setSpeechState(next);
+    const offStart = speechService.onStart(() => {
+      setIsAudioSpeaking(true);
+      setIsAudioLoading(false);
     });
+    const offStop = speechService.onStop(() => {
+      setIsAudioSpeaking(false);
+      setIsAudioLoading(false);
+    });
+    const offSub = speechService.subscribe((next) => {
+      setIsAudioLoading(next.isLoading);
+      if (!next.isSpeaking) {
+        setIsAudioSpeaking(false);
+      }
+    });
+
+    return () => {
+      offStart();
+      offStop();
+      offSub();
+    };
   }, []);
 
   const toggleExpanded = (next: boolean) => {
@@ -63,23 +86,23 @@ export const MariaCompanionDock: React.FC<MariaCompanionDockProps> = ({
         messages,
         isLoading,
         isStreaming,
-        isSpeaking: speechState.isSpeaking,
+        isSpeaking: isAudioSpeaking,
         activeView,
         manualSpyGuardAlert,
       }),
-    [messages, isLoading, isStreaming, speechState.isSpeaking, activeView, manualSpyGuardAlert]
+    [messages, isLoading, isStreaming, isAudioSpeaking, activeView, manualSpyGuardAlert]
   );
 
-  // Yield cleanly when Maria Live overlay is open
+  // Yield cleanly when Maria Live overlay is active
   if (isLiveActive) return null;
 
   const characterState: MariaCharacterState = contextSignal.spyGuardThreat
     ? 'error'
-    : speechState.isSpeaking
+    : isAudioSpeaking
     ? 'speaking'
     : isStreaming
     ? 'explaining'
-    : speechState.isLoading
+    : isAudioLoading
     ? 'connecting'
     : isLoading
     ? 'thinking'
@@ -91,7 +114,7 @@ export const MariaCompanionDock: React.FC<MariaCompanionDockProps> = ({
 
   if (!isExpanded) {
     return (
-      <div className="fixed bottom-24 right-4 sm:right-6 z-30 flex items-center gap-2">
+      <div className="fixed bottom-20 right-3 sm:bottom-24 sm:right-6 z-30 flex items-center gap-2">
         <button
           type="button"
           onClick={() => toggleExpanded(true)}
@@ -116,14 +139,14 @@ export const MariaCompanionDock: React.FC<MariaCompanionDockProps> = ({
   }
 
   return (
-    <div className="fixed bottom-24 right-4 sm:right-6 z-30 select-none">
+    <div className="fixed bottom-24 right-3 sm:bottom-26 sm:right-6 z-30 select-none">
       <div
-        className={`w-[176px] sm:w-[196px] rounded-3xl border shadow-2xl p-2.5 flex flex-col items-center transition-colors duration-300 ${
+        className={`w-[162px] sm:w-[186px] md:w-[200px] overflow-hidden rounded-2xl sm:rounded-3xl border shadow-2xl p-2 sm:p-2.5 flex flex-col items-center transition-colors duration-300 ${
           isAlert
             ? 'bg-[#2a0810]/96 border-rose-500/80 shadow-[0_8px_32px_rgba(244,63,94,0.35)]'
             : isCalm
             ? 'bg-[#071a1f]/96 border-teal-500/50 shadow-[0_8px_28px_rgba(20,184,166,0.22)]'
-            : 'bg-[#0b1120]/96 border-slate-700/80 shadow-[0_8px_30px_rgba(15,23,42,0.4)]'
+            : 'bg-[#071426]/96 border-cyan-500/25 shadow-[0_8px_30px_rgba(7,20,38,0.55)]'
         }`}
       >
         {/* Top Action Row: Spy Guard Shield & Minimize */}
@@ -165,7 +188,7 @@ export const MariaCompanionDock: React.FC<MariaCompanionDockProps> = ({
           </button>
         </div>
 
-        {/* Full-Body 2D Sparkle-Style Robot Mascot */}
+        {/* Responsive 2D SVG Frame-Animated Mascot */}
         <MariaCharacter2D
           state={characterState}
           mood={contextSignal.mood}

@@ -89,3 +89,883 @@ body {
   animation: gentlePulse 2s ease-in-out infinite;
 }
 
+/* =========================================================
+   SPARKLE / MARIA 2D ROBOT COMPANION (Reference Architecture)
+========================================================= */
+
+.sparkle-robot-stage {
+  --sparkle-cyan: #38e7ff;
+  --sparkle-cyan-soft: #8deeff;
+  --sparkle-blue: #168bff;
+  --sparkle-glow: rgba(56, 231, 255, 0.55);
+  position: relative;
+  display: block;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.sparkle-robot-stage.mode-calm {
+  --sparkle-cyan: #2dd4bf;
+  --sparkle-cyan-soft: #99f6e4;
+  --sparkle-blue: #0d9488;
+  --sparkle-glow: rgba(45, 212, 191, 0.5);
+}
+
+.sparkle-robot-stage.mode-alert {
+  --sparkle-cyan: #fb7185;
+  --sparkle-cyan-soft: #fecdd3;
+  --sparkle-blue: #e11d48;
+  --sparkle-glow: rgba(244, 63, 94, 0.65);
+}
+
+.sparkle-orbit {
+  position: absolute;
+  width: 340px;
+  height: 340px;
+  border: 1px solid color-mix(in srgb, var(--sparkle-cyan) 16%, transparent);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: sparkleOrbitRotate 26s linear infinite;
+}
+
+.sparkle-orbit::before {
+  content: "";
+  position: absolute;
+  top: 42px;
+  right: 34px;
+  width: 7px;
+  height: 7px;
+  background: var(--sparkle-cyan);
+  border-radius: 50%;
+  box-shadow: 0 0 18px var(--sparkle-cyan);
+}
+
+.sparkle-orbit.two {
+  width: 265px;
+  height: 265px;
+  animation-direction: reverse;
+  animation-duration: 18s;
+}
+
+@keyframes sparkleOrbitRotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sparkle-star {
+  position: absolute;
+  color: var(--sparkle-cyan);
+  font-size: 22px;
+  line-height: 1;
+  text-shadow: 0 0 16px var(--sparkle-cyan);
+  pointer-events: none;
+  animation: sparkleTwinkle 3s ease-in-out infinite;
+}
+
+.sparkle-star.one {
+  top: 28px;
+  left: 24px;
+}
+
+.sparkle-star.two {
+  top: 80px;
+  right: 16px;
+  animation-delay: -1s;
+}
+
+.sparkle-star.three {
+  bottom: 72px;
+  left: 18px;
+  animation-delay: -2s;
+}
+
+@keyframes sparkleTwinkle {
+  0%, 100% {
+    opacity: 0.25;
+    transform: scale(0.8) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2) rotate(25deg);
+  }
+}
+
+.sparkle-robot {
+  position: relative;
+  z-index: 3;
+  width: 290px;
+  height: 472px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: center bottom;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: filter 0.3s ease;
+}
+
+.sparkle-robot:hover {
+  filter: drop-shadow(0 0 22px var(--sparkle-glow));
+}
+
+/* Antenna */
+.sparkle-antenna {
+  position: relative;
+  z-index: 4;
+  width: 7px;
+  height: 28px;
+  margin-top: 14px;
+  background: linear-gradient(90deg, #819bb4, #f3fbff, #8ca8c2);
+  border-radius: 5px;
+}
+
+.sparkle-antenna::before {
+  content: "";
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  width: 17px;
+  height: 17px;
+  background: var(--sparkle-cyan);
+  border: 3px solid var(--sparkle-cyan-soft);
+  border-radius: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 0 12px var(--sparkle-cyan), 0 0 30px var(--sparkle-glow);
+  animation: sparkleAntennaPulse 2s ease-in-out infinite;
+}
+
+@keyframes sparkleAntennaPulse {
+  0%, 100% {
+    box-shadow: 0 0 12px var(--sparkle-cyan);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--sparkle-cyan), 0 0 42px var(--sparkle-glow);
+  }
+}
+
+/* Head */
+.sparkle-head {
+  position: relative;
+  z-index: 4;
+  width: 245px;
+  height: 180px;
+  padding: 12px;
+  background: linear-gradient(145deg, #ffffff, #d7e7f0 60%, #9db6ca);
+  border-radius: 48px;
+  box-shadow:
+    inset 0 5px 10px rgba(255, 255, 255, 0.9),
+    inset 0 -8px 12px rgba(70, 110, 150, 0.3),
+    0 18px 35px rgba(0, 0, 0, 0.25);
+  transition: transform 0.35s ease;
+}
+
+.sparkle-head::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  pointer-events: none;
+}
+
+.sparkle-head-side {
+  position: absolute;
+  top: 48px;
+  width: 25px;
+  height: 75px;
+  background: linear-gradient(90deg, #6f8ca7, #d8e9f4, #8faac3);
+  border: 2px solid #d7f4ff;
+  border-radius: 10px;
+}
+
+.sparkle-head-side.left {
+  left: -15px;
+}
+
+.sparkle-head-side.right {
+  right: -15px;
+}
+
+.sparkle-head-side::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 36px;
+  background: linear-gradient(var(--sparkle-cyan), var(--sparkle-blue));
+  border-radius: 10px;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 10px var(--sparkle-glow);
+}
+
+/* Face & Eyes */
+.sparkle-face {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  background: linear-gradient(145deg, #020813, #071a30 70%, #031020);
+  border-radius: 38px;
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.08),
+    inset 0 0 25px rgba(0, 0, 0, 0.8);
+}
+
+.sparkle-face::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), transparent);
+  pointer-events: none;
+}
+
+.sparkle-eye-track {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  margin-top: -12px;
+  transition: transform 0.14s ease-out;
+}
+
+.sparkle-eye {
+  position: relative;
+  width: 25px;
+  height: 44px;
+  background: linear-gradient(180deg, var(--sparkle-cyan-soft), var(--sparkle-cyan));
+  border-radius: 50%;
+  box-shadow:
+    0 0 12px var(--sparkle-glow),
+    0 0 28px var(--sparkle-glow);
+  transition:
+    height 0.22s ease,
+    width 0.22s ease,
+    border-radius 0.22s ease,
+    transform 0.22s ease;
+}
+
+.sparkle-eye::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 5px;
+  width: 5px;
+  height: 9px;
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 50%;
+}
+
+/* Mouth (driven smoothly by speechService lip-sync or resting expression) */
+.sparkle-mouth {
+  position: absolute;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 34px;
+  height: 12px;
+  background: var(--sparkle-cyan);
+  border-radius: 4px 4px 20px 20px;
+  box-shadow: 0 0 14px var(--sparkle-glow);
+  transition: width 0.09s ease-out, height 0.09s ease-out, border-radius 0.14s ease-out;
+}
+
+/* Neck */
+.sparkle-neck {
+  position: relative;
+  z-index: 2;
+  width: 55px;
+  height: 22px;
+  margin-top: -3px;
+  background: linear-gradient(90deg, #7895af, #d7eaf6, #7c9bb7);
+  border-radius: 0 0 12px 12px;
+}
+
+.sparkle-neck::after {
+  content: "";
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  width: 25px;
+  height: 5px;
+  background: var(--sparkle-cyan);
+  border-radius: 10px;
+  transform: translateX(-50%);
+  box-shadow: 0 0 8px var(--sparkle-glow);
+}
+
+/* Body */
+.sparkle-body {
+  position: relative;
+  z-index: 3;
+  width: 160px;
+  height: 145px;
+  margin-top: -2px;
+  background: linear-gradient(145deg, #f6fcff, #d4e4ef 65%, #8fa9c1);
+  border-radius: 28px 28px 42px 42px;
+  border: 2px solid #e9faff;
+  box-shadow:
+    inset 0 5px 10px rgba(255, 255, 255, 0.8),
+    0 12px 20px rgba(0, 0, 0, 0.2);
+}
+
+.sparkle-chest-plate {
+  position: absolute;
+  inset: 8px 12px 12px;
+  border-radius: 20px 20px 32px 32px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.25), transparent);
+}
+
+.sparkle-chest-label {
+  position: absolute;
+  top: 34px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #29445f;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  user-select: none;
+}
+
+.sparkle-chest-light {
+  position: absolute;
+  top: 62px;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(145deg, var(--sparkle-cyan), var(--sparkle-blue));
+  border: 3px solid var(--sparkle-cyan-soft);
+  border-radius: 8px;
+  box-shadow: 0 0 18px var(--sparkle-glow);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.sparkle-chest-light::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  background: #e6fcff;
+  border-radius: 50%;
+}
+
+/* Shoulders, Arms, Elbows & 3-Finger Hands */
+.sparkle-shoulder {
+  position: absolute;
+  top: 12px;
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(145deg, #8ca8c1, #f3fbff, #9bb5cb);
+  border-radius: 50%;
+  border: 3px solid #d8f5ff;
+  box-shadow: inset 0 0 0 5px #a9c3d8, 0 5px 10px rgba(0, 0, 0, 0.2);
+}
+
+.sparkle-shoulder.left {
+  left: -28px;
+}
+
+.sparkle-shoulder.right {
+  right: -28px;
+}
+
+.sparkle-arm {
+  position: absolute;
+  top: 43px;
+  width: 39px;
+  height: 77px;
+  background: linear-gradient(90deg, #819bb4, #f3fbff, #afc6d9);
+  border-radius: 25px;
+  transform-origin: top center;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.sparkle-arm.left {
+  left: -33px;
+  transform: rotate(25deg);
+}
+
+.sparkle-arm.right {
+  right: -33px;
+  transform: rotate(-25deg);
+}
+
+.sparkle-elbow {
+  position: absolute;
+  bottom: 18px;
+  width: 29px;
+  height: 29px;
+  background: linear-gradient(145deg, #dcebf5, #819bb4);
+  border-radius: 50%;
+  border: 3px solid #e8faff;
+}
+
+.sparkle-elbow.left {
+  left: -4px;
+}
+
+.sparkle-elbow.right {
+  right: -4px;
+}
+
+.sparkle-hand {
+  position: absolute;
+  bottom: -17px;
+  left: 50%;
+  width: 42px;
+  height: 38px;
+  background: linear-gradient(145deg, #ffffff, #d7e7f0 65%, #9db6ca);
+  border-radius: 45% 45% 50% 50%;
+  border: 2px solid #e6faff;
+  transform: translateX(-50%);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.sparkle-finger {
+  position: absolute;
+  bottom: -6px;
+  width: 12px;
+  height: 20px;
+  background: linear-gradient(180deg, #eaf8ff, #9db6ca);
+  border-radius: 10px;
+  border: 1px solid #d8f5ff;
+}
+
+.sparkle-finger.one { left: 3px; }
+.sparkle-finger.two { left: 15px; }
+.sparkle-finger.three { right: 3px; }
+
+/* Waist, Legs & Jet Boots */
+.sparkle-waist {
+  position: relative;
+  z-index: 2;
+  width: 95px;
+  height: 25px;
+  margin-top: -3px;
+  background: linear-gradient(90deg, #819bb4, #d8e9f4, #819bb4);
+  border-radius: 0 0 20px 20px;
+}
+
+.sparkle-legs {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  gap: 22px;
+  margin-top: -3px;
+}
+
+.sparkle-leg {
+  position: relative;
+  width: 51px;
+  height: 62px;
+  background: linear-gradient(90deg, #8da6bd, #f4fbff, #9bb4c9);
+  border-radius: 12px 12px 20px 20px;
+  border: 2px solid #dceff8;
+}
+
+.sparkle-knee {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(145deg, #f6fcff, #9db6ca);
+  border-radius: 50%;
+  border: 3px solid #d8f5ff;
+  transform: translateX(-50%);
+}
+
+.sparkle-foot {
+  position: absolute;
+  bottom: -5px;
+  left: -12px;
+  width: 75px;
+  height: 34px;
+  background: linear-gradient(180deg, #f6fcff, #d0e3f0 65%, #8fa9c3);
+  border-radius: 15px 20px 12px 12px;
+  border: 2px solid #e8faff;
+  border-bottom: 5px solid var(--sparkle-blue);
+  box-shadow: inset 0 4px 5px rgba(255, 255, 255, 0.7), 0 5px 10px rgba(0, 0, 0, 0.2);
+}
+
+.sparkle-foot::before {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  width: 35px;
+  height: 7px;
+  background: var(--sparkle-cyan);
+  border-radius: 10px;
+  transform: translateX(-50%);
+  box-shadow: 0 0 12px var(--sparkle-glow);
+}
+
+/* Jet Flames */
+.sparkle-jet {
+  position: absolute;
+  bottom: -64px;
+  left: 50%;
+  width: 26px;
+  height: 64px;
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.sparkle-jet-flame {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    #ffffff 0%,
+    #b9faff 14%,
+    var(--sparkle-cyan) 34%,
+    var(--sparkle-blue) 65%,
+    transparent 100%
+  );
+  clip-path: polygon(20% 0%, 80% 0%, 100% 35%, 65% 100%, 35% 100%, 0% 35%);
+  filter: drop-shadow(0 0 10px var(--sparkle-cyan));
+}
+
+.sparkle-jet-glow {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 38px;
+  height: 16px;
+  background: var(--sparkle-cyan);
+  border-radius: 50%;
+  filter: blur(8px);
+  transform: translateX(-50%);
+}
+
+.sparkle-robot.rocket-active .sparkle-jet {
+  opacity: 1;
+}
+
+.sparkle-robot.rocket-active .sparkle-jet-flame {
+  animation: sparkleJetFlame 0.12s infinite alternate;
+}
+
+@keyframes sparkleJetFlame {
+  from { transform: scaleY(0.8) scaleX(0.9); opacity: 0.8; }
+  to { transform: scaleY(1.15) scaleX(1.1); opacity: 1; }
+}
+
+.sparkle-shadow {
+  position: absolute;
+  bottom: 4px;
+  width: 180px;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 50%;
+  filter: blur(12px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* Landing Sequence */
+.sparkle-robot.entering {
+  opacity: 0;
+  transform: translate3d(20px, -180px, 0) rotate(-10deg) scale(0.72);
+}
+
+.sparkle-robot.launch {
+  animation: sparkleDockLaunch 2.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes sparkleDockLaunch {
+  0% {
+    opacity: 0;
+    transform: translate3d(20px, -180px, 0) rotate(-10deg) scale(0.72);
+  }
+  25% {
+    opacity: 1;
+    transform: translate3d(-10px, -90px, 0) rotate(6deg) scale(0.88);
+  }
+  65% {
+    transform: translate3d(6px, -18px, 0) rotate(-3deg) scale(0.98);
+  }
+  82% {
+    transform: translate3d(0, 10px, 0) rotate(1.5deg) scale(1.01, 0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+}
+
+/* Natural Idle Animations */
+.sparkle-robot.idle {
+  animation: sparkleIdleBody 3.2s ease-in-out infinite;
+}
+
+@keyframes sparkleIdleBody {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-4px) rotate(0.4deg); }
+}
+
+.sparkle-robot.idle .sparkle-body {
+  animation: sparkleBreathe 3.2s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+@keyframes sparkleBreathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.012); }
+}
+
+.sparkle-robot.idle .sparkle-head {
+  animation: sparkleIdleHead 5s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+@keyframes sparkleIdleHead {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-1.6deg); }
+  60% { transform: rotate(0.9deg); }
+}
+
+.sparkle-robot.idle .sparkle-arm.left {
+  animation: sparkleIdleArmL 3.2s ease-in-out infinite;
+}
+
+@keyframes sparkleIdleArmL {
+  0%, 100% { transform: rotate(25deg); }
+  50% { transform: rotate(20deg); }
+}
+
+.sparkle-robot.idle .sparkle-arm.right {
+  animation: sparkleIdleArmR 3.2s ease-in-out infinite;
+}
+
+@keyframes sparkleIdleArmR {
+  0%, 100% { transform: rotate(-25deg); }
+  50% { transform: rotate(-20deg); }
+}
+
+/* Contextual Poses & Expressions */
+.sparkle-robot.greeting .sparkle-head {
+  animation: sparkleGreetHead 1.4s ease-in-out;
+}
+
+@keyframes sparkleGreetHead {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-8deg); }
+  55% { transform: rotate(5deg); }
+}
+
+.sparkle-robot.greeting .sparkle-arm.left {
+  animation: sparkleGreetHand 0.9s ease-in-out 2;
+}
+
+@keyframes sparkleGreetHand {
+  0%, 100% { transform: rotate(25deg); }
+  50% { transform: rotate(135deg); }
+}
+
+.sparkle-robot.speaking .sparkle-arm.left {
+  animation: sparkleExplainL 1.1s ease-in-out infinite alternate;
+}
+
+.sparkle-robot.speaking .sparkle-arm.right {
+  animation: sparkleExplainR 1.1s ease-in-out infinite alternate;
+}
+
+@keyframes sparkleExplainL {
+  from { transform: rotate(32deg); }
+  to { transform: rotate(52deg); }
+}
+
+@keyframes sparkleExplainR {
+  from { transform: rotate(-32deg); }
+  to { transform: rotate(-52deg); }
+}
+
+.sparkle-robot.coding .sparkle-arm.right {
+  transform: rotate(-72deg) !important;
+  animation: none;
+}
+
+.sparkle-robot.workspace-point .sparkle-head {
+  transform: rotate(-6deg) !important;
+  animation: none;
+}
+
+.sparkle-robot.workspace-point .sparkle-arm.left {
+  transform: rotate(98deg) !important;
+  animation: none;
+}
+
+.sparkle-robot.workspace-point .sparkle-arm.right {
+  transform: rotate(-52deg) !important;
+  animation: none;
+}
+
+.sparkle-robot.happy .sparkle-eye {
+  height: 20px;
+  border-radius: 50% 50% 10px 10px;
+}
+
+.sparkle-robot.curious .sparkle-head {
+  transform: rotate(-7deg) !important;
+  animation: none;
+}
+
+.sparkle-robot.curious .sparkle-eye {
+  height: 36px;
+}
+
+.sparkle-robot.curious .sparkle-arm.right {
+  transform: rotate(-118deg) !important;
+  animation: none;
+}
+
+.sparkle-robot.surprised .sparkle-eye {
+  width: 30px;
+  height: 38px;
+}
+
+.sparkle-robot.love .sparkle-eye {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px 4px 15px 15px;
+  transform: rotate(45deg);
+}
+
+.sparkle-robot.love .sparkle-eye::after {
+  display: none;
+}
+
+.sparkle-robot.love .sparkle-arm.left {
+  transform: rotate(138deg) !important;
+  animation: none;
+}
+
+.sparkle-robot.love .sparkle-arm.right {
+  transform: rotate(-138deg) !important;
+  animation: none;
+}
+
+.sparkle-robot.calm .sparkle-eye {
+  height: 14px;
+  border-radius: 10px 10px 50% 50%;
+}
+
+.sparkle-robot.alert .sparkle-eye {
+  height: 24px;
+  border-radius: 4px 16px 8px 8px;
+}
+
+.sparkle-robot.alert .sparkle-eye.right {
+  border-radius: 16px 4px 8px 8px;
+}
+
+.sparkle-robot.alert .sparkle-arm.left {
+  transform: rotate(56deg) !important;
+}
+
+.sparkle-robot.alert .sparkle-arm.right {
+  transform: rotate(-56deg) !important;
+}
+
+.sparkle-robot.blink .sparkle-eye {
+  animation: sparkleEyeBlink 0.16s ease-in-out;
+}
+
+@keyframes sparkleEyeBlink {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.08); }
+}
+
+/* Props attached to Sparkle hands */
+.sparkle-wrench {
+  position: absolute;
+  bottom: -24px;
+  left: 50%;
+  transform: translateX(-50%) rotate(25deg);
+  width: 24px;
+  height: 54px;
+  pointer-events: none;
+  filter: drop-shadow(0 0 10px var(--sparkle-cyan));
+}
+
+.sparkle-tablet {
+  position: absolute;
+  bottom: -16px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-12deg);
+  width: 34px;
+  height: 42px;
+  background: #0a192f;
+  border: 2px solid var(--sparkle-cyan);
+  border-radius: 7px;
+  box-shadow: 0 0 14px var(--sparkle-glow);
+  pointer-events: none;
+  padding: 6px 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sparkle-tablet span {
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--sparkle-cyan-soft);
+}
+
+/* Speech Bubble (rendered unscaled inside stage) */
+.sparkle-speech {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%) translateY(4px) scale(0.94);
+  white-space: nowrap;
+  max-width: calc(100% - 8px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 4px 9px;
+  color: #dffaff;
+  background: rgba(8, 30, 52, 0.94);
+  border: 1px solid color-mix(in srgb, var(--sparkle-cyan) 40%, transparent);
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.25;
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.sparkle-speech.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sparkle-orbit,
+  .sparkle-star,
+  .sparkle-antenna::before,
+  .sparkle-robot,
+  .sparkle-robot * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+

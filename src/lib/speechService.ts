@@ -23,6 +23,8 @@ class MariaSpeechService {
   private smoothedFallbackAmp = 0;
   private lastAmpReadAt = 0;
   private listeners: Set<SpeechListener> = new Set();
+  private startListeners: Set<SpeechListener> = new Set();
+  private stopListeners: Set<SpeechListener> = new Set();
   private ttsCache: Map<string, string> = new Map();
   private pendingPrefetches: Set<string> = new Set();
   private activeAbortController: AbortController | null = null;
@@ -70,7 +72,26 @@ class MariaSpeechService {
   public subscribe(listener: SpeechListener): () => void {
     this.listeners.add(listener);
     listener(this.state);
-    return () => this.listeners.delete(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  public onStart(listener: SpeechListener): () => void {
+    this.startListeners.add(listener);
+    if (this.state.isSpeaking) {
+      listener({ ...this.state });
+    }
+    return () => {
+      this.startListeners.delete(listener);
+    };
+  }
+
+  public onStop(listener: SpeechListener): () => void {
+    this.stopListeners.add(listener);
+    return () => {
+      this.stopListeners.delete(listener);
+    };
   }
 
   private notify() {
@@ -78,7 +99,18 @@ class MariaSpeechService {
   }
 
   private setState(updates: Partial<SpeechState>) {
+    const wasSpeaking = this.state.isSpeaking;
     this.state = { ...this.state, ...updates };
+    const nowSpeaking = this.state.isSpeaking;
+
+    if (!wasSpeaking && nowSpeaking) {
+      const snapshot = { ...this.state };
+      this.startListeners.forEach((fn) => fn(snapshot));
+    } else if (wasSpeaking && !nowSpeaking) {
+      const snapshot = { ...this.state };
+      this.stopListeners.forEach((fn) => fn(snapshot));
+    }
+
     this.notify();
   }
 
