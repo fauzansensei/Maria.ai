@@ -1917,6 +1917,15 @@ function AppContent() {
             }}
             onCommitLiveTurn={handleCommitLiveTurn}
             onLiveStateChange={setIsLiveActive}
+            onChangeLiveVoice={(voiceName) => {
+              const matchedPersona = VOICE_PERSONAS.find((item) => item.geminiVoice === voiceName);
+              if (matchedPersona) {
+                handleUpdateSettings({
+                  geminiVoice: matchedPersona.geminiVoice,
+                  voicePersona: matchedPersona.id,
+                });
+              }
+            }}
             spyGuardAlert={
               manualSpyGuardAlert ||
               analyzeMariaContext({

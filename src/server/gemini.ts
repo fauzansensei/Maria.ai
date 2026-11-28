@@ -1449,9 +1449,9 @@ export async function editAiImage(options: GenerateImageOptions) {
   return generateAiImage(options);
 }
 
-// In-memory cache & quota cooldown for generated speech audio to conserve free-tier rate limits
+// In-memory cache & per-model quota cooldown for generated speech audio to conserve free-tier rate limits
 const serverAudioCache = new Map<string, { audioUrl: string; model: string; voice: string }>();
-let geminiTtsCooldownUntil = 0;
+const geminiTtsModelCooldown = new Map<string, number>();
 let geminiTtsLastApiKey = '';
 
 function isGeminiTtsQuotaOrRateError(err: any): boolean {
@@ -1558,7 +1558,7 @@ export async function generateSpeechAudio(
   const currentApiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '';
   if (currentApiKey !== geminiTtsLastApiKey) {
     geminiTtsLastApiKey = currentApiKey;
-    geminiTtsCooldownUntil = 0;
+    geminiTtsModelCooldown.clear();
   }
 
   if (!currentApiKey) {
@@ -1571,7 +1571,16 @@ export async function generateSpeechAudio(
     };
   }
 
-  if (Date.now() < geminiTtsCooldownUntil) {
+  const secondaryModel =
+    targetTtsModel === 'gemini-3.8-flash-lite-tts'
+      ? 'gemini-3.8-flash-tts'
+      : 'gemini-3.8-flash-lite-tts';
+
+  const now = Date.now();
+  const isTargetCoolingDown = (geminiTtsModelCooldown.get(targetTtsModel) || 0) > now;
+  const isSecondaryCoolingDown = (geminiTtsModelCooldown.get(secondaryModel) || 0) > now;
+
+  if (isTargetCoolingDown && isSecondaryCoolingDown) {
     return {
       audioUrl: null,
       model: 'none',
@@ -1625,10 +1634,6 @@ export async function generateSpeechAudio(
     const altVoice = selectedVoice === 'Kore' || selectedVoice === 'Puck'
       ? selectedVoice
       : (isMalePersona ? 'Puck' : 'Kore');
-    const secondaryModel =
-      targetTtsModel === 'gemini-3.8-flash-lite-tts'
-        ? 'gemini-3.8-flash-tts'
-        : 'gemini-3.8-flash-lite-tts';
 
     const attempts: Array<{ model: string; voice: string; meta: boolean; v1beta: boolean }> = [
       { model: targetTtsModel, voice: selectedVoice, meta: true, v1beta: false },
@@ -1636,31 +1641,44 @@ export async function generateSpeechAudio(
         ? [{ model: targetTtsModel, voice: altVoice, meta: true, v1beta: false }]
         : []),
       { model: targetTtsModel, voice: altVoice, meta: false, v1beta: false },
-      { model: secondaryModel, voice: altVoice, meta: true, v1beta: false },
+      { model: secondaryModel, voice: selectedVoice, meta: true, v1beta: false },
+      ...(altVoice !== selectedVoice
+        ? [{ model: secondaryModel, voice: altVoice, meta: true, v1beta: false }]
+        : []),
       { model: targetTtsModel, voice: altVoice, meta: true, v1beta: true },
     ];
 
-    let lastTtsErr: any = null;
+    let sawQuotaLimit = false;
+    let lastNonQuotaErr: any = null;
+
     for (const attempt of attempts) {
+      if ((geminiTtsModelCooldown.get(attempt.model) || 0) > Date.now()) {
+        sawQuotaLimit = true;
+        continue;
+      }
+
       try {
         const audio = await callGeminiTts(attempt.model, attempt.voice, attempt.meta, attempt.v1beta);
         if (audio) {
           base64Audio = audio;
           usedTtsModel = attempt.model;
           selectedVoice = attempt.voice;
-          lastTtsErr = null;
+          geminiTtsModelCooldown.delete(attempt.model);
+          lastNonQuotaErr = null;
           break;
         }
       } catch (err: any) {
-        lastTtsErr = err;
         if (isGeminiTtsQuotaOrRateError(err)) {
-          throw err;
+          sawQuotaLimit = true;
+          const retryMs = parseTtsRetryDelayMs(err);
+          geminiTtsModelCooldown.set(attempt.model, Date.now() + retryMs);
+          console.info(
+            `[Gemini TTS] ${attempt.model} quota reached; entering ${Math.round(retryMs / 60000)}m cooldown.`
+          );
+          continue;
         }
+        lastNonQuotaErr = err;
       }
-    }
-
-    if (!base64Audio && lastTtsErr) {
-      throw lastTtsErr;
     }
 
     if (base64Audio) {
@@ -1673,11 +1691,8 @@ export async function generateSpeechAudio(
       serverAudioCache.set(cacheKey, result);
       return result;
     }
-  } catch (ttsErr: any) {
-    const errMsg = String(ttsErr?.message || ttsErr || '');
-    console.warn('Gemini TTS error (fallback disabled by user preference):', errMsg);
-    if (isGeminiTtsQuotaOrRateError(ttsErr)) {
-      geminiTtsCooldownUntil = Date.now() + parseTtsRetryDelayMs(ttsErr);
+
+    if (sawQuotaLimit) {
       return {
         audioUrl: null,
         model: 'none',
@@ -1686,13 +1701,28 @@ export async function generateSpeechAudio(
         notice: 'Kuota Gemini TTS sedang mencapai batas sementara. Suara dinonaktifkan sementara hingga kuota pulih.',
       };
     }
-    return {
-      audioUrl: null,
-      model: 'none',
-      voice: selectedVoice,
-      limited: true,
-      notice: 'Layanan suara Gemini TTS sedang tidak tersedia atau mencapai batas.',
-    };
+
+    if (lastNonQuotaErr) {
+      console.info(
+        '[Gemini TTS] Audio unavailable:',
+        String(lastNonQuotaErr?.message || lastNonQuotaErr).slice(0, 180)
+      );
+    }
+  } catch (ttsErr: any) {
+    if (isGeminiTtsQuotaOrRateError(ttsErr)) {
+      geminiTtsModelCooldown.set(targetTtsModel, Date.now() + parseTtsRetryDelayMs(ttsErr));
+      return {
+        audioUrl: null,
+        model: 'none',
+        voice: selectedVoice,
+        limited: true,
+        notice: 'Kuota Gemini TTS sedang mencapai batas sementara. Suara dinonaktifkan sementara hingga kuota pulih.',
+      };
+    }
+    console.info(
+      '[Gemini TTS] Unexpected error:',
+      String(ttsErr?.message || ttsErr).slice(0, 180)
+    );
   }
 
   return {
@@ -1720,6 +1750,7 @@ export interface LiveHttpTurnOptions {
   allowEmojis?: boolean;
   voiceLanguage?: 'auto' | 'id-ID' | 'en-US';
   appLanguage?: 'Indonesia' | 'English';
+  liveTranslation?: boolean;
 }
 
 export async function generateLiveTurnResponse(options: LiveHttpTurnOptions) {
@@ -1740,6 +1771,10 @@ export async function generateLiveTurnResponse(options: LiveHttpTurnOptions) {
     ? 'Respond in English unless the user explicitly speaks Indonesian.'
     : 'BAHASA WAJIB: Anda WAJIB selalu menjawab dan menyapa dalam Bahasa Indonesia yang natural dan fasih. Jangan kembali ke bahasa Inggris/default kecuali pengguna secara eksplisit berbicara Bahasa Inggris atau meminta terjemahan.';
 
+  const translationRule = options.liveTranslation
+    ? '\n- MODE TERJEMAHAN LANGSUNG AKTIF: Bertindaklah sebagai penerjemah simultan dwibahasa (Indonesia <-> Inggris atau bahasa yang terdengar) secara langsung dan ringkas.'
+    : '';
+
   const systemInstruction = `${baseSys}
 
 MODE MARIA LIVE (SUARA & VISUAL LANGSUNG):
@@ -1747,7 +1782,7 @@ MODE MARIA LIVE (SUARA & VISUAL LANGSUNG):
 - Jika ada rekaman audio pengguna, tuliskan transkrip akurat ucapan pengguna pada field JSON "userTranscript" (kosongkan string jika hanya ada teks/gambar tanpa ucapan, atau isi ringkasan ucapan bila jelas).
 - Jika audio kosong atau hanya noise/hening tanpa kata-kata jelas, set "userTranscript" ke "" dan "replyText" ke "".
 - Tuliskan jawaban lisan Maria yang natural, hangat, ekspresif, ringkas, dan siap dibacakan pada field JSON "replyText" tanpa simbol markdown (*, #, \`).
-- Bila ada gambar kamera/layar/foto, amati dan tanggapi visualnya secara langsung.`;
+- Bila ada gambar kamera/layar/foto, amati dan tanggapi visualnya secara langsung.${translationRule}`;
 
   const contents: any[] = [];
   if (Array.isArray(options.history)) {

@@ -968,4 +968,56 @@ body {
   }
 }
 
+/* =========================================================
+   GEMINI LIVE LUMINOUS HORIZON GLOW & ANIMATED PILL
+========================================================= */
 
+.gemini-live-horizon {
+  background: radial-gradient(
+    ellipse 75% 100% at 50% 100%,
+    rgba(56, 189, 248, 0.34) 0%,
+    rgba(37, 99, 235, 0.22) 38%,
+    rgba(15, 23, 42, 0) 75%
+  );
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.gemini-live-horizon.alert {
+  background: radial-gradient(
+    ellipse 75% 100% at 50% 100%,
+    rgba(244, 63, 94, 0.38) 0%,
+    rgba(190, 18, 60, 0.22) 42%,
+    rgba(15, 23, 42, 0) 75%
+  );
+}
+
+.gemini-live-pill-btn {
+  background: linear-gradient(125deg, #1d4ed8 0%, #38bdf8 48%, #93c5fd 100%);
+  background-size: 200% 200%;
+  animation: geminiLivePillFlow 4s ease-in-out infinite;
+  box-shadow:
+    0 0 24px rgba(56, 189, 248, 0.45),
+    inset 0 1px 4px rgba(255, 255, 255, 0.45);
+}
+
+.gemini-live-pill-btn.alert {
+  background: linear-gradient(125deg, #be123c 0%, #fb7185 52%, #fecdd3 100%);
+  box-shadow:
+    0 0 24px rgba(244, 63, 94, 0.5),
+    inset 0 1px 4px rgba(255, 255, 255, 0.35);
+}
+
+@keyframes geminiLivePillFlow {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gemini-live-pill-btn {
+    animation: none !important;
+  }
+}

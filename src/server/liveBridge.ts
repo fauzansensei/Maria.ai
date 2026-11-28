@@ -18,6 +18,7 @@ interface LiveSetupPayload {
   voiceLanguage?: 'auto' | 'id-ID' | 'en-US';
   appLanguage?: 'Indonesia' | 'English';
   recentContext?: string;
+  liveTranslation?: boolean;
 }
 
 const ALLOWED_LIVE_VOICES = new Set([
@@ -137,11 +138,15 @@ export function attachLiveWebSocketServer(httpServer: Server) {
         ? `\n\nKONTEKS PERCAKAPAN SEBELUMNYA DI ROOM CHAT INI:\n${setup.recentContext.trim()}`
         : '';
 
+      const translationHint = setup?.liveTranslation
+        ? '\n- MODE TERJEMAHAN LANGSUNG AKTIF: Bertindaklah sebagai penerjemah simultan dwibahasa (Indonesia <-> Inggris atau bahasa yang terdengar). Jika pengguna berbicara bahasa asing, terjemahkan ke Bahasa Indonesia secara ringkas dan natural; jika berbicara Bahasa Indonesia, sediakan terjemahan Bahasa Inggrisnya secara langsung.'
+        : '';
+
       const liveSystemInstruction = `${baseInstruction}\n\nMODE PERCAKAPAN SUARA & VISUAL LANGSUNG (MARIA LIVE):
 - Anda sedang terhubung dalam panggilan suara langsung real-time bersama pengguna.
 - ${languageHint}
 - Berikan jawaban lisan yang natural, jelas, ekspresif, hangat, dan ringkas agar nyaman didengar secara langsung (jangan membacakan simbol markdown seperti bintang/pagar/backtick).
-- Apabila pengguna mengaktifkan kamera, membagikan layar, atau mengirim gambar/berkas, analisis visual yang masuk secara akurat dan responsif seperti rekan diskusi langsung.${contextBlock}`;
+- Apabila pengguna mengaktifkan kamera, membagikan layar, atau mengirim gambar/berkas, analisis visual yang masuk secara akurat dan responsif seperti rekan diskusi langsung.${translationHint}${contextBlock}`;
 
       let errorSent = false;
       const emitErrorOnce = (msg: string) => {

@@ -70,6 +70,7 @@ interface ChatAreaProps {
   liveConfig?: GeminiLiveConfig;
   onCommitLiveTurn?: (role: 'user' | 'model', text: string) => void;
   onLiveStateChange?: (active: boolean) => void;
+  onChangeLiveVoice?: (voiceName: string) => void;
   spyGuardAlert?: boolean;
   liveMood?: MariaMood;
 }
@@ -117,6 +118,7 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
   liveConfig,
   onCommitLiveTurn,
   onLiveStateChange,
+  onChangeLiveVoice,
   spyGuardAlert = false,
   liveMood = 'neutral',
 }) => {
@@ -749,6 +751,9 @@ export const ChatArea: React.FC<ChatAreaProps> = React.memo(({
             onClose={() => setIsLiveActive(false)}
             onCommitLiveTurn={(role, text) => {
               onCommitLiveTurn?.(role, text);
+            }}
+            onChangeVoice={(voiceName) => {
+              onChangeLiveVoice?.(voiceName);
             }}
           />
         ) : (
